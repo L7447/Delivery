@@ -25,7 +25,7 @@
     <div id="home-content"></div>
   </section>
 
-  <!-- ══ 歷史記錄 ═══════════════════════════════════ -->
+  <!-- ══ 查看記錄 ═══════════════════════════════════ -->
   <section class="page" id="page-history" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
     <!-- 固定上半：日曆區 -->
     <div id="hist-header" style="flex-shrink:0;padding:12px 16px 6px;background:var(--bg);">
@@ -52,9 +52,89 @@
     <div id="hist-rec-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;"></div>
   </section>
 
-  <!-- ══ 報表 ═══════════════════════════════════════ -->
+  <!-- ══ 新增／編輯記錄分頁 ════════════════════════════ -->
+  <section class="page" id="page-add">
+    <div class="pg-title" id="add-page-title">新增記錄</div>    
+    <!-- 平台選擇 -->
+    <div style="margin-bottom:14px">
+      <div class="form-lbl">🚴 選擇平台</div>
+      <div id="platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <!-- 日期 -->
+    <div class="fg" style="margin-bottom:14px">
+      <label>📆 日期</label>
+      <input type="date" class="finp" id="f-date">
+    </div>
+    <!-- 打卡時間（上線/下線） -->
+    <div style="margin-bottom:10px">
+      <div class="form-lbl">⏱ 打卡記錄</div>
+      <div style="display:flex;gap:8px">
+        <div class="fg" style="flex:1">
+          <label>上線時間</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="time" class="finp" id="f-punch-in" style="flex:1" oninput="autoCalcHours()">
+            <button class="quick-btn" onclick="setPunchNow('in')">現在</button>
+          </div>
+        </div>
+        <div class="fg" style="flex:1">
+          <label>下線時間</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="time" class="finp" id="f-punch-out" style="flex:1" oninput="autoCalcHours()">
+            <button class="quick-btn" onclick="setPunchNow('out')">現在</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 工時（自動計算） -->
+    <div class="fg" style="margin-bottom:14px">
+      <label>🕐 工時（小時，上線/下線自動計算）</label>
+      <input type="number" class="finp" id="f-hours" placeholder="自動計算或手動輸入" inputmode="decimal" step="0.1">
+    </div>
+    <!-- 單數 + 行程收入 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="fg">
+        <label>📦 接單數（單）</label>
+        <input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()">
+      </div>
+      <div class="fg">
+        <label>💰 行程收入（NT$）</label>
+        <input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+      </div>
+    </div>
+    <!-- 固定發布獎勵 + 臨時獎勵 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="fg">
+        <label>🎁 固定發布獎勵（NT$）</label>
+        <input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+      </div>
+      <div class="fg">
+        <label>⚡ 臨時獎勵（NT$）</label>
+        <input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+      </div>
+    </div>
+    <!-- 小費 -->
+    <div class="fg" style="margin-bottom:14px">
+      <label>🤑 小費（NT$）</label>
+      <input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+    </div>
+    <!-- 本筆總收入（自動加總） -->
+    <div id="add-total-card" style="background:var(--acc-d);border:1px solid rgba(255,107,53,.3);border-radius:var(--r);padding:14px;margin-bottom:14px;text-align:center">
+      <div style="font-size:11px;color:var(--acc);letter-spacing:.5px;margin-bottom:4px">本筆總收入</div>
+      <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--acc)">NT$ <span id="add-total-val">0</span></div>
+      <div id="add-breakdown" style="font-size:11px;color:var(--acc);margin-top:4px;opacity:.7"></div>
+    </div>
+    <!-- 備註 -->
+    <div class="fg" style="margin-bottom:20px">
+      <label>📝 備註（選填）</label>
+      <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事">
+    </div>
+    <!-- 儲存按鈕 -->
+    <button class="btn-acc" id="add-confirm" style="width:100%; padding:14px; font-size:16px; font-weight:700;">💾 儲存記錄</button>
+  </section>
+
+  <!-- ══ 收入分析 ═══════════════════════════════════════ -->
   <section class="page" id="page-report">
-    <div class="pg-title">📊 報表分析</div>
+    <div class="pg-title">收入分析</div>
     <!-- 月份導覽 -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <button class="mbtn" id="rpt-prev">◀</button>
@@ -77,7 +157,7 @@
 
   <!-- ══ 功能設定 ════════════════════════════════════ -->
   <section class="page" id="page-settings">
-    <div class="pg-title">⚙️ 功能設定</div>
+    <div class="pg-title">功能設定</div>
     <div id="settings-content"></div>
   </section>
 
@@ -90,18 +170,18 @@
     </div>
     <!-- 紀錄：點擊前=紀錄1，點擊後=紀錄2 -->
     <div class="ni" data-pg="history" data-img1="images/history1.png" data-img2="images/history2.png">
-      <img class="ni-img" src="images/history1.png" alt="記錄">
-      <span class="lb">記錄</span>
+      <img class="ni-img" src="images/history1.png" alt="查看記錄">
+      <span class="lb">查看記錄</span>
     </div>
-    <!-- 新增紀錄 -->
-    <div class="ni" id="nav-plus">
-      <img class="ni-img" src="images/add-record2.png" alt="新增紀錄">
-      <span class="lb">新增紀錄</span>
+    <!-- 中央新增按鈕改成標準分頁 -->
+    <div class="ni" data-pg="add" data-img1="images/add-record1.png" data-img2="images/add-record2.png">
+      <img class="ni-img" src="images/add-record1.png" alt="新增">
+      <span class="lb">新增</span>
     </div>
     <!-- 報表：點擊前=圖表1，點擊後=圖表2 -->
     <div class="ni" data-pg="report" data-img1="images/report1.png" data-img2="images/report2.png">
-      <img class="ni-img" src="images/report1.png" alt="報表">
-      <span class="lb">報表</span>
+      <img class="ni-img" src="images/report1.png" alt="收入分析">
+      <span class="lb">收入分析</span>
     </div>
     <!-- 設定：點擊前=設定1，點擊後=設定2 -->
     <div class="ni" data-pg="settings" data-img1="images/settings1.png" data-img2="images/settings2.png">
@@ -110,100 +190,6 @@
     </div>
   </nav>
 </div><!-- /#app -->
-
-<!-- ══ 新增／編輯記錄 Overlay ════════════════════════ -->
-<div class="overlay-page" id="add-page">
-  <div class="top-bar">
-    <button class="bar-btn" id="add-cancel">✕</button>
-    <h2 id="add-page-title">新增記錄</h2>
-    <button class="bar-btn confirm" id="add-confirm">✓</button>
-  </div>
-  <div class="overlay-body">
-
-    <!-- 平台選擇 -->
-    <div style="margin-bottom:14px">
-      <div class="form-lbl">🚴 選擇平台</div>
-      <div id="platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-    </div>
-
-    <!-- 日期 -->
-    <div class="fg" style="margin-bottom:14px">
-      <label>📆 日期</label>
-      <input type="date" class="finp" id="f-date">
-    </div>
-
-    <!-- 打卡時間（上線/下線） -->
-    <div style="margin-bottom:10px">
-      <div class="form-lbl">⏱ 打卡記錄</div>
-      <div style="display:flex;gap:8px">
-        <div class="fg" style="flex:1">
-          <label>上線時間</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="time" class="finp" id="f-punch-in" style="flex:1" oninput="autoCalcHours()">
-            <button class="quick-btn" onclick="setPunchNow('in')">現在</button>
-          </div>
-        </div>
-        <div class="fg" style="flex:1">
-          <label>下線時間</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="time" class="finp" id="f-punch-out" style="flex:1" oninput="autoCalcHours()">
-            <button class="quick-btn" onclick="setPunchNow('out')">現在</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 工時（自動計算） -->
-    <div class="fg" style="margin-bottom:14px">
-      <label>🕐 工時（小時，上線/下線自動計算）</label>
-      <input type="number" class="finp" id="f-hours" placeholder="自動計算或手動輸入" inputmode="decimal" step="0.1">
-    </div>
-
-    <!-- 單數 + 行程收入 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div class="fg">
-        <label>📦 接單數（單）</label>
-        <input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()">
-      </div>
-      <div class="fg">
-        <label>💰 行程收入（NT$）</label>
-        <input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-      </div>
-    </div>
-
-    <!-- 固定發布獎勵 + 臨時獎勵 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div class="fg">
-        <label>🎁 固定發布獎勵（NT$）</label>
-        <input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-      </div>
-      <div class="fg">
-        <label>⚡ 臨時獎勵（NT$）</label>
-        <input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-      </div>
-    </div>
-
-    <!-- 小費 -->
-    <div class="fg" style="margin-bottom:14px">
-      <label>🤑 小費（NT$）</label>
-      <input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-    </div>
-
-    <!-- 本筆總收入（自動加總） -->
-    <div id="add-total-card" style="background:var(--acc-d);border:1px solid rgba(255,107,53,.3);border-radius:var(--r);padding:14px;margin-bottom:14px;text-align:center">
-      <div style="font-size:11px;color:var(--acc);letter-spacing:.5px;margin-bottom:4px">本筆總收入</div>
-      <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--acc)">NT$ <span id="add-total-val">0</span></div>
-      <div id="add-breakdown" style="font-size:11px;color:var(--acc);margin-top:4px;opacity:.7"></div>
-    </div>
-
-    <!-- 備註 -->
-    <div class="fg">
-      <label>📝 備註（選填）</label>
-      <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事">
-    </div>
-
-  </div><!-- /.overlay-body -->
-</div><!-- /#add-page -->
 
 <!-- ══ 搜尋 Overlay ════════════════════════════════ -->
 <div class="overlay-page" id="search-page">
