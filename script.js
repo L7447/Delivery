@@ -14,7 +14,7 @@ const KEYS = {
 /* ── 預設平台（強制 3 家主流外送平台）─────────────────── */
 const DEFAULT_PLATFORMS = [
   { id:'uber',      name:'Uber Eats', color:'#06C167', active:true,  ruleDesc:'每週一、四結算｜每週四發薪' },
-  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:true,  ruleDesc:'雙週日結算｜雙週三發薪' },
+  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:true,  ruleDesc:'雙週日結算｜雙週三明細｜雙週三發薪' },
   { id:'foodomo',   name:'foodomo',   color:'#FF6600', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
 
@@ -187,7 +187,6 @@ function renderHome() {
   </div>`;
 
   // ── 今日各平台小徽章 ──
-  const activePlatforms = S.platforms.filter(p=>p.active);
   const platSums = activePlatforms.map(p=>({
     ...p, sum: dayRecs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0)
   })).filter(p=>p.sum>0);
@@ -226,16 +225,28 @@ function renderHome() {
     </button>
   </div>`;
 
-  // ── 平台結算與發薪動態計算 ──
+// ── 平台結算與發薪動態計算（整合精美版） ──
+  const activePlatforms = S.platforms.filter(p=>p.active);
   const todayObj = new Date();
   todayObj.setHours(0,0,0,0); // 清除時間，只留日期
-
-  // 計算邏輯函數
+  
+  // 計算邏輯函數：回傳陣列 [{name, dateStr, diff, diffStr}]
   const calcNextDates = (id) => {
-    let nSettle = new Date(todayObj), nPay = new Date(todayObj);
     const y = todayObj.getFullYear(), m = todayObj.getMonth(), d = todayObj.getDate();
-    
-    // 計算下一個指定的星期幾
+    const events = [];
+
+    // 建立事件的輔助函數
+    const addEvent = (name, dateObj) => {
+      const diff = Math.round((dateObj - todayObj) / 86400000);
+      events.push({
+        name: name,
+        dateStr: `${dateObj.getMonth()+1}/${pad(dateObj.getDate())}`,
+        diff: diff,
+        diffStr: diff === 0 ? '今天' : `${diff} 天後`
+      });
+    };
+
+    // 尋找下一個指定的星期幾
     const getNextDow = (targets) => {
       let cur = todayObj.getDay();
       let add = 7;
@@ -244,70 +255,75 @@ function renderHome() {
     };
 
     if (id === 'uber') {
-      nSettle = getNextDow([1, 4]); // 週一(1)、週四(4)
-      nPay = getNextDow([4]);       // 週四(4)
+      addEvent('結算日', getNextDow([1, 4]));
+      addEvent('發薪日', getNextDow([4]));
     } 
     else if (id === 'foodpanda') {
-      const tUtc = Date.UTC(y, m, d);
-      // 以你提供的 2020年4月 為基準錨點 (4/8發薪, 4/12結算)
-      const aPay = Date.UTC(2020, 3, 8), aSet = Date.UTC(2020, 3, 12);
-      // 算出與基準日的差距，取 14 天的餘數
-      let dPay = 14 - ((Math.floor((tUtc - aPay) / 86400000) % 14) + 14) % 14;
-      let dSet = 14 - ((Math.floor((tUtc - aSet) / 86400000) % 14) + 14) % 14;
-      nPay.setDate(d + (dPay === 14 ? 0 : dPay));
-      nSettle.setDate(d + (dSet === 14 ? 0 : dSet));
+      // 根據圖表精準設定錨點 (2020年為基礎以防跨年問題，月份 0=一月)
+      // 錨點：結算(日)、明細(三)、發薪(三)
+      const getPandaNext = (aY, aM, aD) => {
+        const anchor = new Date(aY, aM, aD);
+        const diffDays = Math.floor((todayObj - anchor) / 86400000);
+        const daysToAdd = (14 - (diffDays % 14)) % 14;
+        let res = new Date(todayObj); res.setDate(d + daysToAdd);
+        return res;
+      };
+      addEvent('結算', getPandaNext(2020, 0, 12));
+      addEvent('明細', getPandaNext(2020, 0, 15));
+      addEvent('發薪', getPandaNext(2020, 0, 22));
     } 
     else if (id === 'foodomo') {
-      // 結算：15號、月底最後一天
-      if (d <= 15) nSettle.setDate(15);
-      else nSettle = new Date(y, m + 1, 0); 
-      // 發薪：5號、20號
-      if (d <= 5) nPay.setDate(5);
-      else if (d <= 20) nPay.setDate(20);
-      else nPay = new Date(y, m + 1, 5); // 下個月5號
+      let nSettle = new Date(todayObj), nPay = new Date(todayObj);
+      if (d <= 15) nSettle.setDate(15); else nSettle = new Date(y, m + 1, 0); 
+      if (d <= 5) nPay.setDate(5); else if (d <= 20) nPay.setDate(20); else nPay = new Date(y, m + 1, 5);
+      
+      addEvent('結算日', nSettle);
+      addEvent('發薪日', nPay);
     } 
     else return null;
 
-    // 格式化顯示文字
-    const diffDays = (target) => Math.round((target - todayObj) / 86400000);
-    const fmtLabel = (target) => {
-      const diff = diffDays(target);
-      return diff === 0 ? '今天' : `${diff} 天後`;
-    };
-    return { 
-      settleLabel: fmtLabel(nSettle), settleDate: `${nSettle.getMonth()+1}/${nSettle.getDate()}`,
-      payLabel: fmtLabel(nPay), payDate: `${nPay.getMonth()+1}/${nPay.getDate()}`
-    };
+    return events;
   };
 
-  // 渲染卡片
+  // 渲染整合行事曆卡片
   if (activePlatforms.length) {
-    html += `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">`;
-    activePlatforms.forEach(p => {
-      const dates = calcNextDates(p.id);
-      if (!dates) return;
+    html += `
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:14px; border:1px solid var(--border);">
+      <!-- 行事曆標題列 -->
+      <div style="background:var(--sf2); padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px;">
+        <span style="font-size:15px;">📅</span>
+        <span style="font-size:12px; font-weight:700; color:var(--t2);">平台日程表</span>
+      </div>
+      <div style="display:flex; flex-direction:column;">`;
+
+    activePlatforms.forEach((p, index) => {
+      const events = calcNextDates(p.id);
+      if (!events) return;
+      const isLast = index === activePlatforms.length - 1;
 
       html += `
-      <div class="card" style="margin-bottom:0; padding:12px; border-left:4px solid ${p.color}; display:flex; flex-direction:column; gap:10px; border-radius:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:13px;font-weight:700;color:${p.color}">${p.name}</div>
-          <div style="font-size:10px;color:var(--t3)">${p.ruleDesc}</div>
-        </div>
-        <div style="display:flex;gap:10px">
-          <!-- 結算區塊 -->
-          <div style="flex:1;background:var(--sf2);padding:8px;border-radius:6px;text-align:center">
-            <div style="font-size:10px;color:var(--t2);margin-bottom:2px">結算 <span style="font-family:var(--mono);font-weight:600">${dates.settleDate}</span></div>
-            <div style="font-size:14px;font-weight:700;color:${dates.settleLabel==='今天'?'var(--acc)':'var(--t1)'}">${dates.settleLabel}</div>
+        <!-- 單一平台列 -->
+        <div style="padding:14px; border-bottom:${isLast ? 'none' : '1px solid var(--border)'};">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+            <div style="width:10px; height:10px; border-radius:50%; background:${p.color};"></div>
+            <span style="font-size:13px; font-weight:700; color:var(--t1);">${p.name}</span>
           </div>
-          <!-- 發薪區塊 -->
-          <div style="flex:1;background:var(--sf2);padding:8px;border-radius:6px;text-align:center">
-            <div style="font-size:10px;color:var(--t2);margin-bottom:2px">發薪 <span style="font-family:var(--mono);font-weight:600">${dates.payDate}</span></div>
-            <div style="font-size:14px;font-weight:700;color:${dates.payLabel==='今天'?'var(--green)':'var(--t1)'}">${dates.payLabel}</div>
+          <div style="display:flex; gap:8px;">
+            ${events.map(ev => `
+              <!-- 單一日期方塊 -->
+              <div style="flex:1; background:var(--bg); border:1px solid rgba(0,0,0,0.04); border-radius:8px; padding:10px 4px; text-align:center;">
+                <div style="font-size:10px; color:var(--t3); margin-bottom:4px;">${ev.name}</div>
+                <div style="font-family:var(--mono); font-size:15px; font-weight:700; color:var(--t1);">${ev.dateStr}</div>
+                <div style="font-size:11px; font-weight:600; color:${ev.diff===0 ? 'var(--green)' : 'var(--acc)'}; margin-top:4px;">
+                  ${ev.diffStr}
+                </div>
+              </div>
+            `).join('')}
           </div>
-        </div>
-      </div>`;
+        </div>`;
     });
-    html += `</div>`;
+
+    html += `</div></div>`;
   }
 
   // ── 月目標進度 ──
