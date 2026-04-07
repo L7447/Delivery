@@ -173,6 +173,9 @@ function renderHome() {
   const dateObj  = new Date(today+'T00:00:00');
   const dow      = ['日','一','二','三','四','五','六'][dateObj.getDay()];
 
+  // 👇 將 activePlatforms 的宣告統一放在這裡！
+  const activePlatforms = S.platforms.filter(p=>p.active);
+
   // ── 今日總覽大卡片 ──
   let html = `
   <div class="today-hero">
@@ -226,7 +229,6 @@ function renderHome() {
   </div>`;
 
 // ── 平台結算與發薪動態計算（整合精美版） ──
-  const activePlatforms = S.platforms.filter(p=>p.active);
   const todayObj = new Date();
   todayObj.setHours(0,0,0,0); // 清除時間，只留日期
   
