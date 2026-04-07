@@ -287,45 +287,49 @@ function renderHome() {
     return events;
   };
 
-  // 渲染整合行事曆卡片
+  // ── 渲染整合行事曆卡片（精美透感獨立卡片版） ──
   if (activePlatforms.length) {
-    html += `
-    <div class="card" style="padding:0; overflow:hidden; margin-bottom:14px; border:1px solid var(--border);">
-      <!-- 行事曆標題列 -->
-      <div style="background:var(--sf2); padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px;">
-        <span style="font-size:15px;">📅</span>
-        <span style="font-size:12px; font-weight:700; color:var(--t2);">平台日程表</span>
-      </div>
-      <div style="display:flex; flex-direction:column;">`;
+    html += `<div style="display:flex; flex-direction:column; margin-bottom:14px;">`;
 
-    activePlatforms.forEach((p, index) => {
+    activePlatforms.forEach(p => {
       const events = calcNextDates(p.id);
       if (!events) return;
-      const isLast = index === activePlatforms.length - 1;
 
+      // 使用 Hex 附加透明度：'33' 約等於 20% 透明度, '66' 約等於 40% 透明度, '40' 給陰影
+      // 這樣可以達到明顯的色彩透感，又不會因為顏色太深而看不清字
       html += `
-        <!-- 單一平台列 -->
-        <div style="padding:14px; border-bottom:${isLast ? 'none' : '1px solid var(--border)'};">
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
-            <div style="width:10px; height:10px; border-radius:50%; background:${p.color};"></div>
-            <span style="font-size:13px; font-weight:700; color:var(--t1);">${p.name}</span>
+        <div style="border: 3px solid ${p.color}; background: ${p.color}25; box-shadow: 0 6px 14px ${p.color}40; border-radius: 14px; padding: 12px; margin-bottom: 12px;">
+          
+          <!-- 平台名稱標題 -->
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom: 10px;">
+            <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
+            <span style="font-size:14px; font-weight:800; color:${p.color}; text-shadow: 0 1px 2px rgba(255,255,255,0.8); letter-spacing:0.5px;">${p.name}</span>
           </div>
-          <div style="display:flex; gap:8px;">
-            ${events.map(ev => `
-              <!-- 單一日期方塊 -->
-              <div style="flex:1; background:var(--bg); border:1px solid rgba(0,0,0,0.04); border-radius:8px; padding:10px 4px; text-align:center;">
-                <div style="font-size:10px; color:var(--t3); margin-bottom:4px;">${ev.name}</div>
-                <div style="font-family:var(--mono); font-size:15px; font-weight:700; color:var(--t1);">${ev.dateStr}</div>
-                <div style="font-size:11px; font-weight:600; color:${ev.diff===0 ? 'var(--green)' : 'var(--acc)'}; margin-top:4px;">
-                  ${ev.diffStr}
-                </div>
+
+          <!-- 日期方塊列 -->
+          <div style="display:flex; gap:6px;">
+            ${events.map(ev => {
+              const isToday = ev.diff === 0;
+              const dateColor = isToday ? 'var(--green)' : 'var(--t1)';
+              const diffColor = isToday ? 'var(--green)' : 'var(--t2)';
+              
+              return `
+              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-radius: 8px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                <!-- 項目名稱 -->
+                <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:3px; letter-spacing:0.5px;">${ev.name}</span>
+                <!-- 日期與天數 -->
+                <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
+                  ${ev.dateStr} <span style="font-size:10px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
+                </span>
               </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
+
         </div>`;
     });
 
-    html += `</div></div>`;
+    html += `</div>`;
   }
 
   // ── 月目標進度 ──
