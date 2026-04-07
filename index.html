@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>外送記帳</title>
+  <!-- PWA 設定 -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#FF6B35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="外送記帳">
+  <!-- 字型：標題用 Syne，內文用 Noto Sans TC -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js 圖表庫 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ 首頁 ══════════════════════════════════════ -->
+  <section class="page active" id="page-home">
+    <!-- 動態渲染內容 -->
+    <div id="home-content"></div>
+  </section>
+
+  <!-- ══ 歷史記錄 ═══════════════════════════════════ -->
+  <section class="page" id="page-history" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
+    <!-- 固定上半：日曆區 -->
+    <div id="hist-header" style="flex-shrink:0;padding:12px 16px 6px;background:var(--bg);">
+      <!-- 月份導覽 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="mbtn" id="hist-prev">◀</button>
+          <h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center"></h2>
+          <button class="mbtn" id="hist-next">▶</button>
+        </div>
+        <!-- 搜尋按鈕 -->
+        <button class="icon-btn" onclick="openSearch()" title="搜尋記錄">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+      <!-- 月曆格 -->
+      <div class="month-grid" id="hist-calendar"></div>
+      <!-- 選取日收支摘要 -->
+      <div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div>
+      <!-- 流水帳標題 -->
+      <div class="sec-title" id="hist-day-label" style="margin-bottom:4px">今日記錄</div>
+    </div>
+    <!-- 可滾動記錄列表 -->
+    <div id="hist-rec-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;"></div>
+  </section>
+
+  <!-- ══ 報表 ═══════════════════════════════════════ -->
+  <section class="page" id="page-report">
+    <div class="pg-title">📊 報表分析</div>
+    <!-- 月份導覽 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button class="mbtn" id="rpt-prev">◀</button>
+      <span id="rpt-label" style="font-size:15px;font-weight:600"></span>
+      <button class="mbtn" id="rpt-next">▶</button>
+    </div>
+    <!-- 報表 Tab -->
+    <div class="seg-tabs" id="rpt-tabs">
+      <button class="seg-tab on" data-rv="overview">總覽</button>
+      <button class="seg-tab" data-rv="trend">趨勢</button>
+      <button class="seg-tab" data-rv="compare">比較</button>
+      <button class="seg-tab" data-rv="top3">TOP3</button>
+    </div>
+    <!-- 各分頁內容 -->
+    <div id="rv-overview"></div>
+    <div id="rv-trend"   style="display:none"></div>
+    <div id="rv-compare" style="display:none"></div>
+    <div id="rv-top3"    style="display:none"></div>
+  </section>
+
+  <!-- ══ 功能設定 ════════════════════════════════════ -->
+  <section class="page" id="page-settings">
+    <div class="pg-title">⚙️ 功能設定</div>
+    <div id="settings-content"></div>
+  </section>
+
+  <!-- ══ 底部導覽列 ══════════════════════════════════ -->
+  <nav id="nav">
+    <!-- 首頁：點擊前=首頁1，點擊後=首頁2 -->
+    <div class="ni active" data-pg="home" data-img1="首頁1.png" data-img2="首頁2.png">
+      <img class="ni-img" src="首頁2.png" alt="首頁">
+      <span class="lb">首頁</span>
+    </div>
+    <!-- 歷史：點擊前=紀錄1，點擊後=紀錄2 -->
+    <div class="ni" data-pg="history" data-img1="紀錄1.png" data-img2="紀錄2.png">
+      <img class="ni-img" src="紀錄1.png" alt="歷史">
+      <span class="lb">歷史</span>
+    </div>
+    <!-- 中央新增按鈕：使用新增紀錄圖示 -->
+    <div class="nav-plus" id="nav-plus" title="新增記錄">
+      <img src="新增紀錄2.png" alt="新增" style="width:30px;height:30px;object-fit:contain;">
+    </div>
+    <!-- 報表：點擊前=圖表1，點擊後=圖表2 -->
+    <div class="ni" data-pg="report" data-img1="圖表1.png" data-img2="圖表2.png">
+      <img class="ni-img" src="圖表1.png" alt="報表">
+      <span class="lb">報表</span>
+    </div>
+    <!-- 設定：點擊前=設定1，點擊後=設定2 -->
+    <div class="ni" data-pg="settings" data-img1="設定1.png" data-img2="設定2.png">
+      <img class="ni-img" src="設定1.png" alt="設定">
+      <span class="lb">設定</span>
+    </div>
+  </nav>
+</div><!-- /#app -->
+
+<!-- ══ 新增／編輯記錄 Overlay ════════════════════════ -->
+<div class="overlay-page" id="add-page">
+  <div class="top-bar">
+    <button class="bar-btn" id="add-cancel">✕</button>
+    <h2 id="add-page-title">新增記錄</h2>
+    <button class="bar-btn confirm" id="add-confirm">✓</button>
+  </div>
+  <div class="overlay-body">
+
+    <!-- 平台選擇 -->
+    <div style="margin-bottom:14px">
+      <div class="form-lbl">🚴 選擇平台</div>
+      <div id="platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- 日期 -->
+    <div class="fg" style="margin-bottom:14px">
+      <label>📆 日期</label>
+      <input type="date" class="finp" id="f-date">
+    </div>
+
+    <!-- 打卡時間（上線/下線） -->
+    <div style="margin-bottom:10px">
+      <div class="form-lbl">⏱ 打卡記錄</div>
+      <div style="display:flex;gap:8px">
+        <div class="fg" style="flex:1">
+          <label>上線時間</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="time" class="finp" id="f-punch-in" style="flex:1" oninput="autoCalcHours()">
+            <button class="quick-btn" onclick="setPunchNow('in')">現在</button>
+          </div>
+        </div>
+        <div class="fg" style="flex:1">
+          <label>下線時間</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="time" class="finp" id="f-punch-out" style="flex:1" oninput="autoCalcHours()">
+            <button class="quick-btn" onclick="setPunchNow('out')">現在</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 工時（自動計算） -->
+    <div class="fg" style="margin-bottom:14px">
+      <label>🕐 工時（小時，上線/下線自動計算）</label>
+      <input type="number" class="finp" id="f-hours" placeholder="自動計算或手動輸入" inputmode="decimal" step="0.1">
+    </div>
+
+    <!-- 單數 + 行程收入 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="fg">
+        <label>📦 接單數（單）</label>
+        <input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()">
+      </div>
+      <div class="fg">
+        <label>💰 行程收入（NT$）</label>
+        <input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+      </div>
+    </div>
+
+    <!-- 固定發布獎勵 + 臨時獎勵 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="fg">
+        <label>🎁 固定發布獎勵（NT$）</label>
+        <input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+      </div>
+      <div class="fg">
+        <label>⚡ 臨時獎勵（NT$）</label>
+        <input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+      </div>
+    </div>
+
+    <!-- 小費 -->
+    <div class="fg" style="margin-bottom:14px">
+      <label>🤑 小費（NT$）</label>
+      <input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
+    </div>
+
+    <!-- 本筆總收入（自動加總） -->
+    <div id="add-total-card" style="background:var(--acc-d);border:1px solid rgba(255,107,53,.3);border-radius:var(--r);padding:14px;margin-bottom:14px;text-align:center">
+      <div style="font-size:11px;color:var(--acc);letter-spacing:.5px;margin-bottom:4px">本筆總收入</div>
+      <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--acc)">NT$ <span id="add-total-val">0</span></div>
+      <div id="add-breakdown" style="font-size:11px;color:var(--acc);margin-top:4px;opacity:.7"></div>
+    </div>
+
+    <!-- 備註 -->
+    <div class="fg">
+      <label>📝 備註（選填）</label>
+      <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事">
+    </div>
+
+  </div><!-- /.overlay-body -->
+</div><!-- /#add-page -->
+
+<!-- ══ 搜尋 Overlay ════════════════════════════════ -->
+<div class="overlay-page" id="search-page">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="closeOverlay('search-page')">✕</button>
+    <h2>🔍 搜尋記錄</h2>
+    <div style="width:36px"></div>
+  </div>
+  <div class="overlay-body">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input type="text" class="finp" id="search-kw" placeholder="關鍵字、平台名稱、金額..." style="flex:1">
+      <button onclick="doSearch()" class="btn-acc" style="padding:10px 16px;border-radius:var(--rs);white-space:nowrap">搜尋</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="date" class="finp" id="search-from" style="flex:1">
+      <input type="date" class="finp" id="search-to"   style="flex:1">
+    </div>
+    <div id="search-results" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+</div>
+
+<!-- ══ 設定子頁 Overlay ════════════════════════════ -->
+<div class="overlay-page" id="sub-page">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="closeOverlay('sub-page')">✕</button>
+    <h2 id="sub-title">設定</h2>
+    <button class="bar-btn confirm" id="sub-add-btn" style="display:none" onclick="subAddAction()">＋</button>
+  </div>
+  <div class="overlay-body" id="sub-body"></div>
+</div>
+
+<!-- ══ 詳情 Overlay ════════════════════════════════ -->
+<div id="detail-overlay">
+  <div id="detail-box">
+    <div class="top-bar" style="border-radius:20px 20px 0 0">
+      <button class="bar-btn" onclick="closeDetailOverlay()">✕</button>
+      <h2>記錄詳情</h2>
+      <button class="bar-btn" id="detail-edit-btn">編輯</button>
+    </div>
+    <div id="detail-body" style="padding:16px 16px 32px;overflow-y:auto;max-height:70vh"></div>
+  </div>
+</div>
+
+<!-- ══ 自訂確認框 ══════════════════════════════════ -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <div id="confirm-msg"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button id="confirm-cancel-btn" style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--sf2);color:var(--t2);font-size:14px;font-family:var(--sans);cursor:pointer">取消</button>
+      <button id="confirm-ok-btn"     style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--red);color:#fff;font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Toast 提示訊息 ══════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- 還原用隱藏 file input -->
+<input type="file" id="restore-file" accept=".json" style="display:none">
+
+<script src="/script.js"></script>
+</body>
+</html>
