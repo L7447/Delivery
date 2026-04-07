@@ -23,7 +23,7 @@
   --t1:       #1C1917;          /* 主文字 */
   --t2:       #57534E;          /* 次要文字 */
   --t3:       #A8A29E;          /* 輔助文字 */
-  --mono:     'JetBrains Mono', monospace;  /* 數字等寬字型 */
+  --mono:     'Roboto', monospace;  /* 數字等寬字型 */
   --title:    'Syne', sans-serif;           /* 標題粗體字型 */
   --sans:     'Noto Sans TC', sans-serif;   /* 主要字型 */
   --rs:       10px;             /* 小圓角 */
