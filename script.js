@@ -298,7 +298,7 @@ function renderHome() {
       // 使用 Hex 附加透明度：'33' 約等於 20% 透明度, '66' 約等於 40% 透明度, '40' 給陰影
       // 這樣可以達到明顯的色彩透感，又不會因為顏色太深而看不清字
       html += `
-        <div style="border: 3px solid ${p.color}; background: ${p.color}25; box-shadow: 0 6px 14px ${p.color}40; border-radius: 14px; padding: 12px; margin-bottom: 12px;">
+        <div style="border: 2px solid ${p.color}50; background: ${p.color}15; box-shadow: 0 6px 14px ${p.color}50; border-radius: 14px; padding: 12px; margin-bottom: 12px;">
           
           <!-- 平台名稱標題 -->
           <div style="display:flex; align-items:center; gap:6px; margin-bottom: 10px;">
@@ -319,7 +319,7 @@ function renderHome() {
                 <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:3px; letter-spacing:0.5px;">${ev.name}</span>
                 <!-- 日期與天數 -->
                 <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
-                  ${ev.dateStr} <span style="font-size:10px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
+                  ${ev.dateStr} <span style="font-size:12px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
                 </span>
               </div>
               `;
