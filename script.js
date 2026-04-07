@@ -317,25 +317,23 @@ function renderHome() {
               <!-- 餅乾造型單一日期方塊 -->
               <div style="
                 flex:1; 
-                background-color: #FFF; 
-                /* 必須要有 border-style 和 width 才能顯示圖片邊框 */
+                background-color: transparent; /* 🌟 拿掉白色，變成透明，完美融合背景 */
                 border-style: solid; 
-                border-width: 14px; 
-                /* 核心九宮格：載入圖片、裁切35像素(四角)、邊緣拉伸(stretch) */
-                border-image: url('images/cookie-border.png') 35 stretch; 
+                border-width: 16px; /* 稍微加粗一點讓花瓣更明顯 */
+                /* 🌟 核心：改成 round，讓邊緣花瓣自動「複製排列」增加數量 */
+                border-image: url('images/cookie-border.png') 35 round; 
                 padding: 4px 0; 
                 text-align: center; 
                 display:flex; 
                 flex-direction:column; 
                 justify-content:center;
-                /* 讓整塊餅乾有微微立體感 */
                 filter: drop-shadow(0 3px 4px rgba(0,0,0,0.08));
               ">
                 <!-- 項目名稱 -->
-                <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
+                <span style="font-size:10px; color:var(--t3); font-weight:800; margin-bottom:2px; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">${ev.name}</span>
                 <!-- 日期與天數 -->
-                <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
-                  ${ev.dateStr} <span style="font-size:10px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
+                <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor}; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">
+                  ${ev.dateStr} <span style="font-size:10px; font-weight:700; color:${diffColor};">（${ev.diffStr}）</span>
                 </span>
               </div>
               `;
