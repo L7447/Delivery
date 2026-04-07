@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v1';
+const CACHE_NAME = 'delivery-app-v2';
 
 // 需要快取的靜態資源清單
 const ASSETS = [
@@ -11,6 +11,16 @@ const ASSETS = [
   '/style.css',
   '/script.js',
   '/manifest.json',
+  '/images/home1.png',
+  '/images/home2.png',
+  '/images/history1.png',
+  '/images/history2.png',
+  '/images/add-record1.png',
+  '/images/add-record2.png',
+  '/images/report1.png',
+  '/images/report2.png',
+  '/images/settings1.png',
+  '/images/settings2.png',
   'https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
 ];
