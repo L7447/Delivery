@@ -11,11 +11,11 @@ const KEYS = {
   punch:     'delivery_punch_live',  // 即時打卡狀態
 };
 
-/* ── 預設平台（三家主流外送平台）─────────────────── */
+/* ── 預設平台（強制 3 家主流外送平台）─────────────────── */
 const DEFAULT_PLATFORMS = [
-  { id:'uber',      name:'Uber Eats', color:'#06C167', active:true,  settleDay:15, payDay:25 },
-  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:true,  settleDay:1,  payDay:10 },
-  { id:'lalamove',  name:'LaLaMove',  color:'#FF6600', active:false, settleDay:0,  payDay:0  },
+  { id:'uber',      name:'Uber Eats', color:'#06C167', active:true,  ruleDesc:'每週一、四結算｜每週四發薪' },
+  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:true,  ruleDesc:'雙週日結算｜雙週三發薪' },
+  { id:'foodomo',   name:'foodomo',   color:'#FF6600', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
 
 /* ── 預設 App 設定 ───────────────────────────────── */
@@ -109,8 +109,14 @@ function closeDetailOverlay() {
 /** 讀取所有資料到 S 狀態 */
 function loadAll() {
   try { S.records   = JSON.parse(localStorage.getItem(KEYS.records)||'[]'); }   catch { S.records=[]; }
-  try { S.platforms = JSON.parse(localStorage.getItem(KEYS.platforms)||'null') || DEFAULT_PLATFORMS.map(p=>({...p})); }
-       catch { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); }
+  // 平台強制固定為 3 個，並繼承舊設定的「顏色」與「啟用狀態」
+  try { 
+    const saved = JSON.parse(localStorage.getItem(KEYS.platforms)||'[]'); 
+    S.platforms = DEFAULT_PLATFORMS.map(dp => {
+      const sp = saved.find(x => x.id === dp.id);
+      return sp ? { ...dp, color: sp.color, active: sp.active } : { ...dp };
+    });
+  } catch { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); }
   try { S.settings  = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; }
        catch { S.settings  = { ...DEFAULT_SETTINGS }; }
   try { S.punch     = JSON.parse(localStorage.getItem(KEYS.punch)||'null'); }    catch { S.punch=null; }
@@ -220,23 +226,85 @@ function renderHome() {
     </button>
   </div>`;
 
-  // ── 結算日 / 發薪日倒數 ──
-  const todayDate   = new Date();
-  const todayDay    = todayDate.getDate();
-  const daysInMonth = new Date(todayDate.getFullYear(), todayDate.getMonth()+1, 0).getDate();
-  const activeP     = activePlatforms.filter(p=>p.settleDay>0||p.payDay>0).slice(0,2);
-  if (activeP.length) {
-    html += `<div class="settle-row">`;
-    activeP.forEach(p => {
-      const settle  = p.settleDay||0;
-      const pay     = p.payDay||0;
-      // 計算下個結算日的剩餘天數
-      let dSettle = settle>0 ? (settle>todayDay?settle-todayDay:daysInMonth-todayDay+settle) : -1;
-      let dPay    = pay>0    ? (pay>todayDay?pay-todayDay:daysInMonth-todayDay+pay) : -1;
-      html += `<div class="settle-chip" style="border-left:3px solid ${p.color}">
-        <div style="font-size:10px;font-weight:600;color:${p.color};margin-bottom:4px">${p.name}</div>
-        ${dSettle>=0?`<div style="font-size:11px;color:var(--t2)">結算日 <strong style="color:var(--acc)">${dSettle===0?'今天':dSettle+'天後'}</strong></div>`:''}
-        ${dPay>=0   ?`<div style="font-size:11px;color:var(--t2)">發薪日 <strong style="color:var(--green)">${dPay===0?'今天':dPay+'天後'}</strong></div>`:''}
+  // ── 平台結算與發薪動態計算 ──
+  const todayObj = new Date();
+  todayObj.setHours(0,0,0,0); // 清除時間，只留日期
+
+  // 計算邏輯函數
+  const calcNextDates = (id) => {
+    let nSettle = new Date(todayObj), nPay = new Date(todayObj);
+    const y = todayObj.getFullYear(), m = todayObj.getMonth(), d = todayObj.getDate();
+    
+    // 計算下一個指定的星期幾
+    const getNextDow = (targets) => {
+      let cur = todayObj.getDay();
+      let add = 7;
+      targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; });
+      let res = new Date(todayObj); res.setDate(d + add); return res;
+    };
+
+    if (id === 'uber') {
+      nSettle = getNextDow([1, 4]); // 週一(1)、週四(4)
+      nPay = getNextDow([4]);       // 週四(4)
+    } 
+    else if (id === 'foodpanda') {
+      const tUtc = Date.UTC(y, m, d);
+      // 以你提供的 2020年4月 為基準錨點 (4/8發薪, 4/12結算)
+      const aPay = Date.UTC(2020, 3, 8), aSet = Date.UTC(2020, 3, 12);
+      // 算出與基準日的差距，取 14 天的餘數
+      let dPay = 14 - ((Math.floor((tUtc - aPay) / 86400000) % 14) + 14) % 14;
+      let dSet = 14 - ((Math.floor((tUtc - aSet) / 86400000) % 14) + 14) % 14;
+      nPay.setDate(d + (dPay === 14 ? 0 : dPay));
+      nSettle.setDate(d + (dSet === 14 ? 0 : dSet));
+    } 
+    else if (id === 'foodomo') {
+      // 結算：15號、月底最後一天
+      if (d <= 15) nSettle.setDate(15);
+      else nSettle = new Date(y, m + 1, 0); 
+      // 發薪：5號、20號
+      if (d <= 5) nPay.setDate(5);
+      else if (d <= 20) nPay.setDate(20);
+      else nPay = new Date(y, m + 1, 5); // 下個月5號
+    } 
+    else return null;
+
+    // 格式化顯示文字
+    const diffDays = (target) => Math.round((target - todayObj) / 86400000);
+    const fmtLabel = (target) => {
+      const diff = diffDays(target);
+      return diff === 0 ? '今天' : `${diff} 天後`;
+    };
+    return { 
+      settleLabel: fmtLabel(nSettle), settleDate: `${nSettle.getMonth()+1}/${nSettle.getDate()}`,
+      payLabel: fmtLabel(nPay), payDate: `${nPay.getMonth()+1}/${nPay.getDate()}`
+    };
+  };
+
+  // 渲染卡片
+  if (activePlatforms.length) {
+    html += `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">`;
+    activePlatforms.forEach(p => {
+      const dates = calcNextDates(p.id);
+      if (!dates) return;
+
+      html += `
+      <div class="card" style="margin-bottom:0; padding:12px; border-left:4px solid ${p.color}; display:flex; flex-direction:column; gap:10px; border-radius:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:700;color:${p.color}">${p.name}</div>
+          <div style="font-size:10px;color:var(--t3)">${p.ruleDesc}</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <!-- 結算區塊 -->
+          <div style="flex:1;background:var(--sf2);padding:8px;border-radius:6px;text-align:center">
+            <div style="font-size:10px;color:var(--t2);margin-bottom:2px">結算 <span style="font-family:var(--mono);font-weight:600">${dates.settleDate}</span></div>
+            <div style="font-size:14px;font-weight:700;color:${dates.settleLabel==='今天'?'var(--acc)':'var(--t1)'}">${dates.settleLabel}</div>
+          </div>
+          <!-- 發薪區塊 -->
+          <div style="flex:1;background:var(--sf2);padding:8px;border-radius:6px;text-align:center">
+            <div style="font-size:10px;color:var(--t2);margin-bottom:2px">發薪 <span style="font-family:var(--mono);font-weight:600">${dates.payDate}</span></div>
+            <div style="font-size:14px;font-weight:700;color:${dates.payLabel==='今天'?'var(--green)':'var(--t1)'}">${dates.payLabel}</div>
+          </div>
+        </div>
       </div>`;
     });
     html += `</div>`;
@@ -957,18 +1025,12 @@ function renderSettings() {
   <div class="set-sec">
     <h3>平台管理</h3>
     <div class="set-list">
-      ${S.platforms.map(p=>`
-        <div class="set-row" onclick="openPlatformEdit('${p.id}')">
-          <div class="plat-color-dot" style="background:${p.color}"></div>
-          <div class="sn">
-            <div>${p.name}</div>
-            <div class="sn-sub">${p.active?'✅ 啟用':'⭕ 停用'}${p.settleDay?`　結算日：${p.settleDay}號`:''}${p.payDay?`　發薪日：${p.payDay}號`:''}</div>
-          </div>
-          <span class="arr">›</span>
-        </div>`).join('')}
-      <div class="set-row" onclick="openAddPlatform()">
-        <span style="font-size:20px">➕</span>
-        <span class="sn">新增平台</span>
+      <div class="set-row" onclick="openPlatformList()">
+        <span class="sn">
+          <div style="font-weight:500">🏪 平台列表與設定</div>
+          <div class="sn-sub">目前啟用 ${S.platforms.filter(p=>p.active).length} 個平台</div>
+        </span>
+        <span class="arr">›</span>
       </div>
     </div>
   </div>
@@ -1017,100 +1079,75 @@ function renderSettings() {
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ══ 設定子頁：平台編輯 ══════════════════════════ */
+/* ══ 設定子頁：平台列表與編輯 ══════════════════════════ */
+/** 開啟平台列表 */
+function openPlatformList() {
+  S.subMode = 'platform_list';
+  document.getElementById('sub-title').textContent = '平台列表';
+  document.getElementById('sub-add-btn').style.display = 'none';
+  document.getElementById('sub-body').innerHTML = `
+    <div class="set-list">
+      ${S.platforms.map(p=>`
+        <div class="set-row" onclick="openPlatformEdit('${p.id}')">
+          <div class="plat-color-dot" style="background:${p.color}"></div>
+          <div class="sn">
+            <div style="font-weight:600">${p.name}</div>
+            <div class="sn-sub">${p.active?'✅ 已啟用':'⭕ 已停用'}</div>
+          </div>
+          <span class="arr">›</span>
+        </div>
+      `).join('')}
+    </div>
+    <div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">
+      💡 點擊平台可自訂顏色與啟用狀態
+    </div>
+  `;
+  openOverlay('sub-page');
+}
+/** 開啟單一平台編輯頁 */
 function openPlatformEdit(id) {
   const p = S.platforms.find(x=>x.id===id);
   if (!p) return;
   S.subMode = 'platform_edit';
-  document.getElementById('sub-title').textContent = '編輯平台';
-  document.getElementById('sub-add-btn').style.display = 'none';
+  document.getElementById('sub-title').textContent = p.name; 
   document.getElementById('sub-body').innerHTML = `
-    <div class="fg" style="margin-bottom:10px"><label>平台名稱</label>
-      <input type="text" class="finp" id="sp-name" value="${p.name}"></div>
-    <div class="fg" style="margin-bottom:10px"><label>顏色（Hex）</label>
+    <!-- 顯示結算規則 -->
+    <div style="margin-bottom:16px; padding:12px; background:var(--sf2); border-radius:var(--rs); font-size:12px; color:var(--t2); line-height:1.6;">
+      <strong>📝 結算與發薪規則：</strong><br>
+      ${p.ruleDesc ? p.ruleDesc.replace(/｜/g, '<br>') : ''}
+    </div>
+    <!-- 顏色修改 -->
+    <div class="fg" style="margin-bottom:16px"><label>自訂平台顏色</label>
       <div style="display:flex;gap:8px">
         <input type="color" id="sp-color-pick" value="${p.color}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px">
-        <input type="text"  class="finp" id="sp-color" value="${p.color}" style="flex:1">
-      </div></div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <div class="fg" style="flex:1"><label>結算日（每月幾號）</label>
-        <input type="number" class="finp" id="sp-settle" value="${p.settleDay||0}" min="0" max="31"></div>
-      <div class="fg" style="flex:1"><label>發薪日（每月幾號）</label>
-        <input type="number" class="finp" id="sp-pay" value="${p.payDay||0}" min="0" max="31"></div>
+        <input type="text" class="finp" id="sp-color" value="${p.color}" style="flex:1">
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:12px;background:var(--sf2);border-radius:var(--rs)">
-      <label style="font-size:13px;font-weight:500;flex:1">啟用此平台</label>
-      <input type="checkbox" id="sp-active" ${p.active?'checked':''} style="width:18px;height:18px;cursor:pointer">
+    <!-- 啟用開關 -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:12px;background:var(--sf2);border-radius:var(--rs)">
+      <label style="font-size:14px;font-weight:600;flex:1;cursor:pointer" for="sp-active">啟用此平台</label>
+      <input type="checkbox" id="sp-active" ${p.active?'checked':''} style="width:20px;height:20px;cursor:pointer">
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="savePlatformEdit('${id}')" class="btn-acc" style="flex:1;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">儲存</button>
-      <button onclick="deletePlatform('${id}')" style="padding:12px 14px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:13px;cursor:pointer;font-family:var(--sans)">刪除</button>
-    </div>`;
-  // 顏色選取器同步
+      <button onclick="openPlatformList()" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-size:14px;font-weight:600;cursor:pointer;">返回列表</button>
+      <button onclick="savePlatformEdit('${id}')" class="btn-acc" style="flex:2;padding:12px;font-size:14px;font-weight:700;border-radius:var(--rs)">儲存設定</button>
+    </div>
+  `;
   document.getElementById('sp-color-pick').addEventListener('input', e => { document.getElementById('sp-color').value = e.target.value; });
-  openOverlay('sub-page');
 }
+/** 儲存單一平台編輯 */
 function savePlatformEdit(id) {
   const p = S.platforms.find(x=>x.id===id);
   if (!p) return;
-  p.name      = document.getElementById('sp-name').value.trim()||p.name;
-  p.color     = document.getElementById('sp-color').value.trim()||p.color;
-  p.settleDay = parseInt(document.getElementById('sp-settle').value)||0;
-  p.payDay    = parseInt(document.getElementById('sp-pay').value)||0;
-  p.active    = document.getElementById('sp-active').checked;
+  p.color  = document.getElementById('sp-color').value.trim() || p.color;
+  p.active = document.getElementById('sp-active').checked;
   savePlatforms();
-  closeOverlay('sub-page');
-  renderSettings();
   toast('✅ 平台已更新');
-}
-async function deletePlatform(id) {
-  const ok = await customConfirm('確定刪除此平台？<br><strong>相關記錄不會被刪除，但會顯示為「未知平台」。</strong>');
-  if (!ok) return;
-  S.platforms = S.platforms.filter(p=>p.id!==id);
-  savePlatforms();
-  closeOverlay('sub-page');
+  // 更新背景畫面
+  if (S.tab === 'home') renderHome();
   renderSettings();
-  toast('已刪除平台');
-}
-function openAddPlatform() {
-  S.subMode = 'platform_add';
-  document.getElementById('sub-title').textContent = '新增平台';
-  document.getElementById('sub-add-btn').style.display = 'none';
-  const colors = ['#06C167','#D70F64','#FF6600','#3B82F6','#8B5CF6','#F59E0B'];
-  const rndColor = colors[Math.floor(Math.random()*colors.length)];
-  document.getElementById('sub-body').innerHTML = `
-    <div class="fg" style="margin-bottom:10px"><label>平台名稱</label>
-      <input type="text" class="finp" id="np-name" placeholder="例：Uber Eats"></div>
-    <div class="fg" style="margin-bottom:10px"><label>顏色</label>
-      <div style="display:flex;gap:8px">
-        <input type="color" id="np-color-pick" value="${rndColor}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px">
-        <input type="text"  class="finp" id="np-color" value="${rndColor}" style="flex:1">
-      </div></div>
-    <div style="display:flex;gap:8px;margin-bottom:14px">
-      <div class="fg" style="flex:1"><label>結算日</label>
-        <input type="number" class="finp" id="np-settle" value="0" min="0" max="31"></div>
-      <div class="fg" style="flex:1"><label>發薪日</label>
-        <input type="number" class="finp" id="np-pay" value="0" min="0" max="31"></div>
-    </div>
-    <button onclick="saveNewPlatform()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增平台</button>`;
-  document.getElementById('np-color-pick').addEventListener('input', e=>{ document.getElementById('np-color').value=e.target.value; });
-  openOverlay('sub-page');
-}
-function saveNewPlatform() {
-  const name = document.getElementById('np-name').value.trim();
-  if (!name) { toast('請輸入平台名稱'); return; }
-  S.platforms.push({
-    id:        'plat_'+newId(),
-    name,
-    color:     document.getElementById('np-color').value.trim()||'#999',
-    active:    true,
-    settleDay: parseInt(document.getElementById('np-settle').value)||0,
-    payDay:    parseInt(document.getElementById('np-pay').value)||0,
-  });
-  savePlatforms();
-  closeOverlay('sub-page');
-  renderSettings();
-  toast('✅ 平台已新增');
+  // 存檔後跳回平台列表
+  openPlatformList();
 }
 
 /* ══ 設定子頁：目標 ═══════════════════════════════ */
