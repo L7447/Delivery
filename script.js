@@ -147,9 +147,15 @@ function goPage(name) {
 }
 // 綁定底部導覽點擊
 document.querySelectorAll('.ni[data-pg]').forEach(el =>
-  el.addEventListener('click', () => goPage(el.dataset.pg)));
-// 中央＋按鈕
-document.getElementById('nav-plus').addEventListener('click', () => openAddPage());
+  el.addEventListener('click', () => {
+    const pg = el.dataset.pg;
+    if (pg === 'add' && S.tab !== 'add') {
+      openAddPage(); // 點擊新增按鈕時，清空表單
+    } else {
+      goPage(pg);
+    }
+  })
+);
 
 /* ══ 首頁渲染 ════════════════════════════════════ */
 function renderHome() {
@@ -458,7 +464,8 @@ function openAddPage(record=null, prefill={}) {
   // 渲染平台選擇 chips
   renderPlatformChips();
   calcAddTotal();
-  openOverlay('add-page');
+  // 替換掉原本的 openOverlay('add-page');
+  goPage('add');
 }
 /** 渲染新增頁平台選擇 chips */
 function renderPlatformChips() {
@@ -552,14 +559,13 @@ document.getElementById('add-confirm').addEventListener('click', () => {
   }
 
   saveRecords();
-  closeOverlay('add-page');
   S.editingId = null;
-  // 更新目前頁面顯示
-  if (S.tab === 'home')    renderHome();
-  if (S.tab === 'history') renderHistory();
+  // 替換掉原本的 closeOverlay('add-page');
+  // 儲存後自動跳回首頁
+  goPage('home'); 
+  toast('✅ 記錄成功！');
 });
-// 取消新增
-document.getElementById('add-cancel').addEventListener('click', () => closeOverlay('add-page'));
+// 取消新增的那行 document.getElementById('add-cancel') 可以直接刪除，因為頁面沒有取消按鈕了
 
 /* ══ 詳情抽屜 ════════════════════════════════════ */
 function openDetailOverlay(id) {
