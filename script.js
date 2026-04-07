@@ -314,12 +314,28 @@ function renderHome() {
               const diffColor = isToday ? 'var(--green)' : 'var(--t2)';
               
               return `
-              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-radius: 8px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+              <!-- 餅乾造型單一日期方塊 -->
+              <div style="
+                flex:1; 
+                background-color: #FFF; 
+                /* 必須要有 border-style 和 width 才能顯示圖片邊框 */
+                border-style: solid; 
+                border-width: 14px; 
+                /* 核心九宮格：載入圖片、裁切35像素(四角)、邊緣拉伸(stretch) */
+                border-image: url('images/cookie-border.png') 35 stretch; 
+                padding: 4px 0; 
+                text-align: center; 
+                display:flex; 
+                flex-direction:column; 
+                justify-content:center;
+                /* 讓整塊餅乾有微微立體感 */
+                filter: drop-shadow(0 3px 4px rgba(0,0,0,0.08));
+              ">
                 <!-- 項目名稱 -->
-                <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:3px; letter-spacing:0.5px;">${ev.name}</span>
+                <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                 <!-- 日期與天數 -->
                 <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
-                  ${ev.dateStr} <span style="font-size:12px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
+                  ${ev.dateStr} <span style="font-size:10px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
                 </span>
               </div>
               `;
