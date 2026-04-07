@@ -257,7 +257,7 @@ function renderHome() {
     };
 
     if (id === 'uber') {
-      addEvent('結算日', getNextDow([1, 4]));
+      addEvent('趟獎結算日', getNextDow([1, 4]));
       addEvent('發薪日', getNextDow([4]));
     } 
     else if (id === 'foodpanda') {
@@ -270,9 +270,9 @@ function renderHome() {
         let res = new Date(todayObj); res.setDate(d + daysToAdd);
         return res;
       };
-      addEvent('結算', getPandaNext(2020, 0, 12));
-      addEvent('明細', getPandaNext(2020, 0, 15));
-      addEvent('發薪', getPandaNext(2020, 0, 22));
+      addEvent('取單率結算日', getPandaNext(2020, 0, 12));
+      addEvent('明細寄發日', getPandaNext(2020, 0, 15));
+      addEvent('發薪日', getPandaNext(2020, 0, 22));
     } 
     else if (id === 'foodomo') {
       let nSettle = new Date(todayObj), nPay = new Date(todayObj);
@@ -298,7 +298,7 @@ function renderHome() {
       // 使用 Hex 附加透明度：'33' 約等於 20% 透明度, '66' 約等於 40% 透明度, '40' 給陰影
       // 這樣可以達到明顯的色彩透感，又不會因為顏色太深而看不清字
       html += `
-        <div style="border: 2px solid ${p.color}50; background: ${p.color}15; box-shadow: 0 6px 14px ${p.color}50; border-radius: 14px; padding: 12px; margin-bottom: 12px;">
+        <div style="border: 3px solid ${p.color}50; background: ${p.color}5; box-shadow: 0 6px 14px ${p.color}50; border-radius: 14px; padding: 12px; margin-bottom: 12px;">
           
           <!-- 平台名稱標題 -->
           <div style="display:flex; align-items:center; gap:6px; margin-bottom: 10px;">
@@ -313,27 +313,19 @@ function renderHome() {
               const dateColor = isToday ? 'var(--green)' : 'var(--t1)';
               const diffColor = isToday ? 'var(--green)' : 'var(--t2)';
               
+              // 🌟 判斷項目名稱，決定字的顏色
+              let nameColor = 'var(--t3)'; // 預設顏色
+              if (ev.name.includes('結算')) nameColor = 'var(--red)';
+              else if (ev.name.includes('明細')) nameColor = 'var(--gold)';
+              else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
+
               return `
-              <!-- 餅乾造型單一日期方塊 -->
-              <div style="
-                flex:1; 
-                background-color: transparent; /* 🌟 拿掉白色，變成透明，完美融合背景 */
-                border-style: solid; 
-                border-width: 16px; /* 稍微加粗一點讓花瓣更明顯 */
-                /* 🌟 核心：改成 round，讓邊緣花瓣自動「複製排列」增加數量 */
-                border-image: url('images/cookie-border.png') 35 round; 
-                padding: 4px 0; 
-                text-align: center; 
-                display:flex; 
-                flex-direction:column; 
-                justify-content:center;
-                filter: drop-shadow(0 3px 4px rgba(0,0,0,0.08));
-              ">
+              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-radius: 8px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                 <!-- 項目名稱 -->
-                <span style="font-size:10px; color:var(--t3); font-weight:800; margin-bottom:2px; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">${ev.name}</span>
+                <span style="font-size:12px; color:${nameColor}; font-weight:900; margin-bottom:2px; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.9);">${ev.name}</span>
                 <!-- 日期與天數 -->
-                <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor}; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">
-                  ${ev.dateStr} <span style="font-size:10px; font-weight:700; color:${diffColor};">（${ev.diffStr}）</span>
+                <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
+                  ${ev.dateStr} <span style="font-size:12px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
                 </span>
               </div>
               `;
