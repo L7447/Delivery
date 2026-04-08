@@ -203,7 +203,7 @@ function renderHome() {
     platStats.forEach(p => {
       // ✅ 將平台顏色設定在行內樣式 (background 設透明度 15%，邊框實色)
       html += `
-        <div class="hero-plat-row" style="background:${p.color}10; border: 1px solid ${p.color}80; color: ${p.color};">
+        <div class="hero-plat-row" style="background:${p.color}10; border: 1px solid ${p.color}90; color: ${p.color};">
           <span class="hp-name">${p.name}收入：</span>
           <span class="hp-sum">$ ${fmt(p.sum)}</span>
           <span class="hp-ord">${p.orders} 單</span>
@@ -306,7 +306,7 @@ function renderHome() {
       const events = calcNextDates(p.id);
       if (!events) return;
       html += `
-        <div style="border: 3px solid ${p.color}85; background: ${p.color}15; border-radius: 16px; padding: 4px; margin-bottom: 2px;">
+        <div style="border: 3px solid ${p.color}90; background: ${p.color}15; border-radius: 16px; padding: 4px; margin-bottom: 2px;">
           <div style="display:flex; align-items:center; gap:5px; margin-bottom: 4px;">
             <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
             <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
