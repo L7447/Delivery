@@ -220,12 +220,32 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   color: var(--acc); /* 變數使用主色橘強調 */
 }
 
+/* ══ 首頁專屬佈局（上層固定，下層捲動） ══════════════════ */
+#page-home {
+  padding: 0; /* 移除預設內距 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 防止整頁捲動 */
+}
+.home-top-fixed {
+  padding: 16px 16px 0 16px;
+  flex-shrink: 0; /* 確保上層不被壓縮 */
+  background: var(--bg); /* 確保滑動時背景不會穿透 */
+  z-index: 10;
+}
+.home-bottom-scroll {
+  flex: 1;
+  overflow-y: auto; /* 下層獨立捲動 */
+  padding: 0 16px 24px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ══ 首頁標題與日期（新版獨立 UI） ══════════════════════ */
 .home-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 16px; /* 加大與下方數據的距離 */
+  margin-bottom: 12px;
   padding: 0 4px;
 }
 .home-pg-title {
@@ -252,92 +272,77 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   color: var(--acc);
 }
 
-/* ══ 今日概況最外框（全透明、無陰影） ══════════════ */
+/* ══ 今日概況最外框（全透明） ══════════════ */
 .today-hero {
-  background: transparent; /* 全透明背景 */
-  box-shadow: none;        /* 刪除陰影 */
-  padding: 0 4px;          /* 縮小內距，讓內容貼齊邊緣 */
-  margin-bottom: 2px;     
+  background: transparent;
+  box-shadow: none;        
+  padding: 0 4px;          
+  margin-bottom: 16px;     
 }
 
-/* 各平台明細列表容器 */
-.hero-plat-list { 
-  display: flex;                   
-  flex-direction: column;          
-  gap: 3px;                        
-}
-
-/* 各平台單行資料（移除固定背景，改由 JS 動態注入） */
+/* 各平台明細 */
+.hero-plat-list { display: flex; flex-direction: column; gap: 4px; }
 .hero-plat-row {
-  display: flex;                   
-  align-items: center;             
-  padding: 6px 14px;              /* 加大內距讓框框更厚實 */
-  border-radius: 12px;             /* 稍微加大圓角 */
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--t1);                /* 確保文字顏色能適應淺色背景 */
+  display: flex; align-items: center;             
+  padding: 8px 14px; border-radius: 12px;             
+  font-size: 13px; font-weight: 600; color: var(--t1);                
 }
-
-/* 單行內部各欄位 */
 .hp-name { width: 35%; white-space: nowrap; }  
 .hp-sum { font-family: var(--mono); font-weight: 800; width: 25%; text-align: right; } 
 .hp-ord { font-weight: 600; width: 20%; text-align: right; }      
 .hp-hrs { font-weight: 600; width: 20%; text-align: right; opacity: 0.8; } 
 
-/* 總結區塊的分隔線 */
-.hero-divider { 
-  height: 1px;                     
-  background: var(--border); /* 使用標準邊框色 */
-  margin: 2px 0;                  
-}
-
-/* 總結數據三等分布局 */
+/* 總結區塊 */
 .hero-total-row { 
-  display: flex;                   
-  justify-content: space-between;  
-  text-align: center;              
-  background: var(--sf);           /* 給總和一個白底卡片增加辨識度 */
-  border: 2px dashed #778899;
-  border-radius: 12px;
-  padding: 6px 0;
-  margin: 2px 0px 10px;          
+  display: flex; justify-content: space-between; text-align: center;              
+  background: var(--sf); border: 2px dashed #778899;
+  border-radius: 12px; padding: 8px 0; margin-top: 6px;          
 }
-.ht-item { 
-  flex: 1;                         
-  display: flex;                   
-  flex-direction: column;          
-  gap: 4px;      
-} 
-.ht-val { 
-  font-family: var(--mono);        
-  font-size: 18px;                 
-  font-weight: 800;                
-  color: var(--blue);               /* 總和數字使用藍色強調 */
-}
-.ht-lbl { 
-  font-size: 11px;                 
-  color: #000000;
-  font-weight: 600;                
-}
+.ht-item { flex: 1; display: flex; flex-direction: column; gap: 4px; } 
+.ht-val { font-family: var(--mono); font-size: 18px; font-weight: 800; color: var(--blue); }
+.ht-lbl { font-size: 11px; color: #000; font-weight: 600; }
 
-/* ══ 打卡按鈕修復（確保全寬大按鈕） ══════════════ */
-.punch-card {
-  background: var(--sf); border: 2px solid var(--border); 
-  border-radius: var(--r); padding: 16px; margin-bottom: 16px; 
+/* ══ 新版：打卡區塊 (精簡美化) ══════════════ */
+.punch-card-new {
+  background: var(--sf); 
+  border: 1px solid var(--border); 
+  border-radius: 16px; 
+  padding: 12px 16px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
 }
-.punch-main-btn {
-  display: block;                  /* 確保為區塊元素 */
-  width: 100%;                     /* 寬度 100% 滿版 */
-  padding: 16px;                   /* 加大上下內距 */
-  border-radius: var(--rs);
-  border: none; 
-  font-size: 16px;                 /* 放大字體 */
-  font-weight: 700;
-  cursor: pointer; 
-  font-family: var(--sans); 
-  transition: .2s;
-  text-align: center;              /* 文字置中 */
+.punch-status-left {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--t2);
+}
+.punch-dot-new { width: 12px; height: 12px; border-radius: 50%; background: var(--t3); }
+.punch-dot-new.online { background: var(--green); box-shadow: 0 0 0 3px var(--green-d); animation: pulse 1.5s infinite; }
+.punch-btn-right {
+  padding: 8px 18px; border-radius: 20px;
+  font-size: 13px; font-weight: 700; border: none; cursor: pointer;
+  font-family: var(--sans); transition: 0.2s;
   -webkit-tap-highlight-color: transparent;
+}
+.btn-go-online { background: var(--acc); color: #fff; box-shadow: 0 2px 8px rgba(255,107,53,0.3); }
+.btn-go-offline { background: var(--sf2); color: var(--t2); border: 1px solid var(--border); }
+.btn-go-offline:active { background: #e5e5e5; }
+
+/* ══ 新版：下半部 Tab 切換按鈕 ══════════════ */
+.home-tabs {
+  display: flex; gap: 4px; background: var(--border);
+  padding: 4px; border-radius: 12px; margin-bottom: 12px;
+}
+.home-tab-btn {
+  flex: 1; padding: 10px 0; border-radius: 8px; border: none; background: transparent;
+  color: var(--t2); font-size: 13px; font-weight: 600; font-family: var(--sans);
+  cursor: pointer; transition: 0.2s;
+}
+.home-tab-btn.active {
+  background: var(--sf); color: var(--acc);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
 
 /* ══ 月曆 ═════════════════════════════════════════ */
