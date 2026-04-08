@@ -280,7 +280,7 @@ function renderHome() {
         targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; });
         let res = new Date(todayObj); res.setDate(d + add); return res;
       };
-      if (id === 'uber') { addEvent('趟獎結算', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
+      if (id === 'uber') { addEvent('趟獎結算日', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
       else if (id === 'foodpanda') {
         const getPandaNext = (aY, aM, aD) => {
           const anchor = new Date(aY, aM, aD); const diffDays = Math.floor((todayObj - anchor) / 86400000);
@@ -351,32 +351,39 @@ function renderHome() {
         const wPct = Math.min(100, Math.round(weekTotal/weekly*100));
         const wRemain = Math.max(0, weekly-weekTotal);
         
+        // ✅ 將預設顏色改為 var(--blue)
         bottomHtml += `
         <div style="margin-bottom: ${monthly>0 ? '16px' : '0'};">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
             <span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${wPct}%</span>
+            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blue)">${wPct}%</span>
           </div>
-          <div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wPct>=100?'var(--green)':wPct>=70?'var(--gold)':'var(--acc)'}"></div></div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${wPct}%;background:${wPct>=100?'var(--green)':wPct>=70?'var(--gold)':'var(--blue)'}"></div>
+          </div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
             <span>已達 $ ${fmt(weekTotal)}</span>
             <span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span>
           </div>
         </div>`;
       }
+      
       if (monthly > 0) {
         const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1);
         const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
         const mPct       = Math.min(100, Math.round(monthTotal/monthly*100));
         const mRemain    = Math.max(0, monthly-monthTotal);
         
+        // ✅ 將預設顏色改為 var(--blue)
         bottomHtml += `
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
             <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${mPct}%</span>
+            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blue)">${mPct}%</span>
           </div>
-          <div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mPct>=100?'var(--green)':mPct>=70?'var(--gold)':'var(--acc)'}"></div></div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${mPct}%;background:${mPct>=100?'var(--green)':mPct>=70?'var(--blue)':'var(--red)'}"></div>
+          </div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
             <span>已達 $ ${fmt(monthTotal)}</span>
             <span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span>
