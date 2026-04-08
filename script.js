@@ -191,19 +191,19 @@ function renderHome() {
   <div class="home-header">
     <div class="home-pg-title">今日概況</div>
     <div class="home-pg-date">
-      <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期<b>${dow}</b>
+      <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b>
     </div>
   </div>`;
 
-  // ── 2. 新版：純數據概況大卡片 ──
+  // ── 2. 新版：外框全透明的概況卡片 ──
   html += `<div class="today-hero">`;
 
-  // 若今天有工作數據，則渲染各平台明細列表
   if (platStats.length > 0) {
     html += `<div class="hero-plat-list">`;
     platStats.forEach(p => {
+      // ✅ 將平台顏色設定在行內樣式 (background 設透明度 15%，邊框實色)
       html += `
-        <div class="hero-plat-row">
+        <div class="hero-plat-row" style="background:${p.color}25; border: 1px solid ${p.color}80; color: ${p.color};">
           <span class="hp-name">${p.name}收入：</span>
           <span class="hp-sum">$ ${fmt(p.sum)}</span>
           <span class="hp-ord">${p.orders} 單</span>
@@ -212,10 +212,9 @@ function renderHome() {
       `;
     });
     html += `</div>`;
-    html += `<div class="hero-divider"></div>`; // 如果有資料，加上分隔線
+    html += `<div class="hero-divider"></div>`;
   } else {
-    // 若沒有資料，給個簡單的空提示
-    html += `<div style="text-align:center; font-size:13px; opacity:0.8; margin-bottom:12px;">今日尚未有收入資料</div>`;
+    html += `<div style="text-align:center; font-size:13px; color:var(--t3); margin-bottom:12px;">今日尚未有收入資料</div>`;
     html += `<div class="hero-divider"></div>`;
   }
 
@@ -227,9 +226,6 @@ function renderHome() {
       <div class="ht-item"><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div><div class="ht-lbl">工時(h)</div></div>
     </div>
   </div>`; 
-  // ↑今日概況大卡片結束↑ (在此完美閉合標籤)
-
-  // 【刪除今日記錄列表】：根據要求，已將今日記錄流水帳列表完全移除
 
   // ── 3. 打卡卡片 ──
   const isPunched = S.punch && S.punch.date === today;
@@ -251,6 +247,7 @@ function renderHome() {
     ${isPunched?`<div class="punch-time-row">
       <span>🟢 上線：${S.punch.startTime}</span>
     </div>`:''}
+    <!-- ✅ 確保 button class 完整，並套用剛剛修正的全寬大按鈕樣式 -->
     <button class="punch-main-btn ${isPunched?'go-offline':'go-online'}"
       onclick="${isPunched?'punchOut()':'punchIn()'}">
       ${isPunched?'⏹ 下線打卡':'▶ 上線打卡'}
@@ -280,7 +277,7 @@ function renderHome() {
       let res = new Date(todayObj); res.setDate(d + add); return res;
     };
     if (id === 'uber') {
-      addEvent('趟獎結算', getNextDow([1, 4]));
+      addEvent('趟獎結算日', getNextDow([1, 4]));
       addEvent('發薪日', getNextDow([4]));
     } else if (id === 'foodpanda') {
       const getPandaNext = (aY, aM, aD) => {
@@ -290,8 +287,8 @@ function renderHome() {
         let res = new Date(todayObj); res.setDate(d + daysToAdd);
         return res;
       };
-      addEvent('取單結算', getPandaNext(2020, 0, 12));
-      addEvent('明細寄發', getPandaNext(2020, 0, 15));
+      addEvent('85% 取單率結算日', getPandaNext(2020, 0, 12));
+      addEvent('明細寄發日', getPandaNext(2020, 0, 15));
       addEvent('發薪日', getPandaNext(2020, 0, 22));
     } else if (id === 'foodomo') {
       let nSettle = new Date(todayObj), nPay = new Date(todayObj);
@@ -309,7 +306,7 @@ function renderHome() {
       const events = calcNextDates(p.id);
       if (!events) return;
       html += `
-        <div style="border: 3px solid ${p.color}80; background: ${p.color}15; box-shadow: 0 6px 14px ${p.color}30; border-radius: 16px; padding: 12px; margin-bottom: 10px;">
+        <div style="border: 3px solid ${p.color}80; background: ${p.color}15; border-radius: 16px; padding: 3px; margin-bottom: 1px;">
           <div style="display:flex; align-items:center; gap:5px; margin-bottom: 8px;">
             <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
             <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -339,28 +336,69 @@ function renderHome() {
     html += `</div>`;
   }
 
-  // ── 5. 月目標進度 (已修復 Crash Bug) ──
+  // ── 5. 週目標 & 月目標進度 ──
+  const weekly = pf(S.settings.goals?.weekly);
   const monthly = pf(S.settings.goals?.monthly);
-  if (monthly > 0) {
-    // 【Bug 修復】將原本錯誤的 todayDate 改為正確的 dateObj 變數
-    const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1);
-    const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
-    const pct        = Math.min(100, Math.round(monthTotal/monthly*100));
-    const remain     = Math.max(0, monthly-monthTotal);
-    html += `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span>
-        <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${pct}%</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width:${pct}%;background:${pct>=100?'var(--green)':pct>=70?'var(--gold)':'var(--acc)'}"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
-        <span>已達 $ ${fmt(monthTotal)}</span>
-        <span>${remain>0?`還差 $ ${fmt(remain)}`:'🎉 已達標！'}</span>
-      </div>
-    </div>`;
+  
+  if (weekly > 0 || monthly > 0) {
+    html += `<div class="card">`;
+    
+    // ✅ 週目標計算與顯示
+    if (weekly > 0) {
+      // 取得本週一日期
+      const wDate = new Date(dateObj);
+      const wDay = wDate.getDay() || 7; // 將日(0)轉為7
+      wDate.setDate(wDate.getDate() - wDay + 1);
+      
+      let weekTotal = 0;
+      for(let i=0; i<7; i++) {
+        const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`;
+        weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0);
+        wDate.setDate(wDate.getDate() + 1);
+      }
+      
+      const wPct = Math.min(100, Math.round(weekTotal/weekly*100));
+      const wRemain = Math.max(0, weekly-weekTotal);
+      
+      html += `
+      <div style="margin-bottom: ${monthly>0 ? '16px' : '0'};">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span>
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${wPct}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${wPct}%;background:${wPct>=100?'var(--green)':wPct>=70?'var(--gold)':'var(--acc)'}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
+          <span>已達 $ ${fmt(weekTotal)}</span>
+          <span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span>
+        </div>
+      </div>`;
+    }
+
+    // 月目標顯示
+    if (monthly > 0) {
+      const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1);
+      const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
+      const mPct       = Math.min(100, Math.round(monthTotal/monthly*100));
+      const mRemain    = Math.max(0, monthly-monthTotal);
+      
+      html += `
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span>
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${mPct}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${mPct}%;background:${mPct>=100?'var(--green)':mPct>=70?'var(--gold)':'var(--acc)'}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
+          <span>已達 $ ${fmt(monthTotal)}</span>
+          <span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span>
+        </div>
+      </div>`;
+    }
+    html += `</div>`; // 結束目標 card
   }
 
   document.getElementById('home-content').innerHTML = html;
