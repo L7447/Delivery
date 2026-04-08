@@ -173,68 +173,63 @@ function renderHome() {
   const dateObj  = new Date(today+'T00:00:00');
   const dow      = ['日','一','二','三','四','五','六'][dateObj.getDay()]; // 轉換星期
 
-  const activePlatforms = S.platforms.filter(p=>p.active);      // 取得目前啟用的平台
+  const activePlatforms = S.platforms.filter(p=>p.active);      // 取得啟用的平台
 
-  // 計算今日各平台的詳細數據（收入、單數、工時）
+  // 計算今日各平台的詳細數據
   const platStats = activePlatforms.map(p => {
-    const recs = dayRecs.filter(r => r.platformId === p.id);    // 篩選屬於該平台的記錄
+    const recs = dayRecs.filter(r => r.platformId === p.id);
     return {
       ...p,
-      sum: recs.reduce((s, r) => s + recTotal(r), 0),           // 加總該平台總收入
-      orders: recs.reduce((s, r) => s + pf(r.orders), 0),       // 加總該平台總接單數
-      hours: recs.reduce((s, r) => s + pf(r.hours), 0)          // 加總該平台總工時
+      sum: recs.reduce((s, r) => s + recTotal(r), 0),
+      orders: recs.reduce((s, r) => s + pf(r.orders), 0),
+      hours: recs.reduce((s, r) => s + pf(r.hours), 0)
     };
-  }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);     // 只保留有打卡或有收入的平台
+  }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
-  // ── 1. 新版：今日概況大卡片 ──
+  // ── 1. 新版：首頁標題與獨立日期 UI ──
   let html = `
-  <div class="today-hero">
-    <div class="hero-title">今日概況</div>                      <!-- 置中主標題 -->
-    <div class="hero-date">
+  <div class="home-header">
+    <div class="home-pg-title">今日概況</div>
+    <div class="home-pg-date">
       <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期<b>${dow}</b>
-    </div>                                                      <!-- 動態日期，數字部位加粗 -->
-  `;
+    </div>
+  </div>`;
+
+  // ── 2. 新版：純數據概況大卡片 ──
+  html += `<div class="today-hero">`;
 
   // 若今天有工作數據，則渲染各平台明細列表
   if (platStats.length > 0) {
     html += `<div class="hero-plat-list">`;
     platStats.forEach(p => {
-      // 依照要求格式：Uber Eats收入： $ 1680 30 單 9.5 (h)
       html += `
         <div class="hero-plat-row">
-          <span class="hp-name">${p.name}收入：</span>        <!-- 平台名稱前綴 -->
-          <span class="hp-sum">$ ${fmt(p.sum)}</span>           <!-- 該平台收入 -->
-          <span class="hp-ord">${p.orders} 單</span>            <!-- 該平台單數 -->
-          <span class="hp-hrs">${p.hours > 0 ? p.hours.toFixed(1) : 0} (h)</span> <!-- 該平台工時 -->
+          <span class="hp-name">${p.name}收入：</span>
+          <span class="hp-sum">$ ${fmt(p.sum)}</span>
+          <span class="hp-ord">${p.orders} 單</span>
+          <span class="hp-hrs">${p.hours > 0 ? p.hours.toFixed(1) : 0} (h)</span>
         </div>
       `;
     });
     html += `</div>`;
-  }
-
-  // 下半部：漸層分隔線與總結總和
-  html += `
-    <div class="hero-divider"></div>                            <!-- 精美漸層分隔線 -->
-    <div class="hero-total-row">
-      <div class="ht-item"><div class="ht-val">$ ${fmt(total)}</div><div class="ht-lbl">總收入</div></div> <!-- 今日總收入 -->
-      <div class="ht-item"><div class="ht-val">${orders} 單</div><div class="ht-lbl">總單數</div></div>   <!-- 今日總單數 -->
-      <div class="ht-item"><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div><div class="ht-lbl">工時(h)</div></div> <!-- 今日總工時 -->
-    </div>
-  </div>`;
-
-  // ── 2. 移上來的「今日記錄列表」 ──
-  html += `<div class="sec-title" style="margin-top:4px">今日記錄</div>`;
-  if (!dayRecs.length) {
-    html += `<div class="empty-tip">✨ 今天還沒有記錄<br>點下方 ＋ 開始記帳</div>`; // 若無記錄的空狀態提示
+    html += `<div class="hero-divider"></div>`; // 如果有資料，加上分隔線
   } else {
-    // 外層容器加上 margin-bottom 隔開下方的打卡區塊
-    html += `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">`; 
-    // 由新到舊排序陣列，並渲染每筆記錄卡片
-    dayRecs.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||'')).forEach(r => {
-      html += buildRecItem(r);
-    });
-    html += `</div>`;
+    // 若沒有資料，給個簡單的空提示
+    html += `<div style="text-align:center; font-size:13px; opacity:0.8; margin-bottom:12px;">今日尚未有收入資料</div>`;
+    html += `<div class="hero-divider"></div>`;
   }
+
+  // 下半部：總結總和
+  html += `
+    <div class="hero-total-row">
+      <div class="ht-item"><div class="ht-val">$ ${fmt(total)}</div><div class="ht-lbl">總收入</div></div>
+      <div class="ht-item"><div class="ht-val">${orders} 單</div><div class="ht-lbl">總單數</div></div>
+      <div class="ht-item"><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div><div class="ht-lbl">工時(h)</div></div>
+    </div>
+  </div>`; 
+  // ↑今日概況大卡片結束↑ (在此完美閉合標籤)
+
+  // 【刪除今日記錄列表】：根據要求，已將今日記錄流水帳列表完全移除
 
   // ── 3. 打卡卡片 ──
   const isPunched = S.punch && S.punch.date === today;
@@ -262,44 +257,32 @@ function renderHome() {
     </button>
   </div>`;
 
-  // ── 4. 平台結算與發薪動態計算（保持原樣，顯示於下方） ──
-  // ... (以下保留您原本計算 calcNextDates 與渲染 activePlatforms 的程式碼)
-
-  // ── 平台結算與發薪動態計算（整合精美版） ──
+  // ── 4. 平台結算與發薪動態計算 ──
   const todayObj = new Date();
-  todayObj.setHours(0,0,0,0); // 清除時間，只留日期
+  todayObj.setHours(0,0,0,0);
   
-  // 計算邏輯函數：回傳陣列 [{name, dateStr, diff, diffStr}]
   const calcNextDates = (id) => {
     const y = todayObj.getFullYear(), m = todayObj.getMonth(), d = todayObj.getDate();
     const events = [];
-
-    // 建立事件的輔助函數
-    const addEvent = (name, dateObj) => {
-      const diff = Math.round((dateObj - todayObj) / 86400000);
+    const addEvent = (name, dObj) => {
+      const diff = Math.round((dObj - todayObj) / 86400000);
       events.push({
         name: name,
-        dateStr: `${dateObj.getMonth()+1}/${pad(dateObj.getDate())}`,
+        dateStr: `${dObj.getMonth()+1}/${pad(dObj.getDate())}`,
         diff: diff,
         diffStr: diff === 0 ? '今天' : `${diff} 天後`
       });
     };
-
-    // 尋找下一個指定的星期幾
     const getNextDow = (targets) => {
       let cur = todayObj.getDay();
       let add = 7;
       targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; });
       let res = new Date(todayObj); res.setDate(d + add); return res;
     };
-
     if (id === 'uber') {
-      addEvent('趟獎結算日', getNextDow([1, 4]));
+      addEvent('趟獎結算', getNextDow([1, 4]));
       addEvent('發薪日', getNextDow([4]));
-    } 
-    else if (id === 'foodpanda') {
-      // 根據圖表精準設定錨點 (2020年為基礎以防跨年問題，月份 0=一月)
-      // 錨點：結算(日)、明細(三)、發薪(三)
+    } else if (id === 'foodpanda') {
       const getPandaNext = (aY, aM, aD) => {
         const anchor = new Date(aY, aM, aD);
         const diffDays = Math.floor((todayObj - anchor) / 86400000);
@@ -307,93 +290,75 @@ function renderHome() {
         let res = new Date(todayObj); res.setDate(d + daysToAdd);
         return res;
       };
-      addEvent('取單率結算日', getPandaNext(2020, 0, 12));
-      addEvent('明細寄發日', getPandaNext(2020, 0, 15));
+      addEvent('取單結算', getPandaNext(2020, 0, 12));
+      addEvent('明細寄發', getPandaNext(2020, 0, 15));
       addEvent('發薪日', getPandaNext(2020, 0, 22));
-    } 
-    else if (id === 'foodomo') {
+    } else if (id === 'foodomo') {
       let nSettle = new Date(todayObj), nPay = new Date(todayObj);
       if (d <= 15) nSettle.setDate(15); else nSettle = new Date(y, m + 1, 0); 
       if (d <= 5) nPay.setDate(5); else if (d <= 20) nPay.setDate(20); else nPay = new Date(y, m + 1, 5);
-      
       addEvent('結算日', nSettle);
       addEvent('發薪日', nPay);
-    } 
-    else return null;
-
+    } else return null;
     return events;
   };
 
-  // ── 渲染整合行事曆卡片（精美透感獨立卡片版） ──
   if (activePlatforms.length) {
     html += `<div style="display:flex; flex-direction:column; margin-bottom:14px;">`;
-
     activePlatforms.forEach(p => {
       const events = calcNextDates(p.id);
       if (!events) return;
-
-      // 使用 Hex 附加透明度：'33' 約等於 20% 透明度, '66' 約等於 40% 透明度, '40' 給陰影
-      // 這樣可以達到明顯的色彩透感，又不會因為顏色太深而看不清字
       html += `
-        <div style="border: 3px solid ${p.color}80; background: ${p.color}15; box-shadow: 0 6px 14px ${p.color}50; border-radius: 20px; padding: 10px; margin-bottom: 10px;">
-          
-          <!-- 平台名稱標題 -->
-          <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
+        <div style="border: 3px solid ${p.color}80; background: ${p.color}15; box-shadow: 0 6px 14px ${p.color}30; border-radius: 16px; padding: 12px; margin-bottom: 10px;">
+          <div style="display:flex; align-items:center; gap:5px; margin-bottom: 8px;">
             <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
-            <span style="font-size:14px; font-weight:800; color:${p.color}; text-shadow: 0 1px 2px rgba(255,255,255,0.8); letter-spacing:0.5px;">${p.name}</span>
+            <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
           </div>
-
-          <!-- 日期方塊列 -->
           <div style="display:flex; gap:6px;">
             ${events.map(ev => {
               const isToday = ev.diff === 0;
               const dateColor = isToday ? 'var(--green)' : 'var(--t1)';
               const diffColor = isToday ? 'var(--green)' : 'var(--t2)';
-              
-              // 🌟 判斷項目名稱，決定字的顏色
-              let nameColor = 'var(--t3)'; // 預設顏色
+              let nameColor = 'var(--t3)'; 
               if (ev.name.includes('結算')) nameColor = 'var(--red)';
               else if (ev.name.includes('明細')) nameColor = 'var(--gold)';
               else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
 
               return `
-              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(59, 131, 246, 0.8); border-radius: 10px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
-                <!-- 項目名稱 -->
-                <span style="font-size:12px; color:${nameColor}; font-weight:900; margin-bottom:2px; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.9);">${ev.name}</span>
-                <!-- 日期與天數 -->
+              <div style="flex:1; background: var(--sf); border: 1px solid rgba(0,0,0,0.05); border-radius: 10px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:4px; letter-spacing:0.5px;">${ev.name}</span>
                 <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
-                  ${ev.dateStr} <span style="font-size:12px; font-weight:600; color:${diffColor};">（${ev.diffStr}）</span>
+                  ${ev.dateStr} <span style="font-size:11px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span>
                 </span>
               </div>
               `;
             }).join('')}
           </div>
-
         </div>`;
     });
-
     html += `</div>`;
   }
 
-  // ── 月目標進度 ──
+  // ── 5. 月目標進度 (已修復 Crash Bug) ──
   const monthly = pf(S.settings.goals?.monthly);
   if (monthly > 0) {
-    const monthRecs  = getMonthRecs(todayDate.getFullYear(), todayDate.getMonth()+1);
+    // 【Bug 修復】將原本錯誤的 todayDate 改為正確的 dateObj 變數
+    const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1);
     const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
     const pct        = Math.min(100, Math.round(monthTotal/monthly*100));
     const remain     = Math.max(0, monthly-monthTotal);
     html += `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-        <span style="font-size:12px;font-weight:600;color:var(--t2)">📈 本月目標進度</span>
-        <span style="font-family:var(--mono);font-size:12px;color:var(--acc)">${pct}%</span>
+        <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span>
+        <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${pct}%</span>
       </div>
       <div class="progress-track">
         <div class="progress-fill" style="width:${pct}%;background:${pct>=100?'var(--green)':pct>=70?'var(--gold)':'var(--acc)'}"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:4px">
-        <span>已達 NT$ ${fmt(monthTotal)}</span>
-        <span>${remain>0?`還差 NT$ ${fmt(remain)}`:'🎉 已達標！'}</span>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
+        <span>已達 $ ${fmt(monthTotal)}</span>
+        <span>${remain>0?`還差 $ ${fmt(remain)}`:'🎉 已達標！'}</span>
       </div>
     </div>`;
   }
