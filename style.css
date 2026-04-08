@@ -271,7 +271,7 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
 .hero-plat-row {
   display: flex;                   
   align-items: center;             
-  padding: 12px 14px;              /* 加大內距讓框框更厚實 */
+  padding: 6px 14px;              /* 加大內距讓框框更厚實 */
   border-radius: 12px;             /* 稍微加大圓角 */
   font-size: 13px;
   font-weight: 600;
@@ -288,7 +288,7 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
 .hero-divider { 
   height: 1px;                     
   background: var(--border); /* 使用標準邊框色 */
-  margin: 16px 0;                  
+  margin: 2px 0;                  
 }
 
 /* 總結數據三等分布局 */
@@ -299,7 +299,7 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   background: var(--sf);           /* 給總和一個白底卡片增加辨識度 */
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 12px 0;
+  padding: 6px 0;
 }
 .ht-item { 
   flex: 1;                         
@@ -311,11 +311,11 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   font-family: var(--mono);        
   font-size: 18px;                 
   font-weight: 800;                
-  color: var(--acc);               /* 總和數字使用橘色強調 */
+  color: var(--blue);               /* 總和數字使用橘色強調 */
 }
 .ht-lbl { 
   font-size: 11px;                 
-  color: var(--t3);
+  color: #000000;
   font-weight: 600;                
 }
 
