@@ -188,97 +188,100 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ══ 首頁元件 ════════════════════════════════════ */
-/* ══ 首頁今日概況卡片（無浮水印、精美優化版） ══════════════ */
+/* ══ 首頁標題與日期（新版獨立 UI） ══════════════════════ */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+.home-pg-title {
+  font-family: var(--title);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--t1);
+  line-height: 1.2;
+}
+.home-pg-date {
+  font-size: 13px;
+  color: var(--t2);
+  font-weight: 500;
+  background: var(--sf);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+.home-pg-date b {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--acc); /* 變數使用主色橘強調 */
+}
+
+/* ══ 首頁今日概況卡片（精美優化版） ══════════════ */
 .today-hero {
-  /* 使用更高級的暖橘多段漸層，提升質感 */
   background: linear-gradient(135deg, #FF7A45 0%, #FF8F50 50%, #FFB07D 100%);
-  border-radius: 18px;             /* 加大圓角，視覺更柔和現代 */
-  padding: 18px 16px;              /* 縮減左右內距，讓出更多空間給數據 */
-  color: #ffffff;                  /* 文字全白 */
-  margin-bottom: 16px;             /* 與下方區塊保持適當距離 */
-  /* 添加雙層陰影：外層環境陰影 + 內層頂部高光邊框，創造立體感 */
+  border-radius: 18px;             
+  padding: 18px 16px;              
+  color: #ffffff;                  
+  margin-bottom: 16px;             
   box-shadow: 0 8px 20px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-/* 置中標題 */
-.hero-title { 
-  font-size: 14px;                 /* 縮小標題字級，襯托下方數據 */
-  font-weight: 800;                /* 最粗字重 */
-  text-align: center;              /* 文字置中 */
-  margin-bottom: 8px;              /* 底部留白 */
-  letter-spacing: 2px;             /* 增加字距，提升質感 */
-  color: rgba(255, 255, 255, 0.9); /* 稍微帶透明度，避免搶過重點 */
-}
-
-/* 動態日期 */
-.hero-date { 
-  font-size: 13px;                 /* 預設字體大小 */
-  text-align: center;              /* 文字置中 */
-  margin-bottom: 16px;             /* 底部留白，隔開清單 */
-  text-shadow: 0 1px 2px rgba(0,0,0,0.1); /* 輕微文字陰影，增強可讀性 */
-}
-.hero-date b { 
-  font-weight: 800;                /* 變數部分（年月日時）加粗 */
-  font-size: 16px;                 /* 變數部分放大 */
-  font-family: var(--mono);        /* 數字使用等寬字體，看起來更整齊 */
 }
 
 /* 各平台明細列表容器 */
 .hero-plat-list { 
-  display: flex;                   /* 使用彈性佈局 */
-  flex-direction: column;          /* 直向排列 */
-  gap: 6px;                        /* 各平台行之間的間距 */
-  margin-bottom: 14px;             /* 底部留白 */
+  display: flex;                   
+  flex-direction: column;          
+  gap: 6px;                        
 }
 
 /* 各平台單行資料（玻璃擬態風格） */
 .hero-plat-row {
-  display: flex;                   /* 使用彈性佈局 */
-  align-items: center;             /* 垂直置中 */
-  background: rgba(255, 255, 255, 0.15); /* 半透明白色背景，營造毛玻璃感 */
-  border: 1px solid rgba(255, 255, 255, 0.2); /* 加上微弱的白邊，增加立體感 */
-  padding: 8px 12px;               /* 內距適中 */
-  border-radius: 10px;             /* 小圓角 */
-  font-size: 13px;                 /* 基礎字體大小 */
+  display: flex;                   
+  align-items: center;             
+  background: rgba(255, 255, 255, 0.15); 
+  border: 1px solid rgba(255, 255, 255, 0.2); 
+  padding: 8px 12px;               
+  border-radius: 10px;             
+  font-size: 13px;                 
 }
-/* 單行內部各欄位寬度與對齊設定 */
-.hp-name { font-weight: 600; width: 35%; white-space: nowrap; }  /* 平台名稱，佔寬 35% */
-.hp-sum { font-family: var(--mono); font-weight: 700; width: 25%; text-align: right; } /* 收入，佔寬 25%，靠右 */
-.hp-ord { font-weight: 500; width: 20%; text-align: right; }      /* 單數，佔寬 20%，靠右 */
-.hp-hrs { font-weight: 500; width: 20%; text-align: right; opacity: 0.9; } /* 工時，佔寬 20%，靠右微透 */
+.hp-name { font-weight: 600; width: 35%; white-space: nowrap; }  
+.hp-sum { font-family: var(--mono); font-weight: 700; width: 25%; text-align: right; } 
+.hp-ord { font-weight: 500; width: 20%; text-align: right; }      
+.hp-hrs { font-weight: 500; width: 20%; text-align: right; opacity: 0.9; } 
 
 /* 總結區塊的分隔線 */
 .hero-divider { 
-  height: 1px;                     /* 高度 1px */
-  /* 使用漸層線條，中間亮、兩側透明消失，極具設計感 */
+  height: 1px;                     
   background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%); 
-  margin: 12px 0;                  /* 上下留白 */
+  margin: 12px 0;                  
 }
 
 /* 總結數據三等分布局 */
 .hero-total-row { 
-  display: flex;                   /* 彈性佈局 */
-  justify-content: space-between;  /* 分散對齊 */
-  text-align: center;              /* 內部文字置中 */
-  padding: 0 4px;                  /* 微微向內縮 */
+  display: flex;                   
+  justify-content: space-between;  
+  text-align: center;              
+  padding: 0 4px;                  
 }
 .ht-item { 
-  flex: 1;                         /* 均分三等份寬度 */
-  display: flex;                   /* 彈性佈局 */
-  flex-direction: column;          /* 上下排列 */
-  gap: 2px;                        /* 數字與標籤間的微小間距 */
+  flex: 1;                         
+  display: flex;                   
+  flex-direction: column;          
+  gap: 2px;                        
 } 
 .ht-val { 
-  font-family: var(--mono);        /* 數字字體 */
-  font-size: 17px;                 /* 總計數值放大 */
-  font-weight: 800;                /* 最粗 */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); /* 增加立體感 */
+  font-family: var(--mono);        
+  font-size: 17px;                 
+  font-weight: 800;                
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); 
 }
 .ht-lbl { 
-  font-size: 11px;                 /* 底部標籤縮小 */
-  opacity: 0.8;                    /* 微透明 */
-  font-weight: 500;                /* 中等字重 */
+  font-size: 11px;                 
+  opacity: 0.8;                    
+  font-weight: 500;                
 }
 
 /* ══ 月曆 ═════════════════════════════════════════ */
