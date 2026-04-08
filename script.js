@@ -316,11 +316,11 @@ function renderHome() {
               // 🌟 判斷項目名稱，決定字的顏色
               let nameColor = 'var(--t3)'; // 預設顏色
               if (ev.name.includes('結算')) nameColor = 'var(--red)';
-              else if (ev.name.includes('明細')) nameColor = 'var(--yellow)';
+              else if (ev.name.includes('明細')) nameColor = 'var(--gold)';
               else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
 
               return `
-              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.5); outline:2px solid var(--blue); outline-offset:1px; border-radius: 25px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(59, 131, 246, 0.8); border-radius: 10px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                 <!-- 項目名稱 -->
                 <span style="font-size:12px; color:${nameColor}; font-weight:900; margin-bottom:2px; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.9);">${ev.name}</span>
                 <!-- 日期與天數 -->
