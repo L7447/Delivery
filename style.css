@@ -220,43 +220,75 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   color: var(--acc); /* 變數使用主色橘強調 */
 }
 
-/* ══ 首頁今日概況卡片（精美優化版） ══════════════ */
+/* ══ 首頁標題與日期（新版獨立 UI） ══════════════════════ */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px; /* 加大與下方數據的距離 */
+  padding: 0 4px;
+}
+.home-pg-title {
+  font-family: var(--title);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--t1);
+  line-height: 1.2;
+}
+.home-pg-date {
+  font-size: 13px;
+  color: var(--t2);
+  font-weight: 500;
+  background: var(--sf);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+.home-pg-date b {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--acc);
+}
+
+/* ══ 今日概況最外框（全透明、無陰影） ══════════════ */
 .today-hero {
-  background: linear-gradient(135deg, #FF7A45 0%, #FF8F50 50%, #FFB07D 100%);
-  border-radius: 18px;             
-  padding: 18px 16px;              
-  color: #ffffff;                  
-  margin-bottom: 16px;             
-  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: transparent; /* 全透明背景 */
+  box-shadow: none;        /* 刪除陰影 */
+  padding: 0 4px;          /* 縮小內距，讓內容貼齊邊緣 */
+  margin-bottom: 2px;     
 }
 
 /* 各平台明細列表容器 */
 .hero-plat-list { 
   display: flex;                   
   flex-direction: column;          
-  gap: 6px;                        
+  gap: 8px;                        
 }
 
-/* 各平台單行資料（玻璃擬態風格） */
+/* 各平台單行資料（移除固定背景，改由 JS 動態注入） */
 .hero-plat-row {
   display: flex;                   
   align-items: center;             
-  background: rgba(255, 255, 255, 0.15); 
-  border: 1px solid rgba(255, 255, 255, 0.2); 
-  padding: 8px 12px;               
-  border-radius: 10px;             
-  font-size: 13px;                 
+  padding: 12px 14px;              /* 加大內距讓框框更厚實 */
+  border-radius: 12px;             /* 稍微加大圓角 */
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);                /* 確保文字顏色能適應淺色背景 */
 }
-.hp-name { font-weight: 600; width: 35%; white-space: nowrap; }  
-.hp-sum { font-family: var(--mono); font-weight: 700; width: 25%; text-align: right; } 
-.hp-ord { font-weight: 500; width: 20%; text-align: right; }      
-.hp-hrs { font-weight: 500; width: 20%; text-align: right; opacity: 0.9; } 
+
+/* 單行內部各欄位 */
+.hp-name { width: 35%; white-space: nowrap; }  
+.hp-sum { font-family: var(--mono); font-weight: 800; width: 25%; text-align: right; } 
+.hp-ord { font-weight: 600; width: 20%; text-align: right; }      
+.hp-hrs { font-weight: 600; width: 20%; text-align: right; opacity: 0.8; } 
 
 /* 總結區塊的分隔線 */
 .hero-divider { 
   height: 1px;                     
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%); 
-  margin: 12px 0;                  
+  background: var(--border); /* 使用標準邊框色 */
+  margin: 16px 0;                  
 }
 
 /* 總結數據三等分布局 */
@@ -264,24 +296,47 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   display: flex;                   
   justify-content: space-between;  
   text-align: center;              
-  padding: 0 4px;                  
+  background: var(--sf);           /* 給總和一個白底卡片增加辨識度 */
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 0;
 }
 .ht-item { 
   flex: 1;                         
   display: flex;                   
   flex-direction: column;          
-  gap: 2px;                        
+  gap: 4px;                        
 } 
 .ht-val { 
   font-family: var(--mono);        
-  font-size: 17px;                 
+  font-size: 18px;                 
   font-weight: 800;                
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); 
+  color: var(--acc);               /* 總和數字使用橘色強調 */
 }
 .ht-lbl { 
   font-size: 11px;                 
-  opacity: 0.8;                    
-  font-weight: 500;                
+  color: var(--t3);
+  font-weight: 600;                
+}
+
+/* ══ 打卡按鈕修復（確保全寬大按鈕） ══════════════ */
+.punch-card {
+  background: var(--sf); border: 1px solid var(--border); 
+  border-radius: var(--r); padding: 16px; margin-bottom: 16px; 
+}
+.punch-main-btn {
+  display: block;                  /* 確保為區塊元素 */
+  width: 100%;                     /* 寬度 100% 滿版 */
+  padding: 16px;                   /* 加大上下內距 */
+  border-radius: var(--rs);
+  border: none; 
+  font-size: 16px;                 /* 放大字體 */
+  font-weight: 700;
+  cursor: pointer; 
+  font-family: var(--sans); 
+  transition: .2s;
+  text-align: center;              /* 文字置中 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ══ 月曆 ═════════════════════════════════════════ */
