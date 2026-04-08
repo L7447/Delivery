@@ -333,11 +333,14 @@ function renderHome() {
 
   } else if (S.homeSubTab === 'goal') {
     // 渲染目標進度
+    // ── 5. 週目標 & 月目標進度 ──
     const weekly = pf(S.settings.goals?.weekly);
     const monthly = pf(S.settings.goals?.monthly);
     
     if (weekly > 0 || monthly > 0) {
       bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
+      
+      // ✅ 週目標
       if (weekly > 0) {
         const wDate = new Date(dateObj);
         const wDay = wDate.getDay() || 7;
@@ -351,15 +354,17 @@ function renderHome() {
         const wPct = Math.min(100, Math.round(weekTotal/weekly*100));
         const wRemain = Math.max(0, weekly-weekTotal);
         
-        // ✅ 將預設顏色改為 var(--blue)
+        // 邏輯修正：>=100(綠), >=70(藍), 其他(紅)
+        const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
+        
         bottomHtml += `
         <div style="margin-bottom: ${monthly>0 ? '16px' : '0'};">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
             <span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blue)">${wPct}%</span>
+            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span>
           </div>
           <div class="progress-track">
-            <div class="progress-fill" style="width:${wPct}%;background:${wPct>=100?'var(--green)':wPct>=70?'var(--gold)':'var(--blue)'}"></div>
+            <div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
             <span>已達 $ ${fmt(weekTotal)}</span>
@@ -368,21 +373,24 @@ function renderHome() {
         </div>`;
       }
       
+      // ✅ 月目標
       if (monthly > 0) {
         const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1);
         const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
         const mPct       = Math.min(100, Math.round(monthTotal/monthly*100));
         const mRemain    = Math.max(0, monthly-monthTotal);
         
-        // ✅ 將預設顏色改為 var(--blue)
+        // 邏輯修正：>=100(綠), >=70(藍), 其他(紅)
+        const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
+        
         bottomHtml += `
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
             <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blue)">${mPct}%</span>
+            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span>
           </div>
           <div class="progress-track">
-            <div class="progress-fill" style="width:${mPct}%;background:${mPct>=100?'var(--green)':mPct>=70?'var(--blue)':'var(--red)'}"></div>
+            <div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
             <span>已達 $ ${fmt(monthTotal)}</span>
