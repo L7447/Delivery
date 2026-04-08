@@ -189,65 +189,97 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
 }
 
 /* ══ 首頁元件 ════════════════════════════════════ */
-/* 今日總覽大卡片（橘色漸層背景） */
+/* ══ 首頁今日概況卡片（無浮水印、精美優化版） ══════════════ */
 .today-hero {
-  background: linear-gradient(135deg, var(--acc) 0%, #FF9A5C 60%, #FFB87A 100%);
-  border-radius: var(--r); padding: 20px; color: #fff; margin-bottom: 12px;
-  position: relative; overflow: hidden;
+  /* 使用更高級的暖橘多段漸層，提升質感 */
+  background: linear-gradient(135deg, #FF7A45 0%, #FF8F50 50%, #FFB07D 100%);
+  border-radius: 18px;             /* 加大圓角，視覺更柔和現代 */
+  padding: 18px 16px;              /* 縮減左右內距，讓出更多空間給數據 */
+  color: #ffffff;                  /* 文字全白 */
+  margin-bottom: 16px;             /* 與下方區塊保持適當距離 */
+  /* 添加雙層陰影：外層環境陰影 + 內層頂部高光邊框，創造立體感 */
+  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
-.today-hero::before {
-  content: '🛵'; position: absolute; right: 14px; bottom: 10px;
-  font-size: 60px; opacity: .18; transform: rotate(-10deg);
+
+/* 置中標題 */
+.hero-title { 
+  font-size: 14px;                 /* 縮小標題字級，襯托下方數據 */
+  font-weight: 800;                /* 最粗字重 */
+  text-align: center;              /* 文字置中 */
+  margin-bottom: 8px;              /* 底部留白 */
+  letter-spacing: 2px;             /* 增加字距，提升質感 */
+  color: rgba(255, 255, 255, 0.9); /* 稍微帶透明度，避免搶過重點 */
 }
-.today-hero .hero-date { font-size: 12px; opacity: .85; margin-bottom: 6px; }
-.today-hero .hero-total { font-family: var(--mono); font-size: 42px; font-weight: 700; line-height: 1; }
-.today-hero .hero-label { font-size: 11px; opacity: .8; margin-top: 3px; }
-.today-hero .hero-stats { display: flex; gap: 14px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.3); }
-.today-hero .stat-item { text-align: center; flex: 1; }
-.today-hero .stat-num { font-family: var(--mono); font-size: 18px; font-weight: 700; }
-.today-hero .stat-lbl { font-size: 10px; opacity: .75; margin-top: 2px; }
-/* 打卡卡片 */
-.punch-card { background: var(--sf); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; }
-.punch-status { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.punch-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--t3); }
-.punch-dot.active { background: var(--green); box-shadow: 0 0 0 3px var(--green-d); animation: pulse 1.5s infinite; }
-@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px var(--green-d)} 50%{box-shadow:0 0 0 6px rgba(34,197,94,.05)} }
-.punch-time-row { display: flex; gap: 8px; font-size: 12px; color: var(--t2); margin-bottom: 12px; }
-/* 打卡按鈕（大） */
-.punch-main-btn {
-  width: 100%; padding: 14px; border-radius: var(--rs);
-  border: none; font-size: 15px; font-weight: 700;
-  cursor: pointer; font-family: var(--sans); transition: .2s;
-  -webkit-tap-highlight-color: transparent;
+
+/* 動態日期 */
+.hero-date { 
+  font-size: 13px;                 /* 預設字體大小 */
+  text-align: center;              /* 文字置中 */
+  margin-bottom: 16px;             /* 底部留白，隔開清單 */
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1); /* 輕微文字陰影，增強可讀性 */
 }
-.punch-main-btn.go-online {
-  background: var(--green-d); color: var(--green);
-  border: 1px solid rgba(34,197,94,.3);
+.hero-date b { 
+  font-weight: 800;                /* 變數部分（年月日時）加粗 */
+  font-size: 16px;                 /* 變數部分放大 */
+  font-family: var(--mono);        /* 數字使用等寬字體，看起來更整齊 */
 }
-.punch-main-btn.go-online:active { background: var(--green); color: #fff; }
-.punch-main-btn.go-offline {
-  background: var(--red-d); color: var(--red);
-  border: 1px solid rgba(239,68,68,.3);
+
+/* 各平台明細列表容器 */
+.hero-plat-list { 
+  display: flex;                   /* 使用彈性佈局 */
+  flex-direction: column;          /* 直向排列 */
+  gap: 6px;                        /* 各平台行之間的間距 */
+  margin-bottom: 14px;             /* 底部留白 */
 }
-.punch-main-btn.go-offline:active { background: var(--red); color: #fff; }
-/* 結算日/發薪日資訊條 */
-.settle-row {
-  display: flex; gap: 8px; margin-bottom: 12px;
+
+/* 各平台單行資料（玻璃擬態風格） */
+.hero-plat-row {
+  display: flex;                   /* 使用彈性佈局 */
+  align-items: center;             /* 垂直置中 */
+  background: rgba(255, 255, 255, 0.15); /* 半透明白色背景，營造毛玻璃感 */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* 加上微弱的白邊，增加立體感 */
+  padding: 8px 12px;               /* 內距適中 */
+  border-radius: 10px;             /* 小圓角 */
+  font-size: 13px;                 /* 基礎字體大小 */
 }
-.settle-chip {
-  flex: 1; background: var(--sf); border: 1px solid var(--border);
-  border-radius: var(--rs); padding: 10px 12px; text-align: center;
+/* 單行內部各欄位寬度與對齊設定 */
+.hp-name { font-weight: 600; width: 35%; white-space: nowrap; }  /* 平台名稱，佔寬 35% */
+.hp-sum { font-family: var(--mono); font-weight: 700; width: 25%; text-align: right; } /* 收入，佔寬 25%，靠右 */
+.hp-ord { font-weight: 500; width: 20%; text-align: right; }      /* 單數，佔寬 20%，靠右 */
+.hp-hrs { font-weight: 500; width: 20%; text-align: right; opacity: 0.9; } /* 工時，佔寬 20%，靠右微透 */
+
+/* 總結區塊的分隔線 */
+.hero-divider { 
+  height: 1px;                     /* 高度 1px */
+  /* 使用漸層線條，中間亮、兩側透明消失，極具設計感 */
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%); 
+  margin: 12px 0;                  /* 上下留白 */
 }
-.settle-chip .sc-days { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--acc); }
-.settle-chip .sc-lbl  { font-size: 10px; color: var(--t3); margin-top: 2px; }
-/* 今日平台小結 */
-.today-platform-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.plat-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 10px; border-radius: 999px;
-  font-size: 12px; font-weight: 600; color: #fff;
+
+/* 總結數據三等分布局 */
+.hero-total-row { 
+  display: flex;                   /* 彈性佈局 */
+  justify-content: space-between;  /* 分散對齊 */
+  text-align: center;              /* 內部文字置中 */
+  padding: 0 4px;                  /* 微微向內縮 */
 }
-.plat-badge .pb-amt { font-family: var(--mono); font-size: 13px; }
+.ht-item { 
+  flex: 1;                         /* 均分三等份寬度 */
+  display: flex;                   /* 彈性佈局 */
+  flex-direction: column;          /* 上下排列 */
+  gap: 2px;                        /* 數字與標籤間的微小間距 */
+} 
+.ht-val { 
+  font-family: var(--mono);        /* 數字字體 */
+  font-size: 17px;                 /* 總計數值放大 */
+  font-weight: 800;                /* 最粗 */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); /* 增加立體感 */
+}
+.ht-lbl { 
+  font-size: 11px;                 /* 底部標籤縮小 */
+  opacity: 0.8;                    /* 微透明 */
+  font-weight: 500;                /* 中等字重 */
+}
 
 /* ══ 月曆 ═════════════════════════════════════════ */
 .month-grid { display: flex; flex-direction: column; gap: 1px; margin-bottom: 8px; }
