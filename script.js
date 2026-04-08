@@ -493,60 +493,235 @@ function buildRecItem(r) {
 }
 
 /* ══ 歷史記錄頁 ══════════════════════════════════ */
+// 初始化記錄頁預設 Tab 為「日」
+if (!S.histTab) S.histTab = 'day';
+
+/** 切換記錄頁 Tab */
+function switchHistTab(tab) {
+  S.histTab = tab;
+  renderHistory();
+}
+
+/** 渲染整個歷史記錄頁面 */
 function renderHistory() {
-  renderHistCalendar();
+  const container = document.getElementById('page-history');
+  
+  // 1. 頂部 Tab 切換列
+  let html = `
+    <div class="hist-tabs">
+      <button class="hist-tab-btn ${S.histTab==='day'?'active':''}" onclick="switchHistTab('day')">日</button>
+      <button class="hist-tab-btn ${S.histTab==='week'?'active':''}" onclick="switchHistTab('week')">週</button>
+      <button class="hist-tab-btn ${S.histTab==='month'?'active':''}" onclick="switchHistTab('month')">月</button>
+      <button class="hist-tab-btn ${S.histTab==='year'?'active':''}" onclick="switchHistTab('year')">年</button>
+    </div>
+    <div id="hist-content" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
+  `;
+  container.innerHTML = html;
+
+  // 根據 Tab 渲染內容
+  if (S.histTab === 'day') {
+    renderHistDayView();
+  } else {
+    renderHistGroupView(S.histTab);
+  }
+}
+
+/** 渲染「日」視圖 (保留原本的月曆與當日列表) */
+function renderHistDayView() {
+  const content = document.getElementById('hist-content');
+  const { calY:y, calM:m } = S;
+  
+  content.innerHTML = `
+    <div id="hist-header" style="flex-shrink:0;padding:0 16px 6px;background:var(--bg);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="mbtn" id="hist-prev">◀</button>
+          <h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2>
+          <button class="mbtn" id="hist-next">▶</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <!-- 🔍 原本的搜尋按鈕 -->
+          <button class="icon-btn" onclick="openSearch()" title="搜尋記錄">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <!-- 📅 新增：全螢幕大日曆按鈕 -->
+          <button class="icon-btn" onclick="openFullCalendar()" title="大日曆">
+            <img src="/images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;">
+          </button>
+        </div>
+      </div>
+      <div class="month-grid" id="hist-calendar"></div>
+      <div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div>
+      <div class="sec-title" id="hist-day-label" style="margin-bottom:4px">今日記錄</div>
+    </div>
+    <div id="hist-rec-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;"></div>
+  `;
+
+  // 綁定月份切換
+  document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
+  document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
+
+  renderHistCalendarGrid();
   renderHistRecords(S.selDate);
 }
-/** 渲染月曆格 */
-function renderHistCalendar() {
+
+/** 渲染日視圖的迷你小月曆格 */
+function renderHistCalendarGrid() {
   const { calY:y, calM:m } = S;
-  // 月份標題
-  document.getElementById('hist-label').textContent = `${y} 年 ${m} 月`;
-  const grid  = document.getElementById('hist-calendar');
-  const first = new Date(y, m-1, 1).getDay(); // 月份第一天是星期幾
-  const days  = new Date(y, m, 0).getDate();   // 本月天數
+  const grid = document.getElementById('hist-calendar');
+  const first = new Date(y, m-1, 1).getDay(); 
+  const days  = new Date(y, m, 0).getDate();   
   const DOW   = ['日','一','二','三','四','五','六'];
 
   let html = `<div class="month-row">`;
   DOW.forEach(d => { html += `<div class="month-cell month-dow">${d}</div>`; });
-  html += `</div>`;
-
+  html += `</div><div class="month-row">`;
+  
   let col = 0;
-  html += `<div class="month-row">`;
-  // 填充第一周的空白格
   for (let i=0; i<first; i++) { html += `<div class="month-cell"></div>`; col++; }
-
   for (let day=1; day<=days; day++) {
     const ds  = `${y}-${pad(m)}-${pad(day)}`;
-    // 計算當日收入合計（顯示在格子下方）
     const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0);
-    const cls = [
-      'month-cell',
-      ds === todayStr() ? 'today' : '',
-      ds === S.selDate  ? 'sel'   : '',
-    ].filter(Boolean).join(' ');
+    const cls = ['month-cell', ds===todayStr()?'today':'', ds===S.selDate?'sel':''].filter(Boolean).join(' ');
     const amtHtml = sum>0 ? `<div class="day-amt">${sum>=1000?Math.round(sum/1000)+'k':sum}</div>` : '';
-    html += `<div class="${cls}" data-ds="${ds}">
-      <div class="day-num">${day}</div>${amtHtml}
-    </div>`;
+    html += `<div class="${cls}" data-ds="${ds}"><div class="day-num">${day}</div>${amtHtml}</div>`;
     col++;
     if (col % 7 === 0 && day < days) { html += `</div><div class="month-row">`; }
   }
   html += `</div>`;
   grid.innerHTML = html;
 
-  // 綁定日期點擊
   grid.querySelectorAll('.month-cell[data-ds]').forEach(cell => {
     cell.addEventListener('click', () => {
       S.selDate = cell.dataset.ds;
-      // 更新選取樣式
-      grid.querySelectorAll('.month-cell').forEach(c => {
-        c.classList.toggle('sel', c.dataset.ds === S.selDate);
-      });
+      grid.querySelectorAll('.month-cell').forEach(c => c.classList.toggle('sel', c.dataset.ds === S.selDate));
       renderHistRecords(S.selDate);
     });
   });
 }
+
+/** 渲染週、月、年的統計列表 */
+function renderHistGroupView(mode) {
+  const content = document.getElementById('hist-content');
+  let groups = {}; // 用來分類的字典
+
+  S.records.forEach(r => {
+    if (r.isPunchOnly) return; // 統計排除純打卡記錄
+    const d = new Date(r.date + 'T00:00:00');
+    let key = '';
+    let label = '';
+    if (mode === 'week') {
+      // 計算屬於哪一週 (以週一為起點)
+      const wDate = new Date(d);
+      const wDay = wDate.getDay() || 7;
+      wDate.setDate(wDate.getDate() - wDay + 1);
+      key = `${wDate.getFullYear()}-W${pad(wDate.getMonth()+1)}${pad(wDate.getDate())}`;
+      label = `${wDate.getFullYear()}年 ${wDate.getMonth()+1}/${wDate.getDate()} 當週`;
+    } else if (mode === 'month') {
+      key = `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+      label = `${d.getFullYear()}年 ${d.getMonth()+1}月`;
+    } else if (mode === 'year') {
+      key = `${d.getFullYear()}`;
+      label = `${d.getFullYear()}年`;
+    }
+    
+    if (!groups[key]) groups[key] = { label, total: 0, orders: 0, hours: 0 };
+    groups[key].total += recTotal(r);
+    groups[key].orders += pf(r.orders);
+    groups[key].hours += pf(r.hours);
+  });
+
+  // 排序並渲染 (新到舊)
+  const sortedKeys = Object.keys(groups).sort().reverse();
+  
+  let html = `<div style="flex:1;overflow-y:auto;padding:0 16px 24px;display:flex;flex-direction:column;gap:8px;">`;
+  if (sortedKeys.length === 0) {
+    html += `<div class="empty-tip">無統計記錄</div>`;
+  } else {
+    sortedKeys.forEach(k => {
+      const g = groups[k];
+      html += `
+        <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:14px; font-weight:700; color:var(--t1); border-bottom:1px solid var(--border); padding-bottom:6px;">${g.label}</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="display:flex; gap:12px; font-size:12px; color:var(--t2);">
+              <span>📦 ${g.orders} 單</span>
+              <span>⏱ ${g.hours.toFixed(1)} h</span>
+            </div>
+            <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--blue);">NT$ ${fmt(g.total)}</div>
+          </div>
+        </div>`;
+    });
+  }
+  html += `</div>`;
+  content.innerHTML = html;
+}
+
+/* ══ 全螢幕大日曆 ════════════════════════════════ */
+/** 打開大日曆 */
+function openFullCalendar() {
+  document.getElementById('full-calendar-overlay').classList.add('show');
+  renderFullCalendar();
+}
+/** 關閉大日曆 */
+function closeFullCalendar() {
+  document.getElementById('full-calendar-overlay').classList.remove('show');
+}
+/** 大日曆切換月份 */
+function changeFullCalMonth(offset) {
+  S.calM += offset;
+  if(S.calM < 1) { S.calM = 12; S.calY--; }
+  if(S.calM > 12) { S.calM = 1; S.calY++; }
+  renderFullCalendar();
+  // 同步更新背後的小月曆
+  S.selDate=`${S.calY}-${pad(S.calM)}-01`; 
+  renderHistory();
+}
+/** 渲染大日曆網格 */
+function renderFullCalendar() {
+  const { calY:y, calM:m } = S;
+  document.getElementById('fc-title').textContent = `${y}年 ${m}月`;
+  
+  const DOW = ['週日','週一','週二','週三','週四','週五','週六'];
+  document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
+
+  const grid = document.getElementById('fc-grid');
+  const first = new Date(y, m-1, 1).getDay(); 
+  const days  = new Date(y, m, 0).getDate();  
+  const today = todayStr();
+
+  let html = ``;
+  
+  // 填充上個月的空白格
+  const prevDays = new Date(y, m-1, 0).getDate();
+  for (let i=first-1; i>=0; i--) { 
+    html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${prevDays - i}</div></div>`; 
+  }
+  
+  // 填充當月日期
+  for (let day=1; day<=days; day++) {
+    const ds  = `${y}-${pad(m)}-${pad(day)}`;
+    const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0);
+    const isToday = ds === today;
+    const amtHtml = sum > 0 ? `<div class="fc-amt">$${fmt(sum)}</div>` : '';
+    
+    html += `
+      <div class="fc-cell ${isToday ? 'today' : ''}" onclick="S.selDate='${ds}'; closeFullCalendar(); renderHistory();">
+        <div class="fc-date">${pad(day)}</div>
+        ${amtHtml}
+      </div>`;
+  }
+
+  // 填充下個月的空白格補滿最後一排
+  const totalCells = first + days;
+  const remain = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let i=1; i<=remain; i++) {
+    html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${pad(i)}</div></div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
 /** 渲染歷史記錄的當日列表 */
 function renderHistRecords(ds) {
   const d   = new Date(ds+'T00:00:00');
