@@ -221,9 +221,9 @@ function renderHome() {
   // 下半部：總結總和
   html += `
     <div class="hero-total-row">
-      <div class="ht-item"><div class="ht-val">$ ${fmt(total)}</div><div class="ht-lbl">總收入</div></div>
-      <div class="ht-item"><div class="ht-val">${orders} 單</div><div class="ht-lbl">總單數</div></div>
-      <div class="ht-item"><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div><div class="ht-lbl">工時(h)</div></div>
+      <div class="ht-item"><div class="ht-lbl">總收入</div><div class="ht-val">$ ${fmt(total)}</div></div>
+      <div class="ht-item"><div class="ht-lbl">總單數</div><div class="ht-val">${orders} 單</div></div>
+      <div class="ht-item"><div class="ht-lbl">工時(h)</div><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div></div>
     </div>
   </div>`; 
 
@@ -301,12 +301,12 @@ function renderHome() {
   };
 
   if (activePlatforms.length) {
-    html += `<div style="display:flex; flex-direction:column; margin-bottom:5px;">`;
+    html += `<div style="display:flex; flex-direction:column; margin-bottom:2px;">`;
     activePlatforms.forEach(p => {
       const events = calcNextDates(p.id);
       if (!events) return;
       html += `
-        <div style="border: 3px solid ${p.color}80; background: ${p.color}15; border-radius: 16px; padding: 4px; margin-bottom: 1px;">
+        <div style="border: 3px solid ${p.color}; background: ${p.color}15; border-radius: 16px; padding: 4px; margin-bottom: 1px;">
           <div style="display:flex; align-items:center; gap:5px; margin-bottom: 8px;">
             <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
             <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -322,7 +322,7 @@ function renderHome() {
               else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
 
               return `
-              <div style="flex:1; background: var(--sf); border: 2px solid rgba(255, 255, 0, 0.7); border-radius: 12px; padding: 4px 2px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+              <div style="flex:1; background: var(--sf); border: 1px solid #AE57A4; border-radius: 12px; padding: 4px 2px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                 <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:4px; letter-spacing:0.5px;">${ev.name}</span>
                 <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
                   ${ev.dateStr} <span style="font-size:11px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span>
