@@ -166,43 +166,77 @@ document.querySelectorAll('.ni[data-pg]').forEach(el =>
 /* ══ 首頁渲染 ════════════════════════════════════ */
 function renderHome() {
   const today    = todayStr();
-  const dayRecs  = getDayRecs(today);                           // 今日所有記錄
-  const total    = dayRecs.reduce((s,r)=>s+recTotal(r), 0);    // 今日總收入
-  const orders   = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);  // 今日總單數
-  const hours    = dayRecs.reduce((s,r)=>s+pf(r.hours), 0);   // 今日總工時
+  const dayRecs  = getDayRecs(today);                           // 取得今日所有記錄
+  const total    = dayRecs.reduce((s,r)=>s+recTotal(r), 0);     // 計算今日總收入
+  const orders   = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);    // 計算今日總單數
+  const hours    = dayRecs.reduce((s,r)=>s+pf(r.hours), 0);     // 計算今日總工時
   const dateObj  = new Date(today+'T00:00:00');
-  const dow      = ['日','一','二','三','四','五','六'][dateObj.getDay()];
+  const dow      = ['日','一','二','三','四','五','六'][dateObj.getDay()]; // 轉換星期
 
-  // 👇 將 activePlatforms 的宣告統一放在這裡！
-  const activePlatforms = S.platforms.filter(p=>p.active);
+  const activePlatforms = S.platforms.filter(p=>p.active);      // 取得目前啟用的平台
 
-  // ── 今日總覽大卡片 ──
+  // 計算今日各平台的詳細數據（收入、單數、工時）
+  const platStats = activePlatforms.map(p => {
+    const recs = dayRecs.filter(r => r.platformId === p.id);    // 篩選屬於該平台的記錄
+    return {
+      ...p,
+      sum: recs.reduce((s, r) => s + recTotal(r), 0),           // 加總該平台總收入
+      orders: recs.reduce((s, r) => s + pf(r.orders), 0),       // 加總該平台總接單數
+      hours: recs.reduce((s, r) => s + pf(r.hours), 0)          // 加總該平台總工時
+    };
+  }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);     // 只保留有打卡或有收入的平台
+
+  // ── 1. 新版：今日概況大卡片 ──
   let html = `
   <div class="today-hero">
-    <div class="hero-date">${dateObj.getFullYear()} 年 ${dateObj.getMonth()+1} 月 ${dateObj.getDate()} 日 星期${dow}</div>
-    <div class="hero-total">NT$ ${fmt(total)}</div>
-    <div class="hero-label">今日總收入</div>
-    <div class="hero-stats">
-      <div class="stat-item"><div class="stat-num">${orders}</div><div class="stat-lbl">接單數</div></div>
-      <div class="stat-item"><div class="stat-num">${hours>0?hours.toFixed(1):'—'}</div><div class="stat-lbl">工時(h)</div></div>
-      <div class="stat-item"><div class="stat-num">${orders>0&&hours>0?(orders/hours).toFixed(1):'—'}</div><div class="stat-lbl">單/時</div></div>
-    </div>
-  </div>`;
+    <div class="hero-title">今日概況</div>                      <!-- 置中主標題 -->
+    <div class="hero-date">
+      <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期<b>${dow}</b>
+    </div>                                                      <!-- 動態日期，數字部位加粗 -->
+  `;
 
-  // ── 今日各平台小徽章 ──
-  const platSums = activePlatforms.map(p=>({
-    ...p, sum: dayRecs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0)
-  })).filter(p=>p.sum>0);
-  if (platSums.length) {
-    html += `<div class="today-platform-row">`;
-    platSums.forEach(p => {
-      html += `<div class="plat-badge" style="background:${p.color}">
-        ${p.name} <span class="pb-amt">$${fmt(p.sum)}</span></div>`;
+  // 若今天有工作數據，則渲染各平台明細列表
+  if (platStats.length > 0) {
+    html += `<div class="hero-plat-list">`;
+    platStats.forEach(p => {
+      // 依照要求格式：Uber Eats收入： $ 1680 30 單 9.5 (h)
+      html += `
+        <div class="hero-plat-row">
+          <span class="hp-name">${p.name}收入：</span>        <!-- 平台名稱前綴 -->
+          <span class="hp-sum">$ ${fmt(p.sum)}</span>           <!-- 該平台收入 -->
+          <span class="hp-ord">${p.orders} 單</span>            <!-- 該平台單數 -->
+          <span class="hp-hrs">${p.hours > 0 ? p.hours.toFixed(1) : 0} (h)</span> <!-- 該平台工時 -->
+        </div>
+      `;
     });
     html += `</div>`;
   }
 
-  // ── 打卡卡片 ──
+  // 下半部：漸層分隔線與總結總和
+  html += `
+    <div class="hero-divider"></div>                            <!-- 精美漸層分隔線 -->
+    <div class="hero-total-row">
+      <div class="ht-item"><div class="ht-val">$ ${fmt(total)}</div><div class="ht-lbl">總收入</div></div> <!-- 今日總收入 -->
+      <div class="ht-item"><div class="ht-val">${orders} 單</div><div class="ht-lbl">總單數</div></div>   <!-- 今日總單數 -->
+      <div class="ht-item"><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div><div class="ht-lbl">工時(h)</div></div> <!-- 今日總工時 -->
+    </div>
+  </div>`;
+
+  // ── 2. 移上來的「今日記錄列表」 ──
+  html += `<div class="sec-title" style="margin-top:4px">今日記錄</div>`;
+  if (!dayRecs.length) {
+    html += `<div class="empty-tip">✨ 今天還沒有記錄<br>點下方 ＋ 開始記帳</div>`; // 若無記錄的空狀態提示
+  } else {
+    // 外層容器加上 margin-bottom 隔開下方的打卡區塊
+    html += `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">`; 
+    // 由新到舊排序陣列，並渲染每筆記錄卡片
+    dayRecs.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||'')).forEach(r => {
+      html += buildRecItem(r);
+    });
+    html += `</div>`;
+  }
+
+  // ── 3. 打卡卡片 ──
   const isPunched = S.punch && S.punch.date === today;
   let punchElapsed = '';
   if (isPunched) {
@@ -228,7 +262,10 @@ function renderHome() {
     </button>
   </div>`;
 
-// ── 平台結算與發薪動態計算（整合精美版） ──
+  // ── 4. 平台結算與發薪動態計算（保持原樣，顯示於下方） ──
+  // ... (以下保留您原本計算 calcNextDates 與渲染 activePlatforms 的程式碼)
+
+  // ── 平台結算與發薪動態計算（整合精美版） ──
   const todayObj = new Date();
   todayObj.setHours(0,0,0,0); // 清除時間，只留日期
   
@@ -359,19 +396,6 @@ function renderHome() {
         <span>${remain>0?`還差 NT$ ${fmt(remain)}`:'🎉 已達標！'}</span>
       </div>
     </div>`;
-  }
-
-  // ── 今日記錄列表 ──
-  html += `<div class="sec-title" style="margin-top:4px">今日記錄</div>`;
-  if (!dayRecs.length) {
-    html += `<div class="empty-tip">✨ 今天還沒有記錄<br>點下方 ＋ 開始記帳</div>`;
-  } else {
-    html += `<div style="display:flex;flex-direction:column;gap:6px">`;
-    // 由新到舊排序
-    dayRecs.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||'')).forEach(r => {
-      html += buildRecItem(r);
-    });
-    html += `</div>`;
   }
 
   document.getElementById('home-content').innerHTML = html;
