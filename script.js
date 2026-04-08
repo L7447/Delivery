@@ -306,8 +306,8 @@ function renderHome() {
       const events = calcNextDates(p.id);
       if (!events) return;
       html += `
-        <div style="border: 3px solid ${p.color}; background: ${p.color}15; border-radius: 16px; padding: 4px; margin-bottom: 1px;">
-          <div style="display:flex; align-items:center; gap:5px; margin-bottom: 8px;">
+        <div style="border: 3px solid ${p.color}85; background: ${p.color}15; border-radius: 16px; padding: 4px; margin-bottom: 2px;">
+          <div style="display:flex; align-items:center; gap:5px; margin-bottom: 4px;">
             <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
             <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
           </div>
