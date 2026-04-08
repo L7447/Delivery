@@ -297,7 +297,7 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   justify-content: space-between;  
   text-align: center;              
   background: var(--sf);           /* 給總和一個白底卡片增加辨識度 */
-/* border: 1px solid var(--border); */
+  border: 2px dashed #778899;
   border-radius: 12px;
   padding: 6px 0;
   margin: 2px 0px 10px;          
