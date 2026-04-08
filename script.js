@@ -174,10 +174,13 @@ function switchHomeTab(tab) {
 function renderHome() {
   const today    = todayStr();
   const dayRecs  = getDayRecs(today);
+  
   const total    = dayRecs.reduce((s,r)=>s+recTotal(r), 0);
   const orders   = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
-  // 只計算有填入工時的紀錄
-  const hours    = dayRecs.reduce((s,r)=>s+pf(r.hours), 0);     
+  
+  // ✅ 關鍵修正：排除「純打卡記錄(isPunchOnly)」，只加總有收入單據的工時
+  const hours    = dayRecs.filter(r => !r.isPunchOnly).reduce((s,r)=>s+pf(r.hours), 0);     
+  
   const dateObj  = new Date(today+'T00:00:00');
   const dow      = ['日','一','二','三','四','五','六'][dateObj.getDay()];
 
@@ -221,11 +224,12 @@ function renderHome() {
     topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`;
   }
 
+  // ✅ UI 修正：工時(h) 改為 總工時
   topHtml += `
       <div class="hero-total-row">
         <div class="ht-item"><div class="ht-lbl">總收入</div><div class="ht-val">$ ${fmt(total)}</div></div>
         <div class="ht-item"><div class="ht-lbl">總單數</div><div class="ht-val">${orders} 單</div></div>
-        <div class="ht-item"><div class="ht-lbl">工時(h)</div><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div></div>
+        <div class="ht-item"><div class="ht-lbl">總工時</div><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div></div>
       </div>
     </div>
   `;
@@ -250,10 +254,9 @@ function renderHome() {
         ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
       </button>
     </div>
-  </div>`; // top-fixed 結束
+  </div>`; 
 
   // ── 下層 (可捲動區塊) ──
-  // Tab 切換按鈕
   if (!S.homeSubTab) S.homeSubTab = 'schedule';
   let bottomHtml = `
   <div class="home-bottom-scroll">
@@ -263,9 +266,7 @@ function renderHome() {
     </div>
   `;
 
-  // 根據 Tab 渲染內容
   if (S.homeSubTab === 'schedule') {
-    // 渲染日程表
     const todayObj = new Date();
     todayObj.setHours(0,0,0,0);
     const calcNextDates = (id) => {
@@ -280,7 +281,7 @@ function renderHome() {
         targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; });
         let res = new Date(todayObj); res.setDate(d + add); return res;
       };
-      if (id === 'uber') { addEvent('趟獎結算日', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
+      if (id === 'uber') { addEvent('趟獎結算', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
       else if (id === 'foodpanda') {
         const getPandaNext = (aY, aM, aD) => {
           const anchor = new Date(aY, aM, aD); const diffDays = Math.floor((todayObj - anchor) / 86400000);
@@ -332,15 +333,11 @@ function renderHome() {
     }
 
   } else if (S.homeSubTab === 'goal') {
-    // 渲染目標進度
-    // ── 5. 週目標 & 月目標進度 ──
     const weekly = pf(S.settings.goals?.weekly);
     const monthly = pf(S.settings.goals?.monthly);
     
     if (weekly > 0 || monthly > 0) {
       bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
-      
-      // ✅ 週目標
       if (weekly > 0) {
         const wDate = new Date(dateObj);
         const wDay = wDate.getDay() || 7;
@@ -353,8 +350,6 @@ function renderHome() {
         }
         const wPct = Math.min(100, Math.round(weekTotal/weekly*100));
         const wRemain = Math.max(0, weekly-weekTotal);
-        
-        // 邏輯修正：>=100(綠), >=70(藍), 其他(紅)
         const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
         
         bottomHtml += `
@@ -363,24 +358,18 @@ function renderHome() {
             <span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span>
             <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span>
           </div>
-          <div class="progress-track">
-            <div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div>
-          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
             <span>已達 $ ${fmt(weekTotal)}</span>
             <span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span>
           </div>
         </div>`;
       }
-      
-      // ✅ 月目標
       if (monthly > 0) {
         const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1);
         const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
         const mPct       = Math.min(100, Math.round(monthTotal/monthly*100));
         const mRemain    = Math.max(0, monthly-monthTotal);
-        
-        // 邏輯修正：>=100(綠), >=70(藍), 其他(紅)
         const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
         
         bottomHtml += `
@@ -389,9 +378,7 @@ function renderHome() {
             <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span>
             <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span>
           </div>
-          <div class="progress-track">
-            <div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div>
-          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
             <span>已達 $ ${fmt(monthTotal)}</span>
             <span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span>
@@ -403,7 +390,7 @@ function renderHome() {
       bottomHtml += `<div class="empty-tip">請先至「設定」設定目標</div>`;
     }
   }
-  bottomHtml += `</div>`; // bottom-scroll 結束
+  bottomHtml += `</div>`;
 
   document.getElementById('home-content').innerHTML = topHtml + bottomHtml;
 }
@@ -493,12 +480,31 @@ function buildRecItem(r) {
 }
 
 /* ══ 歷史記錄頁 ══════════════════════════════════ */
-// 初始化記錄頁預設 Tab 為「日」
 if (!S.histTab) S.histTab = 'day';
+if (!S.histNavDate) S.histNavDate = new Date(); // 供週、月、年導航使用的基準日
+if (!S.histFilter) S.histFilter = 'all'; // 預設篩選全部平台
 
 /** 切換記錄頁 Tab */
 function switchHistTab(tab) {
   S.histTab = tab;
+  S.histNavDate = new Date(); // 切換 Tab 時，自動重置回「當下時間」
+  renderHistory();
+}
+
+/** 歷史區間導航 (上週/下週、上月/下月...) */
+function navHistGroup(dir, mode) {
+  let d = new Date(S.histNavDate);
+  if (mode === 'week')   d.setDate(d.getDate() + (dir * 7));
+  if (mode === 'biweek') d.setDate(d.getDate() + (dir * 14));
+  if (mode === 'month')  d.setMonth(d.getMonth() + dir);
+  if (mode === 'year')   d.setFullYear(d.getFullYear() + dir);
+  S.histNavDate = d;
+  renderHistory();
+}
+
+/** 更改平台篩選器 */
+function changeHistFilter(val) {
+  S.histFilter = val;
   renderHistory();
 }
 
@@ -506,11 +512,15 @@ function switchHistTab(tab) {
 function renderHistory() {
   const container = document.getElementById('page-history');
   
-  // 1. 頂部 Tab 切換列
+  // ✅ 1. 加入頁面標題與 Tab 切換 (新增雙週)
   let html = `
+    <div style="padding: 16px 16px 0;">
+      <div class="home-pg-title">查看記錄</div>
+    </div>
     <div class="hist-tabs">
       <button class="hist-tab-btn ${S.histTab==='day'?'active':''}" onclick="switchHistTab('day')">日</button>
       <button class="hist-tab-btn ${S.histTab==='week'?'active':''}" onclick="switchHistTab('week')">週</button>
+      <button class="hist-tab-btn ${S.histTab==='biweek'?'active':''}" onclick="switchHistTab('biweek')">雙週</button>
       <button class="hist-tab-btn ${S.histTab==='month'?'active':''}" onclick="switchHistTab('month')">月</button>
       <button class="hist-tab-btn ${S.histTab==='year'?'active':''}" onclick="switchHistTab('year')">年</button>
     </div>
@@ -518,7 +528,6 @@ function renderHistory() {
   `;
   container.innerHTML = html;
 
-  // 根據 Tab 渲染內容
   if (S.histTab === 'day') {
     renderHistDayView();
   } else {
@@ -526,7 +535,7 @@ function renderHistory() {
   }
 }
 
-/** 渲染「日」視圖 (保留原本的月曆與當日列表) */
+/** 渲染「日」視圖 */
 function renderHistDayView() {
   const content = document.getElementById('hist-content');
   const { calY:y, calM:m } = S;
@@ -540,11 +549,9 @@ function renderHistDayView() {
           <button class="mbtn" id="hist-next">▶</button>
         </div>
         <div style="display:flex; gap:8px;">
-          <!-- 🔍 原本的搜尋按鈕 -->
           <button class="icon-btn" onclick="openSearch()" title="搜尋記錄">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
-          <!-- 📅 新增：全螢幕大日曆按鈕 -->
           <button class="icon-btn" onclick="openFullCalendar()" title="大日曆">
             <img src="/images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;">
           </button>
@@ -552,12 +559,11 @@ function renderHistDayView() {
       </div>
       <div class="month-grid" id="hist-calendar"></div>
       <div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div>
-      <div class="sec-title" id="hist-day-label" style="margin-bottom:4px">今日記錄</div>
+      <div class="sec-title" id="hist-day-label" style="margin-bottom:4px">指定日記錄</div>
     </div>
     <div id="hist-rec-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;"></div>
   `;
 
-  // 綁定月份切換
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
 
@@ -565,7 +571,6 @@ function renderHistDayView() {
   renderHistRecords(S.selDate);
 }
 
-/** 渲染日視圖的迷你小月曆格 */
 function renderHistCalendarGrid() {
   const { calY:y, calM:m } = S;
   const grid = document.getElementById('hist-calendar');
@@ -600,59 +605,90 @@ function renderHistCalendarGrid() {
   });
 }
 
-/** 渲染週、月、年的統計列表 */
+/** 渲染週、雙週、月、年視圖 (新增導航與篩選) */
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
-  let groups = {}; // 用來分類的字典
-
-  S.records.forEach(r => {
-    if (r.isPunchOnly) return; // 統計排除純打卡記錄
-    const d = new Date(r.date + 'T00:00:00');
-    let key = '';
-    let label = '';
-    if (mode === 'week') {
-      // 計算屬於哪一週 (以週一為起點)
-      const wDate = new Date(d);
-      const wDay = wDate.getDay() || 7;
-      wDate.setDate(wDate.getDate() - wDay + 1);
-      key = `${wDate.getFullYear()}-W${pad(wDate.getMonth()+1)}${pad(wDate.getDate())}`;
-      label = `${wDate.getFullYear()}年 ${wDate.getMonth()+1}/${wDate.getDate()} 當週`;
-    } else if (mode === 'month') {
-      key = `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
-      label = `${d.getFullYear()}年 ${d.getMonth()+1}月`;
-    } else if (mode === 'year') {
-      key = `${d.getFullYear()}`;
-      label = `${d.getFullYear()}年`;
-    }
-    
-    if (!groups[key]) groups[key] = { label, total: 0, orders: 0, hours: 0 };
-    groups[key].total += recTotal(r);
-    groups[key].orders += pf(r.orders);
-    groups[key].hours += pf(r.hours);
-  });
-
-  // 排序並渲染 (新到舊)
-  const sortedKeys = Object.keys(groups).sort().reverse();
+  const nd = new Date(S.histNavDate);
+  let startD, endD, labelStr;
   
-  let html = `<div style="flex:1;overflow-y:auto;padding:0 16px 24px;display:flex;flex-direction:column;gap:8px;">`;
-  if (sortedKeys.length === 0) {
-    html += `<div class="empty-tip">無統計記錄</div>`;
-  } else {
-    sortedKeys.forEach(k => {
-      const g = groups[k];
-      html += `
-        <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:8px;">
-          <div style="font-size:14px; font-weight:700; color:var(--t1); border-bottom:1px solid var(--border); padding-bottom:6px;">${g.label}</div>
-          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-            <div style="display:flex; gap:12px; font-size:12px; color:var(--t2);">
-              <span>📦 ${g.orders} 單</span>
-              <span>⏱ ${g.hours.toFixed(1)} h</span>
-            </div>
-            <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--blue);">NT$ ${fmt(g.total)}</div>
-          </div>
-        </div>`;
-    });
+  // 計算時間區間
+  if (mode === 'week') {
+    const day = nd.getDay() || 7; 
+    startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
+    endD = new Date(startD); endD.setDate(endD.getDate() + 6);
+    labelStr = `${startD.getMonth()+1}/${startD.getDate()} ~ ${endD.getMonth()+1}/${endD.getDate()}`;
+  } else if (mode === 'biweek') {
+    const day = nd.getDay() || 7; 
+    startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
+    endD = new Date(startD); endD.setDate(endD.getDate() + 13);
+    labelStr = `${startD.getMonth()+1}/${startD.getDate()} ~ ${endD.getMonth()+1}/${endD.getDate()} (雙週)`;
+  } else if (mode === 'month') {
+    startD = new Date(nd.getFullYear(), nd.getMonth(), 1);
+    endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0);
+    labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
+  } else if (mode === 'year') {
+    startD = new Date(nd.getFullYear(), 0, 1);
+    endD = new Date(nd.getFullYear(), 11, 31);
+    labelStr = `${nd.getFullYear()}年`;
   }
+
+  const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
+  const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
+
+  // 篩選資料 (依據時間與平台)
+  let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr);
+  if (S.histFilter !== 'all') {
+    recs = recs.filter(r => r.platformId === S.histFilter);
+  }
+
+  // 建立下拉選單 HTML
+  let platOpts = `<option value="all">全部平台</option>` + 
+    S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('');
+
+  // 頂部控制列
+  let html = `
+    <div style="padding: 0 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button>
+          <span style="font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc);">${labelStr}</span>
+          <button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button>
+        </div>
+        <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">
+          ${platOpts}
+        </select>
+      </div>
+    </div>
+  `;
+
+  // 下半部資料列表
+  html += `<div style="padding: 0 16px 24px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">`;
+  
+  if (recs.length === 0) {
+    html += `<div class="empty-tip">沒有資料</div>`;
+  } else {
+    // 該區間統計卡片
+    const tInc = recs.reduce((s,r) => s + recTotal(r), 0);
+    const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0);
+    const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0);
+
+    html += `
+      <div class="card" style="padding:16px; border:2px solid var(--border); margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+          <div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div>
+          <div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;">
+            <span>📦 ${tOrd} 單</span>
+            <span>⏱ ${tHrs.toFixed(1)} h</span>
+          </div>
+        </div>
+        <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--blue);">$ ${fmt(tInc)}</div>
+      </div>
+    `;
+    
+    // 詳細流水帳列表 (新到舊)
+    html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
+  }
+  
   html += `</div>`;
   content.innerHTML = html;
 }
