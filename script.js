@@ -13,7 +13,7 @@ const KEYS = {
 
 /* ── 預設平台（強制 3 家主流外送平台）─────────────────── */
 const DEFAULT_PLATFORMS = [
-  { id:'uber',      name:'Uber Eats', color:'#099451', active:true,  ruleDesc:'每週一、四結算｜每週四發薪' },
+  { id:'uber',      name:'Uber Eats', color:'#008000', active:true,  ruleDesc:'每週一、四結算｜每週四發薪' },
   { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:true,  ruleDesc:'雙週日結算｜雙週三明細｜雙週三發薪' },
   { id:'foodomo',   name:'foodomo',   color:'#FF6600', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
@@ -298,10 +298,10 @@ function renderHome() {
       // 使用 Hex 附加透明度：'33' 約等於 20% 透明度, '66' 約等於 40% 透明度, '40' 給陰影
       // 這樣可以達到明顯的色彩透感，又不會因為顏色太深而看不清字
       html += `
-        <div style="border: 3px solid ${p.color}80; background: ${p.color}15; box-shadow: 0 6px 14px ${p.color}50; border-radius: 14px; padding: 12px; margin-bottom: 12px;">
+        <div style="border: 3px solid ${p.color}80; background: ${p.color}15; box-shadow: 0 6px 14px ${p.color}50; border-radius: 20px; padding: 10px; margin-bottom: 10px;">
           
           <!-- 平台名稱標題 -->
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom: 10px;">
+          <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
             <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
             <span style="font-size:14px; font-weight:800; color:${p.color}; text-shadow: 0 1px 2px rgba(255,255,255,0.8); letter-spacing:0.5px;">${p.name}</span>
           </div>
@@ -320,7 +320,7 @@ function renderHome() {
               else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
 
               return `
-              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.5); outline:2px solid var(--blue); outline-offset:4px; border-radius: 40px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+              <div style="flex:1; background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.5); outline:2px solid var(--blue); outline-offset:1px; border-radius: 25px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                 <!-- 項目名稱 -->
                 <span style="font-size:12px; color:${nameColor}; font-weight:900; margin-bottom:2px; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.9);">${ev.name}</span>
                 <!-- 日期與天數 -->
