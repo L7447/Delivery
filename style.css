@@ -264,7 +264,7 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
 .hero-plat-list { 
   display: flex;                   
   flex-direction: column;          
-  gap: 8px;                        
+  gap: 3px;                        
 }
 
 /* 各平台單行資料（移除固定背景，改由 JS 動態注入） */
@@ -297,21 +297,22 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
   justify-content: space-between;  
   text-align: center;              
   background: var(--sf);           /* 給總和一個白底卡片增加辨識度 */
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 12px;
   padding: 6px 0;
+  margin-bottom: 10px;          
 }
 .ht-item { 
   flex: 1;                         
   display: flex;                   
   flex-direction: column;          
-  gap: 4px;                        
+  gap: 4px;      
 } 
 .ht-val { 
   font-family: var(--mono);        
   font-size: 18px;                 
   font-weight: 800;                
-  color: var(--blue);               /* 總和數字使用橘色強調 */
+  color: var(--blue);               /* 總和數字使用藍色強調 */
 }
 .ht-lbl { 
   font-size: 11px;                 
@@ -321,7 +322,7 @@ html, body { height: 100%; background: var(--bg); color: var(--t1); font-family:
 
 /* ══ 打卡按鈕修復（確保全寬大按鈕） ══════════════ */
 .punch-card {
-  background: var(--sf); border: 1px solid var(--border); 
+  background: var(--sf); border: 2px solid var(--border); 
   border-radius: var(--r); padding: 16px; margin-bottom: 16px; 
 }
 .punch-main-btn {
