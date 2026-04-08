@@ -203,7 +203,7 @@ function renderHome() {
     platStats.forEach(p => {
       // ✅ 將平台顏色設定在行內樣式 (background 設透明度 15%，邊框實色)
       html += `
-        <div class="hero-plat-row" style="background:${p.color}25; border: 1px solid ${p.color}80; color: ${p.color};">
+        <div class="hero-plat-row" style="background:${p.color}10; border: 1px solid ${p.color}80; color: ${p.color};">
           <span class="hp-name">${p.name}收入：</span>
           <span class="hp-sum">$ ${fmt(p.sum)}</span>
           <span class="hp-ord">${p.orders} 單</span>
