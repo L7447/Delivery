@@ -13,10 +13,10 @@ const KEYS = {
   vehicleRecs: 'delivery_vehicle_recs', // 車輛燃料與維修紀錄
 };
 
-/* ── 預設平台（強制 3 家主流外送平台）─────────────────── */
+/* ── 預設平台（強制 3 家主流外送平台，預設改為全關閉）─────────────────── */
 const DEFAULT_PLATFORMS = [
-  { id:'uber',      name:'Uber Eats', color:'#008000', active:true,  ruleDesc:'每週一、四結算｜每週四發薪' },
-  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:true,  ruleDesc:'雙週日結算｜雙週三明細｜雙週三發薪' },
+  { id:'uber',      name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一、四結算｜每週四發薪' },
+  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日結算｜雙週三明細｜雙週三發薪' },
   { id:'foodomo',   name:'foodomo',   color:'#ff0000', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
 
@@ -297,7 +297,7 @@ function renderHome() {
               }).join('')}
             </div></div>`;
       });
-    } else { bottomHtml += `<div class="empty-tip">無啟用平台</div>`; }
+    } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`; }
   } else if (S.homeSubTab === 'goal') {
     const weekly = pf(S.settings.goals?.weekly); const monthly = pf(S.settings.goals?.monthly);
     if (weekly > 0 || monthly > 0) {
@@ -328,7 +328,7 @@ function renderHome() {
           </div></div>`;
       }
       bottomHtml += `</div>`;
-    } else { bottomHtml += `<div class="empty-tip">請先至「設定」設定目標</div>`; }
+    } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
   }
   bottomHtml += `</div>`;
   document.getElementById('home-content').innerHTML = topHtml + bottomHtml;
@@ -649,32 +649,30 @@ document.getElementById('add-confirm').addEventListener('click', () => {
   saveRecords(); S.editingId = null; goPage('home'); 
 });
 
-/* ══ 車輛管理 (新功能 Req 2, 3, 4) ════════════════════════════════════════ */
-/** 切換車輛管理的 Tab */
+/* ══ 車輛管理 (防閃爍、滑動特效、雙排圖示) ════════════════════════════════════════ */
+/** 切換車輛管理的 Tab (使用 CSS 滑動特效) */
 function switchVehicleTab(tab) {
   S.vehicleTab = tab;
-  renderVehicles();
+  
+  // 更新 Tab 文字顏色
+  document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel');
+  document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance');
+  
+  // 控制背景方塊滑動 (0% 在左邊，100% 滑到右邊)
+  const bg = document.getElementById('veh-tab-bg');
+  if (tab === 'fuel') {
+    bg.style.transform = 'translateX(0)';
+  } else {
+    bg.style.transform = 'translateX(100%)';
+  }
+
+  renderVehicles(); // 只更新下方列表，不碰上方按鈕，解決閃爍！
 }
-/** 渲染車輛管理頁面 */
+
+/** 渲染車輛管理資料列表 */
 function renderVehicles() {
-  const container = document.getElementById('page-vehicles');
-  let html = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <div style="width:36px;"></div> <!-- 排版平衡 -->
-      <div class="pg-title" style="margin:0;">車輛管理</div>
-      <!-- 新增車輛按鈕 -->
-      <button class="icon-btn" onclick="openAddVehicle()" title="新增車輛">
-        <img src="/images/scooter.png" alt="新增車輛" style="width:20px;height:20px;">
-      </button>
-    </div>
-    
-    <!-- 圓角動態切換按鈕 -->
-    <div class="hist-tabs">
-      <button class="hist-tab-btn ${S.vehicleTab==='fuel'?'active':''}" onclick="switchVehicleTab('fuel')">車輛燃料</button>
-      <button class="hist-tab-btn ${S.vehicleTab==='maintenance'?'active':''}" onclick="switchVehicleTab('maintenance')">車輛保養維修</button>
-    </div>
-    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding-top:10px;">
-  `;
+  const container = document.getElementById('vehicle-content');
+  let html = '';
 
   // 空狀態判斷
   if (S.vehicles.length === 0) {
@@ -694,37 +692,29 @@ function renderVehicles() {
         </div>
         <div class="empty-tip">尚未新增資料</div>`;
     } else {
-      // 這裡您可以擴充車輛紀錄列表顯示...
       html += `<div class="empty-tip">已有資料（此處可擴充顯示清單）</div>`;
     }
   }
-
-  html += `</div>`;
   container.innerHTML = html;
 }
-/** 打開新增車輛視窗 */
+
+/** 打開新增車輛視窗 (只在打開時渲染一次 HTML，後續只改 CSS) */
 function openAddVehicle() {
   S.newVehIcon = 4; // 預設 4
   S.newVehColor = '#555555'; // 預設深灰
-  renderAddVehicleOverlay();
-  openOverlay('vehicle-add-page');
-}
-/** 渲染新增車輛的浮出視窗內容 */
-function renderAddVehicleOverlay() {
+  
   const container = document.getElementById('vehicle-add-body');
   
-  // 產生 4 到 14 的圖示選項
-  let iconsHtml = '';
+  // 產生 4 到 14 的圖示選項 (改用 div 裝起來方便 CSS Grid 雙排排版)
+  let iconsHtml = '<div class="veh-icon-grid">';
   for (let i = 4; i <= 14; i++) {
-    const isSel = S.newVehIcon === i;
     iconsHtml += `
-      <div onclick="S.newVehIcon=${i}; renderAddVehicleOverlay();" 
-           style="width:50px; height:50px; border-radius:12px; border:2px solid ${isSel ? 'var(--acc)' : 'transparent'}; background:var(--sf2); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-        <!-- 使用 mask-image 將黑色圖示變為指定顏色 -->
-        <div class="scooter-mask" style="background-color:${isSel ? S.newVehColor : '#ccc'}; -webkit-mask-image: url('/images/scooter${i}.png');"></div>
+      <div id="veh-icon-box-${i}" onclick="selectNewVehIcon(${i})" class="veh-icon-box">
+        <div id="veh-icon-mask-${i}" class="scooter-mask" style="background-color:#ccc; -webkit-mask-image: url('/images/scooter${i}.png');"></div>
       </div>
     `;
   }
+  iconsHtml += '</div>';
 
   container.innerHTML = `
     <div class="fg" style="margin-bottom:14px">
@@ -739,19 +729,17 @@ function renderAddVehicleOverlay() {
         <input type="text" class="finp" value="${S.newVehColor}" readonly style="flex:1">
       </div>
     </div>
-
+    
     <div class="fg" style="margin-bottom:14px">
       <label>選擇機車圖示</label>
-      <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px;">
-        ${iconsHtml}
-      </div>
+      ${iconsHtml}
     </div>
 
     <div class="fg" style="margin-bottom:20px">
       <label>預設燃料</label>
       <select class="fsel" id="v-fuel">
-        <option value="92">92 無鉛汽油</option>
-        <option value="95" selected>95 無鉛汽油</option>
+        <option value="92" selected>92 無鉛汽油</option>
+        <option value="95">95 無鉛汽油</option>
         <option value="98">98 無鉛汽油</option>
         <option value="electric">電力 (電動車)</option>
       </select>
@@ -763,25 +751,47 @@ function renderAddVehicleOverlay() {
     </div>
   `;
 
-  // 綁定顏色選擇器事件，即時更新預覽
+  // 綁定顏色選擇器事件 (只更新顏色，不重繪 HTML)
   document.getElementById('v-color').addEventListener('input', (e) => {
     S.newVehColor = e.target.value;
-    renderAddVehicleOverlay();
+    updateVehIconUI(); 
   });
+
+  updateVehIconUI(); // 初始化選取狀態
+  openOverlay('vehicle-add-page');
 }
+
+/** 點擊選擇機車圖示 */
+function selectNewVehIcon(id) {
+  S.newVehIcon = id;
+  updateVehIconUI(); // 只更新 CSS 樣式，解決其他圖示跟著閃爍的問題
+}
+
+/** 更新機車圖示的顏色與邊框狀態 (核心防閃爍邏輯) */
+function updateVehIconUI() {
+  for (let i = 4; i <= 14; i++) {
+    const box = document.getElementById(`veh-icon-box-${i}`);
+    const mask = document.getElementById(`veh-icon-mask-${i}`);
+    if (!box || !mask) continue;
+    
+    if (i === S.newVehIcon) {
+      box.style.borderColor = 'var(--acc)';
+      mask.style.backgroundColor = S.newVehColor;
+    } else {
+      box.style.borderColor = 'transparent';
+      mask.style.backgroundColor = '#ccc';
+    }
+  }
+}
+
 /** 儲存新增的車輛 */
 function saveNewVehicle() {
   const name = document.getElementById('v-name').value.trim();
   if (!name) { toast('請輸入車輛名稱'); return; }
-  
   const fuel = document.getElementById('v-fuel').value;
 
   S.vehicles.push({
-    id: newId(),
-    name: name,
-    icon: S.newVehIcon,
-    color: S.newVehColor,
-    defaultFuel: fuel
+    id: newId(), name: name, icon: S.newVehIcon, color: S.newVehColor, defaultFuel: fuel
   });
 
   saveVehicles();
@@ -789,6 +799,7 @@ function saveNewVehicle() {
   toast('✅ 成功新增車輛！');
   renderVehicles();
 }
+
 
 /* ══ 詳情抽屜 ════════════════════════════════════ */
 function openDetailOverlay(id) {
