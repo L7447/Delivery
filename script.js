@@ -512,10 +512,10 @@ function changeHistFilter(val) {
 function renderHistory() {
   const container = document.getElementById('page-history');
   
-  // ✅ 1. 加入頁面標題與 Tab 切換 (新增雙週)
+  // ✅ 修正 1：加入 text-align:center 讓標題置中
   let html = `
-    <div style="padding: 16px 16px 0;">
-      <div class="home-pg-title">查看記錄</div>
+    <div style="padding: 16px 16px 0; text-align: center;">
+      <div class="home-pg-title" style="display:inline-block;">查看記錄</div>
     </div>
     <div class="hist-tabs">
       <button class="hist-tab-btn ${S.histTab==='day'?'active':''}" onclick="switchHistTab('day')">日</button>
@@ -605,7 +605,7 @@ function renderHistCalendarGrid() {
   });
 }
 
-/** 渲染週、雙週、月、年視圖 (新增導航與篩選) */
+/** 渲染週、雙週、月、年視圖 (包含平台篩選與區間統計) */
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
   const nd = new Date(S.histNavDate);
@@ -616,16 +616,31 @@ function renderHistGroupView(mode) {
     const day = nd.getDay() || 7; 
     startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
     endD = new Date(startD); endD.setDate(endD.getDate() + 6);
-    labelStr = `${startD.getMonth()+1}/${startD.getDate()} ~ ${endD.getMonth()+1}/${endD.getDate()}`;
+    labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+  
   } else if (mode === 'biweek') {
-    const day = nd.getDay() || 7; 
-    startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
-    endD = new Date(startD); endD.setDate(endD.getDate() + 13);
-    labelStr = `${startD.getMonth()+1}/${startD.getDate()} ~ ${endD.getMonth()+1}/${endD.getDate()} (雙週)`;
+    // ✅ 修正 2：依據圖表建立精準雙週演算法（錨點設為 2025/11/10 週一）
+    // 計算目標日(nd)距離基準日相差的天數，得出目前的 14 天循環週期
+    const anchor = new Date(2025, 10, 10); // 月份 10 = 11月
+    // 使用當日中午 12 點計算，避開夏令時間誤差
+    const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const cycleOffset = Math.floor(diffDays / 14); // 得出差了幾個週期
+
+    startD = new Date(anchor);
+    startD.setDate(startD.getDate() + cycleOffset * 14);
+    endD = new Date(startD);
+    endD.setDate(endD.getDate() + 13);
+    
+    // 如果跨年，可加上年份以辨識
+    let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : '';
+    labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+  
   } else if (mode === 'month') {
     startD = new Date(nd.getFullYear(), nd.getMonth(), 1);
     endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0);
     labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
+  
   } else if (mode === 'year') {
     startD = new Date(nd.getFullYear(), 0, 1);
     endD = new Date(nd.getFullYear(), 11, 31);
@@ -635,7 +650,7 @@ function renderHistGroupView(mode) {
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
 
-  // 篩選資料 (依據時間與平台)
+  // 篩選資料 (依據時間與平台，排除純打卡記錄)
   let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr);
   if (S.histFilter !== 'all') {
     recs = recs.filter(r => r.platformId === S.histFilter);
@@ -651,7 +666,7 @@ function renderHistGroupView(mode) {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
         <div style="display:flex; align-items:center; gap:8px;">
           <button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button>
-          <span style="font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc);">${labelStr}</span>
+          <span style="font-family:var(--mono); font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc); letter-spacing:0.5px;">${labelStr}</span>
           <button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button>
         </div>
         <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">
