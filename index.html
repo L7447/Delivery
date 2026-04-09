@@ -155,41 +155,57 @@
     <div id="rv-top3"    style="display:none"></div>
   </section>
 
+  <!-- ══ 車輛管理 (新頁面) ═══════════════════════════════════ -->
+  <!-- 建立車輛管理分頁，預設隱藏，點擊導覽列後會加入 active 顯示 -->
+  <section class="page" id="page-vehicles" style="padding: 16px; display:flex; flex-direction:column; overflow:hidden;">
+    <!-- 車輛管理的內容會由 script.js 的 renderVehicles() 動態渲染到這裡 -->
+  </section>
+
   <!-- ══ 功能設定 ════════════════════════════════════ -->
   <section class="page" id="page-settings">
     <div class="pg-title">功能設定</div>
     <div id="settings-content"></div>
   </section>
 
-  <!-- ══ 底部導覽列 ══════════════════════════════════ -->
+<!-- ══ 底部導覽列 ══════════════════════════════════ -->
   <nav id="nav">
     <!-- 首頁：點擊前=首頁1，點擊後=首頁2 -->
     <div class="ni active" data-pg="home" data-img1="images/home1.png" data-img2="images/home2.png">
       <img class="ni-img" src="images/home2.png" alt="首頁">
       <span class="lb">首頁</span>
     </div>
+    
     <!-- 紀錄：點擊前=紀錄1，點擊後=紀錄2 -->
     <div class="ni" data-pg="history" data-img1="images/history1.png" data-img2="images/history2.png">
       <img class="ni-img" src="images/history1.png" alt="查看記錄">
       <span class="lb">查看記錄</span>
     </div>
-    <!-- 中央新增按鈕改成標準分頁 -->
+    
+    <!-- 新增記錄：點擊前=新增1，點擊後=新增2 -->
     <div class="ni" data-pg="add" data-img1="images/add-record1.png" data-img2="images/add-record2.png">
       <img class="ni-img" src="images/add-record1.png" alt="新增">
       <span class="lb">新增</span>
     </div>
+    
     <!-- 報表：點擊前=圖表1，點擊後=圖表2 -->
     <div class="ni" data-pg="report" data-img1="images/report1.png" data-img2="images/report2.png">
       <img class="ni-img" src="images/report1.png" alt="收入分析">
       <span class="lb">收入分析</span>
     </div>
+
+    <!-- 🌟 車輛管理 (新增)：放置在設定左邊，使用機車圖示 -->
+    <div class="ni" data-pg="vehicles" data-img1="images/scooter1.png" data-img2="images/scooter2.png">
+      <!-- 預設顯示未選中的黑色 1 號圖 -->
+      <img class="ni-img" src="images/scooter1.png" alt="車輛管理">
+      <span class="lb">車輛管理</span>
+    </div>
+    
     <!-- 設定：點擊前=設定1，點擊後=設定2 -->
     <div class="ni" data-pg="settings" data-img1="images/settings1.png" data-img2="images/settings2.png">
       <img class="ni-img" src="images/settings1.png" alt="設定">
       <span class="lb">設定</span>
     </div>
   </nav>
-</div><!-- /#app -->
 
 <!-- ══ 搜尋 Overlay ════════════════════════════════ -->
 <div class="overlay-page" id="search-page">
@@ -269,6 +285,21 @@
     <!-- 日期格子 -->
     <div id="fc-grid" style="display:grid; grid-template-columns:repeat(7,1fr); flex:1; overflow-y:auto; background:var(--border); gap:1px;"></div>
   </div>
+</div>
+
+<!-- ══ 新增車輛 Overlay (由下往上滑出視窗) ════════════════════════ -->
+<!-- 使用 overlay-page 類別，預設隱藏在畫面下方，加上 show 類別會滑上來 -->
+<div class="overlay-page" id="vehicle-add-page">
+  <div class="top-bar">
+    <!-- 左側關閉按鈕 -->
+    <button class="bar-btn" onclick="closeOverlay('vehicle-add-page')">✕</button>
+    <!-- 置中標題 -->
+    <h2>新增車輛</h2>
+    <!-- 右側留白，保持標題絕對置中 -->
+    <div style="width:36px"></div>
+  </div>
+  <!-- 視窗主體，表單與圖示顏色選擇器會由 script.js 渲染在此處 -->
+  <div class="overlay-body" id="vehicle-add-body"></div>
 </div>
 
 <script src="/script.js"></script>
