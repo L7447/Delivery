@@ -156,9 +156,27 @@
   </section>
 
   <!-- ══ 車輛管理 (新頁面) ═══════════════════════════════════ -->
-  <!-- 建立車輛管理分頁，預設隱藏，點擊導覽列後會加入 active 顯示 -->
-  <section class="page" id="page-vehicles" style="padding: 16px; display:flex; flex-direction:column; overflow:hidden;">
-    <!-- 車輛管理的內容會由 script.js 的 renderVehicles() 動態渲染到這裡 -->
+  <section class="page" id="page-vehicles" style="padding: 16px 16px 0; display:flex; flex-direction:column; overflow:hidden;">
+    <!-- 固定的標題與 30x30 滿版新增按鈕 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="width:30px;"></div> <!-- 排版平衡 -->
+      <div class="pg-title" style="margin:0;">車輛管理</div>
+      
+      <!-- 滿版 30x30 新增按鈕 -->
+      <button onclick="openAddVehicle()" title="新增車輛" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer;">
+        <img src="/images/scooter.png" alt="新增車輛" style="width:100%; height:100%; object-fit:contain;">
+      </button>
+    </div>
+    
+    <!-- 圓角滑動特效切換 Tab -->
+    <div class="slide-tabs">
+      <div class="slide-bg" id="veh-tab-bg"></div>
+      <button class="slide-btn active" id="btn-veh-fuel" onclick="switchVehicleTab('fuel')">車輛燃料</button>
+      <button class="slide-btn" id="btn-veh-maint" onclick="switchVehicleTab('maintenance')">車輛保養維修</button>
+    </div>
+
+    <!-- 動態列表容器 (JS 只會更新這裡，不會動到上方的按鈕) -->
+    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding-top:10px; padding-bottom:24px;"></div>
   </section>
 
   <!-- ══ 功能設定 ════════════════════════════════════ -->
