@@ -565,3 +565,57 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
   font-size: 12px; font-family: var(--mono); font-weight: 700; 
   color: var(--blue); text-align: right; margin-top: auto;
 }
+
+/* ══ 高對比平滑滑動 Tab 特效 (車輛管理專用) ═══════════════ */
+.slide-tabs {
+  position: relative; 
+  display: flex; 
+  background: rgba(0,0,0,0.06);
+  border-radius: 999px; /* 極致圓角 */
+  padding: 4px; 
+  margin-bottom: 12px;
+}
+/* 滑動背景方塊 */
+.slide-bg {
+  position: absolute; 
+  top: 4px; bottom: 4px; left: 4px; 
+  width: calc(50% - 4px); /* 一半的寬度 */
+  background: var(--acc); /* 高對比橘色 */
+  border-radius: 999px;
+  /* 時間加長到 0.4s，並使用彈性曲線讓滑動更順暢 */
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 10px rgba(255,107,53, 0.4);
+}
+/* Tab 按鈕文字 */
+.slide-btn {
+  flex: 1; 
+  position: relative; z-index: 1; /* 確保文字在滑塊上方 */
+  border: none; background: transparent;
+  padding: 10px 0; 
+  color: var(--t2); 
+  font-size: 13px; font-weight: 600; font-family: var(--sans);
+  cursor: pointer; 
+  transition: color 0.4s; /* 顏色漸變 */
+  -webkit-tap-highlight-color: transparent;
+}
+.slide-btn.active {
+  color: #fff; /* 選中時變成白色 */
+  font-weight: 700;
+}
+
+/* ══ 機車圖示雙排 Grid 佈局 ════════════════════════════ */
+.veh-icon-grid {
+  display: grid; 
+  /* 切割成 6 等分，11 個圖示會自動變成 上排 6 個、下排 5 個 */
+  grid-template-columns: repeat(6, 1fr); 
+  gap: 8px;
+}
+.veh-icon-box {
+  aspect-ratio: 1 / 1; /* 保持正方形 */
+  border-radius: 12px; 
+  border: 2px solid transparent; 
+  background: var(--sf2); 
+  display: flex; align-items: center; justify-content: center; 
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
