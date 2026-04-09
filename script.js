@@ -1,14 +1,16 @@
 /* ══════════════════════════════════════════════════════
    外送記帳 App — script.js
-   功能：打卡、多平台記帳、報表、目標、獎勵設定
+   功能：打卡、多平台記帳、報表、目標、獎勵設定、車輛管理
    ══════════════════════════════════════════════════════ */
 
 /* ── localStorage 資料鍵值 ──────────────────────── */
 const KEYS = {
-  records:   'delivery_records',    // 記錄陣列
-  platforms: 'delivery_platforms',  // 平台設定
-  settings:  'delivery_settings',   // App 設定（目標、獎勵等）
-  punch:     'delivery_punch_live',  // 即時打卡狀態
+  records:     'delivery_records',      // 記錄陣列
+  platforms:   'delivery_platforms',    // 平台設定
+  settings:    'delivery_settings',     // App 設定（目標、獎勵等）
+  punch:       'delivery_punch_live',   // 即時打卡狀態
+  vehicles:    'delivery_vehicles',     // 車輛清單
+  vehicleRecs: 'delivery_vehicle_recs', // 車輛燃料與維修紀錄
 };
 
 /* ── 預設平台（強制 3 家主流外送平台）─────────────────── */
@@ -21,27 +23,32 @@ const DEFAULT_PLATFORMS = [
 /* ── 預設 App 設定 ───────────────────────────────── */
 const DEFAULT_SETTINGS = {
   goals:   { weekly: 0, monthly: 0 }, // 週目標/月目標
-  rewards: [],                         // 獎勵列表
+  rewards: [],                        // 獎勵列表
 };
 
 /* ══ 全域狀態物件 ════════════════════════════════ */
 const S = {
-  tab:       'home',                  // 目前 tab
-  rptY:      new Date().getFullYear(), // 報表年份
-  rptM:      new Date().getMonth()+1,  // 報表月份
-  rptView:   'overview',              // 報表子頁
-  calY:      new Date().getFullYear(), // 日曆年份
-  calM:      new Date().getMonth()+1,  // 日曆月份
-  selDate:   todayStr(),              // 歷史頁選取日期
-  records:   [],                       // 所有記錄
-  platforms: [],                       // 平台陣列
-  settings:  { ...DEFAULT_SETTINGS }, // App 設定
-  punch: null,                         // {startTime, date} 目前打卡狀態
-  editingId: null,                     // 編輯中的記錄 ID
-  selPlatformId: null,                 // 新增表單選取的平台 ID
-  charts: {},                          // Chart.js 實例快取
-  subMode: '',                         // 子頁目前模式
-  homeSubTab: 'schedule',              // 首頁下半部目前的 Tab ('schedule' 或 'goal')
+  tab:           'home',                  // 目前 tab
+  rptY:          new Date().getFullYear(), // 報表年份
+  rptM:          new Date().getMonth()+1,  // 報表月份
+  rptView:       'overview',              // 報表子頁
+  calY:          new Date().getFullYear(), // 日曆年份
+  calM:          new Date().getMonth()+1,  // 日曆月份
+  selDate:       todayStr(),              // 歷史頁選取日期
+  records:       [],                      // 所有記錄
+  platforms:     [],                      // 平台陣列
+  settings:      { ...DEFAULT_SETTINGS }, // App 設定
+  punch:         null,                    // {startTime, date} 目前打卡狀態
+  vehicles:      [],                      // 車輛清單
+  vehicleRecs:   [],                      // 車輛相關紀錄
+  editingId:     null,                    // 編輯中的記錄 ID
+  selPlatformId: null,                    // 新增表單選取的平台 ID
+  charts:        {},                      // Chart.js 實例快取
+  subMode:       '',                      // 子頁目前模式
+  homeSubTab:    'schedule',              // 首頁下半部目前的 Tab ('schedule' 或 'goal')
+  vehicleTab:    'fuel',                  // 車輛管理目前的 Tab ('fuel' 或 'maintenance')
+  newVehIcon:    4,                       // 新增車輛預設圖示編號 (4~14)
+  newVehColor:   '#555555',               // 新增車輛預設圖示顏色
 };
 
 /* ══ 工具函式 ════════════════════════════════════ */
@@ -102,15 +109,13 @@ function customConfirm(msg) {
 function openOverlay(id)  { document.getElementById(id)?.classList.add('show');    }
 function closeOverlay(id) { document.getElementById(id)?.classList.remove('show'); }
 /** 關閉詳情抽屜 */
-function closeDetailOverlay() {
-  document.getElementById('detail-overlay').classList.remove('show');
-}
+function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
+
 
 /* ══ 資料讀寫（localStorage）════════════════════ */
 /** 讀取所有資料到 S 狀態 */
 function loadAll() {
-  try { S.records   = JSON.parse(localStorage.getItem(KEYS.records)||'[]'); }   catch { S.records=[]; }
-  // 平台強制固定為 3 個，並繼承舊設定的「顏色」與「啟用狀態」
+  try { S.records = JSON.parse(localStorage.getItem(KEYS.records)||'[]'); } catch { S.records=[]; }
   try { 
     const saved = JSON.parse(localStorage.getItem(KEYS.platforms)||'[]'); 
     S.platforms = DEFAULT_PLATFORMS.map(dp => {
@@ -118,84 +123,71 @@ function loadAll() {
       return sp ? { ...dp, color: sp.color, active: sp.active } : { ...dp };
     });
   } catch { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); }
-  try { S.settings  = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; }
-       catch { S.settings  = { ...DEFAULT_SETTINGS }; }
-  try { S.punch     = JSON.parse(localStorage.getItem(KEYS.punch)||'null'); }    catch { S.punch=null; }
+  try { S.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; } catch { S.settings = { ...DEFAULT_SETTINGS }; }
+  try { S.punch = JSON.parse(localStorage.getItem(KEYS.punch)||'null'); } catch { S.punch=null; }
+  // 讀取車輛資料
+  try { S.vehicles = JSON.parse(localStorage.getItem(KEYS.vehicles)||'[]'); } catch { S.vehicles=[]; }
+  try { S.vehicleRecs = JSON.parse(localStorage.getItem(KEYS.vehicleRecs)||'[]'); } catch { S.vehicleRecs=[]; }
 }
 /** 儲存記錄 */
 function saveRecords()   { localStorage.setItem(KEYS.records,   JSON.stringify(S.records));   }
-/** 儲存平台設定 */
 function savePlatforms() { localStorage.setItem(KEYS.platforms, JSON.stringify(S.platforms)); }
-/** 儲存 App 設定 */
 function saveSettings()  { localStorage.setItem(KEYS.settings,  JSON.stringify(S.settings));  }
-/** 儲存即時打卡狀態 */
 function savePunch()     { localStorage.setItem(KEYS.punch,     JSON.stringify(S.punch));     }
+// 儲存車輛資料
+function saveVehicles()    { localStorage.setItem(KEYS.vehicles,    JSON.stringify(S.vehicles));    }
+function saveVehicleRecs() { localStorage.setItem(KEYS.vehicleRecs, JSON.stringify(S.vehicleRecs)); }
 
 /* ══ 導覽 ════════════════════════════════════════ */
-/** 切換到指定頁面（tab 名稱） */
+/** 切換到指定頁面（tab 名稱），並套用對應的專屬背景色 */
 function goPage(name) {
   S.tab = name;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
     const isActive = n.dataset.pg === name;
     n.classList.toggle('active', isActive);
-    // 切換圖示：選中=2號彩色圖，未選中=1號黑色圖
     const img = n.querySelector('.ni-img');
-    if (img) {
-      img.src = isActive ? n.dataset.img2 : n.dataset.img1;
-    }
+    if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
   document.getElementById(`page-${name}`)?.classList.add('active');
-  // 切換時觸發對應渲染
+  
+  // 動態切換 body data-tab 以觸發專屬背景色
+  document.body.setAttribute('data-tab', name);
+
   if (name === 'home')     renderHome();
   if (name === 'history')  renderHistory();
   if (name === 'report')   renderReport();
+  if (name === 'vehicles') renderVehicles(); // 切換到車輛頁
   if (name === 'settings') renderSettings();
 }
 // 綁定底部導覽點擊
 document.querySelectorAll('.ni[data-pg]').forEach(el =>
   el.addEventListener('click', () => {
     const pg = el.dataset.pg;
-    if (pg === 'add' && S.tab !== 'add') {
-      openAddPage(); // 點擊新增按鈕時，清空表單
-    } else {
-      goPage(pg);
-    }
+    if (pg === 'add' && S.tab !== 'add') openAddPage();
+    else goPage(pg);
   })
 );
 
 /* ══ 首頁子分頁切換 ══════════════════════════════ */
-function switchHomeTab(tab) {
-  S.homeSubTab = tab;
-  renderHome();
-}
+function switchHomeTab(tab) { S.homeSubTab = tab; renderHome(); }
 
 /* ══ 首頁渲染 ════════════════════════════════════ */
 function renderHome() {
-  const today    = todayStr();
-  const dayRecs  = getDayRecs(today);
-  
-  const total    = dayRecs.reduce((s,r)=>s+recTotal(r), 0);
-  const orders   = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
-  
-  // ✅ 關鍵修正：排除「純打卡記錄(isPunchOnly)」，只加總有收入單據的工時
-  const hours    = dayRecs.filter(r => !r.isPunchOnly).reduce((s,r)=>s+pf(r.hours), 0);     
-  
-  const dateObj  = new Date(today+'T00:00:00');
-  const dow      = ['日','一','二','三','四','五','六'][dateObj.getDay()];
+  const today = todayStr();
+  const dayRecs = getDayRecs(today);
+  const total = dayRecs.reduce((s,r)=>s+recTotal(r), 0);
+  const orders = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
+  const hours = dayRecs.filter(r => !r.isPunchOnly).reduce((s,r)=>s+pf(r.hours), 0);     
+  const dateObj = new Date(today+'T00:00:00');
+  const dow = ['日','一','二','三','四','五','六'][dateObj.getDay()];
 
   const activePlatforms = S.platforms.filter(p=>p.active);
   const platStats = activePlatforms.map(p => {
     const recs = dayRecs.filter(r => r.platformId === p.id);
-    return {
-      ...p,
-      sum: recs.reduce((s, r) => s + recTotal(r), 0),
-      orders: recs.reduce((s, r) => s + pf(r.orders), 0),
-      hours: recs.reduce((s, r) => s + pf(r.hours), 0)
-    };
+    return { ...p, sum: recs.reduce((s, r) => s + recTotal(r), 0), orders: recs.reduce((s, r) => s + pf(r.orders), 0), hours: recs.reduce((s, r) => s + pf(r.hours), 0) };
   }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
-  // ── 上層 (固定不動區塊) ──
   let topHtml = `
   <div class="home-top-fixed">
     <div class="home-header">
@@ -204,7 +196,6 @@ function renderHome() {
         <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b>
       </div>
     </div>
-    
     <div class="today-hero">
   `;
 
@@ -220,11 +211,8 @@ function renderHome() {
         </div>`;
     });
     topHtml += `</div>`;
-  } else {
-    topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`;
-  }
+  } else { topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`; }
 
-  // ✅ UI 修正：工時(h) 改為 總工時
   topHtml += `
       <div class="hero-total-row">
         <div class="ht-item"><div class="ht-lbl">總收入</div><div class="ht-val">$ ${fmt(total)}</div></div>
@@ -234,7 +222,6 @@ function renderHome() {
     </div>
   `;
 
-  // 打卡區塊 (新版精簡UI)
   const isPunched = S.punch && S.punch.date === today;
   let punchStatusStr = '離線';
   if (isPunched) {
@@ -256,10 +243,10 @@ function renderHome() {
     </div>
   </div>`; 
 
-  // ── 下層 (可捲動區塊) ──
   if (!S.homeSubTab) S.homeSubTab = 'schedule';
   let bottomHtml = `
   <div class="home-bottom-scroll">
+    <!-- 切換按鈕 -->
     <div class="home-tabs">
       <button class="home-tab-btn ${S.homeSubTab==='schedule'?'active':''}" onclick="switchHomeTab('schedule')">平台日程表</button>
       <button class="home-tab-btn ${S.homeSubTab==='goal'?'active':''}" onclick="switchHomeTab('goal')">目標進度</button>
@@ -267,26 +254,15 @@ function renderHome() {
   `;
 
   if (S.homeSubTab === 'schedule') {
-    const todayObj = new Date();
-    todayObj.setHours(0,0,0,0);
+    const todayObj = new Date(); todayObj.setHours(0,0,0,0);
     const calcNextDates = (id) => {
       const y = todayObj.getFullYear(), m = todayObj.getMonth(), d = todayObj.getDate();
       const events = [];
-      const addEvent = (name, dObj) => {
-        const diff = Math.round((dObj - todayObj) / 86400000);
-        events.push({ name: name, dateStr: `${dObj.getMonth()+1}/${pad(dObj.getDate())}`, diff: diff, diffStr: diff === 0 ? '今天' : `${diff} 天後`});
-      };
-      const getNextDow = (targets) => {
-        let cur = todayObj.getDay(); let add = 7;
-        targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; });
-        let res = new Date(todayObj); res.setDate(d + add); return res;
-      };
+      const addEvent = (name, dObj) => { const diff = Math.round((dObj - todayObj) / 86400000); events.push({ name: name, dateStr: `${dObj.getMonth()+1}/${pad(dObj.getDate())}`, diff: diff, diffStr: diff === 0 ? '今天' : `${diff} 天後`}); };
+      const getNextDow = (targets) => { let cur = todayObj.getDay(); let add = 7; targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; }); let res = new Date(todayObj); res.setDate(d + add); return res; };
       if (id === 'uber') { addEvent('趟獎結算', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
       else if (id === 'foodpanda') {
-        const getPandaNext = (aY, aM, aD) => {
-          const anchor = new Date(aY, aM, aD); const diffDays = Math.floor((todayObj - anchor) / 86400000);
-          const daysToAdd = (14 - (diffDays % 14)) % 14; let res = new Date(todayObj); res.setDate(d + daysToAdd); return res;
-        };
+        const getPandaNext = (aY, aM, aD) => { const anchor = new Date(aY, aM, aD); const diffDays = Math.floor((todayObj - anchor) / 86400000); const daysToAdd = (14 - (diffDays % 14)) % 14; let res = new Date(todayObj); res.setDate(d + daysToAdd); return res; };
         addEvent('85% 取單率', getPandaNext(2020, 0, 12)); addEvent('明細寄發', getPandaNext(2020, 0, 15)); addEvent('發薪日', getPandaNext(2020, 0, 22));
       } else if (id === 'foodomo') {
         let nSettle = new Date(todayObj), nPay = new Date(todayObj);
@@ -299,150 +275,83 @@ function renderHome() {
 
     if (activePlatforms.length) {
       activePlatforms.forEach(p => {
-        const events = calcNextDates(p.id);
-        if (!events) return;
-        bottomHtml += `
-          <div style="border: 2px solid ${p.color}40; background: ${p.color}08; border-radius: 16px; padding: 12px; margin-bottom: 10px;">
+        const events = calcNextDates(p.id); if (!events) return;
+        bottomHtml += `<div style="border: 2px solid ${p.color}40; background: ${p.color}08; border-radius: 16px; padding: 12px; margin-bottom: 10px;">
             <div style="display:flex; align-items:center; gap:5px; margin-bottom: 8px;">
               <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);"></div>
               <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
             </div>
             <div style="display:flex; gap:6px;">
               ${events.map(ev => {
-                const isToday = ev.diff === 0;
-                const dateColor = isToday ? 'var(--green)' : 'var(--t1)';
-                const diffColor = isToday ? 'var(--green)' : 'var(--t2)';
+                const isToday = ev.diff === 0; const dateColor = isToday ? 'var(--green)' : 'var(--t1)'; const diffColor = isToday ? 'var(--green)' : 'var(--t2)';
                 let nameColor = 'var(--t3)'; 
                 if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)';
                 else if (ev.name.includes('明細')) nameColor = 'var(--gold)';
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
-
-                return `
-                <div style="flex:1; background: var(--sf); border: 1px solid var(--border); border-radius: 12px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                return `<div style="flex:1; background: var(--sf); border: 1px solid var(--border); border-radius: 12px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                   <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:4px; letter-spacing:0.5px;">${ev.name}</span>
                   <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
                     ${ev.dateStr} <span style="font-size:11px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span>
                   </span>
                 </div>`;
               }).join('')}
-            </div>
-          </div>`;
+            </div></div>`;
       });
-    } else {
-      bottomHtml += `<div class="empty-tip">無啟用平台</div>`;
-    }
-
+    } else { bottomHtml += `<div class="empty-tip">無啟用平台</div>`; }
   } else if (S.homeSubTab === 'goal') {
-    const weekly = pf(S.settings.goals?.weekly);
-    const monthly = pf(S.settings.goals?.monthly);
-    
+    const weekly = pf(S.settings.goals?.weekly); const monthly = pf(S.settings.goals?.monthly);
     if (weekly > 0 || monthly > 0) {
       bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
       if (weekly > 0) {
-        const wDate = new Date(dateObj);
-        const wDay = wDate.getDay() || 7;
-        wDate.setDate(wDate.getDate() - wDay + 1);
-        let weekTotal = 0;
-        for(let i=0; i<7; i++) {
-          const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`;
-          weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0);
-          wDate.setDate(wDate.getDate() + 1);
-        }
-        const wPct = Math.min(100, Math.round(weekTotal/weekly*100));
-        const wRemain = Math.max(0, weekly-weekTotal);
-        const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
-        
-        bottomHtml += `
-        <div style="margin-bottom: ${monthly>0 ? '16px' : '0'};">
+        const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
+        for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
+        const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
+        bottomHtml += `<div style="margin-bottom: ${monthly>0 ? '16px' : '0'};">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-            <span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span>
+            <span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span>
           </div>
           <div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
-            <span>已達 $ ${fmt(weekTotal)}</span>
-            <span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span>
-          </div>
-        </div>`;
+            <span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span>
+          </div></div>`;
       }
       if (monthly > 0) {
-        const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1);
-        const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
-        const mPct       = Math.min(100, Math.round(monthTotal/monthly*100));
-        const mRemain    = Math.max(0, monthly-monthTotal);
-        const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
-        
-        bottomHtml += `
-        <div>
+        const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
+        const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
+        bottomHtml += `<div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-            <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span>
+            <span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span>
           </div>
           <div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;">
-            <span>已達 $ ${fmt(monthTotal)}</span>
-            <span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span>
-          </div>
-        </div>`;
+            <span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span>
+          </div></div>`;
       }
       bottomHtml += `</div>`;
-    } else {
-      bottomHtml += `<div class="empty-tip">請先至「設定」設定目標</div>`;
-    }
+    } else { bottomHtml += `<div class="empty-tip">請先至「設定」設定目標</div>`; }
   }
   bottomHtml += `</div>`;
-
   document.getElementById('home-content').innerHTML = topHtml + bottomHtml;
 }
 
 /* ══ 打卡功能 ════════════════════════════════════ */
-/** 上線打卡 */
 function punchIn() {
-  const today = todayStr();
-  S.punch = { date: today, startTime: nowTime() };
-  savePunch();
-  toast(`✅ 上線打卡：${S.punch.startTime}`);
-  renderHome();
+  const today = todayStr(); S.punch = { date: today, startTime: nowTime() };
+  savePunch(); toast(`✅ 上線打卡：${S.punch.startTime}`); renderHome();
 }
-/** 下線打卡（新版：直接記錄，不開啟新增表單） */
 async function punchOut() {
   if (!S.punch) return;
-  // 跳出正中間的確認對話框
   const ok = await customConfirm('<strong>【確認離線】</strong><br>確定要結束工作並下線嗎？');
   if (!ok) return;
-
-  const endTime   = nowTime();
-  const startMs   = new Date(`${S.punch.date}T${S.punch.startTime}`).getTime();
-  const endMs     = new Date(`${S.punch.date}T${endTime}`).getTime();
+  const endTime = nowTime(); const startMs = new Date(`${S.punch.date}T${S.punch.startTime}`).getTime(); const endMs = new Date(`${S.punch.date}T${endTime}`).getTime();
   const diffHours = Math.max(0, (endMs - startMs) / 3600000);
-
-  // 產生純打卡時間的紀錄物件（不含收入與單數）
-  const punchRecord = {
-    id:          newId(),
-    date:        S.punch.date,
-    time:        endTime,
-    platformId:  null, // 系統紀錄不綁定平台
-    punchIn:     S.punch.startTime,
-    punchOut:    endTime,
-    hours:       diffHours,
-    isPunchOnly: true, // 特殊標記：此為純打卡紀錄
-    note:        '系統上下線記錄'
-  };
-
-  // 存入紀錄陣列
-  S.records.push(punchRecord);
-  saveRecords();
-
-  // 清除打卡狀態
-  S.punch = null; 
-  savePunch();
-  toast('✅ 已離線！時數已記錄至歷史中');
-  renderHome();
+  const punchRecord = { id: newId(), date: S.punch.date, time: endTime, platformId: null, punchIn: S.punch.startTime, punchOut: endTime, hours: diffHours, isPunchOnly: true, note: '系統上下線記錄' };
+  S.records.push(punchRecord); saveRecords(); S.punch = null; savePunch();
+  toast('✅ 已離線！時數已記錄至歷史中'); renderHome();
 }
 
 /* ══ 記錄卡片 HTML（共用）═══════════════════════ */
 function buildRecItem(r) {
-  // 判斷是否為「純打卡紀錄」
   if (r.isPunchOnly) {
     return `<div class="rec-item" data-id="${r.id}" style="background:var(--sf2); border: 1px dashed var(--t3);">
       <div class="rec-plat-dot" style="background:var(--t3)"></div>
@@ -453,26 +362,15 @@ function buildRecItem(r) {
       <div class="rec-amt" style="color:var(--t2); font-size:14px;">+ ${pf(r.hours).toFixed(1)} h</div>
     </div>`;
   }
-
-  // 一般收入紀錄
-  const plat    = getPlatform(r.platformId);
-  const total   = recTotal(r);
-  const chips   = [];
-  if (r.orders > 0) chips.push(`📦${r.orders}單`);
-  if (r.hours  > 0) chips.push(`⏱${pf(r.hours).toFixed(1)}h`);
+  const plat = getPlatform(r.platformId); const total = recTotal(r); const chips = [];
+  if (r.orders > 0) chips.push(`📦${r.orders}單`); if (r.hours > 0) chips.push(`⏱${pf(r.hours).toFixed(1)}h`);
   const bonusBits = [];
-  if (r.bonus    > 0) bonusBits.push(`🎁${fmt(r.bonus)}`);
-  if (r.tempBonus> 0) bonusBits.push(`⚡${fmt(r.tempBonus)}`);
-  if (r.tips     > 0) bonusBits.push(`🤑${fmt(r.tips)}`);
-
+  if (r.bonus > 0) bonusBits.push(`🎁${fmt(r.bonus)}`); if (r.tempBonus> 0) bonusBits.push(`⚡${fmt(r.tempBonus)}`); if (r.tips > 0) bonusBits.push(`🤑${fmt(r.tips)}`);
   return `<div class="rec-item" data-id="${r.id}">
     <div class="rec-plat-dot" style="background:${plat.color}"></div>
     <div class="rec-info">
       <div class="rec-plat-name">${plat.name}${r.time?` · ${r.time}`:''}</div>
-      <div class="rec-main">
-        ${chips.map(c=>`<span class="rec-chip">${c}</span>`).join('')}
-        ${bonusBits.length?`<span class="rec-chip" style="color:var(--gold)">${bonusBits.join(' ')}</span>`:''}
-      </div>
+      <div class="rec-main">${chips.map(c=>`<span class="rec-chip">${c}</span>`).join('')}${bonusBits.length?`<span class="rec-chip" style="color:var(--gold)">${bonusBits.join(' ')}</span>`:''}</div>
       ${r.note?`<div class="rec-sub">${r.note}</div>`:''}
     </div>
     <div class="rec-amt">+${fmt(total)}</div>
@@ -481,16 +379,10 @@ function buildRecItem(r) {
 
 /* ══ 歷史記錄頁 ══════════════════════════════════ */
 if (!S.histTab) S.histTab = 'day';
-if (!S.histNavDate) S.histNavDate = new Date(); // 供週、月、年導航使用的基準日
-if (!S.histFilter) S.histFilter = 'all'; // 預設篩選全部平台
-
+if (!S.histNavDate) S.histNavDate = new Date();
+if (!S.histFilter) S.histFilter = 'all';
 /** 切換記錄頁 Tab */
-function switchHistTab(tab) {
-  S.histTab = tab;
-  S.histNavDate = new Date(); // 切換 Tab 時，自動重置回「當下時間」
-  renderHistory();
-}
-
+function switchHistTab(tab) { S.histTab = tab; S.histNavDate = new Date(); renderHistory(); }
 /** 歷史區間導航 (上週/下週、上月/下月...) */
 function navHistGroup(dir, mode) {
   let d = new Date(S.histNavDate);
@@ -498,25 +390,18 @@ function navHistGroup(dir, mode) {
   if (mode === 'biweek') d.setDate(d.getDate() + (dir * 14));
   if (mode === 'month')  d.setMonth(d.getMonth() + dir);
   if (mode === 'year')   d.setFullYear(d.getFullYear() + dir);
-  S.histNavDate = d;
-  renderHistory();
+  S.histNavDate = d; renderHistory();
 }
-
 /** 更改平台篩選器 */
-function changeHistFilter(val) {
-  S.histFilter = val;
-  renderHistory();
-}
-
+function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
 /** 渲染整個歷史記錄頁面 */
 function renderHistory() {
   const container = document.getElementById('page-history');
-  
-  // ✅ 修正 1：加入 text-align:center 讓標題置中
   let html = `
     <div style="padding: 16px 16px 0; text-align: center;">
       <div class="home-pg-title" style="display:inline-block;">查看記錄</div>
     </div>
+    <!-- 圓角動態切換按鈕 -->
     <div class="hist-tabs">
       <button class="hist-tab-btn ${S.histTab==='day'?'active':''}" onclick="switchHistTab('day')">日</button>
       <button class="hist-tab-btn ${S.histTab==='week'?'active':''}" onclick="switchHistTab('week')">週</button>
@@ -527,21 +412,14 @@ function renderHistory() {
     <div id="hist-content" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
   `;
   container.innerHTML = html;
-
-  if (S.histTab === 'day') {
-    renderHistDayView();
-  } else {
-    renderHistGroupView(S.histTab);
-  }
+  if (S.histTab === 'day') renderHistDayView(); else renderHistGroupView(S.histTab);
 }
-
 /** 渲染「日」視圖 */
 function renderHistDayView() {
   const content = document.getElementById('hist-content');
   const { calY:y, calM:m } = S;
-  
   content.innerHTML = `
-    <div id="hist-header" style="flex-shrink:0;padding:0 16px 6px;background:var(--bg);">
+    <div id="hist-header" style="flex-shrink:0;padding:0 16px 6px;background:transparent;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:8px">
           <button class="mbtn" id="hist-prev">◀</button>
@@ -549,28 +427,22 @@ function renderHistDayView() {
           <button class="mbtn" id="hist-next">▶</button>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="icon-btn" onclick="openSearch()" title="搜尋記錄">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </button>
-          <button class="icon-btn" onclick="openFullCalendar()" title="大日曆">
-            <img src="/images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;">
-          </button>
+          <button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+          <button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="/images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button>
         </div>
       </div>
       <div class="month-grid" id="hist-calendar"></div>
+      <div class="hist-divider"></div>
       <div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div>
       <div class="sec-title" id="hist-day-label" style="margin-bottom:4px">指定日記錄</div>
     </div>
     <div id="hist-rec-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;"></div>
   `;
-
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
-
   renderHistCalendarGrid();
   renderHistRecords(S.selDate);
 }
-
 function renderHistCalendarGrid() {
   const { calY:y, calM:m } = S;
   const grid = document.getElementById('hist-calendar');
@@ -579,6 +451,7 @@ function renderHistCalendarGrid() {
   const DOW   = ['日','一','二','三','四','五','六'];
 
   let html = `<div class="month-row">`;
+  // 星期加上藍色加粗樣式
   DOW.forEach(d => { html += `<div class="month-cell month-dow">${d}</div>`; });
   html += `</div><div class="month-row">`;
   
@@ -588,8 +461,9 @@ function renderHistCalendarGrid() {
     const ds  = `${y}-${pad(m)}-${pad(day)}`;
     const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0);
     const cls = ['month-cell', ds===todayStr()?'today':'', ds===S.selDate?'sel':''].filter(Boolean).join(' ');
-    const amtHtml = sum>0 ? `<div class="day-amt">${sum>=1000?Math.round(sum/1000)+'k':sum}</div>` : '';
-    html += `<div class="${cls}" data-ds="${ds}"><div class="day-num">${day}</div>${amtHtml}</div>`;
+    // 移除文字金額顯示，改為左上角顯示綠點
+    const dotHtml = sum > 0 ? `<div class="has-rec-dot"></div>` : '';
+    html += `<div class="${cls}" data-ds="${ds}">${dotHtml}<div class="day-num">${day}</div></div>`;
     col++;
     if (col % 7 === 0 && day < days) { html += `</div><div class="month-row">`; }
   }
@@ -604,209 +478,105 @@ function renderHistCalendarGrid() {
     });
   });
 }
-
 /** 渲染週、雙週、月、年視圖 (包含平台篩選與區間統計) */
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
   const nd = new Date(S.histNavDate);
   let startD, endD, labelStr;
-  
-  // 計算時間區間
+  // 計算時間區間  
   if (mode === 'week') {
-    const day = nd.getDay() || 7; 
-    startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
-    endD = new Date(startD); endD.setDate(endD.getDate() + 6);
+    const day = nd.getDay() || 7; startD = new Date(nd); startD.setDate(startD.getDate() - day + 1); endD = new Date(startD); endD.setDate(endD.getDate() + 6);
     labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
-  
   } else if (mode === 'biweek') {
-    // ✅ 修正 2：依據圖表建立精準雙週演算法（錨點設為 2025/11/10 週一）
-    // 計算目標日(nd)距離基準日相差的天數，得出目前的 14 天循環週期
-    const anchor = new Date(2025, 10, 10); // 月份 10 = 11月
-    // 使用當日中午 12 點計算，避開夏令時間誤差
-    const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const cycleOffset = Math.floor(diffDays / 14); // 得出差了幾個週期
-
-    startD = new Date(anchor);
-    startD.setDate(startD.getDate() + cycleOffset * 14);
-    endD = new Date(startD);
-    endD.setDate(endD.getDate() + 13);
-    
+    const anchor = new Date(2025, 10, 10); const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); const cycleOffset = Math.floor(diffDays / 14); 
+    startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14); endD = new Date(startD); endD.setDate(endD.getDate() + 13);
     // 如果跨年，可加上年份以辨識
     let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : '';
     labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
-  
   } else if (mode === 'month') {
-    startD = new Date(nd.getFullYear(), nd.getMonth(), 1);
-    endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0);
-    labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
-  
+    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
   } else if (mode === 'year') {
-    startD = new Date(nd.getFullYear(), 0, 1);
-    endD = new Date(nd.getFullYear(), 11, 31);
-    labelStr = `${nd.getFullYear()}年`;
+    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()}年`;
   }
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
-
   // 篩選資料 (依據時間與平台，排除純打卡記錄)
   let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr);
-  if (S.histFilter !== 'all') {
-    recs = recs.filter(r => r.platformId === S.histFilter);
-  }
-
+  if (S.histFilter !== 'all') recs = recs.filter(r => r.platformId === S.histFilter);
   // 建立下拉選單 HTML
-  let platOpts = `<option value="all">全部平台</option>` + 
-    S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('');
-
+  let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('');
   // 頂部控制列
-  let html = `
-    <div style="padding: 0 16px;">
+  let html = `<div style="padding: 0 16px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
         <div style="display:flex; align-items:center; gap:8px;">
           <button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button>
           <span style="font-family:var(--mono); font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc); letter-spacing:0.5px;">${labelStr}</span>
           <button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button>
         </div>
-        <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">
-          ${platOpts}
-        </select>
-      </div>
-    </div>
-  `;
-
-  // 下半部資料列表
+        <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select>
+      </div></div>`;
+  // 下半部資料列表    
   html += `<div style="padding: 0 16px 24px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">`;
-  
-  if (recs.length === 0) {
-    html += `<div class="empty-tip">沒有資料</div>`;
-  } else {
+  if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
     // 該區間統計卡片
-    const tInc = recs.reduce((s,r) => s + recTotal(r), 0);
-    const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0);
-    const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0);
-
-    html += `
-      <div class="card" style="padding:16px; border:2px solid var(--border); margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-end;">
-        <div>
-          <div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div>
-          <div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;">
-            <span>📦 ${tOrd} 單</span>
-            <span>⏱ ${tHrs.toFixed(1)} h</span>
-          </div>
-        </div>
+    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0);
+    html += `<div class="card" style="padding:16px; border:2px solid var(--border); margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-end;">
+        <div><div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div><div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;"><span>📦 ${tOrd} 單</span><span>⏱ ${tHrs.toFixed(1)} h</span></div></div>
         <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--blue);">$ ${fmt(tInc)}</div>
-      </div>
-    `;
-    
-    // 詳細流水帳列表 (新到舊)
+      </div>`;
+    // 詳細流水帳列表 (新到舊)  
     html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
   }
-  
-  html += `</div>`;
-  content.innerHTML = html;
+  html += `</div>`; content.innerHTML = html;
 }
 
 /* ══ 全螢幕大日曆 ════════════════════════════════ */
 /** 打開大日曆 */
-function openFullCalendar() {
-  document.getElementById('full-calendar-overlay').classList.add('show');
-  renderFullCalendar();
-}
+function openFullCalendar() { document.getElementById('full-calendar-overlay').classList.add('show'); renderFullCalendar(); }
 /** 關閉大日曆 */
-function closeFullCalendar() {
-  document.getElementById('full-calendar-overlay').classList.remove('show');
-}
+function closeFullCalendar() { document.getElementById('full-calendar-overlay').classList.remove('show'); }
 /** 大日曆切換月份 */
-function changeFullCalMonth(offset) {
-  S.calM += offset;
-  if(S.calM < 1) { S.calM = 12; S.calY--; }
-  if(S.calM > 12) { S.calM = 1; S.calY++; }
-  renderFullCalendar();
-  // 同步更新背後的小月曆
-  S.selDate=`${S.calY}-${pad(S.calM)}-01`; 
-  renderHistory();
-}
+function changeFullCalMonth(offset) { S.calM += offset; if(S.calM < 1) { S.calM = 12; S.calY--; } if(S.calM > 12) { S.calM = 1; S.calY++; } renderFullCalendar(); S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); }
 /** 渲染大日曆網格 */
 function renderFullCalendar() {
-  const { calY:y, calM:m } = S;
-  document.getElementById('fc-title').textContent = `${y}年 ${m}月`;
-  
-  const DOW = ['週日','週一','週二','週三','週四','週五','週六'];
-  document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
-
-  const grid = document.getElementById('fc-grid');
-  const first = new Date(y, m-1, 1).getDay(); 
-  const days  = new Date(y, m, 0).getDate();  
-  const today = todayStr();
-
-  let html = ``;
-  
+  const { calY:y, calM:m } = S; document.getElementById('fc-title').textContent = `${y}年 ${m}月`;
+  const DOW = ['週日','週一','週二','週三','週四','週五','週六']; document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
+  const grid = document.getElementById('fc-grid'); const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
   // 填充上個月的空白格
-  const prevDays = new Date(y, m-1, 0).getDate();
-  for (let i=first-1; i>=0; i--) { 
-    html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${prevDays - i}</div></div>`; 
-  }
-  
+  let html = ``; const prevDays = new Date(y, m-1, 0).getDate();
+  for (let i=first-1; i>=0; i--) { html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${prevDays - i}</div></div>`; }
   // 填充當月日期
   for (let day=1; day<=days; day++) {
-    const ds  = `${y}-${pad(m)}-${pad(day)}`;
-    const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0);
-    const isToday = ds === today;
-    const amtHtml = sum > 0 ? `<div class="fc-amt">$${fmt(sum)}</div>` : '';
-    
-    html += `
-      <div class="fc-cell ${isToday ? 'today' : ''}" onclick="S.selDate='${ds}'; closeFullCalendar(); renderHistory();">
-        <div class="fc-date">${pad(day)}</div>
-        ${amtHtml}
-      </div>`;
+    const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); const isToday = ds === today; const amtHtml = sum > 0 ? `<div class="fc-amt">$${fmt(sum)}</div>` : '';
+    html += `<div class="fc-cell ${isToday ? 'today' : ''}" onclick="S.selDate='${ds}'; closeFullCalendar(); renderHistory();"><div class="fc-date">${pad(day)}</div>${amtHtml}</div>`;
   }
-
   // 填充下個月的空白格補滿最後一排
-  const totalCells = first + days;
-  const remain = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
-  for (let i=1; i<=remain; i++) {
-    html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${pad(i)}</div></div>`;
-  }
-
+  const totalCells = first + days; const remain = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${pad(i)}</div></div>`; }
   grid.innerHTML = html;
 }
-
 /** 渲染歷史記錄的當日列表 */
 function renderHistRecords(ds) {
-  const d   = new Date(ds+'T00:00:00');
-  const dow = ['日','一','二','三','四','五','六'][d.getDay()];
-  document.getElementById('hist-day-label').textContent =
-    `${d.getMonth()+1} 月 ${d.getDate()} 日（星期${dow}）記錄`;
-
+  const d = new Date(ds+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][d.getDay()];
+  document.getElementById('hist-day-label').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（星期${dow}）記錄`;
   // 當日摘要
-  const recs  = getDayRecs(ds);
-  const total = recs.reduce((s,r)=>s+recTotal(r), 0);
-  const sumEl = document.getElementById('hist-day-summary');
+  const recs = getDayRecs(ds); const total = recs.reduce((s,r)=>s+recTotal(r), 0); const sumEl = document.getElementById('hist-day-summary');
   if (total > 0) {
-    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0);
-    const hours  = recs.reduce((s,r)=>s+pf(r.hours), 0);
+    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
     sumEl.innerHTML = `<div class="day-sum-row">
       <div class="day-sum-chip" style="background:var(--green-d);color:var(--green)">💰 NT$ ${fmt(total)}</div>
       ${orders>0?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">📦 ${orders} 單</div>`:''}
       ${hours>0 ?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">⏱ ${hours.toFixed(1)} h</div>`:''}
     </div>`;
   } else { sumEl.innerHTML = ''; }
-
   // 記錄列表
   const listEl = document.getElementById('hist-rec-list');
-  if (!recs.length) {
-    listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`;
-    return;
-  }
-  listEl.innerHTML = recs.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||''))
-    .map(r => buildRecItem(r)).join('');
-
+  if (!recs.length) { listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`; return; }
+  listEl.innerHTML = recs.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
   // 綁定點擊開啟詳情
-  listEl.querySelectorAll('.rec-item[data-id]').forEach(el => {
-    el.addEventListener('click', () => openDetailOverlay(el.dataset.id));
-  });
+  listEl.querySelectorAll('.rec-item[data-id]').forEach(el => { el.addEventListener('click', () => openDetailOverlay(el.dataset.id)); });
 }
 
 /* ══ 月份切換（歷史頁）════════════════════════════ */
@@ -828,128 +598,197 @@ document.getElementById('hist-next').addEventListener('click', () => {
  * @param {Object}      prefill 預填欄位（打卡下線時使用）
  */
 function openAddPage(record=null, prefill={}) {
-  S.editingId    = record ? record.id : null;
-  S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
-
+  S.editingId = record ? record.id : null; S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
-
   // 填入表單欄位
-  document.getElementById('f-date').value      = record?.date      || prefill.date || S.selDate || todayStr();
-  document.getElementById('f-punch-in').value  = record?.punchIn   || prefill.punchIn  || '';
-  document.getElementById('f-punch-out').value = record?.punchOut  || prefill.punchOut || '';
-  document.getElementById('f-hours').value     = record?.hours     || prefill.hours     || '';
-  document.getElementById('f-orders').value    = record?.orders    || '';
-  document.getElementById('f-income').value    = record?.income    || '';
-  document.getElementById('f-bonus').value     = record?.bonus     || '';
-  document.getElementById('f-temp-bonus').value= record?.tempBonus || '';
-  document.getElementById('f-tips').value      = record?.tips      || '';
-  document.getElementById('f-note').value      = record?.note      || '';
-
+  document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
+  document.getElementById('f-punch-in').value = record?.punchIn || prefill.punchIn || '';
+  document.getElementById('f-punch-out').value = record?.punchOut || prefill.punchOut || '';
+  document.getElementById('f-hours').value = record?.hours || prefill.hours || '';
+  document.getElementById('f-orders').value = record?.orders || ''; document.getElementById('f-income').value = record?.income || '';
+  document.getElementById('f-bonus').value = record?.bonus || ''; document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
+  document.getElementById('f-tips').value = record?.tips || ''; document.getElementById('f-note').value = record?.note || '';
   // 渲染平台選擇 chips
-  renderPlatformChips();
-  calcAddTotal();
-  // 替換掉原本的 openOverlay('add-page');
-  goPage('add');
+  renderPlatformChips(); calcAddTotal(); goPage('add');
 }
 /** 渲染新增頁平台選擇 chips */
 function renderPlatformChips() {
-  const container = document.getElementById('platform-chips');
-  const active    = S.platforms.filter(p=>p.active);
+  const container = document.getElementById('platform-chips'); const active = S.platforms.filter(p=>p.active);
   if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id;
-
-  container.innerHTML = active.map(p => `
-    <div class="platform-chip${S.selPlatformId===p.id?' on':''}"
-         style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}"
-         onclick="selectPlatform('${p.id}')">
-      <span>${p.name}</span>
-    </div>`).join('');
+  container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${p.id}')"><span>${p.name}</span></div>`).join('');
 }
 /** 選取平台 */
-function selectPlatform(id) {
-  S.selPlatformId = id;
-  renderPlatformChips();
-}
+function selectPlatform(id) { S.selPlatformId = id; renderPlatformChips(); }
 /** 由上線/下線時間自動計算工時 */
 function autoCalcHours() {
-  const inVal  = document.getElementById('f-punch-in').value;
-  const outVal = document.getElementById('f-punch-out').value;
-  if (!inVal || !outVal) return;
-  const base = document.getElementById('f-date').value || todayStr();
-  const inMs  = new Date(`${base}T${inVal}`).getTime();
-  const outMs = new Date(`${base}T${outVal}`).getTime();
-  const diff  = (outMs - inMs) / 3600000;
-  if (diff > 0) {
-    document.getElementById('f-hours').value = diff.toFixed(1);
-  }
-  calcAddTotal();
+  const inVal = document.getElementById('f-punch-in').value; const outVal = document.getElementById('f-punch-out').value;
+  if (!inVal || !outVal) return; const base = document.getElementById('f-date').value || todayStr();
+  const inMs = new Date(`${base}T${inVal}`).getTime(); const outMs = new Date(`${base}T${outVal}`).getTime();
+  const diff = (outMs - inMs) / 3600000; if (diff > 0) document.getElementById('f-hours').value = diff.toFixed(1); calcAddTotal();
 }
 /** 設定打卡欄位為「現在」時間 */
-function setPunchNow(field) {
-  const el = document.getElementById(field==='in'?'f-punch-in':'f-punch-out');
-  el.value = nowTime();
-  autoCalcHours();
-}
+function setPunchNow(field) { const el = document.getElementById(field==='in'?'f-punch-in':'f-punch-out'); el.value = nowTime(); autoCalcHours(); }
 /** 即時計算本筆總收入並更新顯示 */
 function calcAddTotal() {
-  const income    = pf(document.getElementById('f-income').value);
-  const bonus     = pf(document.getElementById('f-bonus').value);
-  const tempBonus = pf(document.getElementById('f-temp-bonus').value);
-  const tips      = pf(document.getElementById('f-tips').value);
-  const total     = income + bonus + tempBonus + tips;
-  document.getElementById('add-total-val').textContent = fmt(total);
-
+  const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const tempBonus = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
+  const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total);
   // 顯示分解（有值的才顯示）
-  const parts = [];
-  if (income    >0) parts.push(`行程 $${fmt(income)}`);
-  if (bonus     >0) parts.push(`固定獎勵 $${fmt(bonus)}`);
-  if (tempBonus >0) parts.push(`臨時獎勵 $${fmt(tempBonus)}`);
-  if (tips      >0) parts.push(`小費 $${fmt(tips)}`);
+  const parts = []; if(income>0)parts.push(`行程 $${fmt(income)}`); if(bonus>0)parts.push(`固定獎勵 $${fmt(bonus)}`); if(tempBonus>0)parts.push(`臨時獎勵 $${fmt(tempBonus)}`); if(tips>0)parts.push(`小費 $${fmt(tips)}`);
   document.getElementById('add-breakdown').textContent = parts.join(' + ');
 }
 // 確認新增記錄
 document.getElementById('add-confirm').addEventListener('click', () => {
   if (!S.selPlatformId) { toast('請先選擇平台'); return; }
-  const income = pf(document.getElementById('f-income').value);
-  const bonus  = pf(document.getElementById('f-bonus').value);
-  const temp   = pf(document.getElementById('f-temp-bonus').value);
-  const tips   = pf(document.getElementById('f-tips').value);
+  const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
   if (income+bonus+temp+tips <= 0) { toast('請輸入至少一項收入金額'); return; }
-
-  const rec = {
-    id:          S.editingId || newId(),
-    date:        document.getElementById('f-date').value || todayStr(),
-    time:        document.getElementById('f-punch-out').value || nowTime(),
-    platformId:  S.selPlatformId,
-    punchIn:     document.getElementById('f-punch-in').value,
-    punchOut:    document.getElementById('f-punch-out').value,
-    hours:       pf(document.getElementById('f-hours').value),
-    orders:      pf(document.getElementById('f-orders').value),
-    income,
-    bonus,
-    tempBonus:   temp,
-    tips,
-    note:        document.getElementById('f-note').value.trim(),
-  };
-
-  if (S.editingId) {
-    // 更新記錄
-    const idx = S.records.findIndex(r=>r.id===S.editingId);
-    if (idx >= 0) S.records[idx] = rec;
-    toast('✅ 記錄已更新');
-  } else {
-    // 新增記錄
-    S.records.push(rec);
-    toast('✅ 記錄成功！');
-  }
-
-  saveRecords();
-  S.editingId = null;
+  const rec = { id: S.editingId || newId(), date: document.getElementById('f-date').value || todayStr(), time: document.getElementById('f-punch-out').value || nowTime(), platformId: S.selPlatformId, punchIn: document.getElementById('f-punch-in').value, punchOut: document.getElementById('f-punch-out').value, hours: pf(document.getElementById('f-hours').value), orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
+  if (S.editingId) { const idx = S.records.findIndex(r=>r.id===S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } 
+  else { S.records.push(rec); toast('✅ 記錄成功！'); }
   // 替換掉原本的 closeOverlay('add-page');
   // 儲存後自動跳回首頁
-  goPage('home'); 
-  toast('✅ 記錄成功！');
+  saveRecords(); S.editingId = null; goPage('home'); 
 });
-// 取消新增的那行 document.getElementById('add-cancel') 可以直接刪除，因為頁面沒有取消按鈕了
+
+/* ══ 車輛管理 (新功能 Req 2, 3, 4) ════════════════════════════════════════ */
+/** 切換車輛管理的 Tab */
+function switchVehicleTab(tab) {
+  S.vehicleTab = tab;
+  renderVehicles();
+}
+/** 渲染車輛管理頁面 */
+function renderVehicles() {
+  const container = document.getElementById('page-vehicles');
+  let html = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="width:36px;"></div> <!-- 排版平衡 -->
+      <div class="pg-title" style="margin:0;">車輛管理</div>
+      <!-- 新增車輛按鈕 -->
+      <button class="icon-btn" onclick="openAddVehicle()" title="新增車輛">
+        <img src="/images/scooter.png" alt="新增車輛" style="width:20px;height:20px;">
+      </button>
+    </div>
+    
+    <!-- 圓角動態切換按鈕 -->
+    <div class="hist-tabs">
+      <button class="hist-tab-btn ${S.vehicleTab==='fuel'?'active':''}" onclick="switchVehicleTab('fuel')">車輛燃料</button>
+      <button class="hist-tab-btn ${S.vehicleTab==='maintenance'?'active':''}" onclick="switchVehicleTab('maintenance')">車輛保養維修</button>
+    </div>
+    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding-top:10px;">
+  `;
+
+  // 空狀態判斷
+  if (S.vehicles.length === 0) {
+    html += `<div class="empty-tip">尚未新增車輛</div>`;
+  } else {
+    // 過濾該分頁的紀錄
+    const typeRecs = S.vehicleRecs.filter(r => r.type === S.vehicleTab);
+    if (typeRecs.length === 0) {
+      html += `
+        <div style="display:flex; gap:10px; margin-bottom: 12px; overflow-x:auto; padding-bottom:8px;">
+          ${S.vehicles.map(v => `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:40px; height:40px;"></div>
+              <span style="font-size:11px; font-weight:600;">${v.name}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="empty-tip">尚未新增資料</div>`;
+    } else {
+      // 這裡您可以擴充車輛紀錄列表顯示...
+      html += `<div class="empty-tip">已有資料（此處可擴充顯示清單）</div>`;
+    }
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+/** 打開新增車輛視窗 */
+function openAddVehicle() {
+  S.newVehIcon = 4; // 預設 4
+  S.newVehColor = '#555555'; // 預設深灰
+  renderAddVehicleOverlay();
+  openOverlay('vehicle-add-page');
+}
+/** 渲染新增車輛的浮出視窗內容 */
+function renderAddVehicleOverlay() {
+  const container = document.getElementById('vehicle-add-body');
+  
+  // 產生 4 到 14 的圖示選項
+  let iconsHtml = '';
+  for (let i = 4; i <= 14; i++) {
+    const isSel = S.newVehIcon === i;
+    iconsHtml += `
+      <div onclick="S.newVehIcon=${i}; renderAddVehicleOverlay();" 
+           style="width:50px; height:50px; border-radius:12px; border:2px solid ${isSel ? 'var(--acc)' : 'transparent'}; background:var(--sf2); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <!-- 使用 mask-image 將黑色圖示變為指定顏色 -->
+        <div class="scooter-mask" style="background-color:${isSel ? S.newVehColor : '#ccc'}; -webkit-mask-image: url('/images/scooter${i}.png');"></div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="fg" style="margin-bottom:14px">
+      <label>車輛名稱</label>
+      <input type="text" class="finp" id="v-name" placeholder="例如：我的愛車 Gogoro">
+    </div>
+
+    <div class="fg" style="margin-bottom:14px">
+      <label>自訂圖示顏色</label>
+      <div style="display:flex;gap:8px">
+        <input type="color" id="v-color" value="${S.newVehColor}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px">
+        <input type="text" class="finp" value="${S.newVehColor}" readonly style="flex:1">
+      </div>
+    </div>
+
+    <div class="fg" style="margin-bottom:14px">
+      <label>選擇機車圖示</label>
+      <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px;">
+        ${iconsHtml}
+      </div>
+    </div>
+
+    <div class="fg" style="margin-bottom:20px">
+      <label>預設燃料</label>
+      <select class="fsel" id="v-fuel">
+        <option value="92">92 無鉛汽油</option>
+        <option value="95" selected>95 無鉛汽油</option>
+        <option value="98">98 無鉛汽油</option>
+        <option value="electric">電力 (電動車)</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeOverlay('vehicle-add-page')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-weight:600;cursor:pointer;">取消</button>
+      <button onclick="saveNewVehicle()" class="btn-acc" style="flex:2;padding:12px;font-weight:700;border-radius:var(--rs)">確認新增</button>
+    </div>
+  `;
+
+  // 綁定顏色選擇器事件，即時更新預覽
+  document.getElementById('v-color').addEventListener('input', (e) => {
+    S.newVehColor = e.target.value;
+    renderAddVehicleOverlay();
+  });
+}
+/** 儲存新增的車輛 */
+function saveNewVehicle() {
+  const name = document.getElementById('v-name').value.trim();
+  if (!name) { toast('請輸入車輛名稱'); return; }
+  
+  const fuel = document.getElementById('v-fuel').value;
+
+  S.vehicles.push({
+    id: newId(),
+    name: name,
+    icon: S.newVehIcon,
+    color: S.newVehColor,
+    defaultFuel: fuel
+  });
+
+  saveVehicles();
+  closeOverlay('vehicle-add-page');
+  toast('✅ 成功新增車輛！');
+  renderVehicles();
+}
 
 /* ══ 詳情抽屜 ════════════════════════════════════ */
 function openDetailOverlay(id) {
@@ -1608,12 +1447,9 @@ if ('serviceWorker' in navigator) {
 /* ══ 初始化 ══════════════════════════════════════ */
 function init() {
   loadAll();
-  // 若尚無平台資料，使用預設值
-  if (!S.platforms || !S.platforms.length) {
-    S.platforms = DEFAULT_PLATFORMS.map(p=>({...p}));
-    savePlatforms();
-  }
-  renderHome();
+  if (!S.platforms || !S.platforms.length) { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); savePlatforms(); }
+  // 觸發 body 背景色
+  goPage('home');
 }
 // 啟動 App
 init();
