@@ -36,12 +36,12 @@
   <section class="page" id="page-history" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
     
     <!-- 固定的標題 -->
-    <div style="padding: 16px 16px 0; text-align: center;">
+    <div style="padding: 4px 16px 0; text-align: center;">
       <div class="home-pg-title" style="display:inline-block;">查看記錄</div>
     </div>
     
     <!-- 固定的圓角滑動特效：紀錄 5 等分 -->
-    <div class="slide-tabs tabs-5" style="margin: 12px 16px 8px;">
+    <div class="slide-tabs tabs-5" style="margin: 3px 16px 3px;">
       <div class="slide-bg" id="hist-tab-bg" style="transform: translateX(0%);"></div>
       <button class="slide-btn active" id="btn-hist-day" onclick="switchHistTab('day', 0)">日</button>
       <button class="slide-btn" id="btn-hist-week" onclick="switchHistTab('week', 1)">週</button>
@@ -63,7 +63,7 @@
       <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>    
       
       <!-- 右上角儲存按鈕 (Check1/Check2，加入 id 防連點) -->
-      <button id="add-save-btn" onclick="confirmAddRecord()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none;">
+      <button id="add-save-btn" onclick="confirmAddRecord()" title="儲存" style="width:50px; height:50px; padding:0; background:transparent; border:none; cursor:pointer; outline:none;">
         <img id="add-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
       </button>
     </div>
@@ -98,7 +98,7 @@
     <!-- 行程與小費 -->
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
       <div class="fg"><label>💰 行程收入 (NT$)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
-      <div class="fg"><label>🤑 小費 (NT$)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+      <div class="fg"><label>🤑 線上小費 (NT$)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
     </div>
 
     <!-- 獎勵 -->
