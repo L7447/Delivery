@@ -566,7 +566,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
   color: var(--blue); text-align: right; margin-top: auto;
 }
 
-/* ══ 高對比平滑滑動 Tab 特效 (車輛管理專用) ═══════════════ */
+/* ══ 高對比平滑滑動 Tab 特效 (全局通用版) ═══════════════ */
 .slide-tabs {
   position: relative; 
   display: flex; 
@@ -575,17 +575,28 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
   padding: 4px; 
   margin-bottom: 12px;
 }
-/* 滑動背景方塊 */
+
+/* 依據按鈕數量設定滑塊寬度 */
+.tabs-2 .slide-bg { width: calc(50% - 4px); }
+.tabs-4 .slide-bg { width: calc(25% - 2px); }
+.tabs-5 .slide-bg { width: calc(20% - 1.6px); }
+
+/* 滑塊本體 */
 .slide-bg {
   position: absolute; 
   top: 4px; bottom: 4px; left: 4px; 
-  width: calc(50% - 4px); /* 一半的寬度 */
-  background: var(--acc); /* 高對比橘色 */
   border-radius: 999px;
-  /* 時間加長到 0.4s，並使用彈性曲線讓滑動更順暢 */
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 10px rgba(255,107,53, 0.4);
+  /* 彈性滑動曲線，時間加長至 0.4s */
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s;
+  z-index: 0;
 }
+
+/* 依據不同頁面 (body data-tab) 給予專屬滑塊顏色與陰影 */
+body[data-tab="home"] .slide-bg    { background: var(--acc);   box-shadow: 0 4px 10px rgba(255,107,53, 0.4); }
+body[data-tab="history"] .slide-bg { background: var(--blue);  box-shadow: 0 4px 10px rgba(59,130,246, 0.4); }
+body[data-tab="report"] .slide-bg  { background: var(--green); box-shadow: 0 4px 10px rgba(34,197,94, 0.4); }
+body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px 10px rgba(139,92,246, 0.4); } /* 車輛專屬紫 */
+
 /* Tab 按鈕文字 */
 .slide-btn {
   flex: 1; 
@@ -595,27 +606,23 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
   color: var(--t2); 
   font-size: 13px; font-weight: 600; font-family: var(--sans);
   cursor: pointer; 
-  transition: color 0.4s; /* 顏色漸變 */
+  transition: color 0.3s;
   -webkit-tap-highlight-color: transparent;
 }
-.slide-btn.active {
-  color: #fff; /* 選中時變成白色 */
-  font-weight: 700;
-}
+.slide-btn.active { color: #fff; font-weight: 700; }
 
-/* ══ 機車圖示雙排 Grid 佈局 ════════════════════════════ */
-.veh-icon-grid {
-  display: grid; 
-  /* 切割成 6 等分，11 個圖示會自動變成 上排 6 個、下排 5 個 */
-  grid-template-columns: repeat(6, 1fr); 
-  gap: 8px;
+/* ══ 項目選擇 Chips (保養維修用) ════════════════════════ */
+.item-chip {
+  padding: 6px 12px; border-radius: 20px;
+  background: var(--sf2); color: var(--t2); border: 1px solid var(--border);
+  font-size: 12px; cursor: pointer; transition: 0.2s; white-space: nowrap;
 }
-.veh-icon-box {
-  aspect-ratio: 1 / 1; /* 保持正方形 */
-  border-radius: 12px; 
-  border: 2px solid transparent; 
-  background: var(--sf2); 
-  display: flex; align-items: center; justify-content: center; 
-  cursor: pointer;
-  transition: border-color 0.2s;
+.item-chip.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+/* 店家歷史記憶標籤 */
+.shop-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 12px; background: #e5e7eb;
+  font-size: 11px; color: var(--t2); cursor: pointer;
 }
+.shop-chip-del { color: var(--red); font-weight: bold; padding: 0 4px; }
