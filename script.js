@@ -49,6 +49,7 @@ const S = {
   vehicleTab:    'fuel',                  // 車輛管理目前的 Tab ('fuel' 或 'maintenance')
   newVehIcon:    4,                       // 新增車輛預設圖示編號 (4~14)
   newVehColor:   '#555555',               // 新增車輛預設圖示顏色
+  selVehicleId:  null,                    // 目前選取的車輛 ID
 };
 
 /* ══ 工具函式 ════════════════════════════════════ */
@@ -333,9 +334,11 @@ function renderHome() {
       bottomHtml += `</div>`;
     } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
   }
-  // 分別將上下半部渲染到新的容器中（注意：去除了多餘的 </div>）
-  document.getElementById('home-top-content').innerHTML = topHtml;
-  document.getElementById('home-bottom-content').innerHTML = bottomHtml;
+  // 安全寫入新版分拆的 HTML 容器，避免找不到 ID 導致 JS 崩潰卡死
+  const topEl = document.getElementById('home-top-content');
+  const botEl = document.getElementById('home-bottom-content');
+  if (topEl) topEl.innerHTML = topHtml;
+  if (botEl) botEl.innerHTML = bottomHtml;
 }
 
 /* ══ 打卡功能 ════════════════════════════════════ */
@@ -672,6 +675,13 @@ function switchRptTab(tab, index, btnEl) {
   renderReport();
 }
 
+/* ══ 車輛管理主畫面 (支援多車輛動態滑動切換) ════════════════════════════════════════ */
+/** 點擊切換選取的車輛 */
+function selectVehicle(id) {
+  S.selVehicleId = id;
+  renderVehicles();
+}
+
 /** 渲染車輛管理資料列表 */
 function renderVehicles() {
   const container = document.getElementById('vehicle-content');
@@ -679,55 +689,127 @@ function renderVehicles() {
 
   if (S.vehicles.length === 0) {
     html += `<div class="empty-tip">尚未新增車輛</div>`;
-  } else {
-    // 橫向車輛清單 (包含右上小叉叉刪除)
-    html += `<div style="display:flex; gap:12px; margin-bottom: 16px; overflow-x:auto; padding-bottom:8px;">`;
-    S.vehicles.forEach(v => {
-      html += `
-        <div style="position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:50px;">
-          <!-- 刪除車輛按鈕 -->
-          <div onclick="deleteVehicle('${v.id}')" style="position:absolute; top:-4px; right:-8px; background:var(--red); color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2;">✕</div>
-          <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:46px; height:46px;"></div>
-          <span style="font-size:11px; font-weight:600; color:var(--t2);">${v.name}</span>
-        </div>`;
-    });
-    html += `</div>`;
-
-    // 新增資料大按鈕
-    if (S.vehicleTab === 'fuel') {
-      html += `<button onclick="openAddFuel()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed var(--acc); background:var(--sf2); color:var(--acc); font-weight:700; margin-bottom:16px; cursor:pointer;">➕ 新增燃料紀錄</button>`;
-    } else {
-      html += `<button onclick="openAddMaint()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed #8B5CF6; background:#f5f3ff; color:#8B5CF6; font-weight:700; margin-bottom:16px; cursor:pointer;">➕ 新增保養維修</button>`;
-    }
-
-    // 顯示歷史資料
-    const typeRecs = S.vehicleRecs.filter(r => r.type === S.vehicleTab);
-    if (typeRecs.length === 0) {
-      html += `<div class="empty-tip">尚未新增資料</div>`;
-    } else {
-      // 這裡簡單顯示紀錄 (可依據需求擴充排版)
-      typeRecs.sort((a,b)=>b.date.localeCompare(a.date)).forEach(r => {
-        html += `<div class="card" style="padding:12px; margin-bottom:8px;">
-          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--t3); margin-bottom:4px;">
-            <span>${r.date}</span><span>里程: ${r.km} km</span>
-          </div>
-          <div style="font-weight:bold; color:var(--t1); font-size:14px;">${r.type==='fuel' ? '加油' : r.items.join(', ')}</div>
-          <div style="text-align:right; color:var(--acc); font-weight:bold; font-size:16px; font-family:var(--mono);">NT$ ${fmt(r.amount)}</div>
-        </div>`;
-      });
-    }
+    container.innerHTML = html;
+    return;
   }
+
+  // 若尚未選擇車輛，預設自動選擇第一台
+  if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) {
+    S.selVehicleId = S.vehicles[0].id;
+  }
+
+  // 取得目前選取的車輛索引，用來計算滑塊位置
+  const vCount = S.vehicles.length;
+  const vIndex = S.vehicles.findIndex(v => v.id === S.selVehicleId);
+  const slideWidth = `calc(${100 / vCount}% - 8px / ${vCount})`; // 動態計算寬度
+  const slideTransform = `translateX(${vIndex * 100}%)`;
+
+  // 1. 動態產生「車輛選擇」的滑動 Tabs
+  html += `
+    <div style="font-size:11px; color:var(--t3); margin-bottom:4px; font-weight:bold;">切換車輛</div>
+    <div class="slide-tabs" style="margin-bottom: 16px;">
+      <div class="slide-bg" style="width: ${slideWidth}; transform: ${slideTransform}; background: var(--acc); box-shadow: 0 4px 10px rgba(255,107,53, 0.4);"></div>`;
+  
+  S.vehicles.forEach(v => {
+    const isActive = v.id === S.selVehicleId;
+    html += `
+      <button class="slide-btn ${isActive ? 'active' : ''}" onclick="selectVehicle('${v.id}')" style="display:flex; align-items:center; justify-content:center; gap:6px;">
+        <div class="scooter-mask" style="background-color:${isActive ? '#fff' : v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:16px; height:16px; transition:0.3s;"></div>
+        ${v.name}
+      </button>`;
+  });
+  html += `</div>`;
+
+  // 2. 新增按鈕與刪除車輛按鈕
+  const selVeh = S.vehicles.find(v => v.id === S.selVehicleId);
+  
+  if (S.vehicleTab === 'fuel') {
+    html += `<button onclick="openAddFuel()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed var(--acc); background:var(--sf2); color:var(--acc); font-weight:700; margin-bottom:12px; cursor:pointer;">➕ 新增燃料紀錄</button>`;
+  } else {
+    html += `<button onclick="openAddMaint()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed #8B5CF6; background:#f5f3ff; color:#8B5CF6; font-weight:700; margin-bottom:12px; cursor:pointer;">➕ 新增保養維修</button>`;
+  }
+
+  html += `
+    <div style="text-align:right; margin-bottom:16px;">
+      <button onclick="deleteVehicle('${selVeh.id}')" style="background:var(--red-d); color:var(--red); border:none; padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer;">🗑 刪除此車輛</button>
+    </div>
+  `;
+
+  // 3. 顯示該車輛專屬的歷史資料
+  const typeRecs = S.vehicleRecs.filter(r => r.type === S.vehicleTab && r.vehicleId === S.selVehicleId);
+  
+  if (typeRecs.length === 0) {
+    html += `<div class="empty-tip">此車輛尚未新增資料</div>`;
+  } else {
+    typeRecs.sort((a,b)=>b.date.localeCompare(a.date)).forEach(r => {
+      html += `
+      <div class="card" style="padding:12px; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--t3); margin-bottom:4px;">
+          <span>${r.date}</span><span>里程: ${r.km} km</span>
+        </div>
+        <div style="font-weight:bold; color:var(--t1); font-size:14px; margin-bottom:4px;">${r.type==='fuel' ? '⛽ 加油' : `🔧 ${r.items.join(', ')}`}</div>
+        ${r.note || r.shop ? `<div style="font-size:11px; color:var(--t3); margin-bottom:4px;">${r.shop ? `🏪 ${r.shop} ` : ''}${r.note ? `📝 ${r.note}` : ''}</div>` : ''}
+        <div style="text-align:right; color:var(--acc); font-weight:bold; font-size:16px; font-family:var(--mono);">NT$ ${fmt(r.amount)}</div>
+      </div>`;
+    });
+  }
+
   container.innerHTML = html;
 }
 
-/** 刪除車輛 */
+/** 刪除車輛 (連同紀錄一起刪除防呆) */
 async function deleteVehicle(id) {
-  const ok = await customConfirm('確定要刪除這台車輛嗎？<br><span style="color:var(--red); font-size:12px;">⚠️ 將無法復原</span>');
+  const ok = await customConfirm('確定要刪除這台車輛嗎？<br><span style="color:var(--red); font-size:12px;">⚠️ 該車的所有紀錄將一併刪除且無法復原</span>');
   if(!ok) return;
+  
   S.vehicles = S.vehicles.filter(v => v.id !== id);
+  S.vehicleRecs = S.vehicleRecs.filter(r => r.vehicleId !== id); // 清除關聯紀錄
+  
+  if (S.selVehicleId === id) S.selVehicleId = null; // 重置選取
   saveVehicles();
+  saveVehicleRecs();
   renderVehicles();
-  toast('車輛已刪除');
+  toast('車輛與紀錄已刪除');
+}
+
+/* ══ 燃料表單邏輯 (綁定車輛) ══════════════════════════════ */
+function openAddFuel() {
+  if (!S.selVehicleId) { toast('請先新增並選擇車輛'); return; }
+  document.getElementById('fuel-date').value = todayStr();
+  document.getElementById('fuel-prev-km').value = '';
+  document.getElementById('fuel-curr-km').value = '';
+  document.getElementById('fuel-liters').value = '';
+  document.getElementById('fuel-price').value = '';
+  document.getElementById('fuel-discount').value = '0';
+  calcFuelTotal();
+  openOverlay('fuel-add-page');
+}
+
+function calcFuelTotal() {
+  const liters = pf(document.getElementById('fuel-liters').value);
+  const price = pf(document.getElementById('fuel-price').value);
+  const discount = pf(document.getElementById('fuel-discount').value);
+  const before = liters * price;
+  const final = Math.max(0, before - discount);
+  document.getElementById('fuel-before-total').textContent = fmt(before);
+  document.getElementById('fuel-final-total').textContent = fmt(final);
+}
+
+function saveFuelRecord() {
+  const amount = pf(document.getElementById('fuel-final-total').textContent.replace(/,/g,''));
+  if(amount <= 0) { toast('總金額不能為 0'); return; }
+
+  S.vehicleRecs.push({
+    id: newId(),
+    vehicleId: S.selVehicleId, // 綁定車輛 ID
+    type: 'fuel',
+    date: document.getElementById('fuel-date').value,
+    prevKm: pf(document.getElementById('fuel-prev-km').value),
+    km: pf(document.getElementById('fuel-curr-km').value),
+    amount: amount
+  });
+  saveVehicleRecs();
+  closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
 }
 
 /** 打開新增車輛視窗 (只在打開時渲染一次 HTML，後續只改 CSS) */
