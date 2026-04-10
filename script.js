@@ -128,7 +128,10 @@ function loadAll() {
   // 讀取車輛資料
   try { S.vehicles = JSON.parse(localStorage.getItem(KEYS.vehicles)||'[]'); } catch { S.vehicles=[]; }
   try { S.vehicleRecs = JSON.parse(localStorage.getItem(KEYS.vehicleRecs)||'[]'); } catch { S.vehicleRecs=[]; }
-}
+  /** (店家記憶) */
+  try { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [], ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; } catch { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] }; }
+}  
+
 /** 儲存記錄 */
 function saveRecords()   { localStorage.setItem(KEYS.records,   JSON.stringify(S.records));   }
 function savePlatforms() { localStorage.setItem(KEYS.platforms, JSON.stringify(S.platforms)); }
@@ -170,7 +173,14 @@ document.querySelectorAll('.ni[data-pg]').forEach(el =>
 );
 
 /* ══ 首頁子分頁切換 ══════════════════════════════ */
-function switchHomeTab(tab) { S.homeSubTab = tab; renderHome(); }
+/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
+function switchHomeTab(tab, index) {
+  S.homeSubTab = tab;
+  document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule');
+  document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal');
+  renderHome(); // 重新渲染下方區域
+}
 
 /* ══ 首頁渲染 ════════════════════════════════════ */
 function renderHome() {
@@ -244,14 +254,7 @@ function renderHome() {
   </div>`; 
 
   if (!S.homeSubTab) S.homeSubTab = 'schedule';
-  let bottomHtml = `
-  <div class="home-bottom-scroll">
-    <!-- 切換按鈕 -->
-    <div class="home-tabs">
-      <button class="home-tab-btn ${S.homeSubTab==='schedule'?'active':''}" onclick="switchHomeTab('schedule')">平台日程表</button>
-      <button class="home-tab-btn ${S.homeSubTab==='goal'?'active':''}" onclick="switchHomeTab('goal')">目標進度</button>
-    </div>
-  `;
+  let bottomHtml = ``;
 
   if (S.homeSubTab === 'schedule') {
     const todayObj = new Date(); todayObj.setHours(0,0,0,0);
@@ -382,7 +385,13 @@ if (!S.histTab) S.histTab = 'day';
 if (!S.histNavDate) S.histNavDate = new Date();
 if (!S.histFilter) S.histFilter = 'all';
 /** 切換記錄頁 Tab */
-function switchHistTab(tab) { S.histTab = tab; S.histNavDate = new Date(); renderHistory(); }
+/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
+function switchHistTab(tab, index) {
+  S.histTab = tab; S.histNavDate = new Date();
+  document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
+  renderHistory(); // 重新渲染列表
+}
 /** 歷史區間導航 (上週/下週、上月/下月...) */
 function navHistGroup(dir, mode) {
   let d = new Date(S.histNavDate);
@@ -396,23 +405,13 @@ function navHistGroup(dir, mode) {
 function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
 /** 渲染整個歷史記錄頁面 */
 function renderHistory() {
-  const container = document.getElementById('page-history');
-  let html = `
-    <div style="padding: 16px 16px 0; text-align: center;">
-      <div class="home-pg-title" style="display:inline-block;">查看記錄</div>
-    </div>
-    <!-- 圓角動態切換按鈕 -->
-    <div class="hist-tabs">
-      <button class="hist-tab-btn ${S.histTab==='day'?'active':''}" onclick="switchHistTab('day')">日</button>
-      <button class="hist-tab-btn ${S.histTab==='week'?'active':''}" onclick="switchHistTab('week')">週</button>
-      <button class="hist-tab-btn ${S.histTab==='biweek'?'active':''}" onclick="switchHistTab('biweek')">雙週</button>
-      <button class="hist-tab-btn ${S.histTab==='month'?'active':''}" onclick="switchHistTab('month')">月</button>
-      <button class="hist-tab-btn ${S.histTab==='year'?'active':''}" onclick="switchHistTab('year')">年</button>
-    </div>
-    <div id="hist-content" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
-  `;
-  container.innerHTML = html;
-  if (S.histTab === 'day') renderHistDayView(); else renderHistGroupView(S.histTab);
+  // 因為標題和切換按鈕已經固定在 index.html 裡了
+  // 這裡我們只需要判斷目前在哪個 Tab，然後渲染對應的視圖到 #hist-content 中即可
+  if (S.histTab === 'day') {
+    renderHistDayView();
+  } else {
+    renderHistGroupView(S.histTab);
+  }
 }
 /** 渲染「日」視圖 */
 function renderHistDayView() {
@@ -650,23 +649,26 @@ document.getElementById('add-confirm').addEventListener('click', () => {
 });
 
 /* ══ 車輛管理 (防閃爍、滑動特效、雙排圖示) ════════════════════════════════════════ */
-/** 切換車輛管理的 Tab (使用 CSS 滑動特效) */
-function switchVehicleTab(tab) {
+/** 切換車輛管理的 Tab  */
+/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
+function switchVehicleTab(tab, index) {
   S.vehicleTab = tab;
-  
-  // 更新 Tab 文字顏色
+  document.getElementById('veh-tab-bg').style.transform = `translateX(${index * 100}%)`;
   document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel');
   document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance');
-  
-  // 控制背景方塊滑動 (0% 在左邊，100% 滑到右邊)
-  const bg = document.getElementById('veh-tab-bg');
-  if (tab === 'fuel') {
-    bg.style.transform = 'translateX(0)';
-  } else {
-    bg.style.transform = 'translateX(100%)';
-  }
+  renderVehicles(); 
+}
 
-  renderVehicles(); // 只更新下方列表，不碰上方按鈕，解決閃爍！
+/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
+function switchRptTab(tab, index, btnEl) {
+  S.rptView = tab;
+  document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active'));
+  btnEl.classList.add('active');
+  ['overview','trend','compare','top3'].forEach(v => {
+    document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none';
+  });
+  renderReport();
 }
 
 /** 渲染車輛管理資料列表 */
@@ -674,28 +676,57 @@ function renderVehicles() {
   const container = document.getElementById('vehicle-content');
   let html = '';
 
-  // 空狀態判斷
   if (S.vehicles.length === 0) {
     html += `<div class="empty-tip">尚未新增車輛</div>`;
   } else {
-    // 過濾該分頁的紀錄
+    // 橫向車輛清單 (包含右上小叉叉刪除)
+    html += `<div style="display:flex; gap:12px; margin-bottom: 16px; overflow-x:auto; padding-bottom:8px;">`;
+    S.vehicles.forEach(v => {
+      html += `
+        <div style="position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:50px;">
+          <!-- 刪除車輛按鈕 -->
+          <div onclick="deleteVehicle('${v.id}')" style="position:absolute; top:-4px; right:-8px; background:var(--red); color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2;">✕</div>
+          <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:46px; height:46px;"></div>
+          <span style="font-size:11px; font-weight:600; color:var(--t2);">${v.name}</span>
+        </div>`;
+    });
+    html += `</div>`;
+
+    // 新增資料大按鈕
+    if (S.vehicleTab === 'fuel') {
+      html += `<button onclick="openAddFuel()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed var(--acc); background:var(--sf2); color:var(--acc); font-weight:700; margin-bottom:16px; cursor:pointer;">➕ 新增燃料紀錄</button>`;
+    } else {
+      html += `<button onclick="openAddMaint()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed #8B5CF6; background:#f5f3ff; color:#8B5CF6; font-weight:700; margin-bottom:16px; cursor:pointer;">➕ 新增保養維修</button>`;
+    }
+
+    // 顯示歷史資料
     const typeRecs = S.vehicleRecs.filter(r => r.type === S.vehicleTab);
     if (typeRecs.length === 0) {
-      html += `
-        <div style="display:flex; gap:10px; margin-bottom: 12px; overflow-x:auto; padding-bottom:8px;">
-          ${S.vehicles.map(v => `
-            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-              <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:40px; height:40px;"></div>
-              <span style="font-size:11px; font-weight:600;">${v.name}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div class="empty-tip">尚未新增資料</div>`;
+      html += `<div class="empty-tip">尚未新增資料</div>`;
     } else {
-      html += `<div class="empty-tip">已有資料（此處可擴充顯示清單）</div>`;
+      // 這裡簡單顯示紀錄 (可依據需求擴充排版)
+      typeRecs.sort((a,b)=>b.date.localeCompare(a.date)).forEach(r => {
+        html += `<div class="card" style="padding:12px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--t3); margin-bottom:4px;">
+            <span>${r.date}</span><span>里程: ${r.km} km</span>
+          </div>
+          <div style="font-weight:bold; color:var(--t1); font-size:14px;">${r.type==='fuel' ? '加油' : r.items.join(', ')}</div>
+          <div style="text-align:right; color:var(--acc); font-weight:bold; font-size:16px; font-family:var(--mono);">NT$ ${fmt(r.amount)}</div>
+        </div>`;
+      });
     }
   }
   container.innerHTML = html;
+}
+
+/** 刪除車輛 */
+async function deleteVehicle(id) {
+  const ok = await customConfirm('確定要刪除這台車輛嗎？<br><span style="color:var(--red); font-size:12px;">⚠️ 將無法復原</span>');
+  if(!ok) return;
+  S.vehicles = S.vehicles.filter(v => v.id !== id);
+  saveVehicles();
+  renderVehicles();
+  toast('車輛已刪除');
 }
 
 /** 打開新增車輛視窗 (只在打開時渲染一次 HTML，後續只改 CSS) */
@@ -1453,6 +1484,119 @@ if ('serviceWorker' in navigator) {
       .then(r=>console.log('SW 已註冊：', r.scope))
       .catch(e=>console.log('SW 註冊失敗：', e));
   });
+}
+
+/* ══ 燃料表單邏輯 ══════════════════════════════ */
+function openAddFuel() {
+  document.getElementById('fuel-date').value = todayStr();
+  document.getElementById('fuel-prev-km').value = '';
+  document.getElementById('fuel-curr-km').value = '';
+  document.getElementById('fuel-liters').value = '';
+  document.getElementById('fuel-price').value = '';
+  document.getElementById('fuel-discount').value = '0';
+  calcFuelTotal();
+  openOverlay('fuel-add-page');
+}
+
+function calcFuelTotal() {
+  const liters = pf(document.getElementById('fuel-liters').value);
+  const price = pf(document.getElementById('fuel-price').value);
+  const discount = pf(document.getElementById('fuel-discount').value);
+  const before = liters * price;
+  const final = Math.max(0, before - discount);
+  
+  document.getElementById('fuel-before-total').textContent = fmt(before);
+  document.getElementById('fuel-final-total').textContent = fmt(final);
+}
+
+function saveFuelRecord() {
+  const amount = pf(document.getElementById('fuel-final-total').textContent.replace(/,/g,''));
+  if(amount <= 0) { toast('總金額不能為 0'); return; }
+
+  S.vehicleRecs.push({
+    id: newId(),
+    type: 'fuel',
+    date: document.getElementById('fuel-date').value,
+    prevKm: pf(document.getElementById('fuel-prev-km').value),
+    km: pf(document.getElementById('fuel-curr-km').value),
+    amount: amount
+  });
+  saveVehicleRecs();
+  closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
+}
+
+/* ══ 保養維修表單邏輯 ══════════════════════════ */
+const MAINT_ITEMS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
+let currentSelItems = []; // 暫存目前選取的保養項目
+
+function openAddMaint() {
+  document.getElementById('maint-date').value = todayStr();
+  document.getElementById('maint-km').value = '';
+  document.getElementById('maint-shop').value = '';
+  document.getElementById('maint-note').value = '';
+  document.getElementById('maint-amount').value = '';
+  currentSelItems = [];
+  
+  // 渲染項目 Chips
+  document.getElementById('maint-items-container').innerHTML = MAINT_ITEMS.map(item => 
+    `<div class="item-chip" onclick="toggleMaintItem(this, '${item}')">${item}</div>`
+  ).join('');
+
+  renderShopHistory();
+  openOverlay('maint-add-page');
+}
+
+function toggleMaintItem(el, item) {
+  el.classList.toggle('on');
+  if (currentSelItems.includes(item)) {
+    currentSelItems = currentSelItems.filter(i => i !== item);
+  } else {
+    currentSelItems.push(item);
+  }
+}
+
+/** 渲染店家記憶歷史 */
+function renderShopHistory() {
+  if (!S.settings.shopHistory) S.settings.shopHistory = [];
+  const container = document.getElementById('shop-history-container');
+  container.innerHTML = S.settings.shopHistory.map((shop, i) => `
+    <div class="shop-chip">
+      <span onclick="document.getElementById('maint-shop').value='${shop}'">${shop}</span>
+      <span class="shop-chip-del" onclick="deleteShopHistory(${i})">✕</span>
+    </div>
+  `).join('');
+}
+
+function deleteShopHistory(index) {
+  S.settings.shopHistory.splice(index, 1);
+  saveSettings();
+  renderShopHistory();
+}
+
+function saveMaintRecord() {
+  const amount = pf(document.getElementById('maint-amount').value);
+  if (amount <= 0 || currentSelItems.length === 0) { toast('請選擇項目並輸入金額'); return; }
+  
+  const shop = document.getElementById('maint-shop').value.trim();
+  // 自動記憶店家名稱
+  if (shop && !S.settings.shopHistory.includes(shop)) {
+    S.settings.shopHistory.push(shop);
+    saveSettings();
+  }
+
+  S.vehicleRecs.push({
+    id: newId(),
+    type: 'maintenance',
+    date: document.getElementById('maint-date').value,
+    km: pf(document.getElementById('maint-km').value),
+    items: currentSelItems,
+    shop: shop,
+    payMethod: document.getElementById('maint-pay-method').value,
+    note: document.getElementById('maint-note').value,
+    amount: amount
+  });
+  saveVehicleRecs();
+  closeOverlay('maint-add-page'); toast('✅ 保養紀錄已新增'); renderVehicles();
 }
 
 /* ══ 初始化 ══════════════════════════════════════ */
