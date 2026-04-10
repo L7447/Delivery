@@ -173,11 +173,11 @@
       </button>
     </div>
     
-    <!-- 圓角滑動特效切換 Tab -->
-    <div class="slide-tabs">
-      <div class="slide-bg" id="veh-tab-bg"></div>
-      <button class="slide-btn active" id="btn-veh-fuel" onclick="switchVehicleTab('fuel')">車輛燃料</button>
-      <button class="slide-btn" id="btn-veh-maint" onclick="switchVehicleTab('maintenance')">車輛保養維修</button>
+    <!-- 圓角滑動特效切換 Tab (加入 tabs-2 與數字參數) -->
+    <div class="slide-tabs tabs-2">
+      <div class="slide-bg" id="veh-tab-bg" style="transform: translateX(0%);"></div>
+      <button class="slide-btn active" id="btn-veh-fuel" onclick="switchVehicleTab('fuel', 0)">車輛燃料</button>
+      <button class="slide-btn" id="btn-veh-maint" onclick="switchVehicleTab('maintenance', 1)">車輛保養維修</button>
     </div>
 
     <!-- 動態列表容器 (JS 只會更新這裡，不會動到上方的按鈕) -->
