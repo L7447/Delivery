@@ -264,8 +264,8 @@ function renderHome() {
     if (activePlatforms.length) {
       activePlatforms.forEach(p => {
         const events = calcNextDates(p.id); if (!events) return;
-        bottomHtml += `<div style="border: 2px solid ${p.color}80; background: ${p.color}15; border-radius: 20px; padding: 4px; margin-bottom: 2px;">
-            <div style="display:flex; align-items:center; gap:5px; margin-bottom: 3px;">
+        bottomHtml += `<div style="border: 2px solid ${p.color}80; background: ${p.color}15; border-radius: 20px; padding: 5px; margin-bottom: 5px;">
+            <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
               <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);"></div>
               <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
             </div>
@@ -276,7 +276,7 @@ function renderHome() {
                 if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)';
                 else if (ev.name.includes('明細')) nameColor = 'var(--gold)';
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
-                return `<div style="flex:1; background: var(--sf); border: 1px solid var(--border); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                   <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                   <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
                     ${ev.dateStr} <span style="font-size:11px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span>
