@@ -33,12 +33,12 @@
 
 /* ── 獨立背景色設計 (Req 6) ──────────────────────── */
 /* 依照 body 的 data-tab 屬性，動態切換背景色 */
-body[data-tab="home"]     { --bg: hsl(28, 100%, 95%); } /* 首頁：暖白 */
-body[data-tab="history"]  { --bg: hsl(202, 100%, 95%); } /* 紀錄：淺藍 */
-body[data-tab="add"]      { --bg: hsl(298, 100%, 95%); } /* 新增：淺粉 */
-body[data-tab="report"]   { --bg: hsl(144, 100%, 95%); } /* 報表：淺綠 */
-body[data-tab="vehicles"] { --bg: hsl(262, 100%, 95%); } /* 車輛：淺紫 */
-body[data-tab="settings"] { --bg: hsl(60, 100%, 95%); } /* 設定：淺灰 */
+body[data-tab="home"]     { --bg: hsl(28, 100%, 97%); } /* 首頁：暖白 */
+body[data-tab="history"]  { --bg: hsl(202, 100%, 97%); } /* 紀錄：淺藍 */
+body[data-tab="add"]      { --bg: hsl(298, 100%, 97%); } /* 新增：淺粉 */
+body[data-tab="report"]   { --bg: hsl(144, 100%, 97%); } /* 報表：淺綠 */
+body[data-tab="vehicles"] { --bg: hsl(262, 100%, 97%); } /* 車輛：淺紫 */
+body[data-tab="settings"] { --bg: hsl(60, 100%, 97%); } /* 設定：淺灰 */
 
 /* ── Reset ──────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
