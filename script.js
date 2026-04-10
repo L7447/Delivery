@@ -510,7 +510,7 @@ function renderHistGroupView(mode) {
         <div><div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div><div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;"><span>📦 ${tOrd} 單</span><span>⏱ ${fmtHours(tHrs)}</span></div></div>
         <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--blue);">$ ${fmt(tInc)}</div>
       </div>`;
-    html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
+    html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
   }
   html += `</div>`; content.innerHTML = html;
 }
@@ -547,51 +547,87 @@ function renderHistRecords(ds) {
   } else { sumEl.innerHTML = ''; }
   const listEl = document.getElementById('hist-rec-list');
   if (!recs.length) { listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`; return; }
-  listEl.innerHTML = recs.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
+  listEl.innerHTML = recs.slice().sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
   listEl.querySelectorAll('.rec-item[data-id]').forEach(el => { el.addEventListener('click', () => openDetailOverlay(el.dataset.id)); });
 }
 
-/* ══ 新增／編輯記錄 Overlay ═════════════════════ */
+/* ══ 新增／編輯記錄 (新版精簡邏輯) ═════════════════════ */
 function openAddPage(record=null, prefill={}) {
-  S.editingId = record ? record.id : null; S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
+  S.editingId = record ? record.id : null; 
+  S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
+  
   document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
-  document.getElementById('f-punch-in').value = record?.punchIn || prefill.punchIn || '';
-  document.getElementById('f-punch-out').value = record?.punchOut || prefill.punchOut || '';
-  document.getElementById('f-hours').value = record?.hours || prefill.hours || '';
-  document.getElementById('f-orders').value = record?.orders || ''; document.getElementById('f-income').value = record?.income || '';
-  document.getElementById('f-bonus').value = record?.bonus || ''; document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
-  document.getElementById('f-tips').value = record?.tips || ''; document.getElementById('f-note').value = record?.note || '';
+  
+  // 處理小時與分鐘拆分顯示
+  let totalHours = pf(record?.hours || prefill.hours || 0);
+  let h = Math.floor(totalHours);
+  let m = Math.round((totalHours - h) * 60);
+  document.getElementById('f-hrs-val').value = h > 0 ? h : '';
+  document.getElementById('f-min-val').value = m > 0 ? m : '';
+
+  document.getElementById('f-orders').value = record?.orders || ''; 
+  document.getElementById('f-income').value = record?.income || '';
+  document.getElementById('f-bonus').value = record?.bonus || ''; 
+  document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
+  document.getElementById('f-tips').value = record?.tips || ''; 
+  document.getElementById('f-note').value = record?.note || '';
+  
   renderPlatformChips(); calcAddTotal(); goPage('add');
 }
+
 function renderPlatformChips() {
   const container = document.getElementById('platform-chips'); const active = S.platforms.filter(p=>p.active);
   if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id;
   container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${p.id}')"><span>${p.name}</span></div>`).join('');
 }
 function selectPlatform(id) { S.selPlatformId = id; renderPlatformChips(); }
-function autoCalcHours() {
-  const inVal = document.getElementById('f-punch-in').value; const outVal = document.getElementById('f-punch-out').value;
-  if (!inVal || !outVal) return; const base = document.getElementById('f-date').value || todayStr();
-  const inMs = new Date(`${base}T${inVal}`).getTime(); const outMs = new Date(`${base}T${outVal}`).getTime();
-  const diff = (outMs - inMs) / 3600000; if (diff > 0) document.getElementById('f-hours').value = diff.toFixed(1); calcAddTotal();
-}
-function setPunchNow(field) { const el = document.getElementById(field==='in'?'f-punch-in':'f-punch-out'); el.value = nowTime(); autoCalcHours(); }
+
 function calcAddTotal() {
   const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const tempBonus = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
   const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total);
-  const parts = []; if(income>0)parts.push(`行程 $${fmt(income)}`); if(bonus>0)parts.push(`固定獎勵 $${fmt(bonus)}`); if(tempBonus>0)parts.push(`臨時獎勵 $${fmt(tempBonus)}`); if(tips>0)parts.push(`小費 $${fmt(tips)}`);
-  document.getElementById('add-breakdown').textContent = parts.join(' + ');
 }
-document.getElementById('add-confirm').addEventListener('click', () => {
+
+/** 天氣快速標籤填入 */
+function addWeatherTag(tag) {
+  const noteEl = document.getElementById('f-note');
+  if (!noteEl.value.includes(tag)) {
+    noteEl.value = (noteEl.value + ' ' + tag).trim();
+  }
+}
+
+/** 儲存按鈕點擊事件 (右上角打勾) */
+function confirmAddRecord() {
+  const checkImg = document.getElementById('add-save-img');
+  checkImg.src = 'images/Check2.png'; // 點擊特效
+  setTimeout(() => checkImg.src = 'images/Check1.png', 300);
+
   if (!S.selPlatformId) { toast('請先選擇平台'); return; }
   const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
   if (income+bonus+temp+tips <= 0) { toast('請輸入至少一項收入金額'); return; }
-  const rec = { id: S.editingId || newId(), date: document.getElementById('f-date').value || todayStr(), time: document.getElementById('f-punch-out').value || nowTime(), platformId: S.selPlatformId, punchIn: document.getElementById('f-punch-in').value, punchOut: document.getElementById('f-punch-out').value, hours: pf(document.getElementById('f-hours').value), orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
+
+  // 計算總工時 (小數)
+  const h = pf(document.getElementById('f-hrs-val').value);
+  const m = pf(document.getElementById('f-min-val').value);
+  const totalHours = h + (m / 60);
+
+  const rec = { 
+    id: S.editingId || newId(), 
+    date: document.getElementById('f-date').value || todayStr(), 
+    time: nowTime(), // 移除打卡後，時間直接以現在時間記錄
+    platformId: S.selPlatformId, 
+    punchIn: '', punchOut: '', // 清空打卡紀錄
+    hours: totalHours, 
+    orders: pf(document.getElementById('f-orders').value), 
+    income, bonus, tempBonus: temp, tips, 
+    note: document.getElementById('f-note').value.trim() 
+  };
+
   if (S.editingId) { const idx = S.records.findIndex(r=>r.id===S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } 
   else { S.records.push(rec); toast('✅ 記錄成功！'); }
+  
   saveRecords(); S.editingId = null; goPage('home'); 
-});
+}
 
 /* ══ 車輛管理主畫面 (支援多車輛動態滑動切換) ════════════════════════════════════════ */
 function selectVehicle(id) { S.selVehicleId = id; renderVehicles(); }
@@ -688,8 +724,8 @@ function calcFuelTotal() {
   const liters = pf(document.getElementById('fuel-liters').value);
   const price = pf(document.getElementById('fuel-price').value);
   const discount = pf(document.getElementById('fuel-discount').value);
-  const before = liters * price;
-  const final = Math.max(0, before - discount);
+  const before = Math.round(liters * price);
+  const final = Math.round(Math.max(0, before - discount));
   document.getElementById('fuel-before-total').textContent = fmt(before);
   document.getElementById('fuel-final-total').textContent = fmt(final);
 }
