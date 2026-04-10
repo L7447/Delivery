@@ -71,56 +71,90 @@ function toggleSummaryCard(id) {
   const btn = document.getElementById(id + '-btn');
   if (!el || !btn) return;
   if (el.style.maxHeight === '0px' || el.style.maxHeight === '') {
-    el.style.maxHeight = '100px'; // 展開高度
-    btn.style.transform = 'rotate(180deg)'; // 箭頭反轉
+    el.style.maxHeight = '100px'; // 展開
+    // 加上 translateY(-50%) 是為了保持按鈕垂直置中不跑版
+    btn.style.transform = 'translateY(-50%) rotate(180deg)'; 
   } else {
     el.style.maxHeight = '0px'; // 折疊
-    btn.style.transform = 'rotate(0deg)'; // 箭頭恢復
+    btn.style.transform = 'translateY(-50%) rotate(0deg)'; 
   }
 }
-/** 共用：產生折疊式統計卡片 HTML (首頁、歷史、報表通用) */
+/** 共用：產生與圖片完全一致的折疊式統計卡片 HTML */
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
   
   const totalBonus = bonus + tempBonus;
   let extraStr = '';
+  // 只有當有獎勵或小費時，才會產生這行文字
   if (totalBonus > 0 || tips > 0) {
     const parts = [];
     if (totalBonus > 0) parts.push(`含獎勵${fmt(totalBonus)}元`);
     if (tips > 0) parts.push(`線上小費${fmt(tips)}元`);
-    extraStr = `<div style="font-size:10px; color:var(--gold); margin-top:2px;">〔${parts.join('、')}〕</div>`;
+    extraStr = `<div style="font-size:11px; color:var(--gold); margin-top:2px;">〔${parts.join('、')}〕</div>`;
   }
 
+  // 計算平均數值
   const avgPerOrder = orders > 0 ? Math.round(total / orders) : 0;
   const avgPerHour = hours > 0 ? Math.round(total / hours) : 0;
   const ordersPerHour = hours > 0 ? (orders / hours).toFixed(1) : 0;
 
+  // 嚴格遵守：margin 2px, padding 2px
   return `
-    <div class="summary-card">
-      <!-- 頂部區塊 (總計、單數、工時、展開按鈕) -->
-      <div style="display:flex; justify-content:space-between; align-items:center;" onclick="toggleSummaryCard('${cardId}')">
-        <div style="flex:1;">
-          <div style="display:flex; align-items:baseline; gap:8px;">
-            <span style="font-size:13px; font-weight:700; color:var(--t1);">${title}</span>
-            <span style="font-family:var(--mono); font-size:22px; font-weight:800; color:var(--green);">$${fmt(total)}</span>
+    <div class="summary-card" style="margin:2px; padding:2px;">
+      <!-- 上排：總計資訊 -->
+      <div class="sum-top" onclick="toggleSummaryCard('${cardId}')" style="position:relative; display:flex; align-items:center; padding:2px;">
+        
+        <!-- 左側：標題與金額 -->
+        <div style="flex:1.2; display:flex; flex-direction:column; justify-content:center;">
+          <div style="display:flex; align-items:baseline; gap:6px;">
+            <span style="font-size:14px; font-weight:700; color:var(--t1);">${title}</span>
+            <span style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--green);">$${fmt(total)}</span>
           </div>
           ${extraStr}
-          <div style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">
-            ${orders > 0 ? `${orders} 單` : '0 單'} <span style="color:var(--t3); margin:0 4px;">│</span> ${hours > 0 ? fmtHours(hours) : '0m'}
-          </div>
         </div>
-        <!-- 下拉箭頭按鈕 -->
-        <div id="${cardId}-btn" style="width:24px; height:24px; border-radius:50%; background:var(--sf2); display:flex; align-items:center; justify-content:center; color:var(--t3); font-size:12px; transition:transform 0.3s; cursor:pointer;">▼</div>
+
+        <div class="sum-v-divider"></div>
+
+        <!-- 中間：單數 -->
+        <div style="flex:0.8; text-align:center; font-size:13px; font-weight:700; color:var(--t2);">
+          ${orders > 0 ? fmt(orders) : '0'} 單
+        </div>
+
+        <div class="sum-v-divider"></div>
+
+        <!-- 右側：工時 (為右邊的按鈕預留一點空間 padding-right) -->
+        <div style="flex:1; text-align:center; font-size:13px; font-weight:700; color:var(--t2); padding-right:24px;">
+          ${hours > 0 ? fmtHours(hours) : '0m'}
+        </div>
+
+        <!-- 右側絕對定位：下拉圓形按鈕 -->
+        <div id="${cardId}-btn" class="sum-toggle-btn">▼</div>
       </div>
 
-      <!-- 底部區塊 (平均數據，預設折疊隱藏) -->
-      <div id="${cardId}" class="summary-collapse" style="max-height:0px; overflow:hidden; transition:max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
-        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); display:flex; justify-content:space-between; font-size:11px; color:var(--t2); font-weight:600; text-align:center;">
-          <div style="flex:1;">平均<br><span style="font-family:var(--mono); font-size:14px; color:var(--acc);">$${fmt(avgPerOrder)} <span style="font-size:10px;">/單</span></span></div>
-          <div style="width:1px; background:var(--border);"></div>
-          <div style="flex:1;">均單<br><span style="font-family:var(--mono); font-size:14px; color:var(--acc);">${ordersPerHour} <span style="font-size:10px;">單/時</span></span></div>
-          <div style="width:1px; background:var(--border);"></div>
-          <div style="flex:1;">時薪<br><span style="font-family:var(--mono); font-size:14px; color:var(--acc);">$${fmt(avgPerHour)} <span style="font-size:10px;">/時</span></span></div>
+      <!-- 下排：平均資訊 (預設隱藏) -->
+      <div id="${cardId}" class="summary-collapse" style="max-height:0px; overflow:hidden;">
+        <!-- 上下排分隔線 (margin 2px 0) -->
+        <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:2px 0;"></div>
+        
+        <div style="display:flex; align-items:center; text-align:center; padding:2px;">
+          <!-- 平均 /單 -->
+          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">
+            平均 <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerOrder)}</span> <span style="font-size:10px; font-weight:500;">/單</span>
+          </div>
+          
+          <div class="sum-v-divider"></div>
+
+          <!-- 單數 /時 -->
+          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">
+            <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">${ordersPerHour}</span> <span style="font-size:10px; font-weight:500;">單/時</span>
+          </div>
+
+          <div class="sum-v-divider"></div>
+
+          <!-- 時薪 /時 -->
+          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">
+            <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerHour)}</span> <span style="font-size:10px; font-weight:500;">/時</span>
+          </div>
         </div>
       </div>
     </div>
