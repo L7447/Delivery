@@ -65,6 +65,17 @@ const getDayRecs = date => S.records.filter(r=>r.date===date);
 const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
 const recTotal = r => pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips);
 
+/** 格式化工時：小數轉為 h m 格式 (未滿1小時只顯示 m) */
+function fmtHours(hVal) {
+  const h = pf(hVal);
+  if (h <= 0) return '0';
+  const totalMins = Math.round(h * 60);
+  const hrs = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
+  if (hrs > 0 && mins === 0) return `${hrs}h`;
+  return `${mins}m`;
+}
 function toast(msg, ms=2200) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
@@ -203,7 +214,7 @@ function renderHome() {
     platStats.forEach(p => {
       topHtml += `<div class="hero-plat-row" style="background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};">
           <span class="hp-name">${p.name}收入：</span><span class="hp-sum">$ ${fmt(p.sum)}</span>
-          <span class="hp-ord">${p.orders} 單</span><span class="hp-hrs">${p.hours > 0 ? p.hours.toFixed(1) : 0} (h)</span>
+          <span class="hp-ord">${p.orders} 單</span><span class="hp-hrs">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
         </div>`;
     });
     topHtml += `</div>`;
@@ -213,7 +224,7 @@ function renderHome() {
       <div class="hero-total-row">
         <div class="ht-item"><div class="ht-lbl">總收入</div><div class="ht-val">$ ${fmt(total)}</div></div>
         <div class="ht-item"><div class="ht-lbl">總單數</div><div class="ht-val">${orders} 單</div></div>
-        <div class="ht-item"><div class="ht-lbl">總工時</div><div class="ht-val">${hours > 0 ? hours.toFixed(1) : 0} (h)</div></div>
+        <div class="ht-item"><div class="ht-lbl">總工時</div><div class="ht-val">${hours > 0 ? fmtHours(hours) : 0}</div></div>
       </div>
     </div>
   `;
@@ -357,11 +368,11 @@ function buildRecItem(r) {
         <div class="rec-main" style="color:var(--t2);">🕒 上下線時間：${r.punchIn} → ${r.punchOut}</div>
         <div class="rec-sub">${r.note}</div>
       </div>
-      <div class="rec-amt" style="color:var(--t2); font-size:14px;">+ ${pf(r.hours).toFixed(1)} h</div>
+      <div class="rec-amt" style="color:var(--t2); font-size:14px;">⏱ ${fmtHours(r.hours)}</div>
     </div>`;
   }
   const plat = getPlatform(r.platformId); const total = recTotal(r); const chips = [];
-  if (r.orders > 0) chips.push(`📦${r.orders}單`); if (r.hours > 0) chips.push(`⏱${pf(r.hours).toFixed(1)}h`);
+  if (r.orders > 0) chips.push(`📦${r.orders}單`); if (r.hours > 0) chips.push(`⏱${fmtHours(r.hours)}`);
   const bonusBits = [];
   if (r.bonus > 0) bonusBits.push(`🎁${fmt(r.bonus)}`); if (r.tempBonus> 0) bonusBits.push(`⚡${fmt(r.tempBonus)}`); if (r.tips > 0) bonusBits.push(`🤑${fmt(r.tips)}`);
   return `<div class="rec-item" data-id="${r.id}">
@@ -496,7 +507,7 @@ function renderHistGroupView(mode) {
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
     const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0);
     html += `<div class="card" style="padding:16px; border:2px solid var(--border); margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-end;">
-        <div><div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div><div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;"><span>📦 ${tOrd} 單</span><span>⏱ ${tHrs.toFixed(1)} h</span></div></div>
+        <div><div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div><div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;"><span>📦 ${tOrd} 單</span><span>⏱ ${fmtHours(tHrs)}</span></div></div>
         <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--blue);">$ ${fmt(tInc)}</div>
       </div>`;
     html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
@@ -531,7 +542,7 @@ function renderHistRecords(ds) {
     sumEl.innerHTML = `<div class="day-sum-row">
       <div class="day-sum-chip" style="background:var(--green-d);color:var(--green)">💰 NT$ ${fmt(total)}</div>
       ${orders>0?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">📦 ${orders} 單</div>`:''}
-      ${hours>0 ?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">⏱ ${hours.toFixed(1)} h</div>`:''}
+      ${hours>0 ?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">⏱ ${fmtHours(hours)}</div>`:''}
     </div>`;
   } else { sumEl.innerHTML = ''; }
   const listEl = document.getElementById('hist-rec-list');
@@ -757,7 +768,7 @@ function openDetailOverlay(id) {
   const rows = [
     ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${plat.name}</span>`], ['📆 日期', r.date],
     ['⏱ 打卡', r.punchIn&&r.punchOut?`${r.punchIn} → ${r.punchOut}`:(r.punchIn?r.punchIn:'—')],
-    ['🕐 工時', r.hours>0?`${pf(r.hours).toFixed(1)} 小時`:'—'], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'],
+    ['🕐 工時', r.hours>0?fmtHours(r.hours):'—'], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'],
     ['💰 行程收入',`NT$ ${fmt(r.income)}`], ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'],
     ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'], ['🤑 小費', r.tips>0?`NT$ ${fmt(r.tips)}`:'—'], ['📝 備註', r.note||'—'],
   ];
@@ -820,7 +831,7 @@ function renderRptOverview() {
     <div class="rpt-total-row"><span class="rt-lbl">🤑 小費小計</span><span class="rt-val" style="color:var(--blue)">NT$ ${fmt(tips)}</span></div>
     <div class="rpt-divider"></div>
     <div class="rpt-total-row"><span class="rt-lbl">📦 接單數</span><span class="rt-val">${fmt(orders)} 單</span></div>
-    <div class="rpt-total-row"><span class="rt-lbl">⏱ 累計工時</span><span class="rt-val">${hours.toFixed(1)} h</span></div>
+    <div class="rpt-total-row"><span class="rt-lbl">⏱ 累計工時</span><span class="rt-val">${fmtHours(hours)}</span></div>
     <div class="rpt-total-row"><span class="rt-lbl">💵 平均時薪</span><span class="rt-val" style="color:var(--acc)">${hours>0?`NT$ ${fmt(Math.round(total/hours))}/h`:'—'}</span></div>
     <div class="rpt-total-row"><span class="rt-lbl">📦 平均每單</span><span class="rt-val" style="color:var(--acc)">${orders>0?`NT$ ${fmt(Math.round(total/orders))}/單`:'—'}</span></div>
   </div>`;
@@ -889,7 +900,7 @@ function renderRptTop3() {
   if (!sorted.length) { html += `<div class="empty-tip">本月暫無記錄</div>`; } else {
     sorted.slice(0,3).forEach(([date,total],i) => {
       const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = recs.reduce((s,r)=>s+pf(r.hours),0);
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:28px">${medals[i]||'▶'}</span><div style="flex:1"><div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${orders>0?`${orders}單 `:''}${hours>0?`${hours.toFixed(1)}h `:''}</div></div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div></div>`;
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:28px">${medals[i]||'▶'}</span><div style="flex:1"><div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${orders>0?`${orders}單 `:''}${hours>0?`${fmtHours(hours)} `:''}</div></div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div></div>`;
     });
   }
   html += `</div>`;
