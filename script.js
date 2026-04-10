@@ -274,12 +274,12 @@ function renderHome() {
                 const isToday = ev.diff === 0; const dateColor = isToday ? 'var(--green)' : 'var(--t1)'; let diffColor = isToday ? 'var(--green)' : 'var(--t2)';
                 let nameColor = 'var(--t3)'; 
                 if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)';
-                else if (ev.name.includes('明細')) nameColor = 'var(--green)';
+                else if (ev.name.includes('明細')) nameColor = 'var(--acc)';
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
 
-                // 👇 新增這段判斷：如果是發薪或結算日，把「(X 天後)」改成深綠色
+                // 👇 新增這段判斷：如果是發薪或結算日，把「(X 天後)」改成綠色
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) {
-                  diffColor = '#a926b0'; // 使用高對比的深綠色
+                  diffColor = '#22C55E'; // 使用高對比的綠色
                 }
 
                 return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
