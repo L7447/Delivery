@@ -62,9 +62,9 @@
       <div style="width:30px;"></div> <!-- 排版平衡 -->
       <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>    
       
-      <!-- 右上角儲存按鈕 (Check1/Check2) -->
-      <button onclick="confirmAddRecord()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer;">
-        <img id="add-save-img" src="/images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
+      <!-- 右上角儲存按鈕 (Check1/Check2，加入 id 防連點) -->
+      <button id="add-save-btn" onclick="confirmAddRecord()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none;">
+        <img id="add-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
       </button>
     </div>
 
