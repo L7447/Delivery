@@ -596,37 +596,64 @@ function addWeatherTag(tag) {
   }
 }
 
-/** 儲存按鈕點擊事件 (右上角打勾) */
+/** 儲存按鈕點擊事件 (右上角打勾，3秒過渡動畫) */
 function confirmAddRecord() {
   const checkImg = document.getElementById('add-save-img');
-  checkImg.src = 'images/Check2.png'; // 點擊特效
-  setTimeout(() => checkImg.src = 'images/Check1.png', 300);
+  const checkBtn = document.getElementById('add-save-btn');
 
+  // 1. 防呆機制：如果已經在儲存中（按鈕被停用），就直接返回，避免重複點擊
+  if (checkBtn.disabled) return;
+
+  // 2. 表單驗證（驗證失敗就不會進入 3 秒倒數）
   if (!S.selPlatformId) { toast('請先選擇平台'); return; }
-  const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
-  if (income+bonus+temp+tips <= 0) { toast('請輸入至少一項收入金額'); return; }
+  const income = pf(document.getElementById('f-income').value); 
+  const bonus = pf(document.getElementById('f-bonus').value); 
+  const temp = pf(document.getElementById('f-temp-bonus').value); 
+  const tips = pf(document.getElementById('f-tips').value);
+  if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
 
-  // 計算總工時 (小數)
-  const h = pf(document.getElementById('f-hrs-val').value);
-  const m = pf(document.getElementById('f-min-val').value);
-  const totalHours = h + (m / 60);
+  // 3. 驗證通過，開始「儲存中」的 3 秒動畫特效
+  checkBtn.disabled = true; // 停用按鈕防連點
+  checkImg.src = 'images/Check2.png'; // 切換成勾選狀態的圖片
+  toast('⏳ 紀錄新增中...', 3000); // 顯示 3 秒的 Toast 提示
 
-  const rec = { 
-    id: S.editingId || newId(), 
-    date: document.getElementById('f-date').value || todayStr(), 
-    time: nowTime(), // 移除打卡後，時間直接以現在時間記錄
-    platformId: S.selPlatformId, 
-    punchIn: '', punchOut: '', // 清空打卡紀錄
-    hours: totalHours, 
-    orders: pf(document.getElementById('f-orders').value), 
-    income, bonus, tempBonus: temp, tips, 
-    note: document.getElementById('f-note').value.trim() 
-  };
+  // 4. 使用 setTimeout 模擬 3 秒的處理時間，時間到才真正存入資料並跳轉
+  setTimeout(() => {
+    // 計算總工時 (小數)
+    const h = pf(document.getElementById('f-hrs-val').value);
+    const m = pf(document.getElementById('f-min-val').value);
+    const totalHours = h + (m / 60);
 
-  if (S.editingId) { const idx = S.records.findIndex(r=>r.id===S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } 
-  else { S.records.push(rec); toast('✅ 記錄成功！'); }
-  
-  saveRecords(); S.editingId = null; goPage('home'); 
+    const rec = { 
+      id: S.editingId || newId(), 
+      date: document.getElementById('f-date').value || todayStr(), 
+      time: nowTime(), // 移除打卡後，時間直接以現在時間記錄
+      platformId: S.selPlatformId, 
+      punchIn: '', punchOut: '', // 清空打卡紀錄
+      hours: totalHours, 
+      orders: pf(document.getElementById('f-orders').value), 
+      income, bonus, tempBonus: temp, tips, 
+      note: document.getElementById('f-note').value.trim() 
+    };
+
+    if (S.editingId) { 
+      const idx = S.records.findIndex(r => r.id === S.editingId); 
+      if (idx >= 0) S.records[idx] = rec; 
+      toast('✅ 記錄已更新'); 
+    } else { 
+      S.records.push(rec); 
+      toast('✅ 記錄成功！'); 
+    }
+    
+    saveRecords(); 
+    S.editingId = null; 
+    
+    // 恢復按鈕狀態，並跳回首頁
+    checkImg.src = 'images/Check1.png';
+    checkBtn.disabled = false;
+    goPage('home'); 
+
+  }, 3000); // 3000 毫秒 = 3 秒
 }
 
 /* ══ 車輛管理主畫面 (支援多車輛動態滑動切換) ════════════════════════════════════════ */
