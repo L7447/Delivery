@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════
    外送記帳 App — script.js
-   功能：打卡、多平台記帳、報表、目標、獎勵設定、車輛管理
+   功能：打卡、多平台記帳、報表、目標、車輛管理(含滑動切換與紀錄)
    ══════════════════════════════════════════════════════ */
 
 /* ── localStorage 資料鍵值 ──────────────────────── */
@@ -22,70 +22,54 @@ const DEFAULT_PLATFORMS = [
 
 /* ── 預設 App 設定 ───────────────────────────────── */
 const DEFAULT_SETTINGS = {
-  goals:   { weekly: 0, monthly: 0 }, // 週目標/月目標
-  rewards: [],                        // 獎勵列表
+  goals:       { weekly: 0, monthly: 0 }, // 週目標/月目標
+  rewards:     [],                        // 獎勵列表
+  shopHistory: [],                        // 店家記憶歷史
 };
 
 /* ══ 全域狀態物件 ════════════════════════════════ */
 const S = {
-  tab:           'home',                  // 目前 tab
-  rptY:          new Date().getFullYear(), // 報表年份
-  rptM:          new Date().getMonth()+1,  // 報表月份
-  rptView:       'overview',              // 報表子頁
-  calY:          new Date().getFullYear(), // 日曆年份
-  calM:          new Date().getMonth()+1,  // 日曆月份
-  selDate:       todayStr(),              // 歷史頁選取日期
-  records:       [],                      // 所有記錄
-  platforms:     [],                      // 平台陣列
-  settings:      { ...DEFAULT_SETTINGS }, // App 設定
-  punch:         null,                    // {startTime, date} 目前打卡狀態
-  vehicles:      [],                      // 車輛清單
-  vehicleRecs:   [],                      // 車輛相關紀錄
-  editingId:     null,                    // 編輯中的記錄 ID
-  selPlatformId: null,                    // 新增表單選取的平台 ID
-  charts:        {},                      // Chart.js 實例快取
-  subMode:       '',                      // 子頁目前模式
-  homeSubTab:    'schedule',              // 首頁下半部目前的 Tab ('schedule' 或 'goal')
-  vehicleTab:    'fuel',                  // 車輛管理目前的 Tab ('fuel' 或 'maintenance')
-  newVehIcon:    4,                       // 新增車輛預設圖示編號 (4~14)
-  newVehColor:   '#555555',               // 新增車輛預設圖示顏色
+  tab:           'home',                  
+  rptY:          new Date().getFullYear(),
+  rptM:          new Date().getMonth()+1, 
+  rptView:       'overview',              
+  calY:          new Date().getFullYear(),
+  calM:          new Date().getMonth()+1, 
+  selDate:       todayStr(),              
+  records:       [],                      
+  platforms:     [],                      
+  settings:      { ...DEFAULT_SETTINGS }, 
+  punch:         null,                    
+  vehicles:      [],                      
+  vehicleRecs:   [],                      
+  editingId:     null,                    
+  selPlatformId: null,                    
+  charts:        {},                      
+  subMode:       '',                      
+  homeSubTab:    'schedule',              
+  vehicleTab:    'fuel',                  
+  newVehIcon:    4,                       
+  newVehColor:   '#555555',               
   selVehicleId:  null,                    // 目前選取的車輛 ID
 };
 
 /* ══ 工具函式 ════════════════════════════════════ */
-/** 今日日期字串 YYYY-MM-DD */
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-/** 目前時間字串 HH:MM */
+function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function nowTime() { return new Date().toTimeString().slice(0,5); }
-/** 數字格式化（加千位分隔） */
 const fmt = n => Number(n||0).toLocaleString('zh-TW', { minimumFractionDigits:0 });
-/** 產生唯一 ID */
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-/** 兩位補零 */
 const pad = n => String(n).padStart(2,'0');
-/** 安全 parseFloat */
 const pf = v => parseFloat(v)||0;
-/** 根據 ID 取得平台物件 */
 const getPlatform = id => S.platforms.find(p=>p.id===id)||{name:'未知',color:'#999'};
-/** 取得指定日期的所有記錄 */
 const getDayRecs = date => S.records.filter(r=>r.date===date);
-/** 取得指定月份所有記錄 */
-const getMonthRecs = (y,m) => {
-  const prefix = `${y}-${pad(m)}`;
-  return S.records.filter(r => r.date && r.date.startsWith(prefix));
-};
-/** 計算單筆記錄的總收入 */
+const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
 const recTotal = r => pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips);
-/** 顯示 Toast 訊息 */
+
 function toast(msg, ms=2200) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), ms);
 }
-/** 自訂確認框（回傳 Promise<boolean>）*/
 function customConfirm(msg) {
   return new Promise(resolve => {
     const ov = document.getElementById('confirm-overlay');
@@ -99,22 +83,18 @@ function customConfirm(msg) {
       cancel.removeEventListener('click', onCancel);
       resolve(v);
     }
-    function onOk()     { done(true);  }
+    function onOk() { done(true); }
     function onCancel() { done(false); }
     ok.addEventListener('click', onOk);
     cancel.addEventListener('click', onCancel);
     ov.addEventListener('click', e=>{ if(e.target===ov) done(false); }, {once:true});
   });
 }
-/** 開啟／關閉 Overlay */
-function openOverlay(id)  { document.getElementById(id)?.classList.add('show');    }
+function openOverlay(id)  { document.getElementById(id)?.classList.add('show'); }
 function closeOverlay(id) { document.getElementById(id)?.classList.remove('show'); }
-/** 關閉詳情抽屜 */
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
-
 /* ══ 資料讀寫（localStorage）════════════════════ */
-/** 讀取所有資料到 S 狀態 */
 function loadAll() {
   try { S.records = JSON.parse(localStorage.getItem(KEYS.records)||'[]'); } catch { S.records=[]; }
   try { 
@@ -126,24 +106,17 @@ function loadAll() {
   } catch { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); }
   try { S.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; } catch { S.settings = { ...DEFAULT_SETTINGS }; }
   try { S.punch = JSON.parse(localStorage.getItem(KEYS.punch)||'null'); } catch { S.punch=null; }
-  // 讀取車輛資料
   try { S.vehicles = JSON.parse(localStorage.getItem(KEYS.vehicles)||'[]'); } catch { S.vehicles=[]; }
   try { S.vehicleRecs = JSON.parse(localStorage.getItem(KEYS.vehicleRecs)||'[]'); } catch { S.vehicleRecs=[]; }
-  /** (店家記憶) */
-  try { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [], ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; } catch { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] }; }
 }  
-
-/** 儲存記錄 */
 function saveRecords()   { localStorage.setItem(KEYS.records,   JSON.stringify(S.records));   }
 function savePlatforms() { localStorage.setItem(KEYS.platforms, JSON.stringify(S.platforms)); }
 function saveSettings()  { localStorage.setItem(KEYS.settings,  JSON.stringify(S.settings));  }
 function savePunch()     { localStorage.setItem(KEYS.punch,     JSON.stringify(S.punch));     }
-// 儲存車輛資料
 function saveVehicles()    { localStorage.setItem(KEYS.vehicles,    JSON.stringify(S.vehicles));    }
 function saveVehicleRecs() { localStorage.setItem(KEYS.vehicleRecs, JSON.stringify(S.vehicleRecs)); }
 
-/* ══ 導覽 ════════════════════════════════════════ */
-/** 切換到指定頁面（tab 名稱），並套用對應的專屬背景色 */
+/* ══ 導覽切換 ════════════════════════════════════════ */
 function goPage(name) {
   S.tab = name;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -154,17 +127,14 @@ function goPage(name) {
     if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
   document.getElementById(`page-${name}`)?.classList.add('active');
-  
-  // 動態切換 body data-tab 以觸發專屬背景色
   document.body.setAttribute('data-tab', name);
 
   if (name === 'home')     renderHome();
   if (name === 'history')  renderHistory();
   if (name === 'report')   renderReport();
-  if (name === 'vehicles') renderVehicles(); // 切換到車輛頁
+  if (name === 'vehicles') renderVehicles();
   if (name === 'settings') renderSettings();
 }
-// 綁定底部導覽點擊
 document.querySelectorAll('.ni[data-pg]').forEach(el =>
   el.addEventListener('click', () => {
     const pg = el.dataset.pg;
@@ -173,25 +143,45 @@ document.querySelectorAll('.ni[data-pg]').forEach(el =>
   })
 );
 
-/* ══ 首頁子分頁切換 ══════════════════════════════ */
-/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
+/* ══ 各頁面 Tab 滑塊控制 ══════════════════════════════ */
 function switchHomeTab(tab, index) {
   S.homeSubTab = tab;
   document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`;
   document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule');
   document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal');
-  renderHome(); // 重新渲染下方區域
+  renderHome(); 
+}
+
+function switchHistTab(tab, index) {
+  S.histTab = tab; S.histNavDate = new Date();
+  document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
+  renderHistory(); 
+}
+
+function switchRptTab(tab, index, btnEl) {
+  S.rptView = tab;
+  document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active'));
+  btnEl.classList.add('active');
+  ['overview','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; });
+  renderReport();
+}
+
+function switchVehicleTab(tab, index) {
+  S.vehicleTab = tab;
+  document.getElementById('veh-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel');
+  document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance');
+  renderVehicles(); 
 }
 
 /* ══ 首頁渲染 ════════════════════════════════════ */
 function renderHome() {
-  const today = todayStr();
-  const dayRecs = getDayRecs(today);
-  const total = dayRecs.reduce((s,r)=>s+recTotal(r), 0);
-  const orders = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
+  const today = todayStr(); const dayRecs = getDayRecs(today);
+  const total = dayRecs.reduce((s,r)=>s+recTotal(r), 0); const orders = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
   const hours = dayRecs.filter(r => !r.isPunchOnly).reduce((s,r)=>s+pf(r.hours), 0);     
-  const dateObj = new Date(today+'T00:00:00');
-  const dow = ['日','一','二','三','四','五','六'][dateObj.getDay()];
+  const dateObj = new Date(today+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][dateObj.getDay()];
 
   const activePlatforms = S.platforms.filter(p=>p.active);
   const platStats = activePlatforms.map(p => {
@@ -203,9 +193,7 @@ function renderHome() {
   <div class="home-top-fixed">
     <div class="home-header">
       <div class="home-pg-title">今日概況</div>
-      <div class="home-pg-date">
-        <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b>
-      </div>
+      <div class="home-pg-date"><b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b></div>
     </div>
     <div class="today-hero">
   `;
@@ -213,12 +201,9 @@ function renderHome() {
   if (platStats.length > 0) {
     topHtml += `<div class="hero-plat-list">`;
     platStats.forEach(p => {
-      topHtml += `
-        <div class="hero-plat-row" style="background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};">
-          <span class="hp-name">${p.name}收入：</span>
-          <span class="hp-sum">$ ${fmt(p.sum)}</span>
-          <span class="hp-ord">${p.orders} 單</span>
-          <span class="hp-hrs">${p.hours > 0 ? p.hours.toFixed(1) : 0} (h)</span>
+      topHtml += `<div class="hero-plat-row" style="background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};">
+          <span class="hp-name">${p.name}收入：</span><span class="hp-sum">$ ${fmt(p.sum)}</span>
+          <span class="hp-ord">${p.orders} 單</span><span class="hp-hrs">${p.hours > 0 ? p.hours.toFixed(1) : 0} (h)</span>
         </div>`;
     });
     topHtml += `</div>`;
@@ -247,8 +232,7 @@ function renderHome() {
         <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
         <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span>
       </div>
-      <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}"
-        onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
+      <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
         ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
       </button>
     </div>
@@ -334,7 +318,8 @@ function renderHome() {
       bottomHtml += `</div>`;
     } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
   }
-  // 安全寫入新版分拆的 HTML 容器，避免找不到 ID 導致 JS 崩潰卡死
+
+  // 寫入新版分拆的 HTML 容器
   const topEl = document.getElementById('home-top-content');
   const botEl = document.getElementById('home-bottom-content');
   if (topEl) topEl.innerHTML = topHtml;
@@ -357,7 +342,7 @@ async function punchOut() {
   toast('✅ 已離線！時數已記錄至歷史中'); renderHome();
 }
 
-/* ══ 記錄卡片 HTML（共用）═══════════════════════ */
+/* ══ 記錄卡片 ════════════════════════════════════ */
 function buildRecItem(r) {
   if (r.isPunchOnly) {
     return `<div class="rec-item" data-id="${r.id}" style="background:var(--sf2); border: 1px dashed var(--t3);">
@@ -388,15 +373,7 @@ function buildRecItem(r) {
 if (!S.histTab) S.histTab = 'day';
 if (!S.histNavDate) S.histNavDate = new Date();
 if (!S.histFilter) S.histFilter = 'all';
-/** 切換記錄頁 Tab */
-/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
-function switchHistTab(tab, index) {
-  S.histTab = tab; S.histNavDate = new Date();
-  document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`;
-  document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
-  renderHistory(); // 重新渲染列表
-}
-/** 歷史區間導航 (上週/下週、上月/下月...) */
+
 function navHistGroup(dir, mode) {
   let d = new Date(S.histNavDate);
   if (mode === 'week')   d.setDate(d.getDate() + (dir * 7));
@@ -405,19 +382,13 @@ function navHistGroup(dir, mode) {
   if (mode === 'year')   d.setFullYear(d.getFullYear() + dir);
   S.histNavDate = d; renderHistory();
 }
-/** 更改平台篩選器 */
 function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
-/** 渲染整個歷史記錄頁面 */
+
 function renderHistory() {
-  // 因為標題和切換按鈕已經固定在 index.html 裡了
-  // 這裡我們只需要判斷目前在哪個 Tab，然後渲染對應的視圖到 #hist-content 中即可
-  if (S.histTab === 'day') {
-    renderHistDayView();
-  } else {
-    renderHistGroupView(S.histTab);
-  }
+  if (S.histTab === 'day') renderHistDayView();
+  else renderHistGroupView(S.histTab);
 }
-/** 渲染「日」視圖 */
+
 function renderHistDayView() {
   const content = document.getElementById('hist-content');
   const { calY:y, calM:m } = S;
@@ -446,15 +417,14 @@ function renderHistDayView() {
   renderHistCalendarGrid();
   renderHistRecords(S.selDate);
 }
+
 function renderHistCalendarGrid() {
   const { calY:y, calM:m } = S;
   const grid = document.getElementById('hist-calendar');
   const first = new Date(y, m-1, 1).getDay(); 
   const days  = new Date(y, m, 0).getDate();   
   const DOW   = ['日','一','二','三','四','五','六'];
-
   let html = `<div class="month-row">`;
-  // 星期加上藍色加粗樣式
   DOW.forEach(d => { html += `<div class="month-cell month-dow">${d}</div>`; });
   html += `</div><div class="month-row">`;
   
@@ -464,7 +434,6 @@ function renderHistCalendarGrid() {
     const ds  = `${y}-${pad(m)}-${pad(day)}`;
     const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0);
     const cls = ['month-cell', ds===todayStr()?'today':'', ds===S.selDate?'sel':''].filter(Boolean).join(' ');
-    // 移除文字金額顯示，改為左上角顯示綠點
     const dotHtml = sum > 0 ? `<div class="has-rec-dot"></div>` : '';
     html += `<div class="${cls}" data-ds="${ds}">${dotHtml}<div class="day-num">${day}</div></div>`;
     col++;
@@ -481,12 +450,12 @@ function renderHistCalendarGrid() {
     });
   });
 }
-/** 渲染週、雙週、月、年視圖 (包含平台篩選與區間統計) */
+
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
   const nd = new Date(S.histNavDate);
   let startD, endD, labelStr;
-  // 計算時間區間  
+  
   if (mode === 'week') {
     const day = nd.getDay() || 7; startD = new Date(nd); startD.setDate(startD.getDate() - day + 1); endD = new Date(startD); endD.setDate(endD.getDate() + 6);
     labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
@@ -494,7 +463,6 @@ function renderHistGroupView(mode) {
     const anchor = new Date(2025, 10, 10); const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); const cycleOffset = Math.floor(diffDays / 14); 
     startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14); endD = new Date(startD); endD.setDate(endD.getDate() + 13);
-    // 如果跨年，可加上年份以辨識
     let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : '';
     labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
   } else if (mode === 'month') {
@@ -505,12 +473,10 @@ function renderHistGroupView(mode) {
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
-  // 篩選資料 (依據時間與平台，排除純打卡記錄)
   let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr);
   if (S.histFilter !== 'all') recs = recs.filter(r => r.platformId === S.histFilter);
-  // 建立下拉選單 HTML
   let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('');
-  // 頂部控制列
+  
   let html = `<div style="padding: 0 16px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
         <div style="display:flex; align-items:center; gap:8px;">
@@ -520,51 +486,39 @@ function renderHistGroupView(mode) {
         </div>
         <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select>
       </div></div>`;
-  // 下半部資料列表    
   html += `<div style="padding: 0 16px 24px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">`;
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
-    // 該區間統計卡片
     const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0);
     html += `<div class="card" style="padding:16px; border:2px solid var(--border); margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-end;">
         <div><div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div><div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;"><span>📦 ${tOrd} 單</span><span>⏱ ${tHrs.toFixed(1)} h</span></div></div>
         <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--blue);">$ ${fmt(tInc)}</div>
       </div>`;
-    // 詳細流水帳列表 (新到舊)  
     html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
   }
   html += `</div>`; content.innerHTML = html;
 }
 
 /* ══ 全螢幕大日曆 ════════════════════════════════ */
-/** 打開大日曆 */
 function openFullCalendar() { document.getElementById('full-calendar-overlay').classList.add('show'); renderFullCalendar(); }
-/** 關閉大日曆 */
 function closeFullCalendar() { document.getElementById('full-calendar-overlay').classList.remove('show'); }
-/** 大日曆切換月份 */
 function changeFullCalMonth(offset) { S.calM += offset; if(S.calM < 1) { S.calM = 12; S.calY--; } if(S.calM > 12) { S.calM = 1; S.calY++; } renderFullCalendar(); S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); }
-/** 渲染大日曆網格 */
 function renderFullCalendar() {
   const { calY:y, calM:m } = S; document.getElementById('fc-title').textContent = `${y}年 ${m}月`;
   const DOW = ['週日','週一','週二','週三','週四','週五','週六']; document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
   const grid = document.getElementById('fc-grid'); const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
-  // 填充上個月的空白格
   let html = ``; const prevDays = new Date(y, m-1, 0).getDate();
   for (let i=first-1; i>=0; i--) { html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${prevDays - i}</div></div>`; }
-  // 填充當月日期
   for (let day=1; day<=days; day++) {
     const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); const isToday = ds === today; const amtHtml = sum > 0 ? `<div class="fc-amt">$${fmt(sum)}</div>` : '';
     html += `<div class="fc-cell ${isToday ? 'today' : ''}" onclick="S.selDate='${ds}'; closeFullCalendar(); renderHistory();"><div class="fc-date">${pad(day)}</div>${amtHtml}</div>`;
   }
-  // 填充下個月的空白格補滿最後一排
   const totalCells = first + days; const remain = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
   for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${pad(i)}</div></div>`; }
   grid.innerHTML = html;
 }
-/** 渲染歷史記錄的當日列表 */
 function renderHistRecords(ds) {
   const d = new Date(ds+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][d.getDay()];
   document.getElementById('hist-day-label').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（星期${dow}）記錄`;
-  // 當日摘要
   const recs = getDayRecs(ds); const total = recs.reduce((s,r)=>s+recTotal(r), 0); const sumEl = document.getElementById('hist-day-summary');
   if (total > 0) {
     const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
@@ -574,36 +528,16 @@ function renderHistRecords(ds) {
       ${hours>0 ?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">⏱ ${hours.toFixed(1)} h</div>`:''}
     </div>`;
   } else { sumEl.innerHTML = ''; }
-  // 記錄列表
   const listEl = document.getElementById('hist-rec-list');
   if (!recs.length) { listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`; return; }
   listEl.innerHTML = recs.slice().sort((a,b)=>(b.time||'').localeCompare(a.time||'')).map(r => buildRecItem(r)).join('');
-  // 綁定點擊開啟詳情
   listEl.querySelectorAll('.rec-item[data-id]').forEach(el => { el.addEventListener('click', () => openDetailOverlay(el.dataset.id)); });
 }
 
-/* ══ 月份切換（歷史頁）════════════════════════════ */
-document.getElementById('hist-prev').addEventListener('click', () => {
-  S.calM--; if(S.calM<1){S.calM=12;S.calY--;}
-  S.selDate = `${S.calY}-${pad(S.calM)}-01`;
-  renderHistory();
-});
-document.getElementById('hist-next').addEventListener('click', () => {
-  S.calM++; if(S.calM>12){S.calM=1;S.calY++;}
-  S.selDate = `${S.calY}-${pad(S.calM)}-01`;
-  renderHistory();
-});
-
 /* ══ 新增／編輯記錄 Overlay ═════════════════════ */
-/**
- * 開啟新增/編輯 Overlay
- * @param {Object|null} record 編輯時傳入既有記錄
- * @param {Object}      prefill 預填欄位（打卡下線時使用）
- */
 function openAddPage(record=null, prefill={}) {
   S.editingId = record ? record.id : null; S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
-  // 填入表單欄位
   document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
   document.getElementById('f-punch-in').value = record?.punchIn || prefill.punchIn || '';
   document.getElementById('f-punch-out').value = record?.punchOut || prefill.punchOut || '';
@@ -611,35 +545,27 @@ function openAddPage(record=null, prefill={}) {
   document.getElementById('f-orders').value = record?.orders || ''; document.getElementById('f-income').value = record?.income || '';
   document.getElementById('f-bonus').value = record?.bonus || ''; document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
   document.getElementById('f-tips').value = record?.tips || ''; document.getElementById('f-note').value = record?.note || '';
-  // 渲染平台選擇 chips
   renderPlatformChips(); calcAddTotal(); goPage('add');
 }
-/** 渲染新增頁平台選擇 chips */
 function renderPlatformChips() {
   const container = document.getElementById('platform-chips'); const active = S.platforms.filter(p=>p.active);
   if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id;
   container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${p.id}')"><span>${p.name}</span></div>`).join('');
 }
-/** 選取平台 */
 function selectPlatform(id) { S.selPlatformId = id; renderPlatformChips(); }
-/** 由上線/下線時間自動計算工時 */
 function autoCalcHours() {
   const inVal = document.getElementById('f-punch-in').value; const outVal = document.getElementById('f-punch-out').value;
   if (!inVal || !outVal) return; const base = document.getElementById('f-date').value || todayStr();
   const inMs = new Date(`${base}T${inVal}`).getTime(); const outMs = new Date(`${base}T${outVal}`).getTime();
   const diff = (outMs - inMs) / 3600000; if (diff > 0) document.getElementById('f-hours').value = diff.toFixed(1); calcAddTotal();
 }
-/** 設定打卡欄位為「現在」時間 */
 function setPunchNow(field) { const el = document.getElementById(field==='in'?'f-punch-in':'f-punch-out'); el.value = nowTime(); autoCalcHours(); }
-/** 即時計算本筆總收入並更新顯示 */
 function calcAddTotal() {
   const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const tempBonus = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
   const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total);
-  // 顯示分解（有值的才顯示）
   const parts = []; if(income>0)parts.push(`行程 $${fmt(income)}`); if(bonus>0)parts.push(`固定獎勵 $${fmt(bonus)}`); if(tempBonus>0)parts.push(`臨時獎勵 $${fmt(tempBonus)}`); if(tips>0)parts.push(`小費 $${fmt(tips)}`);
   document.getElementById('add-breakdown').textContent = parts.join(' + ');
 }
-// 確認新增記錄
 document.getElementById('add-confirm').addEventListener('click', () => {
   if (!S.selPlatformId) { toast('請先選擇平台'); return; }
   const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
@@ -647,42 +573,12 @@ document.getElementById('add-confirm').addEventListener('click', () => {
   const rec = { id: S.editingId || newId(), date: document.getElementById('f-date').value || todayStr(), time: document.getElementById('f-punch-out').value || nowTime(), platformId: S.selPlatformId, punchIn: document.getElementById('f-punch-in').value, punchOut: document.getElementById('f-punch-out').value, hours: pf(document.getElementById('f-hours').value), orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
   if (S.editingId) { const idx = S.records.findIndex(r=>r.id===S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } 
   else { S.records.push(rec); toast('✅ 記錄成功！'); }
-  // 替換掉原本的 closeOverlay('add-page');
-  // 儲存後自動跳回首頁
   saveRecords(); S.editingId = null; goPage('home'); 
 });
 
-/* ══ 車輛管理 (防閃爍、滑動特效、雙排圖示) ════════════════════════════════════════ */
-/** 切換車輛管理的 Tab  */
-/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
-function switchVehicleTab(tab, index) {
-  S.vehicleTab = tab;
-  document.getElementById('veh-tab-bg').style.transform = `translateX(${index * 100}%)`;
-  document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel');
-  document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance');
-  renderVehicles(); 
-}
-
-/* ══ Tab 滑塊控制函式 ══════════════════════════════ */
-function switchRptTab(tab, index, btnEl) {
-  S.rptView = tab;
-  document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`;
-  document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active'));
-  btnEl.classList.add('active');
-  ['overview','trend','compare','top3'].forEach(v => {
-    document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none';
-  });
-  renderReport();
-}
-
 /* ══ 車輛管理主畫面 (支援多車輛動態滑動切換) ════════════════════════════════════════ */
-/** 點擊切換選取的車輛 */
-function selectVehicle(id) {
-  S.selVehicleId = id;
-  renderVehicles();
-}
+function selectVehicle(id) { S.selVehicleId = id; renderVehicles(); }
 
-/** 渲染車輛管理資料列表 */
 function renderVehicles() {
   const container = document.getElementById('vehicle-content');
   let html = '';
@@ -693,20 +589,15 @@ function renderVehicles() {
     return;
   }
 
-  // 若尚未選擇車輛，預設自動選擇第一台
-  if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) {
-    S.selVehicleId = S.vehicles[0].id;
-  }
+  if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
 
-  // 取得目前選取的車輛索引，用來計算滑塊位置
   const vCount = S.vehicles.length;
   const vIndex = S.vehicles.findIndex(v => v.id === S.selVehicleId);
-  const slideWidth = `calc(${100 / vCount}% - 8px / ${vCount})`; // 動態計算寬度
+  const slideWidth = `calc(${100 / vCount}% - 8px / ${vCount})`;
   const slideTransform = `translateX(${vIndex * 100}%)`;
 
-  // 1. 動態產生「車輛選擇」的滑動 Tabs
   html += `
-    <div style="font-size:11px; color:var(--t3); margin-bottom:4px; font-weight:bold;">切換車輛</div>
+    <div style="font-size:11px; color:var(--t3); margin-bottom:4px; font-weight:bold; padding: 0 4px;">切換車輛</div>
     <div class="slide-tabs" style="margin-bottom: 16px;">
       <div class="slide-bg" style="width: ${slideWidth}; transform: ${slideTransform}; background: var(--acc); box-shadow: 0 4px 10px rgba(255,107,53, 0.4);"></div>`;
   
@@ -720,7 +611,6 @@ function renderVehicles() {
   });
   html += `</div>`;
 
-  // 2. 新增按鈕與刪除車輛按鈕
   const selVeh = S.vehicles.find(v => v.id === S.selVehicleId);
   
   if (S.vehicleTab === 'fuel') {
@@ -735,7 +625,6 @@ function renderVehicles() {
     </div>
   `;
 
-  // 3. 顯示該車輛專屬的歷史資料
   const typeRecs = S.vehicleRecs.filter(r => r.type === S.vehicleTab && r.vehicleId === S.selVehicleId);
   
   if (typeRecs.length === 0) {
@@ -753,23 +642,16 @@ function renderVehicles() {
       </div>`;
     });
   }
-
   container.innerHTML = html;
 }
 
-/** 刪除車輛 (連同紀錄一起刪除防呆) */
 async function deleteVehicle(id) {
   const ok = await customConfirm('確定要刪除這台車輛嗎？<br><span style="color:var(--red); font-size:12px;">⚠️ 該車的所有紀錄將一併刪除且無法復原</span>');
   if(!ok) return;
-  
   S.vehicles = S.vehicles.filter(v => v.id !== id);
-  S.vehicleRecs = S.vehicleRecs.filter(r => r.vehicleId !== id); // 清除關聯紀錄
-  
-  if (S.selVehicleId === id) S.selVehicleId = null; // 重置選取
-  saveVehicles();
-  saveVehicleRecs();
-  renderVehicles();
-  toast('車輛與紀錄已刪除');
+  S.vehicleRecs = S.vehicleRecs.filter(r => r.vehicleId !== id);
+  if (S.selVehicleId === id) S.selVehicleId = null;
+  saveVehicles(); saveVehicleRecs(); renderVehicles(); toast('車輛與紀錄已刪除');
 }
 
 /* ══ 燃料表單邏輯 (綁定車輛) ══════════════════════════════ */
@@ -798,59 +680,37 @@ function calcFuelTotal() {
 function saveFuelRecord() {
   const amount = pf(document.getElementById('fuel-final-total').textContent.replace(/,/g,''));
   if(amount <= 0) { toast('總金額不能為 0'); return; }
-
   S.vehicleRecs.push({
-    id: newId(),
-    vehicleId: S.selVehicleId, // 綁定車輛 ID
-    type: 'fuel',
+    id: newId(), vehicleId: S.selVehicleId, type: 'fuel',
     date: document.getElementById('fuel-date').value,
     prevKm: pf(document.getElementById('fuel-prev-km').value),
-    km: pf(document.getElementById('fuel-curr-km').value),
-    amount: amount
+    km: pf(document.getElementById('fuel-curr-km').value), amount: amount
   });
-  saveVehicleRecs();
-  closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
+  saveVehicleRecs(); closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
 }
 
-/** 打開新增車輛視窗 (只在打開時渲染一次 HTML，後續只改 CSS) */
+/** 打開新增車輛視窗 */
 function openAddVehicle() {
-  S.newVehIcon = 4; // 預設 4
-  S.newVehColor = '#555555'; // 預設深灰
-  
+  S.newVehIcon = 4; S.newVehColor = '#555555';
   const container = document.getElementById('vehicle-add-body');
-  
-  // 產生 4 到 14 的圖示選項 (改用 div 裝起來方便 CSS Grid 雙排排版)
   let iconsHtml = '<div class="veh-icon-grid">';
   for (let i = 4; i <= 14; i++) {
-    iconsHtml += `
-      <div id="veh-icon-box-${i}" onclick="selectNewVehIcon(${i})" class="veh-icon-box">
+    iconsHtml += `<div id="veh-icon-box-${i}" onclick="selectNewVehIcon(${i})" class="veh-icon-box">
         <div id="veh-icon-mask-${i}" class="scooter-mask" style="background-color:#ccc; -webkit-mask-image: url('/images/scooter${i}.png');"></div>
-      </div>
-    `;
+      </div>`;
   }
   iconsHtml += '</div>';
 
   container.innerHTML = `
-    <div class="fg" style="margin-bottom:14px">
-      <label>車輛名稱</label>
-      <input type="text" class="finp" id="v-name" placeholder="例如：我的愛車 Gogoro">
-    </div>
-
-    <div class="fg" style="margin-bottom:14px">
-      <label>自訂圖示顏色</label>
+    <div class="fg" style="margin-bottom:14px"><label>車輛名稱</label><input type="text" class="finp" id="v-name" placeholder="例如：我的愛車 Gogoro"></div>
+    <div class="fg" style="margin-bottom:14px"><label>自訂圖示顏色</label>
       <div style="display:flex;gap:8px">
         <input type="color" id="v-color" value="${S.newVehColor}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px">
         <input type="text" class="finp" value="${S.newVehColor}" readonly style="flex:1">
       </div>
     </div>
-    
-    <div class="fg" style="margin-bottom:14px">
-      <label>選擇機車圖示</label>
-      ${iconsHtml}
-    </div>
-
-    <div class="fg" style="margin-bottom:20px">
-      <label>預設燃料</label>
+    <div class="fg" style="margin-bottom:14px"><label>選擇機車圖示</label>${iconsHtml}</div>
+    <div class="fg" style="margin-bottom:20px"><label>預設燃料</label>
       <select class="fsel" id="v-fuel">
         <option value="92" selected>92 無鉛汽油</option>
         <option value="95">95 無鉛汽油</option>
@@ -858,186 +718,96 @@ function openAddVehicle() {
         <option value="electric">電力 (電動車)</option>
       </select>
     </div>
-
     <div style="display:flex;gap:10px;">
       <button onclick="closeOverlay('vehicle-add-page')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-weight:600;cursor:pointer;">取消</button>
       <button onclick="saveNewVehicle()" class="btn-acc" style="flex:2;padding:12px;font-weight:700;border-radius:var(--rs)">確認新增</button>
     </div>
   `;
-
-  // 綁定顏色選擇器事件 (只更新顏色，不重繪 HTML)
-  document.getElementById('v-color').addEventListener('input', (e) => {
-    S.newVehColor = e.target.value;
-    updateVehIconUI(); 
-  });
-
-  updateVehIconUI(); // 初始化選取狀態
-  openOverlay('vehicle-add-page');
+  document.getElementById('v-color').addEventListener('input', (e) => { S.newVehColor = e.target.value; updateVehIconUI(); });
+  updateVehIconUI(); openOverlay('vehicle-add-page');
 }
 
-/** 點擊選擇機車圖示 */
-function selectNewVehIcon(id) {
-  S.newVehIcon = id;
-  updateVehIconUI(); // 只更新 CSS 樣式，解決其他圖示跟著閃爍的問題
-}
-
-/** 更新機車圖示的顏色與邊框狀態 (核心防閃爍邏輯) */
+function selectNewVehIcon(id) { S.newVehIcon = id; updateVehIconUI(); }
 function updateVehIconUI() {
   for (let i = 4; i <= 14; i++) {
-    const box = document.getElementById(`veh-icon-box-${i}`);
-    const mask = document.getElementById(`veh-icon-mask-${i}`);
+    const box = document.getElementById(`veh-icon-box-${i}`); const mask = document.getElementById(`veh-icon-mask-${i}`);
     if (!box || !mask) continue;
-    
-    if (i === S.newVehIcon) {
-      box.style.borderColor = 'var(--acc)';
-      mask.style.backgroundColor = S.newVehColor;
-    } else {
-      box.style.borderColor = 'transparent';
-      mask.style.backgroundColor = '#ccc';
-    }
+    if (i === S.newVehIcon) { box.style.borderColor = 'var(--acc)'; mask.style.backgroundColor = S.newVehColor; } 
+    else { box.style.borderColor = 'transparent'; mask.style.backgroundColor = '#ccc'; }
   }
 }
-
-/** 儲存新增的車輛 */
 function saveNewVehicle() {
   const name = document.getElementById('v-name').value.trim();
   if (!name) { toast('請輸入車輛名稱'); return; }
   const fuel = document.getElementById('v-fuel').value;
-
-  S.vehicles.push({
-    id: newId(), name: name, icon: S.newVehIcon, color: S.newVehColor, defaultFuel: fuel
-  });
-
-  saveVehicles();
-  closeOverlay('vehicle-add-page');
-  toast('✅ 成功新增車輛！');
-  renderVehicles();
+  S.vehicles.push({ id: newId(), name: name, icon: S.newVehIcon, color: S.newVehColor, defaultFuel: fuel });
+  saveVehicles(); closeOverlay('vehicle-add-page'); toast('✅ 成功新增車輛！'); renderVehicles();
 }
-
 
 /* ══ 詳情抽屜 ════════════════════════════════════ */
 function openDetailOverlay(id) {
-  const r = S.records.find(r=>r.id===id);
-  if (!r) return;
-  const plat  = getPlatform(r.platformId);
-  const total = recTotal(r);
-  const rows  = [
-    ['🏪 平台',    `<span style="color:${plat.color};font-weight:600">${plat.name}</span>`],
-    ['📆 日期',    r.date],
-    ['⏱ 打卡',    r.punchIn&&r.punchOut?`${r.punchIn} → ${r.punchOut}`:(r.punchIn?r.punchIn:'—')],
-    ['🕐 工時',    r.hours>0?`${pf(r.hours).toFixed(1)} 小時`:'—'],
-    ['📦 接單數',  r.orders>0?`${r.orders} 單`:'—'],
-    ['💰 行程收入',`NT$ ${fmt(r.income)}`],
-    ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'],
-    ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'],
-    ['🤑 小費',    r.tips>0?`NT$ ${fmt(r.tips)}`:'—'],
-    ['📝 備註',    r.note||'—'],
+  const r = S.records.find(r=>r.id===id); if (!r) return;
+  const plat = getPlatform(r.platformId); const total = recTotal(r);
+  const rows = [
+    ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${plat.name}</span>`], ['📆 日期', r.date],
+    ['⏱ 打卡', r.punchIn&&r.punchOut?`${r.punchIn} → ${r.punchOut}`:(r.punchIn?r.punchIn:'—')],
+    ['🕐 工時', r.hours>0?`${pf(r.hours).toFixed(1)} 小時`:'—'], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'],
+    ['💰 行程收入',`NT$ ${fmt(r.income)}`], ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'],
+    ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'], ['🤑 小費', r.tips>0?`NT$ ${fmt(r.tips)}`:'—'], ['📝 備註', r.note||'—'],
   ];
   document.getElementById('detail-body').innerHTML = `
     <div style="text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--border)">
       <div style="font-size:13px;color:var(--t3);margin-bottom:4px">本筆總收入</div>
       <div style="font-family:var(--mono);font-size:38px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div>
     </div>
-    <div style="margin-top:12px">${rows.map(([l,v])=>`
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:12px;color:var(--t3)">${l}</span>
-        <span style="font-size:13px;font-weight:500">${v}</span>
-      </div>`).join('')}
-    </div>
+    <div style="margin-top:12px">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--t3)">${l}</span><span style="font-size:13px;font-weight:500">${v}</span></div>`).join('')}</div>
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button onclick="closeDetailOverlay();openAddPage(${JSON.stringify(r).replace(/"/g,'&quot;')})" 
-        style="flex:1;padding:12px;border-radius:var(--rs);background:var(--acc-d);color:var(--acc);border:1px solid rgba(255,107,53,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">
-        ✎ 編輯
-      </button>
-      <button onclick="deleteRecord('${r.id}')" 
-        style="flex:1;padding:12px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">
-        🗑 刪除
-      </button>
+      <button onclick="closeDetailOverlay();openAddPage(${JSON.stringify(r).replace(/"/g,'&quot;')})" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--acc-d);color:var(--acc);border:1px solid rgba(255,107,53,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">✎ 編輯</button>
+      <button onclick="deleteRecord('${r.id}')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">🗑 刪除</button>
     </div>`;
   document.getElementById('detail-overlay').classList.add('show');
 }
-/** 刪除記錄 */
 async function deleteRecord(id) {
-  closeDetailOverlay();
-  const ok = await customConfirm('確定要刪除這筆記錄嗎？<br><strong>此動作無法復原。</strong>');
-  if (!ok) return;
-  S.records = S.records.filter(r=>r.id!==id);
-  saveRecords();
-  toast('已刪除');
-  if (S.tab==='home')    renderHome();
-  if (S.tab==='history') renderHistory();
+  closeDetailOverlay(); const ok = await customConfirm('確定要刪除這筆記錄嗎？<br><strong>此動作無法復原。</strong>'); if (!ok) return;
+  S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除');
+  if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory();
 }
 
 /* ══ 搜尋 ════════════════════════════════════════ */
 function openSearch() { openOverlay('search-page'); document.getElementById('search-kw').focus(); }
 function doSearch() {
-  const kw   = document.getElementById('search-kw').value.trim().toLowerCase();
-  const from = document.getElementById('search-from').value;
-  const to   = document.getElementById('search-to').value;
-  const el   = document.getElementById('search-results');
-
+  const kw = document.getElementById('search-kw').value.trim().toLowerCase();
+  const from = document.getElementById('search-from').value; const to = document.getElementById('search-to').value;
+  const el = document.getElementById('search-results');
   let recs = S.records.filter(r => {
-    if (from && r.date < from) return false;
-    if (to   && r.date > to)   return false;
-    if (!kw) return true;
+    if (from && r.date < from) return false; if (to && r.date > to) return false; if (!kw) return true;
     const plat = getPlatform(r.platformId).name.toLowerCase();
-    return plat.includes(kw)
-      || (r.note||'').toLowerCase().includes(kw)
-      || String(recTotal(r)).includes(kw)
-      || String(r.orders||'').includes(kw);
+    return plat.includes(kw) || (r.note||'').toLowerCase().includes(kw) || String(recTotal(r)).includes(kw) || String(r.orders||'').includes(kw);
   }).sort((a,b)=>b.date.localeCompare(a.date));
-
   if (!recs.length) { el.innerHTML = `<div class="empty-tip">找不到符合記錄</div>`; return; }
   el.innerHTML = recs.map(r=>buildRecItem(r)).join('');
-  el.querySelectorAll('.rec-item[data-id]').forEach(item => {
-    item.addEventListener('click', () => {
-      closeOverlay('search-page');
-      openDetailOverlay(item.dataset.id);
-    });
-  });
+  el.querySelectorAll('.rec-item[data-id]').forEach(item => { item.addEventListener('click', () => { closeOverlay('search-page'); openDetailOverlay(item.dataset.id); }); });
 }
 document.getElementById('search-kw').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
 
 /* ══ 報表頁 ══════════════════════════════════════ */
 function renderReport() {
   document.getElementById('rpt-label').textContent = `${S.rptY} 年 ${S.rptM} 月`;
-  // 根據目前子頁顯示
-  if (S.rptView === 'overview') renderRptOverview();
-  if (S.rptView === 'trend')    renderRptTrend();
-  if (S.rptView === 'compare')  renderRptCompare();
-  if (S.rptView === 'top3')     renderRptTop3();
+  if (S.rptView === 'overview') renderRptOverview(); if (S.rptView === 'trend') renderRptTrend();
+  if (S.rptView === 'compare') renderRptCompare(); if (S.rptView === 'top3') renderRptTop3();
 }
-// 報表月份切換
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
-// 報表 tab 切換
-document.querySelectorAll('#rpt-tabs .seg-tab').forEach(t => t.addEventListener('click', ()=>{
-  document.querySelectorAll('#rpt-tabs .seg-tab').forEach(x=>x.classList.remove('on'));
-  t.classList.add('on'); S.rptView = t.dataset.rv;
-  ['overview','trend','compare','top3'].forEach(v => {
-    document.getElementById(`rv-${v}`).style.display = v===S.rptView?'':'none';
-  });
-  renderReport();
-}));
 
-/** 報表：總覽 */
 function renderRptOverview() {
-  const recs   = getMonthRecs(S.rptY, S.rptM);
-  const total  = recs.reduce((s,r)=>s+recTotal(r), 0);
-  const income = recs.reduce((s,r)=>s+pf(r.income), 0);
-  const bonus  = recs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus), 0);
-  const tips   = recs.reduce((s,r)=>s+pf(r.tips), 0);
-  const orders = recs.reduce((s,r)=>s+pf(r.orders), 0);
-  const hours  = recs.reduce((s,r)=>s+pf(r.hours), 0);
+  const recs = getMonthRecs(S.rptY, S.rptM);
+  const total = recs.reduce((s,r)=>s+recTotal(r), 0); const income = recs.reduce((s,r)=>s+pf(r.income), 0);
+  const bonus = recs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus), 0); const tips = recs.reduce((s,r)=>s+pf(r.tips), 0);
+  const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
 
   let html = `
   <div class="card">
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <div style="flex:1;text-align:center">
-        <div style="font-family:var(--mono);font-size:26px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div>
-        <div style="font-size:11px;color:var(--t3);margin-top:2px">本月總收入</div>
-      </div>
-    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px"><div style="flex:1;text-align:center"><div style="font-family:var(--mono);font-size:26px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div><div style="font-size:11px;color:var(--t3);margin-top:2px">本月總收入</div></div></div>
     <div class="rpt-divider"></div>
     <div class="rpt-total-row"><span class="rt-lbl">💰 行程收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(income)}</span></div>
     <div class="rpt-total-row"><span class="rt-lbl">🎁 獎勵小計</span><span class="rt-val" style="color:var(--gold)">NT$ ${fmt(bonus)}</span></div>
@@ -1049,645 +819,257 @@ function renderRptOverview() {
     <div class="rpt-total-row"><span class="rt-lbl">📦 平均每單</span><span class="rt-val" style="color:var(--acc)">${orders>0?`NT$ ${fmt(Math.round(total/orders))}/單`:'—'}</span></div>
   </div>`;
 
-  // 平台分解圓餅圖
-  const platData = S.platforms.filter(p=>p.active).map(p=>({
-    name: p.name, color: p.color,
-    val:  recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0)
-  })).filter(p=>p.val>0);
-
+  const platData = S.platforms.filter(p=>p.active).map(p=>({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
   if (platData.length > 1) {
-    html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">各平台佔比</div>
-      <div style="position:relative;height:220px;margin-bottom:10px"><canvas id="plat-pie"></canvas></div>
+    html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">各平台佔比</div><div style="position:relative;height:220px;margin-bottom:10px"><canvas id="plat-pie"></canvas></div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        ${platData.map(p=>{
-          const pct = total>0?Math.round(p.val/total*100):0;
-          return `<div style="display:flex;align-items:center;gap:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></div>
-            <span style="flex:1;font-size:13px">${p.name}</span>
-            <span style="font-family:var(--mono);font-size:13px;color:var(--t2)">${pct}%</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:600">NT$ ${fmt(p.val)}</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
+        ${platData.map(p=>{ const pct = total>0?Math.round(p.val/total*100):0; return `<div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></div><span style="flex:1;font-size:13px">${p.name}</span><span style="font-family:var(--mono);font-size:13px;color:var(--t2)">${pct}%</span><span style="font-family:var(--mono);font-size:13px;font-weight:600">NT$ ${fmt(p.val)}</span></div>`; }).join('')}
+      </div></div>`;
   }
-
-  // 收入結構（行程 vs 獎勵 vs 小費）圓餅
   if (total > 0 && (bonus>0||tips>0)) {
-    html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">收入結構</div>
-      <div style="position:relative;height:200px"><canvas id="income-pie"></canvas></div>
+    html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">收入結構</div><div style="position:relative;height:200px"><canvas id="income-pie"></canvas></div>
       <div style="display:flex;justify-content:space-around;margin-top:10px;font-size:12px;text-align:center">
         <div><div style="color:var(--green);font-family:var(--mono);font-weight:600">${total>0?Math.round(income/total*100):0}%</div><div style="color:var(--t3)">行程</div></div>
         <div><div style="color:var(--gold);font-family:var(--mono);font-weight:600">${total>0?Math.round(bonus/total*100):0}%</div><div style="color:var(--t3)">獎勵</div></div>
         <div><div style="color:var(--blue);font-family:var(--mono);font-weight:600">${total>0?Math.round(tips/total*100):0}%</div><div style="color:var(--t3)">小費</div></div>
-      </div>
-    </div>`;
+      </div></div>`;
   }
-
   document.getElementById('rv-overview').innerHTML = html;
-
-  // 渲染圓餅圖
   if (platData.length>1) drawPie('plat-pie', platData.map(p=>p.name), platData.map(p=>p.val), platData.map(p=>p.color));
   if (total>0&&(bonus>0||tips>0)) drawPie('income-pie',['行程','獎勵','小費'],[income,bonus,tips],['#22C55E','#F59E0B','#3B82F6']);
 }
 
-/** 報表：趨勢 */
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
-  // 趨勢模式（週/月/年）
   const trends = [
     { key:'week',  label:'7天趨勢',   getDays: () => Array.from({length:7}, (_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}) },
     { key:'month', label:'本月趨勢',   getDays: () => { const n=new Date(S.rptY,S.rptM,0).getDate(); return Array.from({length:n},(_,i)=>`${S.rptY}-${pad(S.rptM)}-${pad(i+1)}`); } },
-    { key:'year',  label:'年趨勢',    getDays: () => Array.from({length:12},(_,i)=>null) }, // 月份資料特殊處理
+    { key:'year',  label:'年趨勢',    getDays: () => Array.from({length:12},(_,i)=>null) },
   ];
-  const curT = S.trendMode||'month';
-  const trend = trends.find(t=>t.key===curT)||trends[1];
+  const curT = S.trendMode||'month'; const trend = trends.find(t=>t.key===curT)||trends[1];
 
   let html = `<div style="display:flex;gap:6px;margin-bottom:10px">
-    ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" 
-      style="flex:1;padding:6px;border-radius:var(--rs);border:1px solid ${curT===t.key?'var(--acc)':'var(--border)'};background:${curT===t.key?'var(--acc-d)':'var(--sf2)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:12px;cursor:pointer;font-family:var(--sans)">${t.label}</button>`).join('')}
-  </div>`;
-  html += `<div class="card"><div style="position:relative;height:${curT==='year'?180:220}px"><canvas id="trend-chart"></canvas></div></div>`;
+    ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:6px;border-radius:var(--rs);border:1px solid ${curT===t.key?'var(--acc)':'var(--border)'};background:${curT===t.key?'var(--acc-d)':'var(--sf2)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:12px;cursor:pointer;font-family:var(--sans)">${t.label}</button>`).join('')}
+  </div><div class="card"><div style="position:relative;height:${curT==='year'?180:220}px"><canvas id="trend-chart"></canvas></div></div>`;
 
-  // 年趨勢：12個月
   if (curT === 'year') {
-    const months = Array.from({length:12},(_,i)=>i+1);
-    const labels = months.map(m=>`${m}月`);
-    const data   = months.map(m=>getMonthRecs(S.rptY,m).reduce((s,r)=>s+recTotal(r),0));
-    html += `<div class="card">
-      <div class="rpt-divider" style="margin-bottom:8px"></div>
-      <div class="rpt-total-row"><span class="rt-lbl">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(data.reduce((a,b)=>a+b,0))}</span></div>
-      <div class="rpt-total-row"><span class="rt-lbl">月均收入</span><span class="rt-val">NT$ ${fmt(Math.round(data.reduce((a,b)=>a+b,0)/12))}</span></div>
-    </div>`;
-    el.innerHTML = html;
-    drawLine('trend-chart', labels, [{ label:'月收入', data, color:'#FF6B35' }]);
-    return;
+    const months = Array.from({length:12},(_,i)=>i+1); const labels = months.map(m=>`${m}月`); const data = months.map(m=>getMonthRecs(S.rptY,m).reduce((s,r)=>s+recTotal(r),0));
+    html += `<div class="card"><div class="rpt-divider" style="margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(data.reduce((a,b)=>a+b,0))}</span></div><div class="rpt-total-row"><span class="rt-lbl">月均收入</span><span class="rt-val">NT$ ${fmt(Math.round(data.reduce((a,b)=>a+b,0)/12))}</span></div></div>`;
+    el.innerHTML = html; drawLine('trend-chart', labels, [{ label:'月收入', data, color:'#FF6B35' }]); return;
   }
-
-  // 週/月趨勢
-  const days  = trend.getDays();
-  const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
-  const data   = days.map(d=>getDayRecs(d).reduce((s,r)=>s+recTotal(r),0));
-
-  el.innerHTML = html;
-  drawLine('trend-chart', labels, [{ label:'日收入', data, color:'#FF6B35' }]);
+  const days = trend.getDays(); const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;}); const data = days.map(d=>getDayRecs(d).reduce((s,r)=>s+recTotal(r),0));
+  el.innerHTML = html; drawLine('trend-chart', labels, [{ label:'日收入', data, color:'#FF6B35' }]);
 }
 
-/** 報表：比較 */
 function renderRptCompare() {
-  const el = document.getElementById('rv-compare');
-  const thisRecs = getMonthRecs(S.rptY, S.rptM);
-  const thisTotal = thisRecs.reduce((s,r)=>s+recTotal(r),0);
-
-  // 比較對象：上月、去年同月、前年同月
+  const el = document.getElementById('rv-compare'); const thisRecs = getMonthRecs(S.rptY, S.rptM); const thisTotal = thisRecs.reduce((s,r)=>s+recTotal(r),0);
   const comparisons = [
-    { label:'上個月',   y:S.rptM>1?S.rptY:S.rptY-1,  m:S.rptM>1?S.rptM-1:12 },
-    { label:'去年同月', y:S.rptY-1, m:S.rptM },
-    { label:'前年同月', y:S.rptY-2, m:S.rptM },
-  ].map(c=>({
-    ...c, total: getMonthRecs(c.y,c.m).reduce((s,r)=>s+recTotal(r),0)
-  }));
-
+    { label:'上個月', y:S.rptM>1?S.rptY:S.rptY-1, m:S.rptM>1?S.rptM-1:12 }, { label:'去年同月', y:S.rptY-1, m:S.rptM }, { label:'前年同月', y:S.rptY-2, m:S.rptM }
+  ].map(c=>({ ...c, total: getMonthRecs(c.y,c.m).reduce((s,r)=>s+recTotal(r),0) }));
   const maxV = Math.max(thisTotal, ...comparisons.map(c=>c.total), 1);
-  let html = `<div class="card">
-    <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">📊 與歷史比較</div>
-    <div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-        <span style="font-weight:600;color:var(--acc)">${S.rptY}年${S.rptM}月（本月）</span>
-        <span style="font-family:var(--mono);font-weight:700;color:var(--green)">NT$ ${fmt(thisTotal)}</span>
-      </div>
-      <div class="progress-track" style="height:10px">
-        <div class="progress-fill" style="width:100%;background:var(--acc)"></div>
-      </div>
-    </div>
+  let html = `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">📊 與歷史比較</div><div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600;color:var(--acc)">${S.rptY}年${S.rptM}月（本月）</span><span style="font-family:var(--mono);font-weight:700;color:var(--green)">NT$ ${fmt(thisTotal)}</span></div><div class="progress-track" style="height:10px"><div class="progress-fill" style="width:100%;background:var(--acc)"></div></div></div>
     ${comparisons.map(c=>{
-      const pct = maxV>0?Math.round(c.total/maxV*100):0;
-      const diff = thisTotal - c.total;
-      const diffStr = diff===0?'持平':(diff>0?`+NT$ ${fmt(diff)}`:`-NT$ ${fmt(Math.abs(diff))}`);
-      const diffColor = diff>0?'var(--green)':diff<0?'var(--red)':'var(--t3)';
-      return `<div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-          <span>${c.label}（${c.y}/${pad(c.m)}）</span>
-          <div style="display:flex;gap:8px;align-items:baseline">
-            <span style="font-family:var(--mono);color:var(--t2)">NT$ ${fmt(c.total)}</span>
-            <span style="font-size:11px;color:${diffColor};font-weight:600">${diffStr}</span>
-          </div>
-        </div>
-        <div class="progress-track" style="height:6px">
-          <div class="progress-fill" style="width:${pct}%;background:var(--t3)"></div>
-        </div>
-      </div>`;
-    }).join('')}
-  </div>`;
-
+      const pct = maxV>0?Math.round(c.total/maxV*100):0; const diff = thisTotal - c.total; const diffStr = diff===0?'持平':(diff>0?`+NT$ ${fmt(diff)}`:`-NT$ ${fmt(Math.abs(diff))}`); const diffColor = diff>0?'var(--green)':diff<0?'var(--red)':'var(--t3)';
+      return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>${c.label}（${c.y}/${pad(c.m)}）</span><div style="display:flex;gap:8px;align-items:baseline"><span style="font-family:var(--mono);color:var(--t2)">NT$ ${fmt(c.total)}</span><span style="font-size:11px;color:${diffColor};font-weight:600">${diffStr}</span></div></div><div class="progress-track" style="height:6px"><div class="progress-fill" style="width:${pct}%;background:var(--t3)"></div></div></div>`;
+    }).join('')}</div>`;
   el.innerHTML = html;
 }
 
-/** 報表：TOP3 */
 function renderRptTop3() {
-  const el = document.getElementById('rv-top3');
-  // 依日期加總，取每日總收入
-  const monthRecs = getMonthRecs(S.rptY, S.rptM);
-  const dayMap = {};
-  monthRecs.forEach(r => {
-    dayMap[r.date] = (dayMap[r.date]||0) + recTotal(r);
-  });
-  const sorted = Object.entries(dayMap).sort((a,b)=>b[1]-a[1]);
-  const medals = ['🥇','🥈','🥉'];
-
-  let html = `<div class="card">
-    <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 3 日</div>`;
-
-  if (!sorted.length) {
-    html += `<div class="empty-tip">本月暫無記錄</div>`;
-  } else {
+  const el = document.getElementById('rv-top3'); const monthRecs = getMonthRecs(S.rptY, S.rptM); const dayMap = {};
+  monthRecs.forEach(r => { dayMap[r.date] = (dayMap[r.date]||0) + recTotal(r); });
+  const sorted = Object.entries(dayMap).sort((a,b)=>b[1]-a[1]); const medals = ['🥇','🥈','🥉'];
+  let html = `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 3 日</div>`;
+  if (!sorted.length) { html += `<div class="empty-tip">本月暫無記錄</div>`; } else {
     sorted.slice(0,3).forEach(([date,total],i) => {
-      const d    = new Date(date+'T00:00:00');
-      const recs = getDayRecs(date);
-      const orders = recs.reduce((s,r)=>s+pf(r.orders),0);
-      const hours  = recs.reduce((s,r)=>s+pf(r.hours),0);
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:28px">${medals[i]||'▶'}</span>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div>
-          <div style="font-size:11px;color:var(--t3);margin-top:2px">
-            ${orders>0?`${orders}單 `:''}${hours>0?`${hours.toFixed(1)}h `:''}
-          </div>
-        </div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div>
-      </div>`;
+      const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = recs.reduce((s,r)=>s+pf(r.hours),0);
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:28px">${medals[i]||'▶'}</span><div style="flex:1"><div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${orders>0?`${orders}單 `:''}${hours>0?`${hours.toFixed(1)}h `:''}</div></div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div></div>`;
     });
   }
-
   html += `</div>`;
-
-  // 週趨勢 TOP3（近4週）
   const weekTotals = [];
   for (let w=3; w>=0; w--) {
-    const startD = new Date(); startD.setDate(startD.getDate()-w*7);
-    const endD   = new Date(startD); endD.setDate(endD.getDate()+6);
-    let sum = 0;
-    S.records.forEach(r=>{
-      if(r.date>=`${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`&&
-         r.date<=`${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`)
-        sum += recTotal(r);
-    });
+    const startD = new Date(); startD.setDate(startD.getDate()-w*7); const endD = new Date(startD); endD.setDate(endD.getDate()+6); let sum = 0;
+    S.records.forEach(r=>{ if(r.date>=`${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`&&r.date<=`${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`) sum += recTotal(r); });
     weekTotals.push({ label:`第${w+1}週前`, val:sum });
   }
   weekTotals.reverse();
-
-  html += `<div class="card" style="margin-top:8px">
-    <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">📅 近4週收入</div>
-    <div style="position:relative;height:160px"><canvas id="week-bar"></canvas></div>
-  </div>`;
-
-  el.innerHTML = html;
-  drawBar('week-bar', weekTotals.map(w=>w.label.replace('第','W')), weekTotals.map(w=>w.val), '#FF6B35');
+  html += `<div class="card" style="margin-top:8px"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">📅 近4週收入</div><div style="position:relative;height:160px"><canvas id="week-bar"></canvas></div></div>`;
+  el.innerHTML = html; drawBar('week-bar', weekTotals.map(w=>w.label.replace('第','W')), weekTotals.map(w=>w.val), '#FF6B35');
 }
 
-/* ══ Chart.js 輔助函式 ═══════════════════════════ */
-/** 繪製圓餅圖 */
 function drawPie(canvasId, labels, data, colors) {
-  const ctx = document.getElementById(canvasId)?.getContext('2d');
-  if (!ctx) return;
+  const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  S.charts[canvasId] = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] },
-    options: {
-      responsive:true, maintainAspectRatio:false, cutout:'60%',
-      plugins:{ legend:{ display:true, position:'bottom', labels:{font:{size:11},padding:8} } },
-      animation:{ duration:400 }
-    }
-  });
+  S.charts[canvasId] = new Chart(ctx, { type: 'doughnut', data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] }, options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ display:true, position:'bottom', labels:{font:{size:11},padding:8} } }, animation:{ duration:400 } } });
 }
-/** 繪製折線圖 */
 function drawLine(canvasId, labels, datasets) {
-  const ctx = document.getElementById(canvasId)?.getContext('2d');
-  if (!ctx) return;
+  const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  S.charts[canvasId] = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: datasets.map(d=>({
-      label:d.label, data:d.data,
-      borderColor:d.color, backgroundColor:d.color+'22',
-      borderWidth:2, pointRadius:3, tension:.3, fill:true
-    }))},
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} },
-      scales:{ x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true}}, y:{ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} },
-      animation:{ duration:400 }
-    }
-  });
+  S.charts[canvasId] = new Chart(ctx, { type: 'line', data: { labels, datasets: datasets.map(d=>({ label:d.label, data:d.data, borderColor:d.color, backgroundColor:d.color+'22', borderWidth:2, pointRadius:3, tension:.3, fill:true }))}, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, scales:{ x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true}}, y:{ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} }, animation:{ duration:400 } } });
 }
-/** 繪製長條圖 */
 function drawBar(canvasId, labels, data, color) {
-  const ctx = document.getElementById(canvasId)?.getContext('2d');
-  if (!ctx) return;
+  const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  S.charts[canvasId] = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets:[{ data, backgroundColor:color+'99', borderRadius:6, borderWidth:0 }] },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} },
-      scales:{ x:{ticks:{font:{size:10}},grid:{display:false}}, y:{ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} },
-      animation:{ duration:400 }
-    }
-  });
+  S.charts[canvasId] = new Chart(ctx, { type: 'bar', data: { labels, datasets:[{ data, backgroundColor:color+'99', borderRadius:6, borderWidth:0 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, scales:{ x:{ticks:{font:{size:10}},grid:{display:false}}, y:{ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} }, animation:{ duration:400 } } });
 }
 
 /* ══ 設定頁 ══════════════════════════════════════ */
 function renderSettings() {
   const goals = S.settings.goals||{};
   const html  = `
-  <div class="set-sec">
-    <h3>平台管理</h3>
-    <div class="set-list">
+  <div class="set-sec"><h3>平台管理</h3><div class="set-list">
       <div class="set-row" onclick="openPlatformList()">
-        <span class="sn">
-          <div style="font-weight:500">🏪 平台列表與設定</div>
-          <div class="sn-sub">目前啟用 ${S.platforms.filter(p=>p.active).length} 個平台</div>
-        </span>
-        <span class="arr">›</span>
+        <span class="sn"><div style="font-weight:500">🏪 平台列表與設定</div><div class="sn-sub">目前啟用 ${S.platforms.filter(p=>p.active).length} 個平台</div></span><span class="arr">›</span>
       </div>
-    </div>
-  </div>
-
-  <div class="set-sec">
-    <h3>目標設定</h3>
-    <div class="set-list">
+  </div></div>
+  <div class="set-sec"><h3>目標設定</h3><div class="set-list">
       <div class="set-row" onclick="openGoalSettings()">
-        <span class="sn">
-          <div>週/月收入目標</div>
-          <div class="sn-sub">週目標：NT$ ${fmt(goals.weekly||0)}　月目標：NT$ ${fmt(goals.monthly||0)}</div>
-        </span>
-        <span class="arr">›</span>
+        <span class="sn"><div>週/月收入目標</div><div class="sn-sub">週目標：NT$ ${fmt(goals.weekly||0)}　月目標：NT$ ${fmt(goals.monthly||0)}</div></span><span class="arr">›</span>
       </div>
-    </div>
-  </div>
-
-  <div class="set-sec">
-    <h3>獎勵清單</h3>
-    <div class="set-list">
-      ${(S.settings.rewards||[]).map((r,i)=>`
-        <div class="set-row">
-          <span class="sn">
-            <div>${r.name}</div>
-            <div class="sn-sub">${getPlatform(r.platformId).name}　≥${r.minOrders}單　NT$ ${fmt(r.amount)}</div>
-          </span>
-          <button onclick="event.stopPropagation();deleteReward(${i})" class="del-btn">✕</button>
-        </div>`).join('')}
-      <div class="set-row" onclick="openAddReward()">
-        <span style="font-size:20px">➕</span>
-        <span class="sn">新增獎勵項目</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="set-sec">
-    <h3>資料管理</h3>
-    <div class="set-list">
+  </div></div>
+  <div class="set-sec"><h3>獎勵清單</h3><div class="set-list">
+      ${(S.settings.rewards||[]).map((r,i)=>`<div class="set-row"><span class="sn"><div>${r.name}</div><div class="sn-sub">${getPlatform(r.platformId).name}　≥${r.minOrders}單　NT$ ${fmt(r.amount)}</div></span><button onclick="event.stopPropagation();deleteReward(${i})" class="del-btn">✕</button></div>`).join('')}
+      <div class="set-row" onclick="openAddReward()"><span style="font-size:20px">➕</span><span class="sn">新增獎勵項目</span></div>
+  </div></div>
+  <div class="set-sec"><h3>資料管理</h3><div class="set-list">
       <div class="set-row" onclick="doBackup()"><span class="sn">📥 備份資料（JSON）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="doExportCSV()"><span class="sn">📊 匯出試算表（CSV）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red)">⚠️ 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
-    </div>
-  </div>`;
-
+  </div></div>`;
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ══ 設定子頁：平台列表與編輯 ══════════════════════════ */
-/** 開啟平台列表 */
 function openPlatformList() {
-  S.subMode = 'platform_list';
-  document.getElementById('sub-title').textContent = '平台列表';
-  document.getElementById('sub-add-btn').style.display = 'none';
+  S.subMode = 'platform_list'; document.getElementById('sub-title').textContent = '平台列表'; document.getElementById('sub-add-btn').style.display = 'none';
   document.getElementById('sub-body').innerHTML = `
-    <div class="set-list">
-      ${S.platforms.map(p=>`
-        <div class="set-row" onclick="openPlatformEdit('${p.id}')">
-          <div class="plat-color-dot" style="background:${p.color}"></div>
-          <div class="sn">
-            <div style="font-weight:600">${p.name}</div>
-            <div class="sn-sub">${p.active?'✅ 已啟用':'⭕ 已停用'}</div>
-          </div>
-          <span class="arr">›</span>
-        </div>
-      `).join('')}
-    </div>
-    <div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">
-      💡 點擊平台可自訂顏色與啟用狀態
-    </div>
-  `;
+    <div class="set-list">${S.platforms.map(p=>`<div class="set-row" onclick="openPlatformEdit('${p.id}')"><div class="plat-color-dot" style="background:${p.color}"></div><div class="sn"><div style="font-weight:600">${p.name}</div><div class="sn-sub">${p.active?'✅ 已啟用':'⭕ 已停用'}</div></div><span class="arr">›</span></div>`).join('')}</div>
+    <div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">💡 點擊平台可自訂顏色與啟用狀態</div>`;
   openOverlay('sub-page');
 }
-/** 開啟單一平台編輯頁 */
 function openPlatformEdit(id) {
-  const p = S.platforms.find(x=>x.id===id);
-  if (!p) return;
-  S.subMode = 'platform_edit';
-  document.getElementById('sub-title').textContent = p.name; 
+  const p = S.platforms.find(x=>x.id===id); if (!p) return;
+  S.subMode = 'platform_edit'; document.getElementById('sub-title').textContent = p.name; 
   document.getElementById('sub-body').innerHTML = `
-    <!-- 顯示結算規則 -->
-    <div style="margin-bottom:16px; padding:12px; background:var(--sf2); border-radius:var(--rs); font-size:12px; color:var(--t2); line-height:1.6;">
-      <strong>📝 結算與發薪規則：</strong><br>
-      ${p.ruleDesc ? p.ruleDesc.replace(/｜/g, '<br>') : ''}
-    </div>
-    <!-- 顏色修改 -->
-    <div class="fg" style="margin-bottom:16px"><label>自訂平台顏色</label>
-      <div style="display:flex;gap:8px">
-        <input type="color" id="sp-color-pick" value="${p.color}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px">
-        <input type="text" class="finp" id="sp-color" value="${p.color}" style="flex:1">
-      </div>
-    </div>
-    <!-- 啟用開關 -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:12px;background:var(--sf2);border-radius:var(--rs)">
-      <label style="font-size:14px;font-weight:600;flex:1;cursor:pointer" for="sp-active">啟用此平台</label>
-      <input type="checkbox" id="sp-active" ${p.active?'checked':''} style="width:20px;height:20px;cursor:pointer">
-    </div>
-    <div style="display:flex;gap:8px">
-      <button onclick="openPlatformList()" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-size:14px;font-weight:600;cursor:pointer;">返回列表</button>
-      <button onclick="savePlatformEdit('${id}')" class="btn-acc" style="flex:2;padding:12px;font-size:14px;font-weight:700;border-radius:var(--rs)">儲存設定</button>
-    </div>
-  `;
+    <div style="margin-bottom:16px; padding:12px; background:var(--sf2); border-radius:var(--rs); font-size:12px; color:var(--t2); line-height:1.6;"><strong>📝 結算與發薪規則：</strong><br>${p.ruleDesc ? p.ruleDesc.replace(/｜/g, '<br>') : ''}</div>
+    <div class="fg" style="margin-bottom:16px"><label>自訂平台顏色</label><div style="display:flex;gap:8px"><input type="color" id="sp-color-pick" value="${p.color}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px"><input type="text" class="finp" id="sp-color" value="${p.color}" style="flex:1"></div></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:12px;background:var(--sf2);border-radius:var(--rs)"><label style="font-size:14px;font-weight:600;flex:1;cursor:pointer" for="sp-active">啟用此平台</label><input type="checkbox" id="sp-active" ${p.active?'checked':''} style="width:20px;height:20px;cursor:pointer"></div>
+    <div style="display:flex;gap:8px"><button onclick="openPlatformList()" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-size:14px;font-weight:600;cursor:pointer;">返回列表</button><button onclick="savePlatformEdit('${id}')" class="btn-acc" style="flex:2;padding:12px;font-size:14px;font-weight:700;border-radius:var(--rs)">儲存設定</button></div>`;
   document.getElementById('sp-color-pick').addEventListener('input', e => { document.getElementById('sp-color').value = e.target.value; });
 }
-/** 儲存單一平台編輯 */
 function savePlatformEdit(id) {
-  const p = S.platforms.find(x=>x.id===id);
-  if (!p) return;
-  p.color  = document.getElementById('sp-color').value.trim() || p.color;
-  p.active = document.getElementById('sp-active').checked;
-  savePlatforms();
-  toast('✅ 平台已更新');
-  // 更新背景畫面
-  if (S.tab === 'home') renderHome();
-  renderSettings();
-  // 存檔後跳回平台列表
-  openPlatformList();
+  const p = S.platforms.find(x=>x.id===id); if (!p) return;
+  p.color = document.getElementById('sp-color').value.trim() || p.color; p.active = document.getElementById('sp-active').checked;
+  savePlatforms(); toast('✅ 平台已更新'); if (S.tab === 'home') renderHome(); renderSettings(); openPlatformList();
 }
-
-/* ══ 設定子頁：目標 ═══════════════════════════════ */
 function openGoalSettings() {
-  document.getElementById('sub-title').textContent = '目標設定';
-  document.getElementById('sub-add-btn').style.display = 'none';
-  const g = S.settings.goals||{};
+  document.getElementById('sub-title').textContent = '目標設定'; document.getElementById('sub-add-btn').style.display = 'none'; const g = S.settings.goals||{};
   document.getElementById('sub-body').innerHTML = `
-    <div class="fg" style="margin-bottom:10px"><label>📅 週目標（NT$）</label>
-      <input type="number" class="finp" id="g-weekly" value="${g.weekly||0}" inputmode="decimal"></div>
-    <div class="fg" style="margin-bottom:14px"><label>📆 月目標（NT$）</label>
-      <input type="number" class="finp" id="g-monthly" value="${g.monthly||0}" inputmode="decimal"></div>
+    <div class="fg" style="margin-bottom:10px"><label>📅 週目標（NT$）</label><input type="number" class="finp" id="g-weekly" value="${g.weekly||0}" inputmode="decimal"></div>
+    <div class="fg" style="margin-bottom:14px"><label>📆 月目標（NT$）</label><input type="number" class="finp" id="g-monthly" value="${g.monthly||0}" inputmode="decimal"></div>
     <button onclick="saveGoals()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">儲存目標</button>`;
   openOverlay('sub-page');
 }
-function saveGoals() {
-  S.settings.goals = {
-    weekly:  pf(document.getElementById('g-weekly').value),
-    monthly: pf(document.getElementById('g-monthly').value),
-  };
-  saveSettings();
-  closeOverlay('sub-page');
-  renderSettings();
-  toast('✅ 目標已儲存');
-}
-
-/* ══ 設定子頁：獎勵 ═══════════════════════════════ */
+function saveGoals() { S.settings.goals = { weekly: pf(document.getElementById('g-weekly').value), monthly: pf(document.getElementById('g-monthly').value) }; saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 目標已儲存'); }
 function openAddReward() {
-  document.getElementById('sub-title').textContent = '新增獎勵項目';
-  document.getElementById('sub-add-btn').style.display = 'none';
-  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('sub-title').textContent = '新增獎勵項目'; document.getElementById('sub-add-btn').style.display = 'none'; const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   document.getElementById('sub-body').innerHTML = `
-    <div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label>
-      <input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div>
-    <div class="fg" style="margin-bottom:10px"><label>適用平台</label>
-      <select class="fsel" id="rw-plat">${platOpts}</select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <div class="fg"><label>最低單數</label>
-        <input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div>
-      <div class="fg"><label>上限單數（0=無限）</label>
-        <input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div>
-    </div>
-    <div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label>
-      <input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div>
+    <div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div>
+    <div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div class="fg"><label>最低單數</label><input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div><div class="fg"><label>上限單數（0=無限）</label><input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div></div>
+    <div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label><input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div>
     <button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增獎勵</button>`;
   openOverlay('sub-page');
 }
 function saveNewReward() {
-  const name = document.getElementById('rw-name').value.trim();
-  if (!name) { toast('請輸入獎勵名稱'); return; }
-  if (!S.settings.rewards) S.settings.rewards=[];
-  S.settings.rewards.push({
-    id:         newId(),
-    name,
-    platformId: document.getElementById('rw-plat').value,
-    minOrders:  pf(document.getElementById('rw-min').value),
-    maxOrders:  pf(document.getElementById('rw-max').value),
-    amount:     pf(document.getElementById('rw-amt').value),
-  });
-  saveSettings();
-  closeOverlay('sub-page');
-  renderSettings();
-  toast('✅ 獎勵已新增');
+  const name = document.getElementById('rw-name').value.trim(); if (!name) { toast('請輸入獎勵名稱'); return; }
+  if (!S.settings.rewards) S.settings.rewards=[]; S.settings.rewards.push({ id: newId(), name, platformId: document.getElementById('rw-plat').value, minOrders: pf(document.getElementById('rw-min').value), maxOrders: pf(document.getElementById('rw-max').value), amount: pf(document.getElementById('rw-amt').value) });
+  saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 獎勵已新增');
 }
-async function deleteReward(i) {
-  const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`);
-  if (!ok) return;
-  S.settings.rewards.splice(i,1);
-  saveSettings();
-  renderSettings();
-  toast('已刪除');
-}
-/** sub-page 的＋按鈕（根據目前 subMode 決定動作）*/
+async function deleteReward(i) { const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); if (!ok) return; S.settings.rewards.splice(i,1); saveSettings(); renderSettings(); toast('已刪除'); }
 function subAddAction() {}
 
-/* ══ 備份 / 還原 / 匯出 ════════════════════════ */
-/** 備份為 JSON 檔 */
 function doBackup() {
-  const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings };
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = `外送記帳_${todayStr()}.json`; a.click();
-  URL.revokeObjectURL(url);
-  toast('✅ 備份完成');
+  const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `外送記帳_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成');
 }
-/** 還原 JSON 備份 */
 function doRestore() {
   const fi = document.getElementById('restore-file');
   fi.onchange = async () => {
     const file = fi.files[0]; if(!file) return;
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const ok   = await customConfirm('確定用此備份<strong>覆蓋</strong>現有資料？');
-      if (!ok) return;
-      if (data.records)   { S.records=data.records;     saveRecords();   }
-      if (data.platforms) { S.platforms=data.platforms;  savePlatforms(); }
-      if (data.settings)  { S.settings=data.settings;   saveSettings();  }
-      toast('✅ 還原成功');
-      renderSettings(); renderHome();
+      const text = await file.text(); const data = JSON.parse(text); const ok = await customConfirm('確定用此備份<strong>覆蓋</strong>現有資料？'); if (!ok) return;
+      if (data.records) { S.records=data.records; saveRecords(); } if (data.platforms) { S.platforms=data.platforms; savePlatforms(); } if (data.settings) { S.settings=data.settings; saveSettings(); }
+      if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); }
+      toast('✅ 還原成功'); renderSettings(); renderHome();
     } catch { toast('❌ 檔案格式錯誤'); }
     fi.value='';
-  };
-  fi.click();
+  }; fi.click();
 }
-/** 匯出 CSV 試算表 */
 function doExportCSV() {
   const headers = ['日期','平台','接單數','行程收入','固定獎勵','臨時獎勵','小費','總收入','工時','上線','下線','備註'];
-  const rows = S.records.map(r=>{
-    const p = getPlatform(r.platformId);
-    return [r.date, p.name, r.orders||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0,
-      recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(',');
-  });
-  const csv  = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href=url; a.download=`外送記帳_${todayStr()}.csv`; a.click();
-  URL.revokeObjectURL(url);
-  toast('✅ CSV 匯出完成');
+  const rows = S.records.map(r=>{ const p = getPlatform(r.platformId); return [r.date, p.name, r.orders||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0, recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(','); });
+  const csv = [headers.join(','), ...rows].join('\n'); const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=`外送記帳_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url); toast('✅ CSV 匯出完成');
 }
-/** 清除所有資料 */
 async function doReset() {
-  const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄和設定</strong>嗎？<br>此動作無法復原！');
-  if (!ok) return;
-  S.records=[]; S.settings={...DEFAULT_SETTINGS};
-  saveRecords(); saveSettings();
-  toast('已清除所有資料');
-  renderHome(); renderSettings();
+  const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄和設定</strong>嗎？<br>此動作無法復原！'); if (!ok) return;
+  S.records=[]; S.settings={...DEFAULT_SETTINGS}; S.vehicles=[]; S.vehicleRecs=[]; saveRecords(); saveSettings(); saveVehicles(); saveVehicleRecs(); toast('已清除所有資料'); renderHome(); renderSettings();
 }
 
-/* ══ Service Worker 註冊 ════════════════════════ */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(r=>console.log('SW 已註冊：', r.scope))
-      .catch(e=>console.log('SW 註冊失敗：', e));
-  });
-}
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); }
 
-/* ══ 燃料表單邏輯 ══════════════════════════════ */
+/* ══ 燃料與保養邏輯 ══════════════════════════════ */
 function openAddFuel() {
+  if (!S.selVehicleId) { toast('請先新增並選擇車輛'); return; }
   document.getElementById('fuel-date').value = todayStr();
-  document.getElementById('fuel-prev-km').value = '';
-  document.getElementById('fuel-curr-km').value = '';
-  document.getElementById('fuel-liters').value = '';
-  document.getElementById('fuel-price').value = '';
-  document.getElementById('fuel-discount').value = '0';
-  calcFuelTotal();
-  openOverlay('fuel-add-page');
+  document.getElementById('fuel-prev-km').value = ''; document.getElementById('fuel-curr-km').value = '';
+  document.getElementById('fuel-liters').value = ''; document.getElementById('fuel-price').value = '';
+  document.getElementById('fuel-discount').value = '0'; calcFuelTotal(); openOverlay('fuel-add-page');
 }
-
 function calcFuelTotal() {
-  const liters = pf(document.getElementById('fuel-liters').value);
-  const price = pf(document.getElementById('fuel-price').value);
-  const discount = pf(document.getElementById('fuel-discount').value);
-  const before = liters * price;
-  const final = Math.max(0, before - discount);
-  
-  document.getElementById('fuel-before-total').textContent = fmt(before);
-  document.getElementById('fuel-final-total').textContent = fmt(final);
+  const liters = pf(document.getElementById('fuel-liters').value); const price = pf(document.getElementById('fuel-price').value); const discount = pf(document.getElementById('fuel-discount').value);
+  const before = liters * price; const final = Math.max(0, before - discount);
+  document.getElementById('fuel-before-total').textContent = fmt(before); document.getElementById('fuel-final-total').textContent = fmt(final);
 }
-
 function saveFuelRecord() {
   const amount = pf(document.getElementById('fuel-final-total').textContent.replace(/,/g,''));
   if(amount <= 0) { toast('總金額不能為 0'); return; }
-
-  S.vehicleRecs.push({
-    id: newId(),
-    type: 'fuel',
-    date: document.getElementById('fuel-date').value,
-    prevKm: pf(document.getElementById('fuel-prev-km').value),
-    km: pf(document.getElementById('fuel-curr-km').value),
-    amount: amount
-  });
-  saveVehicleRecs();
-  closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
+  S.vehicleRecs.push({ id: newId(), vehicleId: S.selVehicleId, type: 'fuel', date: document.getElementById('fuel-date').value, prevKm: pf(document.getElementById('fuel-prev-km').value), km: pf(document.getElementById('fuel-curr-km').value), amount: amount });
+  saveVehicleRecs(); closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
 }
 
-/* ══ 保養維修表單邏輯 ══════════════════════════ */
 const MAINT_ITEMS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
-let currentSelItems = []; // 暫存目前選取的保養項目
-
+let currentSelItems = [];
 function openAddMaint() {
-  document.getElementById('maint-date').value = todayStr();
-  document.getElementById('maint-km').value = '';
-  document.getElementById('maint-shop').value = '';
-  document.getElementById('maint-note').value = '';
-  document.getElementById('maint-amount').value = '';
+  if (!S.selVehicleId) { toast('請先新增並選擇車輛'); return; }
+  document.getElementById('maint-date').value = todayStr(); document.getElementById('maint-km').value = '';
+  document.getElementById('maint-shop').value = ''; document.getElementById('maint-note').value = ''; document.getElementById('maint-amount').value = '';
   currentSelItems = [];
-  
-  // 渲染項目 Chips
-  document.getElementById('maint-items-container').innerHTML = MAINT_ITEMS.map(item => 
-    `<div class="item-chip" onclick="toggleMaintItem(this, '${item}')">${item}</div>`
-  ).join('');
-
-  renderShopHistory();
-  openOverlay('maint-add-page');
+  document.getElementById('maint-items-container').innerHTML = MAINT_ITEMS.map(item => `<div class="item-chip" onclick="toggleMaintItem(this, '${item}')">${item}</div>`).join('');
+  renderShopHistory(); openOverlay('maint-add-page');
 }
-
-function toggleMaintItem(el, item) {
-  el.classList.toggle('on');
-  if (currentSelItems.includes(item)) {
-    currentSelItems = currentSelItems.filter(i => i !== item);
-  } else {
-    currentSelItems.push(item);
-  }
-}
-
-/** 渲染店家記憶歷史 */
+function toggleMaintItem(el, item) { el.classList.toggle('on'); if (currentSelItems.includes(item)) { currentSelItems = currentSelItems.filter(i => i !== item); } else { currentSelItems.push(item); } }
 function renderShopHistory() {
   if (!S.settings.shopHistory) S.settings.shopHistory = [];
-  const container = document.getElementById('shop-history-container');
-  container.innerHTML = S.settings.shopHistory.map((shop, i) => `
-    <div class="shop-chip">
-      <span onclick="document.getElementById('maint-shop').value='${shop}'">${shop}</span>
-      <span class="shop-chip-del" onclick="deleteShopHistory(${i})">✕</span>
-    </div>
-  `).join('');
+  document.getElementById('shop-history-container').innerHTML = S.settings.shopHistory.map((shop, i) => `<div class="shop-chip"><span onclick="document.getElementById('maint-shop').value='${shop}'">${shop}</span><span class="shop-chip-del" onclick="deleteShopHistory(${i})">✕</span></div>`).join('');
 }
-
-function deleteShopHistory(index) {
-  S.settings.shopHistory.splice(index, 1);
-  saveSettings();
-  renderShopHistory();
-}
-
+function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); saveSettings(); renderShopHistory(); }
 function saveMaintRecord() {
   const amount = pf(document.getElementById('maint-amount').value);
   if (amount <= 0 || currentSelItems.length === 0) { toast('請選擇項目並輸入金額'); return; }
-  
   const shop = document.getElementById('maint-shop').value.trim();
-  // 自動記憶店家名稱
-  if (shop && !S.settings.shopHistory.includes(shop)) {
-    S.settings.shopHistory.push(shop);
-    saveSettings();
-  }
-
-  S.vehicleRecs.push({
-    id: newId(),
-    type: 'maintenance',
-    date: document.getElementById('maint-date').value,
-    km: pf(document.getElementById('maint-km').value),
-    items: currentSelItems,
-    shop: shop,
-    payMethod: document.getElementById('maint-pay-method').value,
-    note: document.getElementById('maint-note').value,
-    amount: amount
-  });
-  saveVehicleRecs();
-  closeOverlay('maint-add-page'); toast('✅ 保養紀錄已新增'); renderVehicles();
+  if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); }
+  S.vehicleRecs.push({ id: newId(), vehicleId: S.selVehicleId, type: 'maintenance', date: document.getElementById('maint-date').value, km: pf(document.getElementById('maint-km').value), items: currentSelItems, shop: shop, payMethod: document.getElementById('maint-pay-method').value, note: document.getElementById('maint-note').value, amount: amount });
+  saveVehicleRecs(); closeOverlay('maint-add-page'); toast('✅ 保養紀錄已新增'); renderVehicles();
 }
 
 /* ══ 初始化 ══════════════════════════════════════ */
 function init() {
   loadAll();
   if (!S.platforms || !S.platforms.length) { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); savePlatforms(); }
-  // 觸發 body 背景色
   goPage('home');
 }
-// 啟動 App
 init();
