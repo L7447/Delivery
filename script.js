@@ -533,22 +533,51 @@ function renderFullCalendar() {
   for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${pad(i)}</div></div>`; }
   grid.innerHTML = html;
 }
+/** 渲染歷史記錄的當日列表 (含美化後的整合總結區塊) */
 function renderHistRecords(ds) {
   const d = new Date(ds+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][d.getDay()];
   document.getElementById('hist-day-label').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（星期${dow}）記錄`;
-  const recs = getDayRecs(ds); const total = recs.reduce((s,r)=>s+recTotal(r), 0); const sumEl = document.getElementById('hist-day-summary');
+  
+  // 當日摘要計算
+  const recs = getDayRecs(ds); 
+  const total = recs.reduce((s,r)=>s+recTotal(r), 0); 
+  const sumEl = document.getElementById('hist-day-summary');
+  
   if (total > 0) {
-    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
-    sumEl.innerHTML = `<div class="day-sum-row">
-      <div class="day-sum-chip" style="background:var(--green-d);color:var(--green)">💰 NT$ ${fmt(total)}</div>
-      ${orders>0?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">📦 ${orders} 單</div>`:''}
-      ${hours>0 ?`<div class="day-sum-chip" style="background:var(--sf);border:1px solid var(--border)">⏱ ${fmtHours(hours)}</div>`:''}
-    </div>`;
-  } else { sumEl.innerHTML = ''; }
+    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); 
+    const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
+    
+    // 美化版：將三個數據合成為單一橫幅 (Banner)
+    sumEl.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; background:var(--green-d); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:10px 14px; margin-bottom:8px;">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:11px; color:var(--t2); font-weight:600;">當日總計</span>
+          <div style="display:flex; gap:8px; font-size:12px; color:var(--t3); font-weight:500;">
+            ${orders > 0 ? `<span>📦 ${orders}單</span>` : ''}
+            ${hours > 0 ? `<span>⏱ ${fmtHours(hours)}</span>` : ''}
+          </div>
+        </div>
+        <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--green);">
+          NT$ ${fmt(total)}
+        </div>
+      </div>
+    `;
+  } else { 
+    sumEl.innerHTML = ''; 
+  }
+  
+  // 記錄列表 (時間由早到晚 a.time 比較 b.time)
   const listEl = document.getElementById('hist-rec-list');
-  if (!recs.length) { listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`; return; }
+  if (!recs.length) { 
+    listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`; 
+    return; 
+  }
   listEl.innerHTML = recs.slice().sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
-  listEl.querySelectorAll('.rec-item[data-id]').forEach(el => { el.addEventListener('click', () => openDetailOverlay(el.dataset.id)); });
+  
+  // 綁定點擊開啟詳情
+  listEl.querySelectorAll('.rec-item[data-id]').forEach(el => { 
+    el.addEventListener('click', () => openDetailOverlay(el.dataset.id)); 
+  });
 }
 
 /* ══ 新增／編輯記錄 (新版精簡邏輯) ═════════════════════ */
@@ -659,6 +688,7 @@ function confirmAddRecord() {
 /* ══ 車輛管理主畫面 (支援多車輛動態滑動切換) ════════════════════════════════════════ */
 function selectVehicle(id) { S.selVehicleId = id; renderVehicles(); }
 
+/** 渲染車輛管理資料列表 */
 function renderVehicles() {
   const container = document.getElementById('vehicle-content');
   let html = '';
@@ -669,47 +699,49 @@ function renderVehicles() {
     return;
   }
 
-  if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
+  // 若尚未選擇車輛，預設自動選擇第一台
+  if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) {
+    S.selVehicleId = S.vehicles[0].id;
+  }
 
-  const vCount = S.vehicles.length;
-  const vIndex = S.vehicles.findIndex(v => v.id === S.selVehicleId);
-  const slideWidth = `calc(${100 / vCount}% - 8px / ${vCount})`;
-  const slideTransform = `translateX(${vIndex * 100}%)`;
-
-  html += `
-    <div style="font-size:11px; color:var(--t3); margin-bottom:4px; font-weight:bold; padding: 0 4px;">切換車輛</div>
-    <div class="slide-tabs" style="margin-bottom: 16px;">
-      <div class="slide-bg" style="width: ${slideWidth}; transform: ${slideTransform}; background: var(--acc); box-shadow: 0 4px 10px rgba(255,107,53, 0.4);"></div>`;
+  // 1. 產生「選擇車輛」的水平合成圖示列表 (含右上角刪除小叉叉)
+  html += `<div style="font-size:11px; color:var(--t3); margin-bottom:8px; font-weight:bold; padding: 0 4px;">選擇車輛</div>`;
+  html += `<div style="display:flex; gap:12px; margin-bottom: 20px; overflow-x:auto; padding-bottom:8px; padding-left:4px;">`;
   
   S.vehicles.forEach(v => {
     const isActive = v.id === S.selVehicleId;
+    
     html += `
-      <button class="slide-btn ${isActive ? 'active' : ''}" onclick="selectVehicle('${v.id}')" style="display:flex; align-items:center; justify-content:center; gap:6px;">
-        <div class="scooter-mask" style="background-color:${isActive ? '#fff' : v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:16px; height:16px; transition:0.3s;"></div>
-        ${v.name}
-      </button>`;
+      <div style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
+        <!-- 刪除車輛按鈕 (獨立事件，阻止冒泡以防觸發選取) -->
+        <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-4px; right:-4px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div>
+        
+        <!-- 合成圖示外框 -->
+        <div style="width:50px; height:50px; border-radius:14px; background:var(--sf2); border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : 'none'};">
+          <!-- 核心合成圖示 (顏色+圖片) -->
+          <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:32px; height:32px;"></div>
+        </div>
+        
+        <!-- 車輛名稱 -->
+        <span style="font-size:11px; font-weight:${isActive ? '700' : '600'}; color:${isActive ? 'var(--acc)' : 'var(--t2)'}; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60px;">${v.name}</span>
+      </div>`;
   });
   html += `</div>`;
 
-  const selVeh = S.vehicles.find(v => v.id === S.selVehicleId);
-  
+  // 2. 新增資料大按鈕
   if (S.vehicleTab === 'fuel') {
-    html += `<button onclick="openAddFuel()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed var(--acc); background:var(--sf2); color:var(--acc); font-weight:700; margin-bottom:12px; cursor:pointer;">➕ 新增燃料紀錄</button>`;
+    html += `<button onclick="openAddFuel()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed var(--acc); background:var(--sf2); color:var(--acc); font-weight:700; margin-bottom:16px; cursor:pointer; transition:0.2s;">➕ 新增燃料紀錄</button>`;
   } else {
-    html += `<button onclick="openAddMaint()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed #8B5CF6; background:#f5f3ff; color:#8B5CF6; font-weight:700; margin-bottom:12px; cursor:pointer;">➕ 新增保養維修</button>`;
+    html += `<button onclick="openAddMaint()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed #8B5CF6; background:#f5f3ff; color:#8B5CF6; font-weight:700; margin-bottom:16px; cursor:pointer; transition:0.2s;">➕ 新增保養維修</button>`;
   }
 
-  html += `
-    <div style="text-align:right; margin-bottom:16px;">
-      <button onclick="deleteVehicle('${selVeh.id}')" style="background:var(--red-d); color:var(--red); border:none; padding:6px 12px; border-radius:12px; font-size:12px; font-weight:bold; cursor:pointer;">🗑 刪除此車輛</button>
-    </div>
-  `;
-
+  // 3. 顯示該車輛專屬的歷史資料
   const typeRecs = S.vehicleRecs.filter(r => r.type === S.vehicleTab && r.vehicleId === S.selVehicleId);
   
   if (typeRecs.length === 0) {
     html += `<div class="empty-tip">此車輛尚未新增資料</div>`;
   } else {
+    // 依日期由新到舊排序顯示
     typeRecs.sort((a,b)=>b.date.localeCompare(a.date)).forEach(r => {
       html += `
       <div class="card" style="padding:12px; margin-bottom:8px;">
@@ -722,6 +754,7 @@ function renderVehicles() {
       </div>`;
     });
   }
+
   container.innerHTML = html;
 }
 
