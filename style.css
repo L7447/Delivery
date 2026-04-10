@@ -329,7 +329,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
   -webkit-tap-highlight-color: transparent;
 }
 .btn-go-online { background: var(--acc); color: #fff; box-shadow: 0 2px 8px rgba(255,107,53,0.3); }
-.btn-go-offline { background: var(--sf2); color: var(--t2); border: 1px solid var(--border); }
+.btn-go-offline { background: #ff3f3f; color: var(--t2); border: 1px solid var(--border); }
 .btn-go-offline:active { background: #e5e5e5; }
 
 /* ══ 新版：下半部 Tab 切換按鈕 ══════════════ */
@@ -644,4 +644,9 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
   display: flex; align-items: center; justify-content: center; 
   cursor: pointer;
   transition: border-color 0.2s;
+}
+
+/* 確保日曆總結橫幅內的金額數字不會被換行 */
+#hist-day-summary div {
+  white-space: nowrap;
 }
