@@ -278,8 +278,8 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
 
                 // 👇 新增這段判斷：如果是發薪或結算日，把「(X 天後)」改成深綠色
-                if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細'))) {
-                  diffColor = '#15803d'; // 使用高對比的深綠色
+                if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) {
+                  diffColor = '#e614c3'; // 使用高對比的深綠色
                 }
 
                 return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
