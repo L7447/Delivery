@@ -650,3 +650,19 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 #hist-day-summary div {
   white-space: nowrap;
 }
+
+/* ══ 統一折疊統計卡片樣式 ════════════════════════════ */
+.summary-card {
+  background: var(--green-d);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(34,197,94,0.06);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.summary-collapse {
+  /* 確保展開動畫流暢 */
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
