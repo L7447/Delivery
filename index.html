@@ -19,10 +19,10 @@
 <body>
 <div id="app">
 
-  <!-- 首頁 (修改為固定 Tabs 防止閃爍) -->
+  <!-- 首頁 (加上 flex-shrink:0 防止排版擠壓錯亂) -->
   <section class="page active" id="page-home" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
-    <div id="home-top-content"></div> <!-- JS 只渲染上半部 -->
-    <div style="padding: 0 16px;">
+    <div id="home-top-content" style="flex-shrink:0;"></div> <!-- JS 只渲染上半部 -->
+    <div style="padding: 0 16px; flex-shrink:0;">
       <div class="slide-tabs tabs-2">
         <div class="slide-bg" id="home-tab-bg" style="transform: translateX(0%);"></div>
         <button class="slide-btn active" id="btn-home-schedule" onclick="switchHomeTab('schedule', 0)">平台日程表</button>
