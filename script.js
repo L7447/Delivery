@@ -279,13 +279,13 @@ function renderHome() {
 
                 // 👇 新增這段判斷：如果是發薪或結算日，把「(X 天後)」改成深綠色
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) {
-                  diffColor = '#e614c3'; // 使用高對比的深綠色
+                  diffColor = '#a926b0'; // 使用高對比的深綠色
                 }
 
                 return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                   <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                   <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">
-                    ${ev.dateStr} <span style="font-size:11px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span>
+                    ${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span>
                   </span>
                 </div>`;
               }).join('')}
