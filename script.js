@@ -44,8 +44,7 @@ const S = {
   vehicleRecs:   [],                      
   editingId:     null,                    
   selPlatformId: null,                    
-  charts:        {},                      
-  subMode:       '',                      
+  charts:        {},                                           
   homeSubTab:    'schedule',              
   vehicleTab:    'fuel',                  
   newVehIcon:    4,                       
@@ -71,40 +70,32 @@ function toggleSummaryCard(id) {
   const btn = document.getElementById(id + '-btn');
   if (!el || !btn) return;
   if (el.style.maxHeight === '0px' || el.style.maxHeight === '') {
-    el.style.maxHeight = '100px'; // 展開
-    // 加上 translateY(-50%) 是為了保持按鈕垂直置中不跑版
+    el.style.maxHeight = '100px'; 
     btn.style.transform = 'translateY(-50%) rotate(180deg)'; 
   } else {
-    el.style.maxHeight = '0px'; // 折疊
+    el.style.maxHeight = '0px'; 
     btn.style.transform = 'translateY(-50%) rotate(0deg)'; 
   }
 }
+
 /** 共用：產生與圖片完全一致的折疊式統計卡片 HTML */
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
-  
   const totalBonus = bonus + tempBonus;
   let extraStr = '';
-  // 只有當有獎勵或小費時，才會產生這行文字
   if (totalBonus > 0 || tips > 0) {
     const parts = [];
     if (totalBonus > 0) parts.push(`含獎勵${fmt(totalBonus)}元`);
     if (tips > 0) parts.push(`線上小費${fmt(tips)}元`);
     extraStr = `<div style="font-size:11px; color:var(--gold); margin-top:2px;">〔${parts.join('、')}〕</div>`;
   }
-
-  // 計算平均數值
   const avgPerOrder = orders > 0 ? Math.round(total / orders) : 0;
   const avgPerHour = hours > 0 ? Math.round(total / hours) : 0;
   const ordersPerHour = hours > 0 ? (orders / hours).toFixed(1) : 0;
 
-  // 嚴格遵守：margin 2px, padding 2px
   return `
     <div class="summary-card" style="margin:2px; padding:2px;">
-      <!-- 上排：總計資訊 -->
       <div class="sum-top" onclick="toggleSummaryCard('${cardId}')" style="position:relative; display:flex; align-items:center; padding:2px;">
-        
-        <!-- 左側：標題與金額 -->
         <div style="flex:1.2; display:flex; flex-direction:column; justify-content:center;">
           <div style="display:flex; align-items:baseline; gap:6px;">
             <span style="font-size:14px; font-weight:700; color:var(--t1);">${title}</span>
@@ -112,71 +103,42 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           </div>
           ${extraStr}
         </div>
-
         <div class="sum-v-divider"></div>
-
-        <!-- 中間：單數 -->
-        <div style="flex:0.8; text-align:center; font-size:13px; font-weight:700; color:var(--t2);">
-          ${orders > 0 ? fmt(orders) : '0'} 單
-        </div>
-
+        <div style="flex:0.8; text-align:center; font-size:13px; font-weight:700; color:var(--t2);">${orders > 0 ? fmt(orders) : '0'} 單</div>
         <div class="sum-v-divider"></div>
-
-        <!-- 右側：工時 (為右邊的按鈕預留一點空間 padding-right) -->
-        <div style="flex:1; text-align:center; font-size:13px; font-weight:700; color:var(--t2); padding-right:24px;">
-          ${hours > 0 ? fmtHours(hours) : '0m'}
-        </div>
-
-        <!-- 右側絕對定位：下拉圓形按鈕 -->
+        <div style="flex:1; text-align:center; font-size:13px; font-weight:700; color:var(--t2); padding-right:24px;">${hours > 0 ? fmtHours(hours) : '0m'}</div>
         <div id="${cardId}-btn" class="sum-toggle-btn">▼</div>
       </div>
-
-      <!-- 下排：平均資訊 (預設隱藏) -->
       <div id="${cardId}" class="summary-collapse" style="max-height:0px; overflow:hidden;">
-        <!-- 上下排分隔線 (margin 2px 0) -->
         <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:2px 0;"></div>
-        
         <div style="display:flex; align-items:center; text-align:center; padding:2px;">
-          <!-- 平均 /單 -->
-          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">
-            平均 <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerOrder)}</span> <span style="font-size:10px; font-weight:500;">/單</span>
-          </div>
-          
+          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">平均 <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerOrder)}</span> <span style="font-size:10px; font-weight:500;">/單</span></div>
           <div class="sum-v-divider"></div>
-
-          <!-- 單數 /時 -->
-          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">
-            <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">${ordersPerHour}</span> <span style="font-size:10px; font-weight:500;">單/時</span>
-          </div>
-
+          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);"><span style="font-family:var(--mono); font-size:15px; color:var(--blue);">${ordersPerHour}</span> <span style="font-size:10px; font-weight:500;">單/時</span></div>
           <div class="sum-v-divider"></div>
-
-          <!-- 時薪 /時 -->
-          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">
-            <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerHour)}</span> <span style="font-size:10px; font-weight:500;">/時</span>
-          </div>
+          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);"><span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerHour)}</span> <span style="font-size:10px; font-weight:500;">/時</span></div>
         </div>
       </div>
     </div>
   `;
 }
 
-/** 格式化工時：小數轉為 h m 格式 (未滿1小時只顯示 m) */
+/** 格式化工時：小數轉為 h m 格式 */
 function fmtHours(hVal) {
-  const h = pf(hVal);
-  if (h <= 0) return '0';
+  const h = pf(hVal); if (h <= 0) return '0';
   const totalMins = Math.round(h * 60);
-  const hrs = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
+  const hrs = Math.floor(totalMins / 60); const mins = totalMins % 60;
   if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
   if (hrs > 0 && mins === 0) return `${hrs}h`;
   return `${mins}m`;
 }
+
 function toast(msg, ms=2200) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), ms);
 }
+
 function customConfirm(msg) {
   return new Promise(resolve => {
     const ov = document.getElementById('confirm-overlay');
@@ -215,6 +177,7 @@ function loadAll() {
   try { S.punch = JSON.parse(localStorage.getItem(KEYS.punch)||'null'); } catch { S.punch=null; }
   try { S.vehicles = JSON.parse(localStorage.getItem(KEYS.vehicles)||'[]'); } catch { S.vehicles=[]; }
   try { S.vehicleRecs = JSON.parse(localStorage.getItem(KEYS.vehicleRecs)||'[]'); } catch { S.vehicleRecs=[]; }
+  try { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [], ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; } catch { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] }; }
 }  
 function saveRecords()   { localStorage.setItem(KEYS.records,   JSON.stringify(S.records));   }
 function savePlatforms() { localStorage.setItem(KEYS.platforms, JSON.stringify(S.platforms)); }
@@ -239,7 +202,7 @@ function goPage(name) {
   if (name === 'home')     renderHome();
   if (name === 'history')  renderHistory();
   if (name === 'report')   renderReport();
-  if (name === 'vehicles') renderVehicles();
+  if (name === 'vehicles') renderVehicles(); 
   if (name === 'settings') renderSettings();
 }
 document.querySelectorAll('.ni[data-pg]').forEach(el =>
@@ -316,12 +279,11 @@ function renderHome() {
     topHtml += `</div>`;
   } else { topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`; }
 
-  // 加入新版折疊總結卡片
   const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0);
   const dayTemp = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0);
   const dayTips = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
   topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card');
-  topHtml += `</div>`; // 關閉 today-hero
+  topHtml += `</div>`;
 
   const isPunched = S.punch && S.punch.date === today;
   let punchStatusStr = '離線';
@@ -382,9 +344,8 @@ function renderHome() {
                 else if (ev.name.includes('明細')) nameColor = 'var(--acc)';
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
 
-                // 👇 新增這段判斷：如果是發薪或結算日，把「(X 天後)」改成綠色
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) {
-                  diffColor = '#22C55E'; // 使用高對比的綠色
+                  diffColor = '#22C55E';
                 }
 
                 return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
@@ -430,7 +391,6 @@ function renderHome() {
     } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
   }
 
-  // 寫入新版分拆的 HTML 容器
   const topEl = document.getElementById('home-top-content');
   const botEl = document.getElementById('home-bottom-content');
   if (topEl) topEl.innerHTML = topHtml;
@@ -631,12 +591,11 @@ function renderFullCalendar() {
   for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date" style="color:var(--t3);">${pad(i)}</div></div>`; }
   grid.innerHTML = html;
 }
-/** 渲染歷史記錄的當日列表 (含美化後的整合總結區塊) */
+
 function renderHistRecords(ds) {
   const d = new Date(ds+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][d.getDay()];
   document.getElementById('hist-day-label').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（星期${dow}）記錄`;
   
-  // 當日摘要計算
   const recs = getDayRecs(ds); 
   const total = recs.reduce((s,r)=>s+recTotal(r), 0); 
   const sumEl = document.getElementById('hist-day-summary');
@@ -652,7 +611,6 @@ function renderHistRecords(ds) {
     sumEl.innerHTML = ''; 
   }
   
-  // 記錄列表 (時間由早到晚 a.time 比較 b.time)
   const listEl = document.getElementById('hist-rec-list');
   if (!recs.length) { 
     listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`; 
@@ -660,7 +618,6 @@ function renderHistRecords(ds) {
   }
   listEl.innerHTML = recs.slice().sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
   
-  // 綁定點擊開啟詳情
   listEl.querySelectorAll('.rec-item[data-id]').forEach(el => { 
     el.addEventListener('click', () => openDetailOverlay(el.dataset.id)); 
   });
@@ -674,7 +631,6 @@ function openAddPage(record=null, prefill={}) {
   
   document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
   
-  // 處理小時與分鐘拆分顯示
   let totalHours = pf(record?.hours || prefill.hours || 0);
   let h = Math.floor(totalHours);
   let m = Math.round((totalHours - h) * 60);
@@ -703,7 +659,6 @@ function calcAddTotal() {
   const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total);
 }
 
-/** 天氣快速標籤填入 */
 function addWeatherTag(tag) {
   const noteEl = document.getElementById('f-note');
   if (!noteEl.value.includes(tag)) {
@@ -716,10 +671,8 @@ function confirmAddRecord() {
   const checkImg = document.getElementById('add-save-img');
   const checkBtn = document.getElementById('add-save-btn');
 
-  // 1. 防呆機制：如果已經在儲存中（按鈕被停用），就直接返回，避免重複點擊
   if (checkBtn.disabled) return;
 
-  // 2. 表單驗證（驗證失敗就不會進入 3 秒倒數）
   if (!S.selPlatformId) { toast('請先選擇平台'); return; }
   const income = pf(document.getElementById('f-income').value); 
   const bonus = pf(document.getElementById('f-bonus').value); 
@@ -727,14 +680,11 @@ function confirmAddRecord() {
   const tips = pf(document.getElementById('f-tips').value);
   if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
 
-  // 3. 驗證通過，開始「儲存中」的 3 秒動畫特效
-  checkBtn.disabled = true; // 停用按鈕防連點
-  checkImg.src = 'images/Check2.png'; // 切換成勾選狀態的圖片
-  toast('⏳ 紀錄新增中...', 3000); // 顯示 3 秒的 Toast 提示
+  checkBtn.disabled = true; 
+  checkImg.src = 'images/Check2.png'; 
+  toast('⏳ 紀錄新增中...', 3000); 
 
-  // 4. 使用 setTimeout 模擬 3 秒的處理時間，時間到才真正存入資料並跳轉
   setTimeout(() => {
-    // 計算總工時 (小數)
     const h = pf(document.getElementById('f-hrs-val').value);
     const m = pf(document.getElementById('f-min-val').value);
     const totalHours = h + (m / 60);
@@ -742,9 +692,9 @@ function confirmAddRecord() {
     const rec = { 
       id: S.editingId || newId(), 
       date: document.getElementById('f-date').value || todayStr(), 
-      time: nowTime(), // 移除打卡後，時間直接以現在時間記錄
+      time: nowTime(), 
       platformId: S.selPlatformId, 
-      punchIn: '', punchOut: '', // 清空打卡紀錄
+      punchIn: '', punchOut: '', 
       hours: totalHours, 
       orders: pf(document.getElementById('f-orders').value), 
       income, bonus, tempBonus: temp, tips, 
@@ -763,16 +713,18 @@ function confirmAddRecord() {
     saveRecords(); 
     S.editingId = null; 
     
-    // 恢復按鈕狀態，並跳回首頁
     checkImg.src = 'images/Check1.png';
     checkBtn.disabled = false;
     goPage('home'); 
 
-  }, 3000); // 3000 毫秒 = 3 秒
+  }, 3000); 
 }
 
 /* ══ 車輛管理主畫面 (支援多車輛動態滑動切換) ════════════════════════════════════════ */
-function selectVehicle(id) { S.selVehicleId = id; renderVehicles(); }
+function selectVehicle(id) {
+  S.selVehicleId = id;
+  renderVehicles();
+}
 
 /** 渲染車輛管理資料列表 */
 function renderVehicles() {
@@ -785,12 +737,10 @@ function renderVehicles() {
     return;
   }
 
-  // 若尚未選擇車輛，預設自動選擇第一台
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) {
     S.selVehicleId = S.vehicles[0].id;
   }
 
-  // 1. 產生「選擇車輛」的水平合成圖示列表 (含右上角刪除小叉叉)
   html += `<div style="font-size:11px; color:var(--t3); margin-bottom:8px; font-weight:bold; padding: 0 4px;">選擇車輛</div>`;
   html += `<div style="display:flex; gap:12px; margin-bottom: 20px; overflow-x:auto; padding-bottom:8px; padding-left:4px;">`;
   
@@ -799,35 +749,28 @@ function renderVehicles() {
     
     html += `
       <div style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
-        <!-- 刪除車輛按鈕 (獨立事件，阻止冒泡以防觸發選取) -->
         <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-4px; right:-4px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div>
         
-        <!-- 合成圖示外框 -->
-        <div style="width:50px; height:50px; border-radius:14px; background:var(--sf2); border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : 'none'};">
-          <!-- 核心合成圖示 (顏色+圖片) -->
+        <div style="width:50px; height:50px; border-radius:14px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : 'none'};">
           <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('/images/scooter${v.icon}.png'); width:32px; height:32px;"></div>
         </div>
         
-        <!-- 車輛名稱 -->
         <span style="font-size:11px; font-weight:${isActive ? '700' : '600'}; color:${isActive ? 'var(--acc)' : 'var(--t2)'}; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60px;">${v.name}</span>
       </div>`;
   });
   html += `</div>`;
 
-  // 2. 新增資料大按鈕
   if (S.vehicleTab === 'fuel') {
     html += `<button onclick="openAddFuel()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed var(--acc); background:var(--sf2); color:var(--acc); font-weight:700; margin-bottom:16px; cursor:pointer; transition:0.2s;">➕ 新增燃料紀錄</button>`;
   } else {
     html += `<button onclick="openAddMaint()" style="width:100%; padding:12px; border-radius:12px; border:2px dashed #8B5CF6; background:#f5f3ff; color:#8B5CF6; font-weight:700; margin-bottom:16px; cursor:pointer; transition:0.2s;">➕ 新增保養維修</button>`;
   }
 
-  // 3. 顯示該車輛專屬的歷史資料
   const typeRecs = S.vehicleRecs.filter(r => r.type === S.vehicleTab && r.vehicleId === S.selVehicleId);
   
   if (typeRecs.length === 0) {
     html += `<div class="empty-tip">此車輛尚未新增資料</div>`;
   } else {
-    // 依日期由新到舊排序顯示
     typeRecs.sort((a,b)=>b.date.localeCompare(a.date)).forEach(r => {
       html += `
       <div class="card" style="padding:12px; margin-bottom:8px;">
@@ -847,10 +790,15 @@ function renderVehicles() {
 async function deleteVehicle(id) {
   const ok = await customConfirm('確定要刪除這台車輛嗎？<br><span style="color:var(--red); font-size:12px;">⚠️ 該車的所有紀錄將一併刪除且無法復原</span>');
   if(!ok) return;
+  
   S.vehicles = S.vehicles.filter(v => v.id !== id);
-  S.vehicleRecs = S.vehicleRecs.filter(r => r.vehicleId !== id);
-  if (S.selVehicleId === id) S.selVehicleId = null;
-  saveVehicles(); saveVehicleRecs(); renderVehicles(); toast('車輛與紀錄已刪除');
+  S.vehicleRecs = S.vehicleRecs.filter(r => r.vehicleId !== id); 
+  
+  if (S.selVehicleId === id) S.selVehicleId = null; 
+  saveVehicles();
+  saveVehicleRecs();
+  renderVehicles();
+  toast('車輛與紀錄已刪除');
 }
 
 /* ══ 燃料表單邏輯 (綁定車輛) ══════════════════════════════ */
@@ -879,13 +827,30 @@ function calcFuelTotal() {
 function saveFuelRecord() {
   const amount = pf(document.getElementById('fuel-final-total').textContent.replace(/,/g,''));
   if(amount <= 0) { toast('總金額不能為 0'); return; }
-  S.vehicleRecs.push({
-    id: newId(), vehicleId: S.selVehicleId, type: 'fuel',
+
+  const newRec = {
+    id: editingVehRecId || newId(), 
+    vehicleId: S.selVehicleId,
+    type: 'fuel',
     date: document.getElementById('fuel-date').value,
     prevKm: pf(document.getElementById('fuel-prev-km').value),
-    km: pf(document.getElementById('fuel-curr-km').value), amount: amount
-  });
-  saveVehicleRecs(); closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
+    km: pf(document.getElementById('fuel-curr-km').value),
+    amount: amount
+  };
+
+  if (editingVehRecId) {
+    const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId);
+    if (idx >= 0) S.vehicleRecs[idx] = newRec;
+    toast('✅ 燃料紀錄已更新');
+  } else {
+    S.vehicleRecs.push(newRec);
+    toast('✅ 燃料紀錄已新增');
+  }
+
+  editingVehRecId = null; 
+  saveVehicleRecs(); 
+  closeOverlay('fuel-add-page'); 
+  renderVehicles();
 }
 
 /** 打開新增車輛視窗 */
@@ -1187,7 +1152,6 @@ function saveNewReward() {
   saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 獎勵已新增');
 }
 async function deleteReward(i) { const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); if (!ok) return; S.settings.rewards.splice(i,1); saveSettings(); renderSettings(); toast('已刪除'); }
-function subAddAction() {}
 
 function doBackup() {
   const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs };
@@ -1220,49 +1184,87 @@ async function doReset() {
 
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); }
 
-/* ══ 燃料與保養邏輯 ══════════════════════════════ */
-function openAddFuel() {
-  if (!S.selVehicleId) { toast('請先新增並選擇車輛'); return; }
-  document.getElementById('fuel-date').value = todayStr();
-  document.getElementById('fuel-prev-km').value = ''; document.getElementById('fuel-curr-km').value = '';
-  document.getElementById('fuel-liters').value = ''; document.getElementById('fuel-price').value = '';
-  document.getElementById('fuel-discount').value = '0'; calcFuelTotal(); openOverlay('fuel-add-page');
-}
-function calcFuelTotal() {
-  const liters = pf(document.getElementById('fuel-liters').value); const price = pf(document.getElementById('fuel-price').value); const discount = pf(document.getElementById('fuel-discount').value);
-  const before = liters * price; const final = Math.max(0, before - discount);
-  document.getElementById('fuel-before-total').textContent = fmt(before); document.getElementById('fuel-final-total').textContent = fmt(final);
-}
-function saveFuelRecord() {
-  const amount = pf(document.getElementById('fuel-final-total').textContent.replace(/,/g,''));
-  if(amount <= 0) { toast('總金額不能為 0'); return; }
-  S.vehicleRecs.push({ id: newId(), vehicleId: S.selVehicleId, type: 'fuel', date: document.getElementById('fuel-date').value, prevKm: pf(document.getElementById('fuel-prev-km').value), km: pf(document.getElementById('fuel-curr-km').value), amount: amount });
-  saveVehicleRecs(); closeOverlay('fuel-add-page'); toast('✅ 燃料紀錄已新增'); renderVehicles();
-}
-
 const MAINT_ITEMS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
 let currentSelItems = [];
-function openAddMaint() {
-  if (!S.selVehicleId) { toast('請先新增並選擇車輛'); return; }
-  document.getElementById('maint-date').value = todayStr(); document.getElementById('maint-km').value = '';
-  document.getElementById('maint-shop').value = ''; document.getElementById('maint-note').value = ''; document.getElementById('maint-amount').value = '';
-  currentSelItems = [];
-  document.getElementById('maint-items-container').innerHTML = MAINT_ITEMS.map(item => `<div class="item-chip" onclick="toggleMaintItem(this, '${item}')">${item}</div>`).join('');
-  renderShopHistory(); openOverlay('maint-add-page');
-}
+
 function toggleMaintItem(el, item) { el.classList.toggle('on'); if (currentSelItems.includes(item)) { currentSelItems = currentSelItems.filter(i => i !== item); } else { currentSelItems.push(item); } }
 function renderShopHistory() {
   if (!S.settings.shopHistory) S.settings.shopHistory = [];
   document.getElementById('shop-history-container').innerHTML = S.settings.shopHistory.map((shop, i) => `<div class="shop-chip"><span onclick="document.getElementById('maint-shop').value='${shop}'">${shop}</span><span class="shop-chip-del" onclick="deleteShopHistory(${i})">✕</span></div>`).join('');
 }
 function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); saveSettings(); renderShopHistory(); }
-function saveMaintRecord() {
-  const amount = pf(document.getElementById('maint-amount').value);
-  if (amount <= 0 || currentSelItems.length === 0) { toast('請選擇項目並輸入金額'); return; }
-  const shop = document.getElementById('maint-shop').value.trim();
-  if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); }
-  S.vehicleRecs.push({ id: newId(), vehicleId: S.selVehicleId, type: 'maintenance', date: document.getElementById('maint-date').value, km: pf(document.getElementById('maint-km').value), items: currentSelItems, shop: shop, payMethod: document.getElementById('maint-pay-method').value, note: document.getElementById('maint-note').value, amount: amount });
-  saveVehicleRecs(); closeOverlay('maint-add-page'); toast('✅ 保養紀錄已新增'); renderVehicles();
+
+/* ══ 車輛紀錄編輯與刪除邏輯 ══════════════════════════ */
+let editingVehRecId = null; 
+
+async function openVehicleRecDetail(id) {
+  const r = S.vehicleRecs.find(x => x.id === id);
+  if (!r) return;
+
+  document.getElementById('detail-body').innerHTML = `
+    <div style="text-align:center; padding:10px 0 16px; border-bottom:1px solid var(--border)">
+      <div style="font-size:13px; color:var(--t3); margin-bottom:4px;">${r.type==='fuel' ? '燃料紀錄' : '保養維修紀錄'}</div>
+      <div style="font-family:var(--mono); font-size:32px; font-weight:700; color:var(--acc);">NT$ ${fmt(r.amount)}</div>
+    </div>
+    <div style="margin-top:12px; font-size:13px; color:var(--t2); line-height:1.8;">
+      <div>📆 日期：${r.date}</div>
+      <div>🚗 里程：${r.km} km</div>
+      ${r.type === 'fuel' ? `<div>⛽ 油量/油價：依總額計算</div>` : `<div>🔧 項目：${r.items.join(', ')}</div>`}
+      ${r.shop ? `<div>🏪 店家：${r.shop}</div>` : ''}
+      ${r.note ? `<div>📝 備註：${r.note}</div>` : ''}
+    </div>
+    <div style="display:flex; gap:8px; margin-top:20px;">
+      <button onclick="editVehicleRec('${r.id}')" style="flex:1; padding:12px; border-radius:12px; background:var(--blue-d); color:var(--blue); border:none; font-weight:bold; cursor:pointer;">✎ 編輯</button>
+      <button onclick="deleteVehicleRec('${r.id}')" style="flex:1; padding:12px; border-radius:12px; background:var(--red-d); color:var(--red); border:none; font-weight:bold; cursor:pointer;">🗑 刪除</button>
+    </div>
+  `;
+  document.getElementById('detail-overlay').classList.add('show');
+}
+async function deleteVehicleRec(id) {
+  closeDetailOverlay();
+  const ok = await customConfirm('確定要刪除這筆紀錄嗎？<br><strong>此動作無法復原。</strong>');
+  if (!ok) return;
+  
+  S.vehicleRecs = S.vehicleRecs.filter(r => r.id !== id);
+  saveVehicleRecs();
+  toast('✅ 紀錄已刪除');
+  renderVehicles();
+}
+
+function editVehicleRec(id) {
+  closeDetailOverlay();
+  const r = S.vehicleRecs.find(x => x.id === id);
+  if (!r) return;
+  
+  editingVehRecId = id; 
+
+  if (r.type === 'fuel') {
+    document.getElementById('fuel-date').value = r.date;
+    document.getElementById('fuel-curr-km').value = r.km;
+    document.getElementById('fuel-prev-km').value = r.prevKm || '';
+    document.getElementById('fuel-liters').value = '';
+    document.getElementById('fuel-price').value = '';
+    document.getElementById('fuel-discount').value = '0';
+    document.getElementById('fuel-before-total').textContent = fmt(r.amount);
+    document.getElementById('fuel-final-total').textContent = fmt(r.amount);
+    openOverlay('fuel-add-page');
+  } else {
+    document.getElementById('maint-date').value = r.date;
+    document.getElementById('maint-km').value = r.km;
+    document.getElementById('maint-shop').value = r.shop || '';
+    document.getElementById('maint-note').value = r.note || '';
+    document.getElementById('maint-amount').value = r.amount;
+    
+    currentSelItems = [...r.items]; 
+    document.getElementById('maint-items-container').innerHTML = MAINT_ITEMS.map(item => 
+      `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`
+    ).join('');
+    
+    if (r.payMethod) document.getElementById('maint-pay-method').value = r.payMethod;
+    
+    renderShopHistory();
+    openOverlay('maint-add-page');
+  }
 }
 
 /* ══ 初始化 ══════════════════════════════════════ */
