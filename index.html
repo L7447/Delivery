@@ -55,84 +55,73 @@
     
   </section>
 
-  <!-- ══ 新增／編輯記錄分頁 ════════════════════════════ -->
-  <section class="page" id="page-add">
-    <div class="pg-title" id="add-page-title">新增記錄</div>    
+  <!-- ══ 新增／編輯記錄分頁 (精簡美化版) ════════════════════════════ -->
+  <section class="page" id="page-add" style="padding:16px;">
+    <!-- 頂部：標題與右上角儲存按鈕 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="width:30px;"></div> <!-- 排版平衡 -->
+      <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>    
+      
+      <!-- 右上角儲存按鈕 (Check1/Check2) -->
+      <button onclick="confirmAddRecord()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer;">
+        <img id="add-save-img" src="/images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
+      </button>
+    </div>
+
     <!-- 平台選擇 -->
-    <div style="margin-bottom:14px">
+    <div style="margin-bottom:16px;">
       <div class="form-lbl">🚴 選擇平台</div>
       <div id="platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
     </div>
-    <!-- 日期 -->
-    <div class="fg" style="margin-bottom:14px">
-      <label>📆 日期</label>
-      <input type="date" class="finp" id="f-date">
+    
+    <!-- 兩欄：日期 & 單數 -->
+    <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px;">
+      <div class="fg"><label>📆 日期</label><input type="date" class="finp" id="f-date"></div>
+      <div class="fg"><label>📦 單數</label><input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()"></div>
     </div>
-    <!-- 打卡時間（上線/下線） -->
-    <div style="margin-bottom:10px">
-      <div class="form-lbl">⏱ 打卡記錄</div>
-      <div style="display:flex;gap:8px">
-        <div class="fg" style="flex:1">
-          <label>上線時間</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="time" class="finp" id="f-punch-in" style="flex:1" oninput="autoCalcHours()">
-            <button class="quick-btn" onclick="setPunchNow('in')">現在</button>
-          </div>
+
+    <!-- 兩欄：小時 & 分鐘 (取代原本笨重的打卡) -->
+    <div style="margin-bottom:16px;">
+      <div class="form-lbl">⏱ 累計工時</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="fg" style="position:relative;">
+          <input type="number" class="finp" id="f-hrs-val" placeholder="0" inputmode="numeric" style="padding-right:32px;">
+          <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">時</span>
         </div>
-        <div class="fg" style="flex:1">
-          <label>下線時間</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="time" class="finp" id="f-punch-out" style="flex:1" oninput="autoCalcHours()">
-            <button class="quick-btn" onclick="setPunchNow('out')">現在</button>
-          </div>
+        <div class="fg" style="position:relative;">
+          <input type="number" class="finp" id="f-min-val" placeholder="0" inputmode="numeric" style="padding-right:32px;">
+          <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">分</span>
         </div>
       </div>
     </div>
-    <!-- 工時（自動計算） -->
-    <div class="fg" style="margin-bottom:14px">
-      <label>🕐 工時（小時，上線/下線自動計算）</label>
-      <input type="number" class="finp" id="f-hours" placeholder="自動計算或手動輸入" inputmode="decimal" step="0.1">
+
+    <!-- 行程與小費 -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+      <div class="fg"><label>💰 行程收入 (NT$)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+      <div class="fg"><label>🤑 小費 (NT$)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
     </div>
-    <!-- 單數 + 行程收入 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div class="fg">
-        <label>📦 接單數（單）</label>
-        <input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()">
+
+    <!-- 獎勵 -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+      <div class="fg"><label>🎁 固定獎勵</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+      <div class="fg"><label>⚡ 臨時獎勵</label><input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+    </div>
+
+    <!-- 總收入 (精簡置右對齊，不再佔用大版面) -->
+    <div style="background:var(--sf2); padding:12px 16px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:13px; color:var(--acc); font-weight:600;">本筆總收入</span>
+      <div style="font-family:var(--mono); font-size:28px; font-weight:800; color:var(--acc);">NT$ <span id="add-total-val">0</span></div>
+    </div>
+
+    <!-- 備註與天氣標籤 -->
+    <div class="fg" style="margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <label>📝 備註</label>
+        <!-- 天氣快速標籤 -->
+        <button type="button" onclick="addWeatherTag('🌧️下雨')" style="background:var(--blue-d); color:var(--blue); border:none; padding:4px 8px; border-radius:12px; font-size:11px; cursor:pointer;">+ 🌧️下雨</button>
       </div>
-      <div class="fg">
-        <label>💰 行程收入（NT$）</label>
-        <input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-      </div>
+      <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事" style="margin-top:6px;">
     </div>
-    <!-- 固定發布獎勵 + 臨時獎勵 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div class="fg">
-        <label>🎁 固定發布獎勵（NT$）</label>
-        <input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-      </div>
-      <div class="fg">
-        <label>⚡ 臨時獎勵（NT$）</label>
-        <input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-      </div>
-    </div>
-    <!-- 小費 -->
-    <div class="fg" style="margin-bottom:14px">
-      <label>🤑 小費（NT$）</label>
-      <input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()">
-    </div>
-    <!-- 本筆總收入（自動加總） -->
-    <div id="add-total-card" style="background:var(--acc-d);border:1px solid rgba(255,107,53,.3);border-radius:var(--r);padding:14px;margin-bottom:14px;text-align:center">
-      <div style="font-size:11px;color:var(--acc);letter-spacing:.5px;margin-bottom:4px">本筆總收入</div>
-      <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--acc)">NT$ <span id="add-total-val">0</span></div>
-      <div id="add-breakdown" style="font-size:11px;color:var(--acc);margin-top:4px;opacity:.7"></div>
-    </div>
-    <!-- 備註 -->
-    <div class="fg" style="margin-bottom:20px">
-      <label>📝 備註（選填）</label>
-      <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事">
-    </div>
-    <!-- 儲存按鈕 -->
-    <button class="btn-acc" id="add-confirm" style="width:100%; padding:14px; font-size:16px; font-weight:700;">💾 儲存記錄</button>
   </section>
 
   <!-- ══ 收入分析 ═══════════════════════════════════════ -->
