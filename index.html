@@ -19,37 +19,40 @@
 <body>
 <div id="app">
 
-  <!-- ══ 首頁 ══════════════════════════════════════ -->
-  <section class="page active" id="page-home">
-    <!-- 動態渲染內容 -->
-    <div id="home-content"></div>
+  <!-- 首頁 (修改為固定 Tabs 防止閃爍) -->
+  <section class="page active" id="page-home" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+    <div id="home-top-content"></div> <!-- JS 只渲染上半部 -->
+    <div style="padding: 0 16px;">
+      <div class="slide-tabs tabs-2">
+        <div class="slide-bg" id="home-tab-bg" style="transform: translateX(0%);"></div>
+        <button class="slide-btn active" id="btn-home-schedule" onclick="switchHomeTab('schedule', 0)">平台日程表</button>
+        <button class="slide-btn" id="btn-home-goal" onclick="switchHomeTab('goal', 1)">目標進度</button>
+      </div>
+    </div>
+    <div id="home-bottom-content" style="flex:1; overflow-y:auto; padding: 0 16px 24px;"></div> <!-- JS 渲染下半部 -->
   </section>
 
-  <!-- ══ 查看記錄 ═══════════════════════════════════ -->
-  <section class="page" id="page-history" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
-    <!-- 固定上半：日曆區 -->
-    <div id="hist-header" style="flex-shrink:0;padding:12px 16px 6px;background:var(--bg);">
-      <!-- 月份導覽 -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <button class="mbtn" id="hist-prev">◀</button>
-          <h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center"></h2>
-          <button class="mbtn" id="hist-next">▶</button>
-        </div>
-        <!-- 搜尋按鈕 -->
-        <button class="icon-btn" onclick="openSearch()" title="搜尋記錄">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </button>
-      </div>
-      <!-- 月曆格 -->
-      <div class="month-grid" id="hist-calendar"></div>
-      <!-- 選取日收支摘要 -->
-      <div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div>
-      <!-- 流水帳標題 -->
-      <div class="sec-title" id="hist-day-label" style="margin-bottom:4px">今日記錄</div>
+  <!-- ══ 查看記錄 (防閃爍固定結構) ═══════════════════════════════════ -->
+  <section class="page" id="page-history" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+    
+    <!-- 固定的標題 -->
+    <div style="padding: 16px 16px 0; text-align: center;">
+      <div class="home-pg-title" style="display:inline-block;">查看記錄</div>
     </div>
-    <!-- 可滾動記錄列表 -->
-    <div id="hist-rec-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;"></div>
+    
+    <!-- 固定的圓角滑動特效：紀錄 5 等分 -->
+    <div class="slide-tabs tabs-5" style="margin: 12px 16px 8px;">
+      <div class="slide-bg" id="hist-tab-bg" style="transform: translateX(0%);"></div>
+      <button class="slide-btn active" id="btn-hist-day" onclick="switchHistTab('day', 0)">日</button>
+      <button class="slide-btn" id="btn-hist-week" onclick="switchHistTab('week', 1)">週</button>
+      <button class="slide-btn" id="btn-hist-biweek" onclick="switchHistTab('biweek', 2)">雙週</button>
+      <button class="slide-btn" id="btn-hist-month" onclick="switchHistTab('month', 3)">月</button>
+      <button class="slide-btn" id="btn-hist-year" onclick="switchHistTab('year', 4)">年</button>
+    </div>
+
+    <!-- 動態內容區塊：日曆與記錄列表會由 JS 渲染到這裡面 -->
+    <div id="hist-content" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
+    
   </section>
 
   <!-- ══ 新增／編輯記錄分頁 ════════════════════════════ -->
@@ -142,11 +145,13 @@
       <button class="mbtn" id="rpt-next">▶</button>
     </div>
     <!-- 報表 Tab -->
-    <div class="seg-tabs" id="rpt-tabs">
-      <button class="seg-tab on" data-rv="overview">總覽</button>
-      <button class="seg-tab" data-rv="trend">趨勢</button>
-      <button class="seg-tab" data-rv="compare">比較</button>
-      <button class="seg-tab" data-rv="top3">TOP3</button>
+    <!-- 圓角滑動特效：報表 4 等分 -->
+    <div class="slide-tabs tabs-4" id="rpt-tabs">
+      <div class="slide-bg" id="rpt-tab-bg" style="transform: translateX(0%);"></div>
+      <button class="slide-btn active" onclick="switchRptTab('overview', 0, this)">總覽</button>
+      <button class="slide-btn" onclick="switchRptTab('trend', 1, this)">趨勢</button>
+      <button class="slide-btn" onclick="switchRptTab('compare', 2, this)">比較</button>
+      <button class="slide-btn" onclick="switchRptTab('top3', 3, this)">TOP3</button>
     </div>
     <!-- 各分頁內容 -->
     <div id="rv-overview"></div>
@@ -318,6 +323,77 @@
   </div>
   <!-- 視窗主體，表單與圖示顏色選擇器會由 script.js 渲染在此處 -->
   <div class="overlay-body" id="vehicle-add-body"></div>
+</div>
+
+<!-- ══ 新增燃料 Overlay ════════════════════════ -->
+<div class="overlay-page" id="fuel-add-page">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="closeOverlay('fuel-add-page')">✕</button>
+    <h2>新增車輛燃料</h2>
+    <div style="width:36px"></div>
+  </div>
+  <div class="overlay-body">
+    <div class="fg" style="margin-bottom:12px"><label>📆 日期</label><input type="date" class="finp" id="fuel-date"></div>
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <div class="fg" style="flex:1"><label>上次里程 (km)</label><input type="number" class="finp" id="fuel-prev-km"></div>
+      <div class="fg" style="flex:1"><label>加油里程 (km)</label><input type="number" class="finp" id="fuel-curr-km"></div>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <div class="fg" style="flex:1"><label>油量 (公升)</label><input type="number" class="finp" id="fuel-liters" step="0.01" oninput="calcFuelTotal()"></div>
+      <div class="fg" style="flex:1"><label>油價 (單價)</label><input type="number" class="finp" id="fuel-price" step="0.1" oninput="calcFuelTotal()"></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label>折扣 (NT$)</label><input type="number" class="finp" id="fuel-discount" value="0" oninput="calcFuelTotal()"></div>
+    
+    <div style="background:var(--sf2); padding:12px; border-radius:12px; margin-bottom:20px; text-align:right;">
+      <div style="font-size:12px; color:var(--t3);">折扣前總金額：<span id="fuel-before-total">0</span></div>
+      <div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">實際付款：<span style="font-size:24px; color:var(--acc);" id="fuel-final-total">0</span></div>
+    </div>
+    <button onclick="saveFuelRecord()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:700;">💾 儲存燃料紀錄</button>
+  </div>
+</div>
+
+<!-- ══ 新增保養維修 Overlay ════════════════════════ -->
+<div class="overlay-page" id="maint-add-page">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="closeOverlay('maint-add-page')">✕</button>
+    <h2>車輛保養維修</h2>
+    <div style="width:36px"></div>
+  </div>
+  <div class="overlay-body">
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <div class="fg" style="flex:1"><label>📆 日期</label><input type="date" class="finp" id="maint-date"></div>
+      <div class="fg" style="flex:1"><label>里程 (km)</label><input type="number" class="finp" id="maint-km"></div>
+    </div>
+    
+    <!-- 項目複選 Chips -->
+    <div class="fg" style="margin-bottom:16px;">
+      <label>保養維修項目 (可複選)</label>
+      <div style="display:flex; flex-wrap:wrap; gap:6px;" id="maint-items-container">
+        <!-- JS 動態產生項目 -->
+      </div>
+    </div>
+
+    <!-- 店家名稱與記憶歷史 -->
+    <div class="fg" style="margin-bottom:16px;">
+      <label>店家名稱</label>
+      <input type="text" class="finp" id="maint-shop" placeholder="輸入車行名稱">
+      <div id="shop-history-container" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+    </div>
+
+    <div class="fg" style="margin-bottom:12px;">
+      <label>支付方式</label>
+      <select class="fsel" id="maint-pay-method">
+        <option value="現金">現金</option>
+        <option value="電子支付">電子支付 (LinePay/街口等)</option>
+        <option value="銀行帳戶">銀行帳戶 (轉帳/刷卡)</option>
+      </select>
+    </div>
+
+    <div class="fg" style="margin-bottom:12px;"><label>📝 備註</label><input type="text" class="finp" id="maint-note"></div>
+    <div class="fg" style="margin-bottom:20px;"><label>💰 總金額 (NT$)</label><input type="number" class="finp" id="maint-amount" style="font-size:18px; font-weight:bold; color:var(--acc);"></div>
+    
+    <button onclick="saveMaintRecord()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:700;">💾 儲存保養紀錄</button>
+  </div>
 </div>
 
 <script src="/script.js"></script>
