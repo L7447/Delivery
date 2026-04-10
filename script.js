@@ -65,6 +65,68 @@ const getDayRecs = date => S.records.filter(r=>r.date===date);
 const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
 const recTotal = r => pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips);
 
+/** 折疊/展開統計卡片 */
+function toggleSummaryCard(id) {
+  const el = document.getElementById(id);
+  const btn = document.getElementById(id + '-btn');
+  if (!el || !btn) return;
+  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') {
+    el.style.maxHeight = '100px'; // 展開高度
+    btn.style.transform = 'rotate(180deg)'; // 箭頭反轉
+  } else {
+    el.style.maxHeight = '0px'; // 折疊
+    btn.style.transform = 'rotate(0deg)'; // 箭頭恢復
+  }
+}
+/** 共用：產生折疊式統計卡片 HTML (首頁、歷史、報表通用) */
+function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
+  if (total <= 0) return '';
+  
+  const totalBonus = bonus + tempBonus;
+  let extraStr = '';
+  if (totalBonus > 0 || tips > 0) {
+    const parts = [];
+    if (totalBonus > 0) parts.push(`含獎勵${fmt(totalBonus)}元`);
+    if (tips > 0) parts.push(`線上小費${fmt(tips)}元`);
+    extraStr = `<div style="font-size:10px; color:var(--gold); margin-top:2px;">〔${parts.join('、')}〕</div>`;
+  }
+
+  const avgPerOrder = orders > 0 ? Math.round(total / orders) : 0;
+  const avgPerHour = hours > 0 ? Math.round(total / hours) : 0;
+  const ordersPerHour = hours > 0 ? (orders / hours).toFixed(1) : 0;
+
+  return `
+    <div class="summary-card">
+      <!-- 頂部區塊 (總計、單數、工時、展開按鈕) -->
+      <div style="display:flex; justify-content:space-between; align-items:center;" onclick="toggleSummaryCard('${cardId}')">
+        <div style="flex:1;">
+          <div style="display:flex; align-items:baseline; gap:8px;">
+            <span style="font-size:13px; font-weight:700; color:var(--t1);">${title}</span>
+            <span style="font-family:var(--mono); font-size:22px; font-weight:800; color:var(--green);">$${fmt(total)}</span>
+          </div>
+          ${extraStr}
+          <div style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">
+            ${orders > 0 ? `${orders} 單` : '0 單'} <span style="color:var(--t3); margin:0 4px;">│</span> ${hours > 0 ? fmtHours(hours) : '0m'}
+          </div>
+        </div>
+        <!-- 下拉箭頭按鈕 -->
+        <div id="${cardId}-btn" style="width:24px; height:24px; border-radius:50%; background:var(--sf2); display:flex; align-items:center; justify-content:center; color:var(--t3); font-size:12px; transition:transform 0.3s; cursor:pointer;">▼</div>
+      </div>
+
+      <!-- 底部區塊 (平均數據，預設折疊隱藏) -->
+      <div id="${cardId}" class="summary-collapse" style="max-height:0px; overflow:hidden; transition:max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); display:flex; justify-content:space-between; font-size:11px; color:var(--t2); font-weight:600; text-align:center;">
+          <div style="flex:1;">平均<br><span style="font-family:var(--mono); font-size:14px; color:var(--acc);">$${fmt(avgPerOrder)} <span style="font-size:10px;">/單</span></span></div>
+          <div style="width:1px; background:var(--border);"></div>
+          <div style="flex:1;">均單<br><span style="font-family:var(--mono); font-size:14px; color:var(--acc);">${ordersPerHour} <span style="font-size:10px;">單/時</span></span></div>
+          <div style="width:1px; background:var(--border);"></div>
+          <div style="flex:1;">時薪<br><span style="font-family:var(--mono); font-size:14px; color:var(--acc);">$${fmt(avgPerHour)} <span style="font-size:10px;">/時</span></span></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 /** 格式化工時：小數轉為 h m 格式 (未滿1小時只顯示 m) */
 function fmtHours(hVal) {
   const h = pf(hVal);
@@ -220,14 +282,12 @@ function renderHome() {
     topHtml += `</div>`;
   } else { topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`; }
 
-  topHtml += `
-      <div class="hero-total-row">
-        <div class="ht-item"><div class="ht-lbl">總收入</div><div class="ht-val">$ ${fmt(total)}</div></div>
-        <div class="ht-item"><div class="ht-lbl">總單數</div><div class="ht-val">${orders} 單</div></div>
-        <div class="ht-item"><div class="ht-lbl">總工時</div><div class="ht-val">${hours > 0 ? fmtHours(hours) : 0}</div></div>
-      </div>
-    </div>
-  `;
+  // 加入新版折疊總結卡片
+  const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0);
+  const dayTemp = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0);
+  const dayTips = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
+  topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card');
+  topHtml += `</div>`; // 關閉 today-hero
 
   const isPunched = S.punch && S.punch.date === today;
   let punchStatusStr = '離線';
@@ -504,14 +564,18 @@ function renderHistGroupView(mode) {
         <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select>
       </div></div>`;
   html += `<div style="padding: 0 16px 24px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">`;
+  
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
-    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0);
-    html += `<div class="card" style="padding:16px; border:2px solid var(--border); margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-end;">
-        <div><div style="font-size:12px; color:var(--t3); margin-bottom:6px;">區間總計</div><div style="display:flex; gap:12px; font-size:13px; color:var(--t2); font-weight:600;"><span>📦 ${tOrd} 單</span><span>⏱ ${fmtHours(tHrs)}</span></div></div>
-        <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--blue);">$ ${fmt(tInc)}</div>
-      </div>`;
+    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); 
+    const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); 
+    const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0);
+    const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0);
+    const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0);
+    const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
+    html += buildSummaryCard('區間總計', tInc, tOrd, tHrs, tBonus, tTemp, tTips, 'hist-group-card');
     html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
   }
+
   html += `</div>`; content.innerHTML = html;
 }
 
@@ -546,22 +610,10 @@ function renderHistRecords(ds) {
   if (total > 0) {
     const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); 
     const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
-    
-    // 美化版：將三個數據合成為單一橫幅 (Banner)
-    sumEl.innerHTML = `
-      <div style="display:flex; align-items:center; justify-content:space-between; background:var(--green-d); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:10px 14px; margin-bottom:8px;">
-        <div style="display:flex; flex-direction:column; gap:2px;">
-          <span style="font-size:11px; color:var(--t2); font-weight:600;">當日總計</span>
-          <div style="display:flex; gap:8px; font-size:12px; color:var(--t3); font-weight:500;">
-            ${orders > 0 ? `<span>📦 ${orders}單</span>` : ''}
-            ${hours > 0 ? `<span>⏱ ${fmtHours(hours)}</span>` : ''}
-          </div>
-        </div>
-        <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--green);">
-          NT$ ${fmt(total)}
-        </div>
-      </div>
-    `;
+    const dayBonus = recs.reduce((s,r)=>s+pf(r.bonus), 0);
+    const dayTemp = recs.reduce((s,r)=>s+pf(r.tempBonus), 0);
+    const dayTips = recs.reduce((s,r)=>s+pf(r.tips), 0);
+    sumEl.innerHTML = buildSummaryCard('當日', total, orders, hours, dayBonus, dayTemp, dayTips, 'hist-day-card');
   } else { 
     sumEl.innerHTML = ''; 
   }
