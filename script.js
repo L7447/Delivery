@@ -333,8 +333,9 @@ function renderHome() {
       bottomHtml += `</div>`;
     } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
   }
-  bottomHtml += `</div>`;
-  document.getElementById('home-content').innerHTML = topHtml + bottomHtml;
+  // 分別將上下半部渲染到新的容器中（注意：去除了多餘的 </div>）
+  document.getElementById('home-top-content').innerHTML = topHtml;
+  document.getElementById('home-bottom-content').innerHTML = bottomHtml;
 }
 
 /* ══ 打卡功能 ════════════════════════════════════ */
