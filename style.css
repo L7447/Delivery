@@ -626,3 +626,20 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
   font-size: 11px; color: var(--t2); cursor: pointer;
 }
 .shop-chip-del { color: var(--red); font-weight: bold; padding: 0 4px; }
+
+/* ══ 機車圖示雙排 Grid 佈局 ════════════════════════════ */
+.veh-icon-grid {
+  display: grid; 
+  /* 切割成 6 等分，11 個圖示會自動變成 上排 6 個、下排 5 個 */
+  grid-template-columns: repeat(6, 1fr); 
+  gap: 8px;
+}
+.veh-icon-box {
+  aspect-ratio: 1 / 1; /* 保持正方形 */
+  border-radius: 12px; 
+  border: 2px solid transparent; 
+  background: var(--sf2); 
+  display: flex; align-items: center; justify-content: center; 
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
