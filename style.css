@@ -40,7 +40,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 #app { width: 100%; height: 100dvh; position: relative; overflow: hidden; }
 
 .page { position: absolute; inset: 0; bottom: var(--nav); overflow-y: auto; overflow-x: hidden; padding: 16px 16px 24px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .2s, transform .2s; -webkit-overflow-scrolling: touch; }
-.page.active { opacity: 1; transform: translateY(0); pointer-events: all; }
+.page.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .page::-webkit-scrollbar { display: none; }
 
 #nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav); display: flex; align-items: center; justify-content: space-around; background: var(--sf); border-top: 1px solid var(--border); z-index: 90; padding: 0 4px env(safe-area-inset-bottom); }
