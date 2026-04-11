@@ -262,6 +262,7 @@ function buildRecItem(r) {
   
   let tagsHtml = '';
   if (r.orders > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.orders} 單</span>`;
+  if (r.mileage > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.mileage} km</span>`; // 顯示里程
   if (r.hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(r.hours)}</span>`;
   if (totalBonus > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
   if (r.tips > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-tips">小費 $${fmt(r.tips)}</span>`;
@@ -389,7 +390,7 @@ function renderHistRecords(ds) {
 function openDetailOverlay(id) {
   const r = S.records.find(r=>r.id===id); if (!r) return;
   const plat = getPlatform(r.platformId); const total = recTotal(r);
-  const rows = [ ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${plat.name}</span>`], ['📆 日期', r.date], ['⏱ 打卡', r.punchIn&&r.punchOut?`${r.punchIn} → ${r.punchOut}`:(r.punchIn?r.punchIn:'—')], ['🕐 工時', r.hours>0?fmtHours(r.hours):'—'], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'], ['💰 行程收入',`NT$ ${fmt(r.income)}`], ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'], ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'], ['🤑 小費', r.tips>0?`NT$ ${fmt(r.tips)}`:'—'], ['📝 備註', r.note||'—'] ];
+  const rows = [ ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${plat.name}</span>`], ['📆 日期', r.date], ['⏱ 打卡', r.punchIn&&r.punchOut?`${r.punchIn} → ${r.punchOut}`:(r.punchIn?r.punchIn:'—')], ['🕐 工時', r.hours>0?fmtHours(r.hours):'—'], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'], ['🛣️ 行駛里程', r.mileage>0?`${r.mileage} km`:'—'], ['💰 行程收入',`NT$ ${fmt(r.income)}`], ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'], ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'], ['🤑 小費', r.tips>0?`NT$ ${fmt(r.tips)}`:'—'], ['📝 備註', r.note||'—'] ];
   document.getElementById('detail-body').innerHTML = `<div style="text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--border)"><div style="font-size:13px;color:var(--t3);margin-bottom:4px">本筆總收入</div><div style="font-family:var(--mono);font-size:38px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div></div><div style="margin-top:12px">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--t3)">${l}</span><span style="font-size:13px;font-weight:500">${v}</span></div>`).join('')}</div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="closeDetailOverlay();openAddPage(${JSON.stringify(r).replace(/"/g,'&quot;')})" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--acc-d);color:var(--acc);border:1px solid rgba(255,107,53,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">✎ 編輯</button><button onclick="deleteRecord('${r.id}')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">🗑 刪除</button></div>`;
   document.getElementById('detail-overlay').classList.add('show');
 }
@@ -415,7 +416,9 @@ function openAddPage(record=null, prefill={}) {
   document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
   let totalHours = pf(record?.hours || prefill.hours || 0); let h = Math.floor(totalHours); let m = Math.round((totalHours - h) * 60);
   document.getElementById('f-hrs-val').value = h > 0 ? h : ''; document.getElementById('f-min-val').value = m > 0 ? m : '';
-  document.getElementById('f-orders').value = record?.orders || ''; document.getElementById('f-income').value = record?.income || '';
+  document.getElementById('f-orders').value = record?.orders || ''; 
+  document.getElementById('f-mileage').value = record?.mileage || ''; // 新增里程
+  document.getElementById('f-income').value = record?.income || '';
   document.getElementById('f-bonus').value = record?.bonus || ''; document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
   document.getElementById('f-tips').value = record?.tips || ''; document.getElementById('f-note').value = record?.note || '';
   renderPlatformChips(); calcAddTotal(); goPage('add');
@@ -424,14 +427,13 @@ function renderPlatformChips() { const container = document.getElementById('plat
 function selectPlatform(id) { S.selPlatformId = id; renderPlatformChips(); }
 function calcAddTotal() { const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const tempBonus = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value); const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total); }
 function addWeatherTag(tag) { const noteEl = document.getElementById('f-note'); if (!noteEl.value.includes(tag)) { noteEl.value = (noteEl.value + ' ' + tag).trim(); } }
-// 將原本的 confirmAddRecord 替換為以下非同步版本
+
 async function confirmAddRecord() {
   const checkImg = document.getElementById('add-save-img'); const checkBtn = document.getElementById('add-save-btn');
   if (checkBtn.disabled) return; if (!S.selPlatformId) { toast('請先選擇平台'); return; }
   const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
   if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
   
-  // 當處於「編輯」模式時 (從歷史記錄點進來)，彈出警語
   if (S.editingId) {
     const ok = await customConfirm('是否確認要儲存修改後的記錄？');
     if (!ok) return;
@@ -440,7 +442,8 @@ async function confirmAddRecord() {
   checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 3000); 
   setTimeout(() => {
     checkImg.style.transform = 'scale(1)'; const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
-    const rec = { id: S.editingId || newId(), date: document.getElementById('f-date').value || todayStr(), time: nowTime(), platformId: S.selPlatformId, punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
+    // 寫入 mileage
+    const rec = { id: S.editingId || newId(), date: document.getElementById('f-date').value || todayStr(), time: nowTime(), platformId: S.selPlatformId, punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), mileage: pf(document.getElementById('f-mileage').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
     if (S.editingId) { const idx = S.records.findIndex(r => r.id === S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } else { S.records.push(rec); toast('✅ 記錄成功！'); }
     saveRecords(); S.editingId = null; checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; goPage('home'); 
   }, 3000); 
@@ -568,7 +571,6 @@ function renderRptOverview() {
   }
 }
 
-// 重構：修正圖表互動、從週一開始算、避免Y軸起點跳動
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
   const trends = [
@@ -591,16 +593,55 @@ function renderRptTrend() {
   </div>`;
 
   if (curT === 'year') {
-    const months = Array.from({length:12},(_,i)=>i+1); const labels = months.map(m=>`${m}月`); const data = months.map(m=>getMonthRecs(S.rptY,m).reduce((s,r)=>s+recTotal(r),0));
-    html += `<div class="card"><div class="chart-scroll-wrap"><div style="min-width:400px; height:180px;"><canvas id="trend-chart"></canvas></div></div><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(data.reduce((a,b)=>a+b,0))}</span></div><div class="rpt-total-row"><span class="rt-lbl gray">月均收入</span><span class="rt-val">NT$ ${fmt(Math.round(data.reduce((a,b)=>a+b,0)/12))}</span></div></div>`;
-    el.innerHTML = html; drawLine('trend-chart', labels, [{ label:'月收入', data, color:'#FF6B35' }]); return;
+    const months = Array.from({length:12},(_,i)=>i+1); const labels = months.map(m=>`${m}月`); 
+    const data = months.map(m=>getMonthRecs(S.rptY,m).reduce((s,r)=>s+recTotal(r),0));
+    html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:100%; height:240px; position:relative;"><canvas id="trend-chart"></canvas></div></div><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(data.reduce((a,b)=>a+b,0))}</span></div><div class="rpt-total-row"><span class="rt-lbl gray">月均收入</span><span class="rt-val">NT$ ${fmt(Math.round(data.reduce((a,b)=>a+b,0)/12))}</span></div></div>`;
+    el.innerHTML = html; drawTrendBar('trend-chart', labels, data); return;
   }
   
-  const days = trend.getDays(); const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;}); const data = days.map(d=>getDayRecs(d).reduce((s,r)=>s+recTotal(r),0));
-  const chartWidth = curT === 'month' ? `${Math.max(100, days.length * 5)}%` : '100%'; 
+  const days = trend.getDays(); const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;}); 
+  const data = days.map(d=>getDayRecs(d).reduce((s,r)=>s+recTotal(r),0));
   
-  html += `<div class="card"><div class="chart-scroll-wrap"><div style="min-width:${chartWidth}; height:220px; position:relative;"><canvas id="trend-chart"></canvas></div></div></div>`;
-  el.innerHTML = html; drawLine('trend-chart', labels, [{ label:'日收入', data, color:'#FF6B35' }]);
+  // 月趨勢加寬 250% 讓它能左右平滑滑動，週趨勢維持 100%
+  const chartWidth = curT === 'month' ? `250%` : '100%'; 
+  
+  html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:${chartWidth}; height:240px; position:relative;"><canvas id="trend-chart"></canvas></div></div></div>`;
+  el.innerHTML = html; 
+  
+  // 若單日資料來自特定單一平台，套用該平台顏色（若混合平台則用預設橘色）
+  const bgColors = days.map(d => {
+    const recs = getDayRecs(d);
+    if(recs.length === 0) return '#e5e7eb';
+    const platId = recs[0].platformId;
+    const isSamePlat = recs.every(r => r.platformId === platId);
+    if(isSamePlat) return getPlatform(platId).color;
+    return '#FF6B35'; // 混合平台
+  });
+
+  drawTrendBar('trend-chart', labels, data, bgColors);
+}
+
+// 專用的趨勢柱狀圖繪製函式
+function drawTrendBar(canvasId, labels, data, colors) {
+  const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
+  if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
+  S.charts[canvasId] = new Chart(ctx, { 
+    type: 'bar', 
+    data: { 
+      labels, 
+      datasets:[{ data, backgroundColor: colors || '#FF6B35', borderRadius:4, borderWidth:0 }] 
+    }, 
+    options: { 
+      responsive:true, maintainAspectRatio:false, 
+      layout: { padding: { left: -10 } }, // 最大化靠左
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, 
+      scales:{ 
+        x:{ticks:{font:{size:10}, maxRotation:0}, grid:{display:false}}, 
+        y:{beginAtZero:true, suggestedMax:500, ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:10}}, grid:{color:'rgba(0,0,0,.05)', drawBorder:false}} 
+      }, 
+      animation:{ duration:400 } 
+    } 
+  });
 }
 
 // 重構：靈活設定 3 個不同的月份或年份進行比較
@@ -803,6 +844,9 @@ async function deleteVehicle(id) {
 }
 
 let editingVehRecId = null; 
+const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
+const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞車來令片', '後輪', '前輪', '其它'];
+
 function openAddVehRec(recordId = null) {
   editingVehRecId = recordId; const isEdit = !!recordId; if (!isEdit && S.vehicles.length === 0) { toast('請先新增車輛'); return; }
   document.getElementById('veh-rec-title').textContent = isEdit ? '編輯車輛記錄' : '新增車輛記錄'; document.getElementById('veh-rec-del-btn').style.display = isEdit ? 'block' : 'none';
@@ -812,16 +856,69 @@ function openAddVehRec(recordId = null) {
   let r = null; if (isEdit) { r = S.vehicleRecs.find(x => x.id === recordId); S.addVehRecType = r.type; } else { S.addVehRecType = S.vehicleTab; }
   document.getElementById('vr-date').value = r ? r.date : todayStr(); document.getElementById('vr-time').value = r ? (r.time || nowTime()) : nowTime();
   currentSelItems = (r && r.type === 'maintenance') ? [...r.items] : [];
-  document.getElementById('vm-items-container').innerHTML = MAINT_ITEMS.map(item => `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`).join('');
-
-  if (S.addVehRecType === 'fuel') { document.getElementById('vr-fuel-type').value = r?.fuelType || '95'; document.getElementById('vr-discount').value = r?.discount || '0'; document.getElementById('vr-prev-km').value = r?.prevKm || ''; document.getElementById('vr-curr-km').value = r?.km || ''; document.getElementById('vr-liters').value = r?.liters || ''; document.getElementById('vr-price').value = r?.price || ''; calcVehFuel(); } 
-  else { document.getElementById('vm-km').value = r?.km || ''; document.getElementById('vm-shop').value = r?.shop || ''; document.getElementById('vm-pay-method').value = r?.payMethod || '現金'; document.getElementById('vm-amount').value = r?.amount || ''; document.getElementById('vm-note').value = r?.note || ''; renderShopHistory(); }
+  
+  if (S.addVehRecType === 'fuel') { 
+    // 帶入車輛預設燃料
+    const v = S.vehicles.find(x => x.id === S.selVehicleId);
+    document.getElementById('vr-fuel-type').value = r?.fuelType || (v ? v.defaultFuel : '95'); 
+    document.getElementById('vr-discount').value = r?.discount || '0'; document.getElementById('vr-prev-km').value = r?.prevKm || ''; document.getElementById('vr-curr-km').value = r?.km || ''; document.getElementById('vr-liters').value = r?.liters || ''; document.getElementById('vr-price').value = r?.price || ''; 
+    calcVehFuel(); 
+  } else { 
+    document.getElementById('vm-km').value = r?.km || ''; document.getElementById('vm-shop').value = r?.shop || ''; document.getElementById('vm-pay-method').value = r?.payMethod || '現金'; document.getElementById('vm-amount').value = r?.amount || ''; document.getElementById('vm-note').value = r?.note || ''; renderShopHistory(); 
+  }
   switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); openOverlay('veh-rec-add-page');
 }
 
 function switchVehFormTab(type, index) {
-  S.addVehRecType = type; document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-form-fuel').classList.toggle('active', type === 'fuel'); document.getElementById('btn-form-maint').classList.toggle('active', type === 'maintenance'); document.getElementById('form-area-fuel').style.display = type === 'fuel' ? 'block' : 'none'; document.getElementById('form-area-maint').style.display = type === 'maintenance' ? 'block' : 'none';
-  if (type === 'maintenance') { document.getElementById('vm-items-container').innerHTML = MAINT_ITEMS.map(item => `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`).join(''); renderShopHistory(); }
+  S.addVehRecType = type; document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`; 
+  document.getElementById('btn-form-fuel').classList.toggle('active', type === 'fuel'); document.getElementById('btn-form-maint').classList.toggle('active', type === 'maintenance'); 
+  document.getElementById('form-area-fuel').style.display = type === 'fuel' ? 'block' : 'none'; document.getElementById('form-area-maint').style.display = type === 'maintenance' ? 'block' : 'none';
+  
+  const v = S.vehicles.find(x => x.id === S.selVehicleId);
+  const isEV = v && v.defaultFuel === 'electric';
+
+  if (type === 'fuel') {
+    // 若為電動車，隱藏油價/公升/折扣/燃料選擇，只顯示里程
+    document.getElementById('vr-fuel-type').parentElement.style.display = isEV ? 'none' : 'flex';
+    document.getElementById('vr-discount').parentElement.style.display = isEV ? 'none' : 'flex';
+    document.getElementById('vr-liters').parentElement.style.display = isEV ? 'none' : 'flex';
+    document.getElementById('vr-price').parentElement.style.display = isEV ? 'none' : 'flex';
+    document.getElementById('vr-before-total').parentElement.style.display = isEV ? 'none' : 'block';
+    
+    document.getElementById('vr-prev-km').parentElement.querySelector('label').textContent = isEV ? '上次總量紀錄' : '上次里程 (km)';
+    document.getElementById('vr-curr-km').parentElement.querySelector('label').textContent = isEV ? '現在總量紀錄' : '加油里程 (km)';
+    
+    // 如果是電動車，幫它插入一個唯讀的「使用量 (km)」
+    if (isEV) {
+       let evUse = document.getElementById('vr-ev-usage');
+       if(!evUse) {
+         document.getElementById('vr-curr-km').parentElement.insertAdjacentHTML('afterend', `<div class="fg" style="flex:1" id="vr-ev-usage"><label>使用量 (km)</label><input type="text" class="finp" id="vr-ev-calc" readonly style="background:transparent; border:none; font-weight:bold; color:var(--acc); padding:10px 0;"></div>`);
+         evUse = document.getElementById('vr-ev-usage');
+       } else { evUse.style.display = 'flex'; }
+    } else {
+       if(document.getElementById('vr-ev-usage')) document.getElementById('vr-ev-usage').style.display = 'none';
+    }
+  }
+
+  if (type === 'maintenance') { 
+    const items = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
+    document.getElementById('vm-items-container').innerHTML = items.map(item => `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`).join(''); 
+    renderShopHistory(); 
+  }
+}
+
+// 監聽里程輸入，即時計算電動車使用量
+function calcVehFuel() { 
+  const prev = pf(document.getElementById('vr-prev-km').value);
+  const curr = pf(document.getElementById('vr-curr-km').value);
+  if (document.getElementById('vr-ev-calc')) {
+    const diff = curr - prev;
+    document.getElementById('vr-ev-calc').value = diff > 0 ? `${diff} km` : '0 km';
+  }
+
+  const liters = pf(document.getElementById('vr-liters').value); const price = pf(document.getElementById('vr-price').value); const discount = pf(document.getElementById('vr-discount').value); const before = Math.round(liters * price); const final = Math.round(Math.max(0, before - discount)); 
+  if (document.getElementById('vr-before-total')) document.getElementById('vr-before-total').textContent = fmt(before); 
+  if (document.getElementById('vr-final-total')) document.getElementById('vr-final-total').textContent = fmt(final); 
 }
 
 function calcVehFuel() { const liters = pf(document.getElementById('vr-liters').value); const price = pf(document.getElementById('vr-price').value); const discount = pf(document.getElementById('vr-discount').value); const before = Math.round(liters * price); const final = Math.round(Math.max(0, before - discount)); document.getElementById('vr-before-total').textContent = fmt(before); document.getElementById('vr-final-total').textContent = fmt(final); }
