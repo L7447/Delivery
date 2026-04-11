@@ -105,8 +105,9 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .btn-go-online { background: var(--acc); color: #fff; box-shadow: 0 2px 8px rgba(255,107,53,0.3); }
 .btn-go-offline { background: var(--sf2); color: var(--t2); border: 1px solid var(--border); }
 
-/* ── 歷史記錄卡片 (新版精簡美化) ── */
-.hist-rec-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
+/* ── 歷史記錄卡片 (精簡單行設計修復) ── */
+.hist-rec-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
+.punch-card-compact { display: flex; align-items: center; padding: 10px 12px; cursor: pointer; }
 .hrc-top { padding: 10px 12px; position: relative; cursor: pointer; }
 .hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
 .hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--t2); font-weight: 600; margin-bottom: 6px; }
@@ -174,12 +175,26 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 .slide-btn { flex: 1; position: relative; z-index: 1; border: none; background: transparent; padding: 10px 0; color: var(--t2); font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: color 0.3s; }
 .slide-btn.active { color: #fff; font-weight: 700; }
 
+/* ── Summary & Card Animations ── */
 .summary-card { background: #eaf5f0; border: 1px solid #cce5d8; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
 .sum-top { cursor: pointer; }
 .sum-v-divider { width: 1px; height: 20px; background: rgba(0,0,0,0.08); }
-.sum-toggle-btn { position: absolute; right: 2px; top: 50%; transform: translateY(-50%) rotate(0deg); width: 22px; height: 22px; border-radius: 50%; background: #ffede6; color: #a3958e; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+.sum-toggle-btn { position: absolute; right: 2px; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: #ffede6; color: #a3958e; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
 .summary-collapse { transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
 .summary-card div, .summary-card span, #hist-day-summary div { white-space: nowrap; }
+
+/* ── 全螢幕月曆精美樣式設計 ── */
+#fc-grid { padding: 12px; gap: 8px; background: var(--bg); display: grid; grid-template-columns: repeat(7, 1fr); align-content: start; }
+.fc-dow-cell { text-align: center; font-size: 11px; font-weight: 700; color: var(--t2); padding: 8px 0; }
+.fc-cell { background: #fff; border-radius: 10px; aspect-ratio: 0.8; display: flex; flex-direction: column; padding: 4px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer; transition: 0.2s; position: relative; }
+.fc-cell:active { transform: scale(0.95); }
+.fc-cell.empty { background: transparent; border-color: transparent; box-shadow: none; pointer-events: none; }
+.fc-date { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--t1); margin-bottom: auto; text-align: left; }
+.fc-cell.empty .fc-date { color: var(--t3); opacity: 0.5; }
+.fc-amt { font-family: var(--mono); font-size: 11px; font-weight: 800; color: var(--green); text-align: right; margin-top: auto; letter-spacing: -0.5px; }
+.fc-cell.today { border-color: var(--acc); background: var(--acc-d); }
+.fc-cell.today .fc-date { color: var(--acc); font-weight: 800; }
+.fc-cell.sel { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-d); }
 
 .veh-summary-fuel { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
 .veh-summary-maint { background: linear-gradient(135deg, #4c1d95, #a855f7); color: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(168,85,247,0.3); }
