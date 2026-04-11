@@ -479,12 +479,10 @@ function renderRptOverview() {
   let html = `
     <div class="summary-card" style="margin-bottom:12px; padding-bottom:12px; position:relative;">
       <div class="sum-top" onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px 12px 8px; position:relative;">
-        
         <div style="text-align:center; margin-bottom:12px;">
           <div style="font-size:11px; color:var(--t3); font-weight:600; margin-bottom:4px; letter-spacing:1px;">本月總收入</div>
           <div style="font-family:var(--mono); font-size:28px; font-weight:800; color:var(--t1); line-height:1;">NT$ ${fmt(total)}</div>
         </div>
-        
         <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
           <div style="display:flex; justify-content:center; align-items:center; gap:12px;">
             <div style="display:flex; align-items:center; gap:6px;">
@@ -502,7 +500,6 @@ function renderRptOverview() {
             <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--blue);">$${fmt(tips)}</span>
           </div>
         </div>
-
         <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:50%; transform:translateX(-50%) rotate(0deg); box-shadow:0 2px 4px rgba(0,0,0,0.05); z-index:2;">▼</div>
       </div>
       
@@ -882,7 +879,7 @@ function renderSettings() {
 }
 
 function openPlatformList() {
-  document.getElementById('sub-title').textContent = '平台列表'; document.getElementById('sub-add-btn').style.display = 'none';
+  document.getElementById('sub-title').textContent = '平台列表'; 
   document.getElementById('sub-body').innerHTML = `<div class="set-list">${S.platforms.map(p=>`<div class="set-row" onclick="openPlatformEdit('${p.id}')"><div class="plat-color-dot" style="background:${p.color}"></div><div class="sn"><div style="font-weight:600">${p.name}</div><div class="sn-sub">${p.active?'✅ 已啟用':'⭕ 已停用'}</div></div><span class="arr">›</span></div>`).join('')}</div><div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">💡 點擊平台可自訂顏色與啟用狀態</div>`;
   openOverlay('sub-page');
 }
@@ -893,9 +890,19 @@ function openPlatformEdit(id) {
   document.getElementById('sp-color-pick').addEventListener('input', e => { document.getElementById('sp-color').value = e.target.value; });
 }
 function savePlatformEdit(id) { const p = S.platforms.find(x=>x.id===id); if (!p) return; p.color = document.getElementById('sp-color').value.trim() || p.color; p.active = document.getElementById('sp-active').checked; savePlatforms(); toast('✅ 平台已更新'); if (S.tab === 'home') renderHome(); renderSettings(); openPlatformList(); }
-function openGoalSettings() { document.getElementById('sub-title').textContent = '目標設定'; document.getElementById('sub-add-btn').style.display = 'none'; const g = S.settings.goals||{}; document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>📅 週目標（NT$）</label><input type="number" class="finp" id="g-weekly" value="${g.weekly||0}" inputmode="decimal"></div><div class="fg" style="margin-bottom:14px"><label>📆 月目標（NT$）</label><input type="number" class="finp" id="g-monthly" value="${g.monthly||0}" inputmode="decimal"></div><button onclick="saveGoals()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">儲存目標</button>`; openOverlay('sub-page'); }
+function openGoalSettings() { 
+  document.getElementById('sub-title').textContent = '目標設定'; 
+  const g = S.settings.goals||{}; 
+  document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>📅 週目標（NT$）</label><input type="number" class="finp" id="g-weekly" value="${g.weekly||0}" inputmode="decimal"></div><div class="fg" style="margin-bottom:14px"><label>📆 月目標（NT$）</label><input type="number" class="finp" id="g-monthly" value="${g.monthly||0}" inputmode="decimal"></div><button onclick="saveGoals()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">儲存目標</button>`; 
+  openOverlay('sub-page'); 
+}
 function saveGoals() { S.settings.goals = { weekly: pf(document.getElementById('g-weekly').value), monthly: pf(document.getElementById('g-monthly').value) }; saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 目標已儲存'); }
-function openAddReward() { document.getElementById('sub-title').textContent = '新增獎勵項目'; document.getElementById('sub-add-btn').style.display = 'none'; const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div><div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div class="fg"><label>最低單數</label><input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div><div class="fg"><label>上限單數（0=無限）</label><input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div></div><div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label><input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div><button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增獎勵</button>`; openOverlay('sub-page'); }
+function openAddReward() { 
+  document.getElementById('sub-title').textContent = '新增獎勵項目'; 
+  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); 
+  document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div><div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div class="fg"><label>最低單數</label><input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div><div class="fg"><label>上限單數（0=無限）</label><input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div></div><div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label><input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div><button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增獎勵</button>`; 
+  openOverlay('sub-page'); 
+}
 function saveNewReward() { const name = document.getElementById('rw-name').value.trim(); if (!name) { toast('請輸入獎勵名稱'); return; } if (!S.settings.rewards) S.settings.rewards=[]; S.settings.rewards.push({ id: newId(), name, platformId: document.getElementById('rw-plat').value, minOrders: pf(document.getElementById('rw-min').value), maxOrders: pf(document.getElementById('rw-max').value), amount: pf(document.getElementById('rw-amt').value) }); saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 獎勵已新增'); }
 async function deleteReward(i) { const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); if (!ok) return; S.settings.rewards.splice(i,1); saveSettings(); renderSettings(); toast('已刪除'); }
 
