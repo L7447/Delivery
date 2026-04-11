@@ -97,16 +97,18 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .hp-ord { font-weight: 600; width: 20%; text-align: right; }      
 .hp-hrs { font-weight: 600; width: 20%; text-align: right; opacity: 0.8; } 
 
-.punch-card-new { background: var(--sf); border: 1px solid var(--border); border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-.punch-status-left { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--t2); }
-.punch-dot-new { width: 12px; height: 12px; border-radius: 50%; background: var(--t3); }
-.punch-dot-new.online { background: var(--green); box-shadow: 0 0 0 3px var(--green-d); animation: pulse 1.5s infinite; }
-.punch-btn-right { padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
-.btn-go-online { background: var(--acc); color: #fff; box-shadow: 0 2px 8px rgba(255,107,53,0.3); }
-.btn-go-offline { background: var(--sf2); color: var(--t2); border: 1px solid var(--border); }
+/* 首頁打卡面板 */
+.punch-card-new { background: linear-gradient(145deg, #ffffff, #f9fafb); border: 1px solid #f3f4f6; border-radius: 20px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
+.punch-status-left { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--t2); }
+.punch-dot-new { width: 12px; height: 12px; border-radius: 50%; background: #e5e7eb; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+.punch-dot-new.online { background: #22C55E; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); animation: pulse 2s infinite; }
+.punch-btn-right { padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; gap: 6px; }
+.punch-btn-right:active { transform: scale(0.95); }
+.btn-go-online { background: #22C55E; color: #fff; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25); }
+.btn-go-offline { background: #EF4444; color: #fff; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); }
 
 /* ── 歷史記錄卡片 (精簡單行設計修復) ── */
-.hist-rec-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
+.hist-rec-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
 .punch-card-compact { display: flex; align-items: center; padding: 10px 12px; cursor: pointer; }
 .hrc-top { padding: 10px 12px; position: relative; cursor: pointer; }
 .hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
@@ -184,17 +186,20 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 .summary-card div, .summary-card span, #hist-day-summary div { white-space: nowrap; }
 
 /* ── 全螢幕月曆精美樣式設計 ── */
-#fc-grid { padding: 12px; gap: 8px; background: var(--bg); display: grid; grid-template-columns: repeat(7, 1fr); align-content: start; }
-.fc-dow-cell { text-align: center; font-size: 11px; font-weight: 700; color: var(--t2); padding: 8px 0; }
-.fc-cell { background: #fff; border-radius: 10px; aspect-ratio: 0.8; display: flex; flex-direction: column; padding: 4px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer; transition: 0.2s; position: relative; }
-.fc-cell:active { transform: scale(0.95); }
-.fc-cell.empty { background: transparent; border-color: transparent; box-shadow: none; pointer-events: none; }
-.fc-date { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--t1); margin-bottom: auto; text-align: left; }
-.fc-cell.empty .fc-date { color: var(--t3); opacity: 0.5; }
-.fc-amt { font-family: var(--mono); font-size: 11px; font-weight: 800; color: var(--green); text-align: right; margin-top: auto; letter-spacing: -0.5px; }
-.fc-cell.today { border-color: var(--acc); background: var(--acc-d); }
-.fc-cell.today .fc-date { color: var(--acc); font-weight: 800; }
-.fc-cell.sel { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-d); }
+#fc-body { background: #fafafa; }
+#fc-dow { border-bottom: none !important; padding-top: 8px; }
+.fc-dow-cell { text-align: center; font-size: 11px; font-weight: 500; color: var(--t2); padding: 8px 0; }
+#fc-grid { background: #e5e7eb; display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 0; align-content: start; }
+.fc-cell { background: #fff; display: flex; flex-direction: column; padding: 6px; min-height: 64px; cursor: pointer; position: relative; }
+.fc-cell:active { background: #f3f4f6; }
+.fc-cell.empty { background: #fafafa; pointer-events: none; }
+.fc-date { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--t1); margin-bottom: auto; line-height: 1; }
+.fc-cell.empty .fc-date { color: #d1d5db; }
+.fc-amt { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--t3); text-align: right; margin-top: auto; letter-spacing: -0.5px; position: absolute; bottom: 4px; right: 4px; }
+/* 選取狀態（淺藍色邊框） */
+.fc-cell.sel { border: 2px solid #38bdf8; z-index: 1; }
+/* 今天的樣式 */
+.fc-cell.today .fc-date { color: #fff; background: var(--t1); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: -2px 0 0 -2px; }
 
 .veh-summary-fuel { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
 .veh-summary-maint { background: linear-gradient(135deg, #4c1d95, #a855f7); color: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(168,85,247,0.3); }
