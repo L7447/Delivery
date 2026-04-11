@@ -81,10 +81,10 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
   if (total <= 0) return '';
   const totalBonus = bonus + tempBonus; let extraStr = '';
   if (totalBonus > 0 || tips > 0) {
-    const parts = [];
-    if (totalBonus > 0) parts.push(`含獎勵${fmt(totalBonus)}元`);
-    if (tips > 0) parts.push(`線上小費${fmt(tips)}元`);
-    extraStr = `<div style="font-size:11px; color:var(--gold); margin-top:2px;">〔${parts.join('、')}〕</div>`;
+    let tags = '';
+    if (totalBonus > 0) tags += `<span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
+    if (tips > 0) tags += `<span class="lbl-tips" style="${totalBonus > 0 ? 'margin-left:6px;' : ''}">小費 $${fmt(tips)}</span>`;
+    extraStr = `<div style="margin-top:6px; display:flex; align-items:center;">${tags}</div>`;
   }
   const avgPerOrder = orders > 0 ? Math.round(total / orders) : 0;
   const avgPerHour = hours > 0 ? Math.round(total / hours) : 0;
@@ -248,7 +248,7 @@ function buildRecItem(r) {
   if (r.isPunchOnly) {
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
-        <span style="font-size:12px; font-weight:600; color:var(--t3);">(上線打卡)</span>
+        <span style="background:var(--t2); color:#fff; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700;">🕒 打卡</span>
         <div class="h-div" style="margin:0 12px;"></div>
         <span style="font-family:var(--mono); color:var(--t1); font-size:13px; font-weight:500; flex:1; text-align:center;">${r.punchIn} <span style="color:var(--t3);font-size:11px;">→</span> ${r.punchOut}</span>
         <div class="h-div" style="margin:0 12px;"></div>
@@ -425,11 +425,17 @@ function renderPlatformChips() { const container = document.getElementById('plat
 function selectPlatform(id) { S.selPlatformId = id; renderPlatformChips(); }
 function calcAddTotal() { const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const tempBonus = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value); const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total); }
 function addWeatherTag(tag) { const noteEl = document.getElementById('f-note'); if (!noteEl.value.includes(tag)) { noteEl.value = (noteEl.value + ' ' + tag).trim(); } }
-function confirmAddRecord() {
+// 將原本的 confirmAddRecord 替換為以下非同步版本
+async function confirmAddRecord() {
   const checkImg = document.getElementById('add-save-img'); const checkBtn = document.getElementById('add-save-btn');
   if (checkBtn.disabled) return; if (!S.selPlatformId) { toast('請先選擇平台'); return; }
   const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
   if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
+  
+  // 加入防呆警示
+  const ok = await customConfirm('是否確認要儲存此筆記錄？');
+  if (!ok) return;
+
   checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 3000); 
   setTimeout(() => {
     checkImg.style.transform = 'scale(1)'; const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
@@ -437,6 +443,17 @@ function confirmAddRecord() {
     if (S.editingId) { const idx = S.records.findIndex(r => r.id === S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } else { S.records.push(rec); toast('✅ 記錄成功！'); }
     saveRecords(); S.editingId = null; checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; goPage('home'); 
   }, 3000); 
+}
+// 新增：處理點擊返回的邏輯
+function cancelAddRecord() {
+  if (S.editingId) {
+    // 如果是從「查看記錄」點進來編輯的，就退回歷史記錄頁
+    S.editingId = null;
+    goPage('history');
+  } else {
+    // 如果是單純新增，就退回首頁
+    goPage('home');
+  }
 }
 /* ══ 4. 新增記錄 結束 ════════════════════════════════════ */
 
@@ -475,16 +492,35 @@ function renderRptOverview() {
         </div>
         <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:50%; transform:translateX(-50%) rotate(0deg); box-shadow:0 2px 4px rgba(0,0,0,0.05); z-index:2;">▼</div>
       </div>
+
+      // 請找到以下這段並替換：
       <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden;">
         <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:12px 16px;"></div>
         <div style="padding:0 16px;">
-          <div class="rpt-total-row"><span class="rt-lbl gray">接單數</span><span class="rt-val" style="color:var(--t2)">${fmt(orders)} 單</span></div>
-          <div class="rpt-total-row"><span class="rt-lbl gray">總工時</span><span class="rt-val" style="color:var(--t2)">${fmtHours(hours)}</span></div>
-          <div class="rpt-total-row"><span class="rt-lbl gray">時薪</span><span class="rt-val" style="color:var(--t1)">${hours>0?`$${fmt(Math.round(total/hours))}/h`:'—'}</span></div>
-          <div class="rpt-total-row"><span class="rt-lbl gray">均單</span><span class="rt-val" style="color:var(--t1)">${orders>0?`$${fmt(Math.round(total/orders))}/單`:'—'}</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.03);">
+            <div style="flex:1; display:flex; align-items:center; gap:8px;">
+              <span style="background:var(--t3); color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">接單數</span>
+              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:500;">單</span></span>
+            </div>
+            <div style="color:rgba(0,0,0,0.1); font-size:12px; margin:0 8px;">│</div>
+            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+              <span style="background:#8b5cf6; color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">總工時</span>
+              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#8b5cf6;">${fmtHours(hours)}</span>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
+            <div style="flex:1; display:flex; align-items:center; gap:8px;">
+              <span style="background:var(--blue); color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">時薪</span>
+              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--blue);">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'} <span style="font-size:11px; font-weight:500;">/h</span></span>
+            </div>
+            <div style="color:rgba(0,0,0,0.1); font-size:12px; margin:0 8px;">│</div>
+            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+              <span style="background:var(--acc); color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">均單</span>
+              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--acc);">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'} <span style="font-size:11px; font-weight:500;">/單</span></span>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
 
   const activePlats = S.platforms.filter(p=>p.active);
   const platData = activePlats.map(p=>({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
