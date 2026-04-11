@@ -108,20 +108,20 @@
   <!-- ══ 車輛管理 ═══════════════════════════════════════ -->
   <section class="page" id="page-vehicles" style="padding: 16px 16px 0; display:flex; flex-direction:column; overflow:hidden;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-shrink:0;">
-      <div style="width:60px;"></div> <!-- 排版平衡 -->
+      <div style="width:28px;"></div> <!-- 排版平衡 -->
       <div class="pg-title" style="margin:0;">車輛管理</div>
-      <div style="display:flex; gap:16px; align-items:center;">
-        <button onclick="openAddVehRec()" style="padding: 6px 12px; background: transparent; border: 1.5px dashed var(--acc); border-radius: 8px; color: var(--acc); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">+ 新增車輛記錄</button>
-        <button onclick="openAddVehicle()" title="新增車輛" style="width:28px; height:28px; padding:0; background:transparent; border:none; cursor:pointer;">
-          <img src="images/scooter.png" alt="新增車輛" style="width:100%; height:100%; object-fit:contain;">
-        </button>
-      </div>
+      <button onclick="openAddVehicle()" title="新增車輛" style="width:28px; height:28px; padding:0; background:transparent; border:none; cursor:pointer;">
+        <img src="images/scooter.png" alt="新增車輛" style="width:100%; height:100%; object-fit:contain;">
+      </button>
     </div>
     
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-shrink:0;">
-      <button class="mbtn" onclick="changeVehMonth(-1)">◀</button>
-      <h2 id="veh-month-label" style="font-size:15px; font-weight:700; color:var(--acc);"></h2>
-      <button class="mbtn" onclick="changeVehMonth(1)">▶</button>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="mbtn" onclick="changeVehMonth(-1)">◀</button>
+        <h2 id="veh-month-label" style="font-size:14px; font-weight:800; color:var(--t1);"></h2>
+        <button class="mbtn" onclick="changeVehMonth(1)">▶</button>
+      </div>
+      <button onclick="openAddVehRec()" style="padding: 8px 12px; background: #eff6ff; border: 1.5px dashed #3b82f6; border-radius: 8px; color: #3b82f6; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">+ 新增車輛記錄</button>
     </div>
 
     <div id="veh-selector-container" style="flex-shrink:0;"></div>
