@@ -348,22 +348,27 @@ function changeFullCalMonth(offset) { S.calM += offset; if(S.calM < 1) { S.calM 
 // 重構：全螢幕日曆的精美 UI 生成
 function renderFullCalendar() {
   const { calY:y, calM:m } = S; document.getElementById('fc-title').textContent = `${y}年 ${m}月`;
-  const DOW = ['週日','週一','週二','週三','週四','週五','週六']; 
-  document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
-  const grid = document.getElementById('fc-grid'); 
-  const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
+  const DOW = ['週日','週一','週二','週三','週四','週五','週六']; document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
+  const grid = document.getElementById('fc-grid'); const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
   let html = ``; const prevDays = new Date(y, m-1, 0).getDate();
-  // 上個月的日期
   for (let i=first-1; i>=0; i--) { html += `<div class="fc-cell empty"><div class="fc-date">${pad(prevDays - i)}</div></div>`; }
-  // 本月日期
+  
   for (let day=1; day<=days; day++) {
     const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); 
-    const isToday = ds === today; const isSel = ds === S.selDate;
-    const amtHtml = sum > 0 ? `<div class="fc-amt">$${fmt(sum)}</div>` : '';
-    let cls = 'fc-cell'; if(isToday) cls+=' today'; if(isSel) cls+=' sel';
-    html += `<div class="${cls}" onclick="S.selDate='${ds}'; closeFullCalendar(); renderHistory();"><div class="fc-date">${pad(day)}</div>${amtHtml}</div>`;
+    const isToday = ds === today;
+    
+    let cls = 'fc-cell'; 
+    if(isToday) cls+=' today';
+    
+    let contentHtml = `<div class="fc-date">${pad(day)}</div>`;
+    // 若有收入，加上專屬樣式類別，並顯示在右下角
+    if(sum > 0) {
+      cls += ' has-income';
+      contentHtml += `<div class="fc-amt">${fmt(sum)}</div>`;
+    }
+    // 移除了 onclick 點選功能，只供觀看
+    html += `<div class="${cls}">${contentHtml}</div>`;
   }
-  // 下個月的日期
   const totalCells = first + days; const remain = totalCells % 7 === 0 ? 0 : (Math.ceil(totalCells/7)*7) - totalCells;
   for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date">${pad(i)}</div></div>`; }
   grid.innerHTML = html;
@@ -710,7 +715,7 @@ function renderVehicleContent() {
 
   let html = '';
   if (S.vehicleTab === 'fuel') {
-    html += `<div class="veh-summary-fuel"><div style="font-size:13px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;"><span>⛽ 本月燃料總計</span><span class="veh-sum-val">$${fmt(totalFuelPaid)}</span></div><div style="display:flex; justify-content:space-between; font-size:11px;"><div><span class="veh-sum-lbl">加油</span><br><span style="font-weight:700;">${totalLiters.toFixed(1)} L</span></div><div><span class="veh-sum-lbl">跑了</span><br><span style="font-weight:700;">${fmt(totalDistance)} km</span></div><div><span class="veh-sum-lbl">油耗</span><br><span style="font-weight:700;">${avgKmL} km/L</span></div></div></div>`;
+    html += `<div class="veh-summary-fuel"><div style="font-size:13px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;"><span>⛽ 本月燃料總計</span><span class="veh-sum-val">$${fmt(totalFuelPaid)}</span></div><div style="display:flex; justify-content:space-between; font-size:11px;"><div><span class="veh-sum-lbl">總油量</span><br><span style="font-weight:700;">${totalLiters.toFixed(1)} L</span></div><div><span class="veh-sum-lbl">總里程</span><br><span style="font-weight:700;">${fmt(totalDistance)} km</span></div><div><span class="veh-sum-lbl">平均油耗</span><br><span style="font-weight:700;">${avgKmL} km/L</span></div></div></div>`;
   } else {
     html += `<div class="veh-summary-maint"><div style="font-size:13px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;"><span>🔧 本月保養總計</span><span class="veh-sum-val">$${fmt(totalMaintPaid)}</span></div><div style="display:flex; justify-content:space-between; font-size:11px;"><div><span class="veh-sum-lbl">本月保養次數</span><br><span style="font-weight:700;">${maintRecs.length} 筆</span></div></div></div>`;
   }
@@ -719,7 +724,18 @@ function renderVehicleContent() {
   if (typeRecs.length === 0) { html += `<div class="empty-tip">本月尚未新增資料</div>`; } else {
     typeRecs.sort((a, b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'')).forEach(r => {
       const isFuel = r.type === 'fuel'; const icon = isFuel ? '⛽' : '🔧'; const mainText = isFuel ? `${r.fuelType||'95 無鉛'} ($${r.price||0}/L)` : r.items.join(', '); const kmText = isFuel ? `${r.prevKm} → ${r.km} km` : `${r.km} km`;
-      html += `<div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer;"><div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:6px;"><div style="font-size:13px; font-weight:700; color:var(--t1);">${icon} ${mainText}</div><div style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--acc);">-$${fmt(r.amount)}</div></div><div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-size:11px; font-family:var(--mono); color:var(--t2);">${kmText}</div><div style="font-size:11px; font-weight:600; color:var(--t3);">${r.date.slice(5)} ${r.time||''}</div></div></div>`;
+      // 全新精簡明亮的記錄區塊設計
+      html += `
+        <div onclick="openAddVehRec('${r.id}')" style="background:#fff; border-bottom:1px solid #f3f4f6; padding:10px 4px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:${isFuel?'#eff6ff':'#ecfdf5'}; color:${isFuel?'#3b82f6':'#10b981'}; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">${icon}</div>
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--t1); margin-bottom:2px;">${mainText}</div>
+              <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
+            </div>
+          </div>
+          <div style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">-$${fmt(r.amount)}</div>
+        </div>`;
     });
   }
   container.innerHTML = html;
