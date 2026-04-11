@@ -190,6 +190,7 @@
 <!-- 還原用隱藏 file input -->
 <input type="file" id="restore-file" accept=".json" style="display:none">
 
+<!-- 全螢幕日曆 -->
 <div class="overlay-page" id="full-calendar-overlay" style="background:var(--bg); z-index:900;">
   <div class="top-bar">
     <button class="bar-btn" onclick="closeFullCalendar()">✕</button>
@@ -198,7 +199,7 @@
   </div>
   <div class="overlay-body" id="fc-body" style="padding:0; display:flex; flex-direction:column; height:100%;">
     <div id="fc-dow" style="display:grid; grid-template-columns:repeat(7,1fr); background:var(--sf); border-bottom:1px solid var(--border);"></div>
-    <div id="fc-grid" style="display:grid; grid-template-columns:repeat(7,1fr); flex:1; overflow-y:auto; background:var(--border); gap:1px;"></div>
+    <div id="fc-grid"></div>
   </div>
 </div>
 
