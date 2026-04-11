@@ -83,8 +83,8 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
   if (totalBonus > 0 || tips > 0) {
     let tags = '';
     if (totalBonus > 0) tags += `<span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
-    if (tips > 0) tags += `<span class="lbl-tips" style="${totalBonus > 0 ? 'margin-left:6px;' : ''}">小費 $${fmt(tips)}</span>`;
-    extraStr = `<div style="margin-top:6px; display:flex; align-items:center;">${tags}</div>`;
+    if (tips > 0) tags += `<span class="lbl-tips">小費 $${fmt(tips)}</span>`;
+    extraStr = `<div style="margin-top:6px; display:flex; align-items:center; gap:6px;">${tags}</div>`;
   }
   const avgPerOrder = orders > 0 ? Math.round(total / orders) : 0;
   const avgPerHour = hours > 0 ? Math.round(total / hours) : 0;
@@ -244,15 +244,14 @@ function foldCard(id, e) {
 
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
-  // 新版打卡記錄設計：單行排列、無多餘文字
   if (r.isPunchOnly) {
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
-        <span style="background:var(--t2); color:#fff; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700;">🕒 打卡</span>
+        <span style="background:var(--t2); color:#fff; font-size:10px; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.5px;">🕒 上線打卡</span>
         <div class="h-div" style="margin:0 12px;"></div>
-        <span style="font-family:var(--mono); color:var(--t1); font-size:13px; font-weight:500; flex:1; text-align:center;">${r.punchIn} <span style="color:var(--t3);font-size:11px;">→</span> ${r.punchOut}</span>
+        <span style="font-family:var(--mono); color:var(--t1); font-size:13px; font-weight:600; flex:1; text-align:center;">${r.punchIn} <span style="color:var(--t3);font-size:11px;">→</span> ${r.punchOut}</span>
         <div class="h-div" style="margin:0 12px;"></div>
-        <span style="font-size:13px; font-weight:700; color:var(--t2); font-family:var(--mono);">${fmtHours(r.hours)}</span>
+        <span style="font-size:13px; font-weight:800; color:var(--t2); font-family:var(--mono);">${fmtHours(r.hours)}</span>
       </div>`;
   }
   const plat = getPlatform(r.platformId); const total = recTotal(r);
@@ -432,9 +431,11 @@ async function confirmAddRecord() {
   const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
   if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
   
-  // 加入防呆警示
-  const ok = await customConfirm('是否確認要儲存此筆記錄？');
-  if (!ok) return;
+  // 當處於「編輯」模式時 (從歷史記錄點進來)，彈出警語
+  if (S.editingId) {
+    const ok = await customConfirm('是否確認要儲存修改後的記錄？');
+    if (!ok) return;
+  }
 
   checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 3000); 
   setTimeout(() => {
@@ -444,17 +445,16 @@ async function confirmAddRecord() {
     saveRecords(); S.editingId = null; checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; goPage('home'); 
   }, 3000); 
 }
-// 新增：處理點擊返回的邏輯
+
 function cancelAddRecord() {
   if (S.editingId) {
-    // 如果是從「查看記錄」點進來編輯的，就退回歷史記錄頁
     S.editingId = null;
     goPage('history');
   } else {
-    // 如果是單純新增，就退回首頁
     goPage('home');
   }
 }
+
 /* ══ 4. 新增記錄 結束 ════════════════════════════════════ */
 
 
@@ -479,21 +479,33 @@ function renderRptOverview() {
   let html = `
     <div class="summary-card" style="margin-bottom:12px; padding-bottom:12px; position:relative;">
       <div class="sum-top" onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px 12px 8px; position:relative;">
+        
         <div style="text-align:center; margin-bottom:12px;">
-          <div style="font-size:12px; color:var(--t3); margin-bottom:4px;">本月總收入</div>
-          <div style="font-family:var(--mono); font-size:32px; font-weight:800; color:var(--green); line-height:1;">NT$ ${fmt(total)}</div>
+          <div style="font-size:11px; color:var(--t3); font-weight:600; margin-bottom:4px; letter-spacing:1px;">本月總收入</div>
+          <div style="font-family:var(--mono); font-size:28px; font-weight:800; color:var(--t1); line-height:1;">NT$ ${fmt(total)}</div>
         </div>
-        <div style="display:flex; justify-content:space-around; align-items:center; text-align:center;">
-          <div><div style="font-size:11px; color:var(--t2); font-weight:700; margin-bottom:2px;">行程</div><div style="font-family:var(--mono); font-size:15px; color:var(--green); font-weight:800;">$${fmt(income)}</div></div>
-          <div style="width:1px; height:20px; background:rgba(0,0,0,0.08);"></div>
-          <div><div style="font-size:11px; color:var(--t2); font-weight:700; margin-bottom:2px;">獎勵</div><div style="font-family:var(--mono); font-size:15px; color:var(--gold); font-weight:800;">$${fmt(bonus)}</div></div>
-          <div style="width:1px; height:20px; background:rgba(0,0,0,0.08);"></div>
-          <div><div style="font-size:11px; color:var(--t2); font-weight:700; margin-bottom:2px;">小費</div><div style="font-family:var(--mono); font-size:15px; color:var(--blue); font-weight:800;">$${fmt(tips)}</div></div>
+        
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+          <div style="display:flex; justify-content:center; align-items:center; gap:12px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="background:var(--green-d); color:var(--green); font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">行程</span>
+              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--green);">$${fmt(income)}</span>
+            </div>
+            <div style="color:var(--border);">│</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="background:var(--gold-d); color:var(--gold); font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">獎勵</span>
+              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--gold);">$${fmt(bonus)}</span>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:center; align-items:center; gap:6px;">
+            <span style="background:var(--blue-d); color:var(--blue); font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">小費</span>
+            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--blue);">$${fmt(tips)}</span>
+          </div>
         </div>
+
         <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:50%; transform:translateX(-50%) rotate(0deg); box-shadow:0 2px 4px rgba(0,0,0,0.05); z-index:2;">▼</div>
       </div>
-
-      // 請找到以下這段並替換：
+      
       <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden;">
         <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:12px 16px;"></div>
         <div style="padding:0 16px;">
@@ -520,7 +532,8 @@ function renderRptOverview() {
             </div>
           </div>
         </div>
-      </div>`;
+      </div>
+    </div>`;
 
   const activePlats = S.platforms.filter(p=>p.active);
   const platData = activePlats.map(p=>({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
