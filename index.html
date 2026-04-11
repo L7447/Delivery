@@ -55,9 +55,10 @@
       </button>
     </div>
     <div style="margin-bottom:16px;"><div class="form-lbl">🚴 選擇平台</div><div id="platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div></div>
-    <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px;">
+    <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:12px; margin-bottom:12px;">
       <div class="fg"><label>📆 日期</label><input type="date" class="finp" id="f-date"></div>
       <div class="fg"><label>📦 單數</label><input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()"></div>
+      <div class="fg"><label>🛣️ 里程(km)</label><input type="number" class="finp" id="f-mileage" placeholder="0" inputmode="decimal"></div>
     </div>
     <div style="margin-bottom:16px;">
       <div class="form-lbl">⏱ 累計工時</div>
