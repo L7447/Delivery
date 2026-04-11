@@ -249,8 +249,8 @@ function buildRecItem(r) {
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
         <span class="hrc-punch-tag" style="margin-right:auto;">🕒 打卡</span>
-        <span style="font-family:var(--mono); color:var(--t2); font-size:12px; margin-right:8px;">${r.punchIn} → ${r.punchOut}</span>
-        <span style="font-size:13px; font-weight:700; color:var(--acc);">${fmtHours(r.hours)}</span>
+        <span style="font-family:var(--mono); color:var(--t2); font-size:12px; margin-right:8px;">🕒 上下線時間：${r.punchIn} → ${r.punchOut}</span>
+        <span style="font-size:13px; font-weight:700; color:var(--acc);">⏱ ${fmtHours(r.hours)}</span>
       </div>`;
   }
   const plat = getPlatform(r.platformId); const total = recTotal(r);
