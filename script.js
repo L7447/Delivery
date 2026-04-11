@@ -910,6 +910,7 @@ async function deleteVehicle(id) {
    ══════════════════════════════════════════════════════ */
 let editingVehRecId = null; 
 
+/** 開啟新增/編輯車輛記錄整合表單 */
 function openAddVehRec(recordId = null) {
   editingVehRecId = recordId;
   const isEdit = !!recordId;
@@ -931,11 +932,23 @@ function openAddVehRec(recordId = null) {
   }).join('');
 
   let r = null;
-  if (isEdit) { r = S.vehicleRecs.find(x => x.id === recordId); S.addVehRecType = r.type; } else { S.addVehRecType = S.vehicleTab; }
+  if (isEdit) { 
+    r = S.vehicleRecs.find(x => x.id === recordId); 
+    S.addVehRecType = r.type; 
+  } else { 
+    S.addVehRecType = S.vehicleTab; 
+  }
 
   document.getElementById('vr-date').value = r ? r.date : todayStr();
   document.getElementById('vr-time').value = r ? (r.time || nowTime()) : nowTime();
 
+  // 永遠初始化並渲染保養維修項目 (解決項目沒出現的 Bug)
+  currentSelItems = (r && r.type === 'maintenance') ? [...r.items] : [];
+  document.getElementById('vm-items-container').innerHTML = MAINT_ITEMS.map(item => 
+    `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`
+  ).join('');
+
+  // 根據目前類型載入資料
   if (S.addVehRecType === 'fuel') {
     document.getElementById('vr-fuel-type').value = r?.fuelType || '95';
     document.getElementById('vr-discount').value = r?.discount || '0';
@@ -950,8 +963,6 @@ function openAddVehRec(recordId = null) {
     document.getElementById('vm-pay-method').value = r?.payMethod || '現金';
     document.getElementById('vm-amount').value = r?.amount || '';
     document.getElementById('vm-note').value = r?.note || '';
-    currentSelItems = r ? [...r.items] : [];
-    document.getElementById('vm-items-container').innerHTML = MAINT_ITEMS.map(item => `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`).join('');
     renderShopHistory();
   }
 
