@@ -218,7 +218,7 @@ function switchVehicleTab(tab, index) {
   document.getElementById('veh-tab-bg').style.transform = `translateX(${index * 100}%)`;
   document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel');
   document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance');
-  renderVehicles(); 
+  renderVehicleContent(); // 只重繪內容區，選擇器不動
 }
 
 
@@ -801,56 +801,97 @@ function changeVehMonth(offset) {
 }
 
 function selectVehicle(id) {
-  S.selVehicleId = id; renderVehicles();
+  /* ── 選取車輛：就地更新樣式 + 只重繪內容區 ── */
+  S.selVehicleId = id;
+  _syncVehSelectorActive(id);
+  renderVehicleContent();
 }
 
 function renderVehicles() {
+  /* ── 車輛管理主畫面渲染 開始 ── */
   const container = document.getElementById('vehicle-content');
   const selectorContainer = document.getElementById('veh-selector-container');
   document.getElementById('veh-month-label').textContent = `${S.vehY} 年 ${S.vehM} 月`;
-  
+
   if (S.vehicles.length === 0) {
     selectorContainer.innerHTML = '';
-    container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return;
+    container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`;
+    return;
   }
-  if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) S.selVehicleId = S.vehicles[0].id;
+  if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) {
+    S.selVehicleId = S.vehicles[0].id;
+  }
 
-  let selectorHtml = `<div style="display:flex; gap:12px; margin-bottom:12px; overflow-x:auto; padding:4px;">`;
-  S.vehicles.forEach(v => {
-    const isActive = v.id === S.selVehicleId;
-    selectorHtml += `
-      <div style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
-        <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div>
-        <div style="width:50px; height:50px; border-radius:14px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};">
-          <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div>
-        </div>
-        <span style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span>
-      </div>`;
+  // 重建選擇器（僅在車輛數量改變時才重建，否則只更新 active 樣式）
+  const existingItems = selectorContainer.querySelectorAll('[data-vid]');
+  if (existingItems.length !== S.vehicles.length) {
+    let selectorHtml = `<div style="display:flex; gap:12px; margin-bottom:12px; overflow-x:auto; padding:4px;">`;
+    S.vehicles.forEach(v => {
+      const isActive = v.id === S.selVehicleId;
+      selectorHtml += `
+        <div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
+          <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div>
+          <div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};">
+            <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div>
+          </div>
+          <span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span>
+        </div>`;
+    });
+    selectorHtml += `</div>`;
+    selectorContainer.innerHTML = selectorHtml;
+  } else {
+    // 僅就地更新 active 樣式，不重建 DOM，避免閃爍
+    _syncVehSelectorActive(S.selVehicleId);
+  }
+
+  renderVehicleContent();
+  /* ── 車輛管理主畫面渲染 結束 ── */
+}
+/* ── 共用：就地同步車輛選取器 active 樣式（不重建 DOM）── */
+function _syncVehSelectorActive(id) {
+  document.querySelectorAll('#veh-selector-container [data-vid]').forEach(el => {
+    const isActive = el.dataset.vid === id;
+    const iconBox  = el.querySelector('.veh-sel-icon');
+    const nameSpan = el.querySelector('.veh-sel-name');
+    if (iconBox) {
+      iconBox.style.borderColor = isActive ? 'var(--acc)' : 'transparent';
+      iconBox.style.boxShadow   = isActive
+        ? '0 4px 10px rgba(255,107,53,0.2)'
+        : '0 2px 6px rgba(0,0,0,0.06)';
+    }
+    if (nameSpan) {
+      nameSpan.style.color      = isActive ? 'var(--acc)' : 'var(--t2)';
+      nameSpan.style.fontWeight = isActive ? '700' : '600';
+    }
   });
-  selectorHtml += `</div>`;
-  selectorContainer.innerHTML = selectorHtml;
+}
 
-  let html = '';
-  const prefix = `${S.vehY}-${pad(S.vehM)}`;
+/* ── 車輛內容區渲染（燃料/保養記錄，不含選擇器）開始 ── */
+function renderVehicleContent() {
+  const container = document.getElementById('vehicle-content');
+  if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
+
+  const prefix    = `${S.vehY}-${pad(S.vehM)}`;
   const monthRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix));
-  const fuelRecs = monthRecs.filter(r => r.type === 'fuel');
+  const fuelRecs  = monthRecs.filter(r => r.type === 'fuel');
   const maintRecs = monthRecs.filter(r => r.type === 'maintenance');
-  
-  let totalDistance = 0, totalLiters = 0, totalFuelPaid = 0, totalDiscount = 0, totalMaintPaid = 0;
+
+  let totalDistance = 0, totalLiters = 0, totalFuelPaid = 0, totalMaintPaid = 0;
   fuelRecs.forEach(r => {
     const diff = pf(r.km) - pf(r.prevKm);
     if (diff > 0) totalDistance += diff;
-    totalLiters += pf(r.liters); totalFuelPaid += pf(r.amount); totalDiscount += pf(r.discount);
+    totalLiters  += pf(r.liters);
+    totalFuelPaid += pf(r.amount);
   });
   maintRecs.forEach(r => totalMaintPaid += pf(r.amount));
-  const avgPrice = totalLiters > 0 ? (totalFuelPaid / totalLiters).toFixed(1) : 0;
   const avgKmL = totalLiters > 0 ? (totalDistance / totalLiters).toFixed(1) : 0;
 
+  let html = '';
   if (S.vehicleTab === 'fuel') {
     html += `
       <div class="veh-summary-fuel">
         <div style="font-size:13px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;">
-          <span>⛽ 本月燃料總計</span> <span class="veh-sum-val">$${fmt(totalFuelPaid)}</span>
+          <span>⛽ 本月燃料總計</span><span class="veh-sum-val">$${fmt(totalFuelPaid)}</span>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px;">
           <div><span class="veh-sum-lbl">加油</span><br><span style="font-weight:700;">${totalLiters.toFixed(1)} L</span></div>
@@ -862,7 +903,7 @@ function renderVehicles() {
     html += `
       <div class="veh-summary-maint">
         <div style="font-size:13px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;">
-          <span>🔧 本月保養總計</span> <span class="veh-sum-val">$${fmt(totalMaintPaid)}</span>
+          <span>🔧 本月保養總計</span><span class="veh-sum-val">$${fmt(totalMaintPaid)}</span>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px;">
           <div><span class="veh-sum-lbl">本月保養次數</span><br><span style="font-weight:700;">${maintRecs.length} 筆</span></div>
@@ -874,12 +915,11 @@ function renderVehicles() {
   if (typeRecs.length === 0) {
     html += `<div class="empty-tip">本月尚未新增資料</div>`;
   } else {
-    typeRecs.sort((a,b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'')).forEach(r => {
-      const isFuel = r.type === 'fuel';
-      const icon = isFuel ? '⛽' : '🔧';
+    typeRecs.sort((a, b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'')).forEach(r => {
+      const isFuel   = r.type === 'fuel';
+      const icon     = isFuel ? '⛽' : '🔧';
       const mainText = isFuel ? `${r.fuelType||'95 無鉛'} ($${r.price||0}/L)` : r.items.join(', ');
-      const kmText = isFuel ? `${r.prevKm} → ${r.km} km` : `${r.km} km`;
-      
+      const kmText   = isFuel ? `${r.prevKm} → ${r.km} km` : `${r.km} km`;
       html += `
         <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer;">
           <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:6px;">
@@ -894,6 +934,27 @@ function renderVehicles() {
     });
   }
   container.innerHTML = html;
+}
+/* ── 車輛內容區渲染 結束 ── */
+
+/* ── 表單內就地切換車輛（不重開 overlay）── */
+function selectVehInForm(id) {
+  S.selVehicleId = id;
+  document.querySelectorAll('#veh-rec-veh-icons [data-vid]').forEach(el => {
+    const isActive = el.dataset.vid === id;
+    const iconBox  = el.querySelector('.veh-form-icon');
+    const nameSpan = el.querySelector('.veh-form-name');
+    if (iconBox) {
+      iconBox.style.borderColor = isActive ? 'var(--acc)' : 'transparent';
+      iconBox.style.boxShadow   = isActive
+        ? '0 4px 10px rgba(255,107,53,0.2)'
+        : '0 2px 4px rgba(0,0,0,0.1)';
+    }
+    if (nameSpan) {
+      nameSpan.style.color      = isActive ? 'var(--acc)' : 'var(--t2)';
+      nameSpan.style.fontWeight = isActive ? '700' : '500';
+    }
+  });
 }
 
 async function deleteVehicle(id) {
@@ -921,14 +982,14 @@ function openAddVehRec(recordId = null) {
 
   const vehChips = document.getElementById('veh-rec-veh-icons');
   vehChips.innerHTML = S.vehicles.map(v => {
-    const isActive = v.id === S.selVehicleId;
-    return `
-    <div style="display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;" onclick="S.selVehicleId='${v.id}'; openAddVehRec('${recordId||''}');">
-      <div style="width:40px; height:40px; border-radius:10px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-        <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:24px; height:24px;"></div>
-      </div>
-      <span style="font-size:10px; font-weight:${isActive?'700':'500'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span>
-    </div>`;
+  const isActive = v.id === S.selVehicleId;
+  return `
+  <div data-vid="${v.id}" style="display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;" onclick="selectVehInForm('${v.id}')">
+    <div class="veh-form-icon" style="width:40px; height:40px; border-radius:10px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'};">
+      <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:24px; height:24px;"></div>
+    </div>
+    <span class="veh-form-name" style="font-size:10px; font-weight:${isActive?'700':'500'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span>
+  </div>`;
   }).join('');
 
   let r = null;
@@ -975,8 +1036,16 @@ function switchVehFormTab(type, index) {
   document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`;
   document.getElementById('btn-form-fuel').classList.toggle('active', type === 'fuel');
   document.getElementById('btn-form-maint').classList.toggle('active', type === 'maintenance');
-  document.getElementById('form-area-fuel').style.display = type === 'fuel' ? 'block' : 'none';
+  document.getElementById('form-area-fuel').style.display  = type === 'fuel'        ? 'block' : 'none';
   document.getElementById('form-area-maint').style.display = type === 'maintenance' ? 'block' : 'none';
+
+  // ── Bug 修正：每次切換至保養維修 tab 時，強制重新渲染項目選項 ──
+  if (type === 'maintenance') {
+    document.getElementById('vm-items-container').innerHTML = MAINT_ITEMS.map(item =>
+      `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`
+    ).join('');
+    renderShopHistory();
+  }
 }
 
 function calcVehFuel() {
