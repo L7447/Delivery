@@ -479,56 +479,59 @@ function renderRptOverview() {
   const bonus = recs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus), 0); const tips = recs.reduce((s,r)=>s+pf(r.tips), 0);
   const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
 
+  // 全新黃底版面設計
   let html = `
-    <div class="summary-card" style="margin-bottom:12px; padding-bottom:12px; position:relative;">
-      <div class="sum-top" onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px 12px 8px; position:relative;">
-        <div style="text-align:center; margin-bottom:12px;">
-          <div style="font-size:11px; color:var(--t3); font-weight:600; margin-bottom:4px; letter-spacing:1px;">本月總收入</div>
-          <div style="font-family:var(--mono); font-size:28px; font-weight:800; color:var(--t1); line-height:1;">NT$ ${fmt(total)}</div>
+    <div class="summary-card" style="margin-bottom:12px; background:#FFFFE0; border:1px solid #f0e6cc; border-radius:16px; position:relative;">
+      <div class="sum-top" onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; position:relative;">
+        
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:12px; color:var(--t3); font-weight:700; margin-bottom:6px; letter-spacing:1px;">本月總收入</div>
+          <div style="font-family:var(--mono); font-size:32px; font-weight:800; color:var(--t1); line-height:1;">$ ${fmt(total)}</div>
         </div>
-        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-          <div style="display:flex; justify-content:center; align-items:center; gap:12px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="background:var(--green-d); color:var(--green); font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">行程</span>
-              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--green);">$${fmt(income)}</span>
-            </div>
-            <div style="color:var(--border);">│</div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="background:var(--gold-d); color:var(--gold); font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">獎勵</span>
-              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--gold);">$${fmt(bonus)}</span>
-            </div>
+        
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="background:#dcfce7; color:#16a34a; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">行程</span>
+            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#16a34a;">$${fmt(income)}</span>
           </div>
-          <div style="display:flex; justify-content:center; align-items:center; gap:6px;">
-            <span style="background:var(--blue-d); color:var(--blue); font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">小費</span>
-            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--blue);">$${fmt(tips)}</span>
+          <div style="color:#d1d5db;">│</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="background:#fef3c7; color:#d97706; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">獎勵</span>
+            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#d97706;">$${fmt(bonus)}</span>
+          </div>
+          <div style="color:#d1d5db;">│</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="background:#e0f2fe; color:#2563eb; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">小費</span>
+            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#2563eb;">$${fmt(tips)}</span>
           </div>
         </div>
-        <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:50%; transform:translateX(-50%) rotate(0deg); box-shadow:0 2px 4px rgba(0,0,0,0.05); z-index:2;">▼</div>
+
+        <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:90%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05); color:#f97316; font-size:12px; z-index:2;">▼</div>
       </div>
       
       <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden;">
-        <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:12px 16px;"></div>
-        <div style="padding:0 16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.03);">
+        <div style="border-top:1px dashed #d1d5db; margin:8px 16px;"></div>
+        <div style="padding:8px 16px 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed rgba(0,0,0,0.05);">
             <div style="flex:1; display:flex; align-items:center; gap:8px;">
-              <span style="background:var(--t3); color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">接單數</span>
-              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:500;">單</span></span>
+              <span style="background:#9ca3af; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">接單數</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:600;">單</span></span>
             </div>
-            <div style="color:rgba(0,0,0,0.1); font-size:12px; margin:0 8px;">│</div>
+            <div style="color:rgba(0,0,0,0.05); margin:0 12px;">│</div>
             <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
-              <span style="background:#8b5cf6; color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">總工時</span>
-              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#8b5cf6;">${fmtHours(hours)}</span>
+              <span style="background:#8b5cf6; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">總工時</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#8b5cf6;">${fmtHours(hours)}</span>
             </div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0;">
             <div style="flex:1; display:flex; align-items:center; gap:8px;">
-              <span style="background:var(--blue); color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">時薪</span>
-              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--blue);">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'} <span style="font-size:11px; font-weight:500;">/h</span></span>
+              <span style="background:#3b82f6; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">時薪</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#3b82f6;">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'} <span style="font-size:11px; font-weight:600;">/h</span></span>
             </div>
-            <div style="color:rgba(0,0,0,0.1); font-size:12px; margin:0 8px;">│</div>
+            <div style="color:rgba(0,0,0,0.05); margin:0 12px;">│</div>
             <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
-              <span style="background:var(--acc); color:#fff; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:700;">均單</span>
-              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--acc);">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'} <span style="font-size:11px; font-weight:500;">/單</span></span>
+              <span style="background:#ea580c; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">均單</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#ea580c;">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'} <span style="font-size:11px; font-weight:600;">/單</span></span>
             </div>
           </div>
         </div>
@@ -544,36 +547,14 @@ function renderRptOverview() {
         ${platData.map(p=>{ const pct = total>0?Math.round(p.val/total*100):0; return `<div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></div><span style="flex:1;font-size:13px">${p.name}</span><span style="font-family:var(--mono);font-size:13px;color:var(--t2)">${pct}%</span><span style="font-family:var(--mono);font-size:13px;font-weight:600">NT$ ${fmt(p.val)}</span></div>`; }).join('')}
       </div></div>`;
   }
-
-  if (total > 0 && (bonus>0||tips>0)) {
-    let filterOpts = `<div style="display:flex; gap:6px; margin-bottom:12px; overflow-x:auto;">
-      <button class="item-chip ${S.rptOverviewFilter==='all'?'on':''}" onclick="S.rptOverviewFilter='all';renderRptOverview()">全部</button>`;
-    activePlats.forEach(p => { filterOpts += `<button class="item-chip ${S.rptOverviewFilter===p.id?'on':''}" onclick="S.rptOverviewFilter='${p.id}';renderRptOverview()">${p.name}</button>`; });
-    filterOpts += `</div>`;
-    const filteredRecs = S.rptOverviewFilter === 'all' ? recs : recs.filter(r=>r.platformId === S.rptOverviewFilter);
-    const ftot = filteredRecs.reduce((s,r)=>s+recTotal(r),0);
-    const finc = filteredRecs.reduce((s,r)=>s+pf(r.income),0);
-    const fbon = filteredRecs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus),0);
-    const ftip = filteredRecs.reduce((s,r)=>s+pf(r.tips),0);
-
-    html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:6px">收入結構</div>${filterOpts}<div style="position:relative;height:200px"><canvas id="income-pie"></canvas></div>
-      <div style="display:flex;justify-content:space-around;margin-top:10px;font-size:12px;text-align:center">
-        <div><div style="color:var(--green);font-family:var(--mono);font-weight:600">${ftot>0?Math.round(finc/ftot*100):0}%</div><div style="color:var(--t3)">行程</div></div>
-        <div><div style="color:var(--gold);font-family:var(--mono);font-weight:600">${ftot>0?Math.round(fbon/ftot*100):0}%</div><div style="color:var(--t3)">獎勵</div></div>
-        <div><div style="color:var(--blue);font-family:var(--mono);font-weight:600">${ftot>0?Math.round(ftip/ftot*100):0}%</div><div style="color:var(--t3)">小費</div></div>
-      </div></div>`;
-  }
   document.getElementById('rv-overview').innerHTML = html;
   if (platData.length>1) drawPie('plat-pie', platData.map(p=>p.name), platData.map(p=>p.val), platData.map(p=>p.color));
-  if (total > 0 && (bonus>0||tips>0)) {
-    const fRecs = S.rptOverviewFilter === 'all' ? recs : recs.filter(r=>r.platformId === S.rptOverviewFilter);
-    drawPie('income-pie',['行程','獎勵','小費'],[fRecs.reduce((s,r)=>s+pf(r.income),0), fRecs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus),0), fRecs.reduce((s,r)=>s+pf(r.tips),0)],['#22C55E','#F59E0B','#3B82F6']);
-  }
 }
 
+// 趨勢圖改為多平台堆疊（Stacked）
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
-  const trends = [
+  const trends =[
     { key:'week',  label:'本週趨勢',   getDays: () => { 
         const d = new Date(); const day = d.getDay() || 7; 
         const start = new Date(d); start.setDate(start.getDate() - day + 1);
@@ -592,52 +573,71 @@ function renderRptTrend() {
     ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:6px;border-radius:var(--rs);border:1px solid ${curT===t.key?'var(--acc)':'var(--border)'};background:${curT===t.key?'var(--acc-d)':'var(--sf2)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:12px;cursor:pointer;font-family:var(--sans);font-weight:${curT===t.key?'700':'500'}">${t.label}</button>`).join('')}
   </div>`;
 
+  const datasets =[];
+  const plats = S.platforms.filter(p=>p.active);
+  let labels =[];
+
   if (curT === 'year') {
-    const months = Array.from({length:12},(_,i)=>i+1); const labels = months.map(m=>`${m}月`); 
-    const data = months.map(m=>getMonthRecs(S.rptY,m).reduce((s,r)=>s+recTotal(r),0));
-    html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:100%; height:240px; position:relative;"><canvas id="trend-chart"></canvas></div></div><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(data.reduce((a,b)=>a+b,0))}</span></div><div class="rpt-total-row"><span class="rt-lbl gray">月均收入</span><span class="rt-val">NT$ ${fmt(Math.round(data.reduce((a,b)=>a+b,0)/12))}</span></div></div>`;
-    el.innerHTML = html; drawTrendBar('trend-chart', labels, data); return;
+    labels = Array.from({length:12},(_,i)=>`${i+1}月`);
+    plats.forEach(p => {
+      const data = Array.from({length:12}, (_,i)=> getMonthRecs(S.rptY, i+1).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
+      if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
+    });
+    const allTotal = S.records.filter(r=>r.date.startsWith(`${S.rptY}-`)).reduce((s,r)=>s+recTotal(r),0);
+    html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div></div>`;
+  } else {
+    const days = trend.getDays();
+    labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
+    plats.forEach(p => {
+      const data = days.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
+      if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
+    });
+    const chartWidth = curT === 'month' ? `250%` : '100%'; 
+    html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div></div>`;
   }
   
-  const days = trend.getDays(); const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;}); 
-  const data = days.map(d=>getDayRecs(d).reduce((s,r)=>s+recTotal(r),0));
-  
-  // 月趨勢加寬 250% 讓它能左右平滑滑動，週趨勢維持 100%
-  const chartWidth = curT === 'month' ? `250%` : '100%'; 
-  
-  html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:${chartWidth}; height:240px; position:relative;"><canvas id="trend-chart"></canvas></div></div></div>`;
   el.innerHTML = html; 
-  
-  // 若單日資料來自特定單一平台，套用該平台顏色（若混合平台則用預設橘色）
-  const bgColors = days.map(d => {
-    const recs = getDayRecs(d);
-    if(recs.length === 0) return '#e5e7eb';
-    const platId = recs[0].platformId;
-    const isSamePlat = recs.every(r => r.platformId === platId);
-    if(isSamePlat) return getPlatform(platId).color;
-    return '#FF6B35'; // 混合平台
-  });
-
-  drawTrendBar('trend-chart', labels, data, bgColors);
+  drawTrendBar('trend-chart', labels, datasets);
 }
 
-// 專用的趨勢柱狀圖繪製函式
-function drawTrendBar(canvasId, labels, data, colors) {
+// 支援在堆疊最頂端繪製總額的自訂外掛
+function drawTrendBar(canvasId, labels, datasets) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
+  
+  // 自訂外掛：在最上方顯示加總金額
+  const topTotalPlugin = {
+    id: 'topTotalPlugin',
+    afterDatasetsDraw: (chart) => {
+      const ctx = chart.ctx;
+      chart.data.labels.forEach((_, i) => {
+        let total = 0; let meta;
+        chart.data.datasets.forEach((dataset, j) => {
+          meta = chart.getDatasetMeta(j);
+          if (!meta.hidden) total += dataset.data[i];
+        });
+        if (total > 0 && meta) {
+          const finalModel = meta.data[i];
+          ctx.save();
+          ctx.fillStyle = '#1C1917'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(fmt(total), finalModel.x, finalModel.y - 6);
+          ctx.restore();
+        }
+      });
+    }
+  };
+
   S.charts[canvasId] = new Chart(ctx, { 
     type: 'bar', 
-    data: { 
-      labels, 
-      datasets:[{ data, backgroundColor: colors || '#FF6B35', borderRadius:4, borderWidth:0 }] 
-    }, 
+    data: { labels, datasets }, 
+    plugins: [topTotalPlugin],
     options: { 
       responsive:true, maintainAspectRatio:false, 
-      layout: { padding: { left: -10 } }, // 最大化靠左
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, 
+      layout: { padding: { top: 20 } },
+      plugins:{ legend:{display:true, position:'top', labels:{font:{size:11}, boxWidth:12}}, tooltip:{ mode:'index', intersect:false, callbacks:{ label:c=>`${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` }} }, 
       scales:{ 
-        x:{ticks:{font:{size:10}, maxRotation:0}, grid:{display:false}}, 
-        y:{beginAtZero:true, suggestedMax:500, ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:10}}, grid:{color:'rgba(0,0,0,.05)', drawBorder:false}} 
+        x:{ stacked:true, ticks:{font:{size:10}, maxRotation:0}, grid:{display:false}}, 
+        y:{ stacked:true, beginAtZero:true, suggestedMax:500, ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:10}}, grid:{color:'rgba(0,0,0,.05)', drawBorder:false}} 
       }, 
       animation:{ duration:400 } 
     } 
@@ -772,14 +772,17 @@ function renderVehicles() {
   if (S.vehicles.length === 0) { selectorContainer.innerHTML = ''; container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return; }
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
 
-  const existingItems = selectorContainer.querySelectorAll('[data-vid]');
-  if (existingItems.length !== S.vehicles.length) {
-    let selectorHtml = `<div style="display:flex; gap:12px; margin-bottom:12px; overflow-x:auto; padding:4px;">`;
-    S.vehicles.forEach(v => {
-      const isActive = v.id === S.selVehicleId;
-      selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')"><div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div><div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div></div><span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span></div>`;
-    }); selectorHtml += `</div>`; selectorContainer.innerHTML = selectorHtml;
-  } else { _syncVehSelectorActive(S.selVehicleId); }
+  // 加上「選擇車輛」標題
+  let selectorHtml = `<div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">選擇車輛</div>`;
+  selectorHtml += `<div style="display:flex; gap:12px; margin-bottom:12px; overflow-x:auto; padding:4px 4px 8px;">`;
+  
+  S.vehicles.forEach(v => {
+    const isActive = v.id === S.selVehicleId;
+    selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')"><div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div><div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div></div><span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span></div>`;
+  }); 
+  selectorHtml += `</div>`; 
+  selectorContainer.innerHTML = selectorHtml;
+  
   renderVehicleContent();
 }
 
@@ -850,16 +853,18 @@ const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞
 function openAddVehRec(recordId = null) {
   editingVehRecId = recordId; const isEdit = !!recordId; if (!isEdit && S.vehicles.length === 0) { toast('請先新增車輛'); return; }
   document.getElementById('veh-rec-title').textContent = isEdit ? '編輯車輛記錄' : '新增車輛記錄'; document.getElementById('veh-rec-del-btn').style.display = isEdit ? 'block' : 'none';
-  const vehChips = document.getElementById('veh-rec-veh-icons');
-  vehChips.innerHTML = S.vehicles.map(v => { const isActive = v.id === S.selVehicleId; return `<div data-vid="${v.id}" style="display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;" onclick="selectVehInForm('${v.id}')"><div class="veh-form-icon" style="width:40px; height:40px; border-radius:10px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'};"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:24px; height:24px;"></div></div><span class="veh-form-name" style="font-size:10px; font-weight:${isActive?'700':'500'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span></div>`; }).join('');
+  
+  // 上方只顯示目前「選擇中」的單一車輛圖示
+  const v = S.vehicles.find(x => x.id === S.selVehicleId);
+  if (v) {
+    document.getElementById('veh-rec-veh-icons').innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;"><div style="width:50px; height:50px; border-radius:12px; background:#fff; border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:30px; height:30px;"></div></div><span style="font-size:11px; font-weight:700; color:var(--acc);">${v.name}</span></div>`;
+  }
 
   let r = null; if (isEdit) { r = S.vehicleRecs.find(x => x.id === recordId); S.addVehRecType = r.type; } else { S.addVehRecType = S.vehicleTab; }
   document.getElementById('vr-date').value = r ? r.date : todayStr(); document.getElementById('vr-time').value = r ? (r.time || nowTime()) : nowTime();
-  currentSelItems = (r && r.type === 'maintenance') ? [...r.items] : [];
+  currentSelItems = (r && r.type === 'maintenance') ? [...r.items] :[];
   
   if (S.addVehRecType === 'fuel') { 
-    // 帶入車輛預設燃料
-    const v = S.vehicles.find(x => x.id === S.selVehicleId);
     document.getElementById('vr-fuel-type').value = r?.fuelType || (v ? v.defaultFuel : '95'); 
     document.getElementById('vr-discount').value = r?.discount || '0'; document.getElementById('vr-prev-km').value = r?.prevKm || ''; document.getElementById('vr-curr-km').value = r?.km || ''; document.getElementById('vr-liters').value = r?.liters || ''; document.getElementById('vr-price').value = r?.price || ''; 
     calcVehFuel(); 
@@ -970,13 +975,18 @@ function renderSettings() {
       <div class="set-row" onclick="doBackup()"><span class="sn">📥 備份資料（JSON）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="doExportCSV()"><span class="sn">📊 匯出試算表（CSV）</span><span class="arr">↓</span></div>
-      <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red)">⚠️ 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
-  </div></div>`;
+      <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料 (保留設定)</span><span class="arr" style="color:var(--red)">!</span></div>
+      <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置所有設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
+  </div></div>
+  <div style="margin-top:24px; padding-bottom:16px; text-align:center;">
+      <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--t3); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
+  </div>`;
   document.getElementById('settings-content').innerHTML = html;
 }
 
+// 保留的其他設定功能
 function openPlatformList() {
-  document.getElementById('sub-title').textContent = '平台列表'; 
+  document.getElementById('sub-title').textContent = '平台列表'; document.getElementById('sub-add-btn')?.style.setProperty('display', 'none');
   document.getElementById('sub-body').innerHTML = `<div class="set-list">${S.platforms.map(p=>`<div class="set-row" onclick="openPlatformEdit('${p.id}')"><div class="plat-color-dot" style="background:${p.color}"></div><div class="sn"><div style="font-weight:600">${p.name}</div><div class="sn-sub">${p.active?'✅ 已啟用':'⭕ 已停用'}</div></div><span class="arr">›</span></div>`).join('')}</div><div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">💡 點擊平台可自訂顏色與啟用狀態</div>`;
   openOverlay('sub-page');
 }
@@ -987,26 +997,41 @@ function openPlatformEdit(id) {
   document.getElementById('sp-color-pick').addEventListener('input', e => { document.getElementById('sp-color').value = e.target.value; });
 }
 function savePlatformEdit(id) { const p = S.platforms.find(x=>x.id===id); if (!p) return; p.color = document.getElementById('sp-color').value.trim() || p.color; p.active = document.getElementById('sp-active').checked; savePlatforms(); toast('✅ 平台已更新'); if (S.tab === 'home') renderHome(); renderSettings(); openPlatformList(); }
-function openGoalSettings() { 
-  document.getElementById('sub-title').textContent = '目標設定'; 
-  const g = S.settings.goals||{}; 
-  document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>📅 週目標（NT$）</label><input type="number" class="finp" id="g-weekly" value="${g.weekly||0}" inputmode="decimal"></div><div class="fg" style="margin-bottom:14px"><label>📆 月目標（NT$）</label><input type="number" class="finp" id="g-monthly" value="${g.monthly||0}" inputmode="decimal"></div><button onclick="saveGoals()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">儲存目標</button>`; 
-  openOverlay('sub-page'); 
-}
+function openGoalSettings() { document.getElementById('sub-title').textContent = '目標設定'; document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); const g = S.settings.goals||{}; document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>📅 週目標（NT$）</label><input type="number" class="finp" id="g-weekly" value="${g.weekly||0}" inputmode="decimal"></div><div class="fg" style="margin-bottom:14px"><label>📆 月目標（NT$）</label><input type="number" class="finp" id="g-monthly" value="${g.monthly||0}" inputmode="decimal"></div><button onclick="saveGoals()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">儲存目標</button>`; openOverlay('sub-page'); }
 function saveGoals() { S.settings.goals = { weekly: pf(document.getElementById('g-weekly').value), monthly: pf(document.getElementById('g-monthly').value) }; saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 目標已儲存'); }
-function openAddReward() { 
-  document.getElementById('sub-title').textContent = '新增獎勵項目'; 
-  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); 
-  document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div><div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div class="fg"><label>最低單數</label><input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div><div class="fg"><label>上限單數（0=無限）</label><input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div></div><div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label><input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div><button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增獎勵</button>`; 
-  openOverlay('sub-page'); 
-}
+function openAddReward() { document.getElementById('sub-title').textContent = '新增獎勵項目'; document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div><div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div class="fg"><label>最低單數</label><input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div><div class="fg"><label>上限單數（0=無限）</label><input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div></div><div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label><input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div><button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增獎勵</button>`; openOverlay('sub-page'); }
 function saveNewReward() { const name = document.getElementById('rw-name').value.trim(); if (!name) { toast('請輸入獎勵名稱'); return; } if (!S.settings.rewards) S.settings.rewards=[]; S.settings.rewards.push({ id: newId(), name, platformId: document.getElementById('rw-plat').value, minOrders: pf(document.getElementById('rw-min').value), maxOrders: pf(document.getElementById('rw-max').value), amount: pf(document.getElementById('rw-amt').value) }); saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 獎勵已新增'); }
 async function deleteReward(i) { const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); if (!ok) return; S.settings.rewards.splice(i,1); saveSettings(); renderSettings(); toast('已刪除'); }
 
+// 備份與匯出
 function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記帳_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
 function doRestore() { const fi = document.getElementById('restore-file'); fi.onchange = async () => { const file = fi.files[0]; if(!file) return; try { const text = await file.text(); const data = JSON.parse(text); const ok = await customConfirm('確定用此備份<strong>覆蓋</strong>現有資料？'); if (!ok) return; if (data.records) { S.records=data.records; saveRecords(); } if (data.platforms) { S.platforms=data.platforms; savePlatforms(); } if (data.settings) { S.settings=data.settings; saveSettings(); } if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } toast('✅ 還原成功'); renderSettings(); renderHome(); } catch { toast('❌ 檔案格式錯誤'); } fi.value=''; }; fi.click(); }
-function doExportCSV() { const headers = ['日期','平台','接單數','行程收入','固定獎勵','臨時獎勵','小費','總收入','工時','上線','下線','備註']; const rows = S.records.map(r=>{ const p = getPlatform(r.platformId); return [r.date, p.name, r.orders||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0, recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(','); }); const csv = [headers.join(','), ...rows].join('\n'); const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`外送記帳_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url); toast('✅ CSV 匯出完成'); }
-async function doReset() { const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄和設定</strong>嗎？<br>此動作無法復原！'); if (!ok) return; S.records=[]; S.settings={...DEFAULT_SETTINGS}; S.vehicles=[]; S.vehicleRecs=[]; saveRecords(); saveSettings(); saveVehicles(); saveVehicleRecs(); toast('已清除所有資料'); renderHome(); renderSettings(); }
+function doExportCSV() { const headers =['日期','平台','接單數','里程','行程收入','固定獎勵','臨時獎勵','小費','總收入','工時','上線','下線','備註']; const rows = S.records.map(r=>{ const p = getPlatform(r.platformId); return[r.date, p.name, r.orders||0, r.mileage||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0, recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(','); }); const csv =[headers.join(','), ...rows].join('\n'); const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`外送記帳_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url); toast('✅ CSV 匯出完成'); }
+
+// 清除資料：只清空收入記錄與車輛維修記錄（保留平台、目標等設定）
+async function doClearData() { 
+  const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄與車輛資料</strong>嗎？<br>（這將保留您的平台設定與目標）此動作無法復原！'); 
+  if (!ok) return; 
+  S.records=[]; S.vehicles=[]; S.vehicleRecs=[]; 
+  saveRecords(); saveVehicles(); saveVehicleRecs(); 
+  toast('已清除記錄與車輛資料'); 
+  renderHome(); renderSettings(); 
+}
+
+// 重置所有：回歸預設值（連同平台顏色、設定目標全部歸零）
+async function doReset() { 
+  const ok = await customConfirm('⚠️ 確定要<strong>重置所有設定和資料</strong>嗎？<br>App將完全恢復到剛安裝的初始狀態！此動作無法復原！'); 
+  if (!ok) return; 
+  
+  S.records = []; 
+  S.settings = { ...DEFAULT_SETTINGS, shopHistory:[] }; 
+  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); // 恢復預設的三大平台與顏色
+  S.vehicles = []; 
+  S.vehicleRecs = []; 
+  saveRecords(); saveSettings(); savePlatforms(); saveVehicles(); saveVehicleRecs(); 
+  toast('已重置所有設定和資料'); 
+  renderHome(); renderSettings(); 
+}
 
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); }
 function init() { loadAll(); if (!S.platforms || !S.platforms.length) { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); savePlatforms(); } goPage('home'); }
