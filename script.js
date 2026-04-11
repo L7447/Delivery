@@ -177,7 +177,7 @@ function renderHome() {
 
   const isPunched = S.punch && S.punch.date === today; let punchStatusStr = '離線';
   if (isPunched) { const startMs = new Date(`${today}T${S.punch.startTime}`).getTime(); const diffMin = Math.floor((Date.now() - startMs) / 60000); punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`; }
-  topHtml += `<div class="punch-card-new"><div class="punch-status-left"><div class="punch-dot-new ${isPunched ? 'online' : ''}"></div><span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span></div><button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}</button></div></div>`; 
+  topHtml += `<div class="punch-card-new"><div class="punch-status-left"><div class="punch-dot-new ${isPunched ? 'online' : ''}"></div><span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span></div><button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}</button></div></div>`;
 
   if (!S.homeSubTab) S.homeSubTab = 'schedule'; let bottomHtml = ``;
   if (S.homeSubTab === 'schedule') {
@@ -248,9 +248,11 @@ function buildRecItem(r) {
   if (r.isPunchOnly) {
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
-        <span class="hrc-punch-tag" style="margin-right:auto;">🕒 打卡</span>
-        <span style="font-family:var(--mono); color:var(--t2); font-size:12px; margin-right:8px;">🕒 上下線時間：${r.punchIn} → ${r.punchOut}</span>
-        <span style="font-size:13px; font-weight:700; color:var(--acc);">⏱ ${fmtHours(r.hours)}</span>
+        <span style="font-size:12px; font-weight:600; color:var(--t3);">(上線打卡)</span>
+        <div class="h-div" style="margin:0 12px;"></div>
+        <span style="font-family:var(--mono); color:var(--t1); font-size:13px; font-weight:500; flex:1; text-align:center;">${r.punchIn} <span style="color:var(--t3);font-size:11px;">→</span> ${r.punchOut}</span>
+        <div class="h-div" style="margin:0 12px;"></div>
+        <span style="font-size:13px; font-weight:700; color:var(--t2); font-family:var(--mono);">${fmtHours(r.hours)}</span>
       </div>`;
   }
   const plat = getPlatform(r.platformId); const total = recTotal(r);
@@ -346,19 +348,24 @@ function changeFullCalMonth(offset) { S.calM += offset; if(S.calM < 1) { S.calM 
 // 重構：全螢幕日曆的精美 UI 生成
 function renderFullCalendar() {
   const { calY:y, calM:m } = S; document.getElementById('fc-title').textContent = `${y}年 ${m}月`;
-  const DOW = ['週日','週一','週二','週三','週四','週五','週六']; document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
-  const grid = document.getElementById('fc-grid'); const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
+  const DOW = ['週日','週一','週二','週三','週四','週五','週六']; 
+  document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
+  const grid = document.getElementById('fc-grid'); 
+  const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
   let html = ``; const prevDays = new Date(y, m-1, 0).getDate();
-  for (let i=first-1; i>=0; i--) { html += `<div class="fc-cell empty"><div class="fc-date">${prevDays - i}</div></div>`; }
+  // 上個月的日期
+  for (let i=first-1; i>=0; i--) { html += `<div class="fc-cell empty"><div class="fc-date">${pad(prevDays - i)}</div></div>`; }
+  // 本月日期
   for (let day=1; day<=days; day++) {
     const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); 
     const isToday = ds === today; const isSel = ds === S.selDate;
     const amtHtml = sum > 0 ? `<div class="fc-amt">$${fmt(sum)}</div>` : '';
     let cls = 'fc-cell'; if(isToday) cls+=' today'; if(isSel) cls+=' sel';
-    html += `<div class="${cls}" onclick="S.selDate='${ds}'; closeFullCalendar(); renderHistory();"><div class="fc-date">${day}</div>${amtHtml}</div>`;
+    html += `<div class="${cls}" onclick="S.selDate='${ds}'; closeFullCalendar(); renderHistory();"><div class="fc-date">${pad(day)}</div>${amtHtml}</div>`;
   }
-  const totalCells = first + days; const remain = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
-  for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date">${i}</div></div>`; }
+  // 下個月的日期
+  const totalCells = first + days; const remain = totalCells % 7 === 0 ? 0 : (Math.ceil(totalCells/7)*7) - totalCells;
+  for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date">${pad(i)}</div></div>`; }
   grid.innerHTML = html;
 }
 
@@ -384,7 +391,10 @@ function openDetailOverlay(id) {
 }
 async function deleteRecord(id) { closeDetailOverlay(); const ok = await customConfirm('確定要刪除這筆記錄嗎？<br><strong>此動作無法復原。</strong>'); if (!ok) return; S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除'); if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory(); }
 
-function openSearch() { openOverlay('search-page'); document.getElementById('search-kw').focus(); }
+function openSearch() { 
+  openOverlay('search-page'); 
+  setTimeout(() => { document.getElementById('search-kw').focus(); }, 350); 
+}
 function doSearch() {
   const kw = document.getElementById('search-kw').value.trim().toLowerCase(); const from = document.getElementById('search-from').value; const to = document.getElementById('search-to').value; const el = document.getElementById('search-results');
   let recs = S.records.filter(r => { if (from && r.date < from) return false; if (to && r.date > to) return false; if (!kw) return true; const plat = getPlatform(r.platformId).name.toLowerCase(); return plat.includes(kw) || (r.note||'').toLowerCase().includes(kw) || String(recTotal(r)).includes(kw) || String(r.orders||'').includes(kw); }).sort((a,b)=>b.date.localeCompare(a.date));
