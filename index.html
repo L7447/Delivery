@@ -149,28 +149,27 @@
     <div id="rv-top3"    style="display:none"></div>
   </section>
 
-  <!-- ══ 車輛管理 (新頁面) ═══════════════════════════════════ -->
+  <!-- ══ 車輛管理主頁面 ═══════════════════════════════════ -->
   <section class="page" id="page-vehicles" style="padding: 16px 16px 0; display:flex; flex-direction:column; overflow:hidden;">
-    <!-- 固定的標題與 30x30 滿版新增按鈕 -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-shrink:0;">
       <div style="width:30px;"></div> <!-- 排版平衡 -->
       <div class="pg-title" style="margin:0;">車輛管理</div>
       
-      <!-- 滿版 30x30 新增按鈕 -->
-      <button onclick="openAddVehicle()" title="新增車輛" style="width:45px; height:45px; padding:0; background:transparent; border:none; cursor:pointer;">
-        <img src="/images/scooter.png" alt="新增車輛" style="width:40px; height:40px; object-fit:contain;">
+      <!-- 滿版 30x30 新增車輛按鈕 -->
+      <button onclick="openAddVehicle()" title="新增車輛" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer;">
+        <img src="images/scooter.png" alt="新增車輛" style="width:100%; height:100%; object-fit:contain;">
       </button>
     </div>
-    
-    <!-- 圓角滑動特效切換 Tab (加入 tabs-2 與數字參數) -->
-    <div class="slide-tabs tabs-2">
-      <div class="slide-bg" id="veh-tab-bg" style="transform: translateX(0%);"></div>
-      <button class="slide-btn active" id="btn-veh-fuel" onclick="switchVehicleTab('fuel', 0)">車輛燃料</button>
-      <button class="slide-btn" id="btn-veh-maint" onclick="switchVehicleTab('maintenance', 1)">車輛保養維修</button>
+
+    <!-- 月份切換導覽 -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-shrink:0;">
+      <button class="mbtn" onclick="changeVehMonth(-1)">◀</button>
+      <h2 id="veh-month-label" style="font-size:15px; font-weight:700; color:var(--acc);"></h2>
+      <button class="mbtn" onclick="changeVehMonth(1)">▶</button>
     </div>
 
-    <!-- 動態列表容器 (JS 只會更新這裡，不會動到上方的按鈕) -->
-    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding-top:10px; padding-bottom:24px;"></div>
+    <!-- 動態列表容器 (包含選擇車輛、總結與歷史紀錄) -->
+    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding-bottom:24px;"></div>
   </section>
 
   <!-- ══ 功能設定 ════════════════════════════════════ -->
@@ -314,74 +313,94 @@
   <div class="overlay-body" id="vehicle-add-body"></div>
 </div>
 
-<!-- ══ 新增燃料 Overlay ════════════════════════ -->
-<div class="overlay-page" id="fuel-add-page">
+<!-- ══ 整合版：新增/編輯車輛紀錄 Overlay ════════════════════════ -->
+<div class="overlay-page" id="veh-rec-add-page">
   <div class="top-bar">
-    <button class="bar-btn" onclick="closeOverlay('fuel-add-page')">✕</button>
-    <h2>新增車輛燃料</h2>
-    <div style="width:36px"></div>
+    <button class="bar-btn" onclick="closeOverlay('veh-rec-add-page')">✕</button>
+    <h2 id="veh-rec-title">新增車輛紀錄</h2>
+    <!-- 右上角儲存按鈕 (與外送紀錄相同功能) -->
+    <button id="veh-save-btn" onclick="confirmAddVehRec()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none;">
+      <img id="veh-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
+    </button>
   </div>
   <div class="overlay-body">
-    <div class="fg" style="margin-bottom:12px"><label>📆 日期</label><input type="date" class="finp" id="fuel-date"></div>
-    <div style="display:flex; gap:10px; margin-bottom:12px;">
-      <div class="fg" style="flex:1"><label>上次里程 (km)</label><input type="number" class="finp" id="fuel-prev-km"></div>
-      <div class="fg" style="flex:1"><label>加油里程 (km)</label><input type="number" class="finp" id="fuel-curr-km"></div>
-    </div>
-    <div style="display:flex; gap:10px; margin-bottom:12px;">
-      <div class="fg" style="flex:1"><label>油量 (公升)</label><input type="number" class="finp" id="fuel-liters" step="0.01" oninput="calcFuelTotal()"></div>
-      <div class="fg" style="flex:1"><label>油價 (單價)</label><input type="number" class="finp" id="fuel-price" step="0.1" oninput="calcFuelTotal()"></div>
-    </div>
-    <div class="fg" style="margin-bottom:12px"><label>折扣 (NT$)</label><input type="number" class="finp" id="fuel-discount" value="0" oninput="calcFuelTotal()"></div>
     
-    <div style="background:var(--sf2); padding:12px; border-radius:12px; margin-bottom:20px; text-align:right;">
-      <div style="font-size:12px; color:var(--t3);">折扣前總金額：<span id="fuel-before-total">0</span></div>
-      <div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">實際付款：<span style="font-size:24px; color:var(--acc);" id="fuel-final-total">0</span></div>
+    <!-- 選擇車輛 (置於最上方) -->
+    <div style="margin-bottom:16px;">
+      <div class="form-lbl">🚗 選擇車輛</div>
+      <div id="veh-rec-veh-chips" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
     </div>
-    <button onclick="saveFuelRecord()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:700;">💾 儲存燃料紀錄</button>
-  </div>
-</div>
 
-<!-- ══ 新增保養維修 Overlay ════════════════════════ -->
-<div class="overlay-page" id="maint-add-page">
-  <div class="top-bar">
-    <button class="bar-btn" onclick="closeOverlay('maint-add-page')">✕</button>
-    <h2>車輛保養維修</h2>
-    <div style="width:36px"></div>
-  </div>
-  <div class="overlay-body">
-    <div style="display:flex; gap:10px; margin-bottom:12px;">
-      <div class="fg" style="flex:1"><label>📆 日期</label><input type="date" class="finp" id="maint-date"></div>
-      <div class="fg" style="flex:1"><label>里程 (km)</label><input type="number" class="finp" id="maint-km"></div>
+    <!-- 滑動切換 燃料/保養 -->
+    <div class="slide-tabs tabs-2" style="margin-bottom:16px;">
+      <div class="slide-bg" id="veh-form-tab-bg" style="transform: translateX(0%);"></div>
+      <button class="slide-btn active" id="btn-form-fuel" onclick="switchVehFormTab('fuel', 0)">車輛燃料</button>
+      <button class="slide-btn" id="btn-form-maint" onclick="switchVehFormTab('maintenance', 1)">保養維修</button>
     </div>
-    
-    <!-- 項目複選 Chips -->
-    <div class="fg" style="margin-bottom:16px;">
-      <label>保養維修項目 (可複選)</label>
-      <div style="display:flex; flex-wrap:wrap; gap:6px;" id="maint-items-container">
-        <!-- JS 動態產生項目 -->
+
+    <!-- 共用：日期與時間 -->
+    <div style="display:flex; gap:10px; margin-bottom:16px;">
+      <div class="fg" style="flex:1.5"><label>📆 日期</label><input type="date" class="finp" id="vr-date"></div>
+      <div class="fg" style="flex:1"><label>⏱ 時間</label><input type="time" class="finp" id="vr-time"></div>
+    </div>
+
+    <!-- ⛽ 燃料專屬表單區塊 -->
+    <div id="form-area-fuel">
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <div class="fg" style="flex:1"><label>汽油類型</label>
+          <select class="fsel" id="vr-fuel-type">
+            <option value="92">92 無鉛</option><option value="95" selected>95 無鉛</option><option value="98">98 無鉛</option><option value="柴油">柴油</option>
+          </select>
+        </div>
+        <div class="fg" style="flex:1"><label>折扣 (NT$)</label><input type="number" class="finp" id="vr-discount" value="0" oninput="calcVehFuel()"></div>
+      </div>
+      
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <div class="fg" style="flex:1"><label>上次里程 (km)</label><input type="number" class="finp" id="vr-prev-km"></div>
+        <div class="fg" style="flex:1"><label>加油里程 (km)</label><input type="number" class="finp" id="vr-curr-km"></div>
+      </div>
+      
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <div class="fg" style="flex:1"><label>油量 (公升)</label><input type="number" class="finp" id="vr-liters" step="0.01" oninput="calcVehFuel()"></div>
+        <div class="fg" style="flex:1"><label>油價 (單價)</label><input type="number" class="finp" id="vr-price" step="0.1" oninput="calcVehFuel()"></div>
+      </div>
+      
+      <div style="background:var(--sf2); padding:12px; border-radius:12px; text-align:right; margin-bottom:16px;">
+        <div style="font-size:12px; color:var(--t3);">折扣前總額：NT$ <span id="vr-before-total">0</span></div>
+        <div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">付款金額：<span style="font-size:24px; color:var(--acc);" id="vr-final-total">0</span></div>
       </div>
     </div>
 
-    <!-- 店家名稱與記憶歷史 -->
-    <div class="fg" style="margin-bottom:16px;">
-      <label>店家名稱</label>
-      <input type="text" class="finp" id="maint-shop" placeholder="輸入車行名稱">
-      <div id="shop-history-container" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+    <!-- 🔧 保養維修專屬表單區塊 -->
+    <div id="form-area-maint" style="display:none;">
+      <div class="fg" style="margin-bottom:16px;"><label>目前里程 (km)</label><input type="number" class="finp" id="vm-km"></div>
+      
+      <div class="fg" style="margin-bottom:16px;">
+        <label>保養維修項目 (可複選)</label>
+        <div id="vm-items-container" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+      </div>
+
+      <div class="fg" style="margin-bottom:16px;">
+        <label>店家名稱</label>
+        <input type="text" class="finp" id="vm-shop" placeholder="輸入車行名稱">
+        <div id="shop-history-container" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <div class="fg" style="flex:1.5"><label>支付方式</label>
+          <select class="fsel" id="vm-pay-method">
+            <option value="現金">現金</option><option value="電子支付">電子支付</option><option value="銀行帳戶">銀行帳戶</option>
+          </select>
+        </div>
+        <div class="fg" style="flex:1"><label>💰 金額</label><input type="number" class="finp" id="vm-amount" style="font-weight:bold; color:var(--acc);"></div>
+      </div>
+      
+      <div class="fg" style="margin-bottom:16px;"><label>📝 備註</label><input type="text" class="finp" id="vm-note"></div>
     </div>
 
-    <div class="fg" style="margin-bottom:12px;">
-      <label>支付方式</label>
-      <select class="fsel" id="maint-pay-method">
-        <option value="現金">現金</option>
-        <option value="電子支付">電子支付 (LinePay/街口等)</option>
-        <option value="銀行帳戶">銀行帳戶 (轉帳/刷卡)</option>
-      </select>
-    </div>
-
-    <div class="fg" style="margin-bottom:12px;"><label>📝 備註</label><input type="text" class="finp" id="maint-note"></div>
-    <div class="fg" style="margin-bottom:20px;"><label>💰 總金額 (NT$)</label><input type="number" class="finp" id="maint-amount" style="font-size:18px; font-weight:bold; color:var(--acc);"></div>
-    
-    <button onclick="saveMaintRecord()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:700;">💾 儲存保養紀錄</button>
+    <!-- 刪除按鈕 (僅編輯時出現) -->
+    <button id="veh-rec-del-btn" onclick="deleteVehRecFromEdit()" class="btn-danger" style="width:100%; display:none; padding:14px; font-weight:700; margin-top:10px;">🗑 刪除此紀錄</button>
+    <div style="height: 40px;"></div>
   </div>
 </div>
 
