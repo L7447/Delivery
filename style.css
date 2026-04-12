@@ -141,7 +141,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hrc-amt { font-family: var(--mono); font-size: 16px; font-weight: 800; color: var(--t1); }
 .hrc-stat { font-size: 12px; font-weight: 600; color: var(--t2); }
-.h-div { width: 1px; height: 12px; background: #cbd5e1; }
+.h-div { width: 2px; height: 15px; background: #cbd5e1; }
 .lbl-bonus { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .lbl-tips { background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .hrc-toggle { position: absolute; right: 10px; top: 10px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; border-radius: 50%; color: #94a3b8; font-size: 12px; cursor: pointer; transition: transform 0.3s; }
