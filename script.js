@@ -1258,8 +1258,17 @@ async function doReset() {
   toast('已重置所有設定和資料'); 
   renderHome(); renderSettings(); 
 }
-
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); }
+/* ══ 全部功能都開發完畢，準備正式上線時，再把這段程式碼改回原本的「註冊」代碼，並把 sw.js 的版本號加 1 ═══════════════════════════════════ */
+/* if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); } */
+/* 開發測試用：強制註銷所有 Service Worker，避免快取舊檔案 */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister();
+    }
+  });
+  console.log('SW 已強制註銷，目前不會快取檔案。');
+}
 
 function init() {
   loadAll();
