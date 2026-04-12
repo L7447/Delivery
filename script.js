@@ -1180,5 +1180,12 @@ async function doReset() {
 
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); }
 function init() { loadAll(); if (!S.platforms || !S.platforms.length) { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); savePlatforms(); } goPage('home'); }
-init();
+
+// 改成：等瀏覽器完成第一次繪製後再初始化，避免 flex 排版尚未就緒導致首頁版面錯亂
+window.addEventListener('load', () => {
+  init();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => renderHome());
+  });
+});
 /* ══ 7. 設定管理與啟動 結束 ═══════════════════════════════════ */
