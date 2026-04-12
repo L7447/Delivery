@@ -64,13 +64,12 @@ function openOverlay(id)  { document.getElementById(id)?.classList.add('show'); 
 function closeOverlay(id) { document.getElementById(id)?.classList.remove('show'); }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
-// 替換：重構展開的資料成為一行，並調整標籤位置到最右邊（工時的下方/旁邊）
+// 替換：改回動態計算高度 scrollHeight，這樣不管是單行還是大卡片都不會被切掉
 function toggleSummaryCard(id) {
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
   const t = btn.style.transform || 'rotate(0deg)';
-  // 展開的高度固定為足夠容納內容即可，50px 足夠一行文字
   if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { 
-    el.style.maxHeight = '50px'; 
+    el.style.maxHeight = el.scrollHeight + 'px'; 
     btn.style.transform = t.includes('rotate') ? t.replace('rotate(0deg)', 'rotate(180deg)') : t + ' rotate(180deg)';
   } else { 
     el.style.maxHeight = '0px'; 
@@ -161,6 +160,7 @@ function switchVehicleTab(tab, index) { S.vehicleTab = tab; document.getElementB
 
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
+// 替換：確保 HTML 字串完整無誤，避免語法錯誤導致畫面卡住
 function renderHome() {
   const today = todayStr(); const dayRecs = getDayRecs(today);
   const total = dayRecs.reduce((s,r)=>s+recTotal(r), 0); const orders = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
@@ -530,13 +530,13 @@ window.navTrend = function(dir) {
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
+// 替換：加入 white-space: normal 解決文字擠壓破版，並置中下拉箭頭
 function renderRptOverview() {
   const recs = getMonthRecs(S.rptY, S.rptM);
   const total = recs.reduce((s,r)=>s+recTotal(r), 0); const income = recs.reduce((s,r)=>s+pf(r.income), 0);
   const bonus = recs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus), 0); const tips = recs.reduce((s,r)=>s+pf(r.tips), 0);
   const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
 
-  // 新增獨立月份切換器
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
       <button class="mbtn" onclick="navRptMonth(-1)">◀</button>
       <span style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--acc);">${S.rptY} 年 ${S.rptM} 月</span>
@@ -550,18 +550,18 @@ function renderRptOverview() {
           <div style="font-size:12px; color:var(--t3); font-weight:700; margin-bottom:6px; letter-spacing:1px;">本月總收入</div>
           <div style="font-family:var(--mono); font-size:32px; font-weight:800; color:var(--t1); line-height:1;">$ ${fmt(total)}</div>
         </div>
-        <div style="display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap; white-space:normal;">
           <div style="display:flex; align-items:center; gap:6px;"><span style="background:#dcfce7; color:#16a34a; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">行程</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#16a34a;">$${fmt(income)}</span></div>
           <div style="color:#d1d5db;">│</div>
           <div style="display:flex; align-items:center; gap:6px;"><span style="background:#fef3c7; color:#d97706; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">獎勵</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#d97706;">$${fmt(bonus)}</span></div>
           <div style="color:#d1d5db;">│</div>
           <div style="display:flex; align-items:center; gap:6px;"><span style="background:#e0f2fe; color:#2563eb; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">小費</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#2563eb;">$${fmt(tips)}</span></div>
         </div>
-        <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:90%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05); color:#f97316; font-size:12px; z-index:2;">▼</div>
+        <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:50%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05); color:#f97316; font-size:12px; z-index:2;">▼</div>
       </div>
-      <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden;">
+      <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease;">
         <div style="border-top:1px dashed #d1d5db; margin:8px 16px;"></div>
-        <div style="padding:8px 16px 16px;">
+        <div style="padding:8px 16px 16px; white-space:normal;">
           <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed rgba(0,0,0,0.05);">
             <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:#9ca3af; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">接單數</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:600;">單</span></span></div>
             <div style="color:rgba(0,0,0,0.05); margin:0 12px;">│</div>
