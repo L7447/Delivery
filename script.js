@@ -1130,8 +1130,30 @@ function renderSettings() {
 }
 
 function openPlatformList() {
+  // 確保平台資料存在
+  if (!S.platforms || S.platforms.length === 0) {
+    S.platforms = DEFAULT_PLATFORMS.map(p => ({ ...p }));
+    savePlatforms();
+  }
+  
   document.getElementById('sub-title').textContent = '平台列表';
-  document.getElementById('sub-body').innerHTML = `<div class="set-list">${S.platforms.map(p=>`<div class="set-row" onclick="openPlatformEdit('${p.id}')"><div class="plat-color-dot" style="background:${p.color}"></div><div class="sn"><div style="font-weight:600">${p.name}</div><div class="sn-sub">${p.active?'✅ 已啟用':'⭕ 已停用'}</div></div><span class="arr">›</span></div>`).join('')}</div><div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">💡 點擊平台可自訂顏色與啟用狀態</div>`;
+  document.getElementById('sub-body').innerHTML = `
+    <div class="set-list">
+      ${S.platforms.map(p => `
+        <div class="set-row" onclick="openPlatformEdit('${p.id}')">
+          <div class="plat-color-dot" style="background:${p.color}"></div>
+          <div class="sn">
+            <div style="font-weight:600">${p.name}</div>
+            <div class="sn-sub">${p.active ? '✅ 已啟用' : '⭕ 已停用'}</div>
+          </div>
+          <span class="arr">›</span>
+        </div>
+      `).join('')}
+    </div>
+    <div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">
+      💡 點擊平台可自訂顏色與啟用狀態
+    </div>`;
+  
   openOverlay('sub-page');
 }
 function openPlatformEdit(id) {
