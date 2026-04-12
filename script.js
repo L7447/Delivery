@@ -64,7 +64,7 @@ function openOverlay(id)  { document.getElementById(id)?.classList.add('show'); 
 function closeOverlay(id) { document.getElementById(id)?.classList.remove('show'); }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
-// 替換：改回動態計算高度 scrollHeight，這樣不管是單行還是大卡片都不會被切掉
+// 替換：改回動態計算高度 scrollHeight，這樣不管是首頁單行，還是分析頁的大卡片，都能完美展開不會被切斷
 function toggleSummaryCard(id) {
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
   const t = btn.style.transform || 'rotate(0deg)';
@@ -160,72 +160,82 @@ function switchVehicleTab(tab, index) { S.vehicleTab = tab; document.getElementB
 
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-// 替換：確保 HTML 字串完整無誤，避免語法錯誤導致畫面卡住
+// 替換：加入嚴謹的安全防護，確保初次載入不會因為資料異常而中斷卡住
 function renderHome() {
-  const today = todayStr(); const dayRecs = getDayRecs(today);
-  const total = dayRecs.reduce((s,r)=>s+recTotal(r), 0); const orders = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
-  const hours = dayRecs.filter(r => !r.isPunchOnly).reduce((s,r)=>s+pf(r.hours), 0);     
-  const dateObj = new Date(today+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][dateObj.getDay()];
-  const activePlatforms = S.platforms.filter(p=>p.active);
-  const platStats = activePlatforms.map(p => {
-    const recs = dayRecs.filter(r => r.platformId === p.id);
-    return { ...p, sum: recs.reduce((s, r) => s + recTotal(r), 0), orders: recs.reduce((s, r) => s + pf(r.orders), 0), hours: recs.reduce((s, r) => s + pf(r.hours), 0) };
-  }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
+  try {
+    const today = todayStr(); const dayRecs = getDayRecs(today) || [];
+    const total = dayRecs.reduce((s,r)=>s+recTotal(r), 0); const orders = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
+    const hours = dayRecs.filter(r => !r.isPunchOnly).reduce((s,r)=>s+pf(r.hours), 0);     
+    const dateObj = new Date(today+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
+    const activePlatforms = (S.platforms || []).filter(p=>p.active);
+    const platStats = activePlatforms.map(p => {
+      const recs = dayRecs.filter(r => r.platformId === p.id);
+      return { ...p, sum: recs.reduce((s, r) => s + recTotal(r), 0), orders: recs.reduce((s, r) => s + pf(r.orders), 0), hours: recs.reduce((s, r) => s + pf(r.hours), 0) };
+    }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
-  let topHtml = `<div class="home-top-fixed"><div class="home-header"><div class="home-pg-title">今日概況</div><div class="home-pg-date"><b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b></div></div><div class="today-hero">`;
-  if (platStats.length > 0) { topHtml += `<div class="hero-plat-list">`; platStats.forEach(p => { topHtml += `<div class="hero-plat-row" style="background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};"><span class="hp-name">${p.name}收入：</span><span class="hp-sum">$ ${fmt(p.sum)}</span><span class="hp-ord">${p.orders} 單</span><span class="hp-hrs">${p.hours > 0 ? fmtHours(p.hours) : 0}</span></div>`; }); topHtml += `</div>`; } 
-  else { topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`; }
+    let topHtml = `<div class="home-top-fixed"><div class="home-header"><div class="home-pg-title">今日概況</div><div class="home-pg-date"><b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b></div></div><div class="today-hero">`;
+    if (platStats.length > 0) { topHtml += `<div class="hero-plat-list">`; platStats.forEach(p => { topHtml += `<div class="hero-plat-row" style="background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};"><span class="hp-name">${p.name}收入：</span><span class="hp-sum">$ ${fmt(p.sum)}</span><span class="hp-ord">${p.orders} 單</span><span class="hp-hrs">${p.hours > 0 ? fmtHours(p.hours) : 0}</span></div>`; }); topHtml += `</div>`; } 
+    else { topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`; }
 
-  const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
-  topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card'); topHtml += `</div>`;
+    const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
+    topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card'); topHtml += `</div>`;
 
-  const isPunched = S.punch && S.punch.date === today; let punchStatusStr = '離線';
-  if (isPunched) { const startMs = new Date(`${today}T${S.punch.startTime}`).getTime(); const diffMin = Math.floor((Date.now() - startMs) / 60000); punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`; }
-  topHtml += `<div class="punch-card-new"><div class="punch-status-left"><div class="punch-dot-new ${isPunched ? 'online' : ''}"></div><span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span></div><button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}</button></div></div>`;
+    const isPunched = S.punch && S.punch.date === today; let punchStatusStr = '離線';
+    if (isPunched && S.punch.startTime) { 
+      // 修復舊版 iOS 解析時間異常的問題
+      const startParts = S.punch.startTime.split(':');
+      const startMs = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), parseInt(startParts[0]||0), parseInt(startParts[1]||0)).getTime(); 
+      const diffMin = Math.floor((Date.now() - startMs) / 60000); 
+      punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`; 
+    }
+    topHtml += `<div class="punch-card-new"><div class="punch-status-left"><div class="punch-dot-new ${isPunched ? 'online' : ''}"></div><span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span></div><button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}</button></div></div>`;
 
-  if (!S.homeSubTab) S.homeSubTab = 'schedule'; let bottomHtml = ``;
-  if (S.homeSubTab === 'schedule') {
-    const todayObj = new Date(); todayObj.setHours(0,0,0,0);
-    const calcNextDates = (id) => {
-      const y = todayObj.getFullYear(), m = todayObj.getMonth(), d = todayObj.getDate(); const events = [];
-      const addEvent = (name, dObj) => { const diff = Math.round((dObj - todayObj) / 86400000); events.push({ name: name, dateStr: `${dObj.getMonth()+1}/${pad(dObj.getDate())}`, diff: diff, diffStr: diff === 0 ? '今天' : `${diff} 天後`}); };
-      const getNextDow = (targets) => { let cur = todayObj.getDay(); let add = 7; targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; }); let res = new Date(todayObj); res.setDate(d + add); return res; };
-      if (id === 'uber') { addEvent('趟獎結算', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
-      else if (id === 'foodpanda') { const getPandaNext = (aY, aM, aD) => { const anchor = new Date(aY, aM, aD); const diffDays = Math.floor((todayObj - anchor) / 86400000); const daysToAdd = (14 - (diffDays % 14)) % 14; let res = new Date(todayObj); res.setDate(d + daysToAdd); return res; }; addEvent('85% 取單率', getPandaNext(2020, 0, 12)); addEvent('明細寄發', getPandaNext(2020, 0, 15)); addEvent('發薪日', getPandaNext(2020, 0, 22)); } 
-      else if (id === 'foodomo') { let nSettle = new Date(todayObj), nPay = new Date(todayObj); if (d <= 15) nSettle.setDate(15); else nSettle = new Date(y, m + 1, 0); if (d <= 5) nPay.setDate(5); else if (d <= 20) nPay.setDate(20); else nPay = new Date(y, m + 1, 5); addEvent('結算日', nSettle); addEvent('發薪日', nPay); } else return null;
-      return events;
-    };
-    if (activePlatforms.length) {
-      activePlatforms.forEach(p => {
-        const events = calcNextDates(p.id); if (!events) return;
-        bottomHtml += `<div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 5px;"><div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;"><div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);"></div><span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span></div><div style="display:flex; gap:6px;">${events.map(ev => {
-                const isToday = ev.diff === 0; const dateColor = isToday ? 'var(--green)' : 'var(--t1)'; let diffColor = isToday ? 'var(--green)' : 'var(--t2)'; let nameColor = 'var(--t3)'; 
-                if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)'; else if (ev.name.includes('明細')) nameColor = 'var(--acc)'; else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
-                if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) { diffColor = '#22C55E'; }
-                return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;"><span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span><span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span></div>`;
-              }).join('')}</div></div>`;
-      });
-    } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`; }
-  } else if (S.homeSubTab === 'goal') {
-    const weekly = pf(S.settings.goals?.weekly); const monthly = pf(S.settings.goals?.monthly);
-    if (weekly > 0 || monthly > 0) {
-      bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
-      if (weekly > 0) {
-        const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
-        for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
-        const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
-        bottomHtml += `<div style="margin-bottom: ${monthly>0 ? '16px' : '0'};"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
-      }
-      if (monthly > 0) {
-        const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
-        const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
-        bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
-      }
-      bottomHtml += `</div>`;
-    } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
+    if (!S.homeSubTab) S.homeSubTab = 'schedule'; let bottomHtml = ``;
+    if (S.homeSubTab === 'schedule') {
+      const todayObj = new Date(); todayObj.setHours(0,0,0,0);
+      const calcNextDates = (id) => {
+        const y = todayObj.getFullYear(), m = todayObj.getMonth(), d = todayObj.getDate(); const events = [];
+        const addEvent = (name, dObj) => { const diff = Math.round((dObj - todayObj) / 86400000); events.push({ name: name, dateStr: `${dObj.getMonth()+1}/${pad(dObj.getDate())}`, diff: diff, diffStr: diff === 0 ? '今天' : `${diff} 天後`}); };
+        const getNextDow = (targets) => { let cur = todayObj.getDay(); let add = 7; targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; }); let res = new Date(todayObj); res.setDate(d + add); return res; };
+        if (id === 'uber') { addEvent('趟獎結算', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
+        else if (id === 'foodpanda') { const getPandaNext = (aY, aM, aD) => { const anchor = new Date(aY, aM, aD); const diffDays = Math.floor((todayObj - anchor) / 86400000); const daysToAdd = (14 - (diffDays % 14)) % 14; let res = new Date(todayObj); res.setDate(d + daysToAdd); return res; }; addEvent('85% 取單率', getPandaNext(2020, 0, 12)); addEvent('明細寄發', getPandaNext(2020, 0, 15)); addEvent('發薪日', getPandaNext(2020, 0, 22)); } 
+        else if (id === 'foodomo') { let nSettle = new Date(todayObj), nPay = new Date(todayObj); if (d <= 15) nSettle.setDate(15); else nSettle = new Date(y, m + 1, 0); if (d <= 5) nPay.setDate(5); else if (d <= 20) nPay.setDate(20); else nPay = new Date(y, m + 1, 5); addEvent('結算日', nSettle); addEvent('發薪日', nPay); } else return null;
+        return events;
+      };
+      if (activePlatforms.length) {
+        activePlatforms.forEach(p => {
+          const events = calcNextDates(p.id); if (!events) return;
+          bottomHtml += `<div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 5px;"><div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;"><div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);"></div><span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span></div><div style="display:flex; gap:6px;">${events.map(ev => {
+                  const isToday = ev.diff === 0; const dateColor = isToday ? 'var(--green)' : 'var(--t1)'; let diffColor = isToday ? 'var(--green)' : 'var(--t2)'; let nameColor = 'var(--t3)'; 
+                  if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)'; else if (ev.name.includes('明細')) nameColor = 'var(--acc)'; else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
+                  if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) { diffColor = '#22C55E'; }
+                  return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;"><span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span><span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span></div>`;
+                }).join('')}</div></div>`;
+        });
+      } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`; }
+    } else if (S.homeSubTab === 'goal') {
+      const weekly = pf(S.settings.goals?.weekly); const monthly = pf(S.settings.goals?.monthly);
+      if (weekly > 0 || monthly > 0) {
+        bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
+        if (weekly > 0) {
+          const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
+          for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
+          const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
+          bottomHtml += `<div style="margin-bottom: ${monthly>0 ? '16px' : '0'};"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
+        }
+        if (monthly > 0) {
+          const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
+          const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
+          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
+        }
+        bottomHtml += `</div>`;
+      } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
+    }
+    const topEl = document.getElementById('home-top-content'); const botEl = document.getElementById('home-bottom-content');
+    if (topEl) topEl.innerHTML = topHtml; if (botEl) botEl.innerHTML = bottomHtml;
+  } catch (error) {
+    console.error("首頁渲染錯誤：", error);
   }
-  const topEl = document.getElementById('home-top-content'); const botEl = document.getElementById('home-bottom-content');
-  if (topEl) topEl.innerHTML = topHtml; if (botEl) botEl.innerHTML = bottomHtml;
 }
 
 function punchIn() { const today = todayStr(); S.punch = { date: today, startTime: nowTime() }; savePunch(); toast(`✅ 上線打卡：${S.punch.startTime}`); renderHome(); }
@@ -530,7 +540,7 @@ window.navTrend = function(dir) {
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
-// 替換：加入 white-space: normal 解決文字擠壓破版，並置中下拉箭頭
+// 替換：改用「直欄式」排列，避免小螢幕上換行造成分隔線錯位，並將展開按鈕完美置中
 function renderRptOverview() {
   const recs = getMonthRecs(S.rptY, S.rptM);
   const total = recs.reduce((s,r)=>s+recTotal(r), 0); const income = recs.reduce((s,r)=>s+pf(r.income), 0);
@@ -544,24 +554,33 @@ function renderRptOverview() {
     </div>`;
 
   html += `
-    <div class="summary-card" style="margin-bottom:12px; background:#FFFFE0; border:1px solid #f0e6cc; border-radius:16px; position:relative;">
+    <div class="summary-card" style="margin-bottom:20px; background:#FFFFE0; border:1px solid #f0e6cc; border-radius:16px; position:relative;">
       <div class="sum-top" onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; position:relative;">
         <div style="text-align:center; margin-bottom:16px;">
           <div style="font-size:12px; color:var(--t3); font-weight:700; margin-bottom:6px; letter-spacing:1px;">本月總收入</div>
           <div style="font-family:var(--mono); font-size:32px; font-weight:800; color:var(--t1); line-height:1;">$ ${fmt(total)}</div>
         </div>
-        <div style="display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap; white-space:normal;">
-          <div style="display:flex; align-items:center; gap:6px;"><span style="background:#dcfce7; color:#16a34a; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">行程</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#16a34a;">$${fmt(income)}</span></div>
-          <div style="color:#d1d5db;">│</div>
-          <div style="display:flex; align-items:center; gap:6px;"><span style="background:#fef3c7; color:#d97706; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">獎勵</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#d97706;">$${fmt(bonus)}</span></div>
-          <div style="color:#d1d5db;">│</div>
-          <div style="display:flex; align-items:center; gap:6px;"><span style="background:#e0f2fe; color:#2563eb; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">小費</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#2563eb;">$${fmt(tips)}</span></div>
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px;">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <span style="background:#dcfce7; color:#16a34a; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700;">行程</span>
+            <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:#16a34a;">$${fmt(income)}</span>
+          </div>
+          <div style="width:1px; height:24px; background:rgba(0,0,0,0.1);"></div>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <span style="background:#fef3c7; color:#d97706; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700;">獎勵</span>
+            <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:#d97706;">$${fmt(bonus)}</span>
+          </div>
+          <div style="width:1px; height:24px; background:rgba(0,0,0,0.1);"></div>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <span style="background:#e0f2fe; color:#2563eb; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700;">小費</span>
+            <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:#2563eb;">$${fmt(tips)}</span>
+          </div>
         </div>
-        <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:50%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05); color:#f97316; font-size:12px; z-index:2;">▼</div>
+        <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="position:absolute; bottom:-14px; left:50%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 4px 6px rgba(0,0,0,0.1); color:#f97316; font-size:12px; z-index:10; display:flex; align-items:center; justify-content:center;">▼</div>
       </div>
       <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease;">
         <div style="border-top:1px dashed #d1d5db; margin:8px 16px;"></div>
-        <div style="padding:8px 16px 16px; white-space:normal;">
+        <div style="padding:8px 16px 16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed rgba(0,0,0,0.05);">
             <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:#9ca3af; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">接單數</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:600;">單</span></span></div>
             <div style="color:rgba(0,0,0,0.05); margin:0 12px;">│</div>
