@@ -317,12 +317,26 @@ function navHistGroup(dir, mode) {
 }
 function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
 
-function renderHistory() { if (S.histTab === 'day') renderHistDayView(); else renderHistGroupView(S.histTab); }
+// 替換：根據不同的模式，決定捲動行為，確保整個頁面能順暢捲動
+function renderHistory() { 
+  const content = document.getElementById('hist-content');
+  if (S.histTab === 'day') {
+    content.style.overflowY = 'auto';
+    content.style.overflowX = 'hidden';
+    content.style.display = 'block';
+    content.style.WebkitOverflowScrolling = 'touch';
+    renderHistDayView(); 
+  } else {
+    content.style.overflowY = 'hidden';
+    content.style.display = 'flex';
+    renderHistGroupView(S.histTab); 
+  }
+}
 
-// 替換：加上 min-height:0 與 -webkit-overflow-scrolling:touch 確保列表能順利滑動
+// 替換：移除內部多餘的 overflow 限制，讓整個內容自然撐開往下滾
 function renderHistDayView() {
   const content = document.getElementById('hist-content'); const { calY:y, calM:m } = S;
-  content.innerHTML = `<div id="hist-header" style="flex-shrink:0;padding:0 16px 6px;background:transparent;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><button class="mbtn" id="hist-prev">◀</button><h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2><button class="mbtn" id="hist-next">▶</button><button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▲</button></div><div style="display:flex; gap:8px;"><button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button></div></div><div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;"><div class="month-grid" id="hist-calendar"></div></div><div class="hist-divider"></div><div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div><div class="sec-title" id="hist-day-label" style="margin-bottom:4px">指定日記錄</div></div><div id="hist-rec-list" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:3px;"></div>`;
+  content.innerHTML = `<div id="hist-header" style="padding:0 16px 6px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><button class="mbtn" id="hist-prev">◀</button><h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2><button class="mbtn" id="hist-next">▶</button><button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▲</button></div><div style="display:flex; gap:8px;"><button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button></div></div><div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;"><div class="month-grid" id="hist-calendar"></div></div><div class="hist-divider"></div><div id="hist-day-summary" style="margin:6px 0 4px;"></div><div class="sec-title" id="hist-day-label" style="margin-bottom:4px; padding:0 4px;">指定日記錄</div></div><div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:3px;"></div>`;
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   renderHistCalendarGrid(); renderHistRecords(S.selDate);
@@ -569,7 +583,7 @@ function renderRptOverview() {
   if (platData.length>1) drawPie('plat-pie', platData.map(p=>p.name), platData.map(p=>p.val), platData.map(p=>p.color));
 }
 
-// 替換：移除雙畫布設計，改為單一畫布完美滑動
+// 替換：新增背景遮罩層，完美實現固定 Y 軸與橫向滑動
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
   const trends =[
@@ -602,14 +616,10 @@ function renderRptTrend() {
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const allTotal = S.records.filter(r=>r.date.startsWith(`${S.rptY}-`)).reduce((s,r)=>s+recTotal(r),0);
-    html += `<div class="card" style="padding:16px 0;">
-               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding:0 16px; -webkit-overflow-scrolling:touch;">
-                 <div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
-               </div>
-               <div style="padding:0 16px;">
-                 <div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div>
-                 <div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div>
-               </div>
+    html += `<div class="card" style="position:relative; padding:16px 0;">
+               <div style="position:absolute; left:0; top:16px; width:55px; height:260px; background:var(--sf); z-index:10; pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
+               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding-left:55px; padding-right:16px; -webkit-overflow-scrolling:touch;"><div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
+               <div style="padding:0 16px;"><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div></div>
              </div>`;
   } else {
     const days = trend.getDays();
@@ -619,10 +629,9 @@ function renderRptTrend() {
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const chartWidth = curT === 'month' ? `250%` : '100%'; 
-    html += `<div class="card" style="padding:16px 0;">
-               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding:0 16px; -webkit-overflow-scrolling:touch;">
-                 <div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
-               </div>
+    html += `<div class="card" style="position:relative; padding:16px 0;">
+               <div style="position:absolute; left:0; top:16px; width:55px; height:260px; background:var(--sf); z-index:10; pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
+               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding-left:55px; padding-right:16px; -webkit-overflow-scrolling:touch;"><div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
              </div>`;
   }
   
@@ -630,10 +639,11 @@ function renderRptTrend() {
   drawTrendBar('trend-chart', labels, datasets);
 }
 
-// 替換：統一使用單一畫布繪製，消除分離感
+// 替換：加入隱形圖層，精準對齊固定 Y 軸
 function drawTrendBar(canvasId, labels, datasets) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
+  if (S.charts['trend-y-axis']) { S.charts['trend-y-axis'].destroy(); }
   
   const topTotalPlugin = {
     id: 'topTotalPlugin',
@@ -656,28 +666,49 @@ function drawTrendBar(canvasId, labels, datasets) {
     }
   };
 
+  const yOpts = { 
+    stacked: true, beginAtZero: true, suggestedMax: 500, 
+    ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 }, padding: 4 }, 
+    grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
+  };
+
+  // 1. 主圖表 (可滾動，Y軸文字透明)
   S.charts[canvasId] = new Chart(ctx, { 
     type: 'bar', 
     data: { labels, datasets }, 
     plugins: [topTotalPlugin],
     options: { 
       responsive: true, maintainAspectRatio: false, 
-      layout: { padding: { top: 20, right: 10 } },
-      plugins: { 
-        legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, 
-        tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } 
-      }, 
+      layout: { padding: { top: 20 } },
+      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } }, 
       scales: { 
         x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 0 }, grid: { display: false } }, 
-        y: { 
-          stacked: true, beginAtZero: true, suggestedMax: 500, 
-          ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
-          grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
-        } 
+        y: { ...yOpts, ticks: { ...yOpts.ticks, color: 'transparent' } } 
       }, 
       animation: { duration: 400 } 
     } 
   });
+
+  // 2. Y 軸專屬圖表 (覆蓋在最左側，顏色透明，只顯示刻度)
+  const axisCtx = document.getElementById('trend-y-axis')?.getContext('2d');
+  if (axisCtx) {
+    // 將顏色改為透明，避免在左側邊緣畫出資料遮擋視覺
+    const ghostDatasets = datasets.map(d => ({ ...d, backgroundColor: 'rgba(0,0,0,0)' }));
+    S.charts['trend-y-axis'] = new Chart(axisCtx, {
+      type: 'bar',
+      data: { labels, datasets: ghostDatasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { top: 20 } },
+        plugins: { legend: { display: true, position: 'top', labels: { color: 'transparent', font: { size: 11 }, boxWidth: 12 } }, tooltip: { enabled: false } },
+        scales: {
+          x: { stacked: true, ticks: { font: { size: 10 }, color: 'transparent' }, grid: { display: false }, border: { display: false } },
+          y: { ...yOpts }
+        },
+        animation: false
+      }
+    });
+  }
 }
 
 // 重構：靈活設定 3 個不同的月份或年份進行比較
