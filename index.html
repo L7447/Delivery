@@ -234,15 +234,17 @@
         <div class="fg" style="flex:1"><label>汽油類型</label><select class="fsel" id="vr-fuel-type"><option value="92">92 無鉛</option><option value="95" selected>95 無鉛</option><option value="98">98 無鉛</option><option value="柴油">柴油</option></select></div>
         <div class="fg" style="flex:1"><label>折扣 (NT$)</label><input type="number" class="finp" id="vr-discount" value="0" oninput="calcVehFuel()"></div>
       </div>
+      <!-- 替換這段 HTML -->
       <div style="display:flex; gap:10px; margin-bottom:12px;">
-        <div class="fg" style="flex:1"><label>上次里程 (km)</label><input type="number" class="finp" id="vr-prev-km"></div>
-        <div class="fg" style="flex:1"><label>加油里程 (km)</label><input type="number" class="finp" id="vr-curr-km"></div>
+        <div class="fg" style="flex:1"><label>上次里程 (km)</label><input type="number" class="finp" id="vr-prev-km" oninput="calcVehFuel()"></div>
+        <div class="fg" style="flex:1"><label>加油里程 (km)</label><input type="number" class="finp" id="vr-curr-km" oninput="calcVehFuel()"></div>
       </div>
       <div style="display:flex; gap:10px; margin-bottom:16px;">
         <div class="fg" style="flex:1"><label>油量 (公升)</label><input type="number" class="finp" id="vr-liters" step="0.01" oninput="calcVehFuel()"></div>
         <div class="fg" style="flex:1"><label>油價 (單價)</label><input type="number" class="finp" id="vr-price" step="0.1" oninput="calcVehFuel()"></div>
       </div>
-      <div style="background:var(--sf2); padding:12px; border-radius:12px; text-align:right; margin-bottom:16px;">
+      <!-- 為這整個區塊加上 id="vr-fuel-total-panel" -->
+      <div id="vr-fuel-total-panel" style="background:var(--sf2); padding:12px; border-radius:12px; text-align:right; margin-bottom:16px;">
         <div style="font-size:12px; color:var(--t3);">折扣前總額：NT$ <span id="vr-before-total">0</span></div>
         <div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">付款金額：<span style="font-size:24px; color:var(--acc);" id="vr-final-total">0</span></div>
       </div>
