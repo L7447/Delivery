@@ -64,12 +64,13 @@ function openOverlay(id)  { document.getElementById(id)?.classList.add('show'); 
 function closeOverlay(id) { document.getElementById(id)?.classList.remove('show'); }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
-// 改寫：動態讀取 scrollHeight，確保總覽卡片與首頁卡片都能正常伸縮
+// 替換：重構展開的資料成為一行，並調整標籤位置到最右邊（工時的下方/旁邊）
 function toggleSummaryCard(id) {
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
   const t = btn.style.transform || 'rotate(0deg)';
+  // 展開的高度固定為足夠容納內容即可，50px 足夠一行文字
   if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { 
-    el.style.maxHeight = el.scrollHeight + 'px'; 
+    el.style.maxHeight = '50px'; 
     btn.style.transform = t.includes('rotate') ? t.replace('rotate(0deg)', 'rotate(180deg)') : t + ' rotate(180deg)';
   } else { 
     el.style.maxHeight = '0px'; 
@@ -79,38 +80,41 @@ function toggleSummaryCard(id) {
 
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
-  const totalBonus = bonus + tempBonus; let extraStr = '';
-  if (totalBonus > 0 || tips > 0) {
-    let tags = '';
-    if (totalBonus > 0) tags += `<span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
-    if (tips > 0) tags += `<span class="lbl-tips">小費 $${fmt(tips)}</span>`;
-    extraStr = `<div style="margin-top:6px; display:flex; align-items:center; gap:6px;">${tags}</div>`;
-  }
+  const totalBonus = bonus + tempBonus; 
+  let tags = '';
+  if (totalBonus > 0) tags += `<span class="lbl-bonus" style="margin-right:4px;">獎勵 $${fmt(totalBonus)}</span>`;
+  if (tips > 0) tags += `<span class="lbl-tips">小費 $${fmt(tips)}</span>`;
+
   const avgPerOrder = orders > 0 ? Math.round(total / orders) : 0;
   const avgPerHour = hours > 0 ? Math.round(total / hours) : 0;
   const ordersPerHour = hours > 0 ? (orders / hours).toFixed(1) : 0;
 
   return `
-    <div class="summary-card" style="margin:2px; padding:2px;">
+    <div class="summary-card" style="margin:2px; padding:4px 2px;">
       <div class="sum-top" onclick="toggleSummaryCard('${cardId}')" style="position:relative; display:flex; align-items:center; padding:2px;">
         <div style="flex:1.2; display:flex; flex-direction:column; justify-content:center;">
-          <div style="display:flex; align-items:baseline; gap:6px;"><span style="font-size:14px; font-weight:700; color:var(--t1);">${title}</span><span style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--green);">$${fmt(total)}</span></div>
-          ${extraStr}
+          <div style="display:flex; align-items:baseline; gap:6px;">
+            <span style="font-size:14px; font-weight:700; color:var(--t1);">${title}</span>
+            <span style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--green);">$${fmt(total)}</span>
+          </div>
         </div>
         <div class="sum-v-divider"></div>
-        <div style="flex:0.8; text-align:center; font-size:13px; font-weight:700; color:var(--t2);">${orders > 0 ? fmt(orders) : '0'} 單</div>
+        <div style="flex:0.6; text-align:center; font-size:13px; font-weight:700; color:var(--t2);">${orders > 0 ? fmt(orders) : '0'} 單</div>
         <div class="sum-v-divider"></div>
-        <div style="flex:1; text-align:center; font-size:13px; font-weight:700; color:var(--t2); padding-right:24px;">${hours > 0 ? fmtHours(hours) : '0m'}</div>
-        <div id="${cardId}-btn" class="sum-toggle-btn" style="transform:translateY(-50%) rotate(0deg);">▼</div>
+        <div style="flex:1.2; padding-left:10px; display:flex; flex-direction:column; justify-content:center; position:relative;">
+          <div style="font-size:13px; font-weight:700; color:var(--t2); margin-bottom:${tags ? '4px' : '0'};">${hours > 0 ? fmtHours(hours) : '0m'}</div>
+          ${tags ? `<div style="display:flex; align-items:center; flex-wrap:wrap;">${tags}</div>` : ''}
+          <div id="${cardId}-btn" class="sum-toggle-btn" style="position:absolute; right:8px; top:50%; transform:translateY(-50%) rotate(0deg);">▼</div>
+        </div>
       </div>
-      <div id="${cardId}" class="summary-collapse" style="max-height:0px; overflow:hidden;">
-        <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:2px 0;"></div>
-        <div style="display:flex; align-items:center; text-align:center; padding:2px;">
-          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);">平均 <span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerOrder)}</span> <span style="font-size:10px; font-weight:500;">/單</span></div>
-          <div class="sum-v-divider"></div>
-          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);"><span style="font-family:var(--mono); font-size:15px; color:var(--blue);">${ordersPerHour}</span> <span style="font-size:10px; font-weight:500;">單/時</span></div>
-          <div class="sum-v-divider"></div>
-          <div style="flex:1; font-size:12px; font-weight:700; color:var(--t2);"><span style="font-family:var(--mono); font-size:15px; color:var(--blue);">$${fmt(avgPerHour)}</span> <span style="font-size:10px; font-weight:500;">/時</span></div>
+      <div id="${cardId}" class="summary-collapse" style="max-height:0px; overflow:hidden; transition: max-height 0.3s ease;">
+        <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:6px 0;"></div>
+        <div style="text-align:center; font-size:12px; font-weight:600; color:var(--t2); padding:4px 0;">
+          平均：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgPerOrder)}</span> /單
+          <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
+          效率：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordersPerHour}</span> 單/時
+          <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
+          時薪：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgPerHour)}</span> /時
         </div>
       </div>
     </div>`;
@@ -235,11 +239,11 @@ async function punchOut() {
 
 
 /* ══ 3. 查看記錄 (包含精簡美化的卡片生成) 開始 ════════════════════ */
-// 替換：改用固定 150px 高度，解決隱藏時 scrollHeight 為 0 導致無法展開的問題
+// 替換 foldCard 展開高度，一行文字只需約 40px 即可
 function foldCard(id, e) {
   e.stopPropagation();
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '150px'; btn.style.transform = 'rotate(180deg)'; } 
+  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '45px'; btn.style.transform = 'rotate(180deg)'; } 
   else { el.style.maxHeight = '0px'; btn.style.transform = 'rotate(0deg)'; }
 }
 
@@ -256,7 +260,6 @@ function toggleCalendarGrid() {
   }
 }
 
-// 替換：確保 orders 與 hours 使用 pf() 轉為數字，計算才能正確顯示
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
   if (r.isPunchOnly) {
@@ -297,10 +300,15 @@ function buildRecItem(r) {
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cid}" class="hrc-collapse">
-        <div class="hrc-col-item"><span>平均</span><span class="hrc-col-val">$${fmt(avgOrd)}<span style="font-size:9px;color:var(--t3);">/單</span></span></div>
-        <div class="hrc-col-item"><span>效率</span><span class="hrc-col-val">${ordHr}<span style="font-size:9px;color:var(--t3);"> 單/時</span></span></div>
-        <div class="hrc-col-item"><span>時薪</span><span class="hrc-col-val">$${fmt(avgHr)}<span style="font-size:9px;color:var(--t3);">/時</span></span></div>
+      <div id="${cid}" class="hrc-collapse" style="background:#f8fafc; text-align:center; font-size:12px; font-weight:600; color:var(--t2); overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="border-top:1px dashed #cbd5e1; margin-bottom:6px;"></div>
+        <div style="padding-bottom:8px;">
+          平均：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgOrd)}</span> /單
+          <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
+          效率：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordHr}</span> 單/時
+          <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
+          時薪：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgHr)}</span> /時
+        </div>
       </div>
     </div>`;
 }
@@ -583,7 +591,10 @@ function renderRptOverview() {
   if (platData.length>1) drawPie('plat-pie', platData.map(p=>p.name), platData.map(p=>p.val), platData.map(p=>p.color));
 }
 
-// 替換：新增背景遮罩層，完美實現固定 Y 軸與橫向滑動
+/* ══ 5. 收入分析 開始 ════════════════════════════════════ */
+// (保留前面的程式碼)
+
+// 替換：本月趨勢分成上下兩張圖，避免橫向滑動問題
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
   const trends =[
@@ -605,45 +616,93 @@ function renderRptTrend() {
     ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:6px;border-radius:var(--rs);border:1px solid ${curT===t.key?'var(--acc)':'var(--border)'};background:${curT===t.key?'var(--acc-d)':'var(--sf2)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:12px;cursor:pointer;font-family:var(--sans);font-weight:${curT===t.key?'700':'500'}">${t.label}</button>`).join('')}
   </div>`;
 
-  const datasets =[];
   const plats = S.platforms.filter(p=>p.active);
-  let labels =[];
-
+  
   if (curT === 'year') {
-    labels = Array.from({length:12},(_,i)=>`${i+1}月`);
+    const labels = Array.from({length:12},(_,i)=>`${i+1}月`);
+    const datasets = [];
     plats.forEach(p => {
       const data = Array.from({length:12}, (_,i)=> getMonthRecs(S.rptY, i+1).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const allTotal = S.records.filter(r=>r.date.startsWith(`${S.rptY}-`)).reduce((s,r)=>s+recTotal(r),0);
-    html += `<div class="card" style="position:relative; padding:16px 0;">
-               <div style="position:absolute; left:0; top:16px; width:55px; height:260px; background:var(--sf); z-index:10; pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
-               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding-left:55px; padding-right:16px; -webkit-overflow-scrolling:touch;"><div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
-               <div style="padding:0 16px;"><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div></div>
+    
+    html += `<div class="card">
+               <div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
+               <div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div>
+               <div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div>
              </div>`;
-  } else {
+    el.innerHTML = html;
+    drawTrendBar('trend-chart', labels, datasets);
+  } 
+  else if (curT === 'month') {
+    // 將月份拆成兩半：1~15日 和 16~月底
     const days = trend.getDays();
-    labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
+    const days1 = days.slice(0, 15);
+    const days2 = days.slice(15);
+    
+    const labels1 = days1.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
+    const labels2 = days2.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
+    
+    const datasets1 = [];
+    const datasets2 = [];
+    
+    plats.forEach(p => {
+      const data1 = days1.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
+      const data2 = days2.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
+      
+      if (data1.some(v => v > 0) || data2.some(v => v > 0)) {
+        datasets1.push({ label: p.name, data: data1, backgroundColor: p.color, borderRadius: 4 });
+        datasets2.push({ label: p.name, data: data2, backgroundColor: p.color, borderRadius: 4 });
+      }
+    });
+
+    html += `<div class="card" style="margin-bottom:12px;">
+               <div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">上旬 (1-15日)</div>
+               <div style="height:220px; position:relative;"><canvas id="trend-chart-1"></canvas></div>
+             </div>
+             <div class="card">
+               <div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">下旬 (16-月底)</div>
+               <div style="height:220px; position:relative;"><canvas id="trend-chart-2"></canvas></div>
+             </div>`;
+    el.innerHTML = html;
+    
+    // 將兩張圖表的最高點統一，確保比例視覺一致
+    let maxVal = 0;
+    plats.forEach(p => {
+      const dataAll = days.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
+      const m = Math.max(...dataAll);
+      if (m > maxVal) maxVal = m;
+    });
+    // 預留標籤空間
+    maxVal = maxVal > 0 ? maxVal * 1.2 : 500;
+
+    drawTrendBar('trend-chart-1', labels1, datasets1, true, maxVal);
+    // 第二張圖隱藏圖例，節省空間
+    drawTrendBar('trend-chart-2', labels2, datasets2, false, maxVal);
+  }
+  else {
+    // 週趨勢 (7天)，不需要拆分
+    const days = trend.getDays();
+    const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
+    const datasets = [];
     plats.forEach(p => {
       const data = days.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
-    const chartWidth = curT === 'month' ? `250%` : '100%'; 
-    html += `<div class="card" style="position:relative; padding:16px 0;">
-               <div style="position:absolute; left:0; top:16px; width:55px; height:260px; background:var(--sf); z-index:10; pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
-               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding-left:55px; padding-right:16px; -webkit-overflow-scrolling:touch;"><div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
+    
+    html += `<div class="card">
+               <div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
              </div>`;
+    el.innerHTML = html;
+    drawTrendBar('trend-chart', labels, datasets);
   }
-  
-  el.innerHTML = html; 
-  drawTrendBar('trend-chart', labels, datasets);
 }
 
-// 替換：加入隱形圖層，精準對齊固定 Y 軸
-function drawTrendBar(canvasId, labels, datasets) {
+// 替換：單純繪製直條圖，支援自訂最高刻度
+function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = null) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  if (S.charts['trend-y-axis']) { S.charts['trend-y-axis'].destroy(); }
   
   const topTotalPlugin = {
     id: 'topTotalPlugin',
@@ -658,8 +717,8 @@ function drawTrendBar(canvasId, labels, datasets) {
         if (total > 0 && meta) {
           const finalModel = meta.data[i];
           ctx.save();
-          ctx.fillStyle = '#1C1917'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-          ctx.fillText(fmt(total), finalModel.x, finalModel.y - 6);
+          ctx.fillStyle = '#1C1917'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(fmt(total), finalModel.x, finalModel.y - 4);
           ctx.restore();
         }
       });
@@ -667,48 +726,31 @@ function drawTrendBar(canvasId, labels, datasets) {
   };
 
   const yOpts = { 
-    stacked: true, beginAtZero: true, suggestedMax: 500, 
-    ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 }, padding: 4 }, 
+    stacked: true, beginAtZero: true, suggestedMax: maxScale || 500, 
+    ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
     grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
   };
+  
+  if (maxScale) yOpts.max = maxScale;
 
-  // 1. 主圖表 (可滾動，Y軸文字透明)
   S.charts[canvasId] = new Chart(ctx, { 
     type: 'bar', 
     data: { labels, datasets }, 
     plugins: [topTotalPlugin],
     options: { 
       responsive: true, maintainAspectRatio: false, 
-      layout: { padding: { top: 20 } },
-      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } }, 
+      layout: { padding: { top: 15 } },
+      plugins: { 
+        legend: { display: showLegend, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, 
+        tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } 
+      }, 
       scales: { 
-        x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 0 }, grid: { display: false } }, 
-        y: { ...yOpts, ticks: { ...yOpts.ticks, color: 'transparent' } } 
+        x: { stacked: true, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } }, 
+        y: yOpts
       }, 
       animation: { duration: 400 } 
     } 
   });
-
-  // 2. Y 軸專屬圖表 (覆蓋在最左側，顏色透明，只顯示刻度)
-  const axisCtx = document.getElementById('trend-y-axis')?.getContext('2d');
-  if (axisCtx) {
-    // 將顏色改為透明，避免在左側邊緣畫出資料遮擋視覺
-    const ghostDatasets = datasets.map(d => ({ ...d, backgroundColor: 'rgba(0,0,0,0)' }));
-    S.charts['trend-y-axis'] = new Chart(axisCtx, {
-      type: 'bar',
-      data: { labels, datasets: ghostDatasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        layout: { padding: { top: 20 } },
-        plugins: { legend: { display: true, position: 'top', labels: { color: 'transparent', font: { size: 11 }, boxWidth: 12 } }, tooltip: { enabled: false } },
-        scales: {
-          x: { stacked: true, ticks: { font: { size: 10 }, color: 'transparent' }, grid: { display: false }, border: { display: false } },
-          y: { ...yOpts }
-        },
-        animation: false
-      }
-    });
-  }
 }
 
 // 重構：靈活設定 3 個不同的月份或年份進行比較
