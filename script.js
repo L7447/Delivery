@@ -319,10 +319,10 @@ function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
 
 function renderHistory() { if (S.histTab === 'day') renderHistDayView(); else renderHistGroupView(S.histTab); }
 
-// 替換：新增日曆折疊按鈕與包裹層
+// 替換：加上 min-height:0 與 -webkit-overflow-scrolling:touch 確保列表能順利滑動
 function renderHistDayView() {
   const content = document.getElementById('hist-content'); const { calY:y, calM:m } = S;
-  content.innerHTML = `<div id="hist-header" style="flex-shrink:0;padding:0 16px 6px;background:transparent;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><button class="mbtn" id="hist-prev">◀</button><h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2><button class="mbtn" id="hist-next">▶</button><button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▲</button></div><div style="display:flex; gap:8px;"><button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button></div></div><div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;"><div class="month-grid" id="hist-calendar"></div></div><div class="hist-divider"></div><div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div><div class="sec-title" id="hist-day-label" style="margin-bottom:4px">指定日記錄</div></div><div id="hist-rec-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:3px;"></div>`;
+  content.innerHTML = `<div id="hist-header" style="flex-shrink:0;padding:0 16px 6px;background:transparent;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><button class="mbtn" id="hist-prev">◀</button><h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2><button class="mbtn" id="hist-next">▶</button><button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▲</button></div><div style="display:flex; gap:8px;"><button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button></div></div><div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;"><div class="month-grid" id="hist-calendar"></div></div><div class="hist-divider"></div><div id="hist-day-summary" style="margin:6px 0 4px;min-height:0"></div><div class="sec-title" id="hist-day-label" style="margin-bottom:4px">指定日記錄</div></div><div id="hist-rec-list" style="flex:1;overflow-y:auto;min-height:0;padding:0 16px 24px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:3px;"></div>`;
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   renderHistCalendarGrid(); renderHistRecords(S.selDate);
@@ -340,6 +340,7 @@ function renderHistCalendarGrid() {
   grid.querySelectorAll('.month-cell[data-ds]').forEach(cell => { cell.addEventListener('click', () => { S.selDate = cell.dataset.ds; grid.querySelectorAll('.month-cell').forEach(c => c.classList.toggle('sel', c.dataset.ds === S.selDate)); renderHistRecords(S.selDate); }); });
 }
 
+// 替換：同樣加上 min-height:0 確保群組檢視(週/月)也能滑動
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content'); const nd = new Date(S.histNavDate); let startD, endD, labelStr;
   if (mode === 'week') { const day = nd.getDay() || 7; startD = new Date(nd); startD.setDate(startD.getDate() - day + 1); endD = new Date(startD); endD.setDate(endD.getDate() + 6); labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`; } 
@@ -350,7 +351,7 @@ function renderHistGroupView(mode) {
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`; const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
   let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr); if (S.histFilter !== 'all') recs = recs.filter(r => r.platformId === S.histFilter);
   let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('');
-  let html = `<div style="padding: 0 16px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);"><div style="display:flex; align-items:center; gap:8px;"><button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button><span style="font-family:var(--mono); font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc); letter-spacing:0.5px;">${labelStr}</span><button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button></div><select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select></div></div><div style="padding: 0 16px 24px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:0;">`;
+  let html = `<div style="padding: 0 16px; flex-shrink:0;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);"><div style="display:flex; align-items:center; gap:8px;"><button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button><span style="font-family:var(--mono); font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc); letter-spacing:0.5px;">${labelStr}</span><button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button></div><select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select></div></div><div style="padding: 0 16px 24px; flex:1; overflow-y:auto; min-height:0; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:0;">`;
   
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
     const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
@@ -568,7 +569,7 @@ function renderRptOverview() {
   if (platData.length>1) drawPie('plat-pie', platData.map(p=>p.name), platData.map(p=>p.val), platData.map(p=>p.color));
 }
 
-// 替換：加寬 Y 軸畫布的容器，將 45px 改為 65px，確保如 2.5k 這種字眼不會被切掉
+// 替換：移除雙畫布設計，改為單一畫布完美滑動
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
   const trends =[
@@ -601,11 +602,14 @@ function renderRptTrend() {
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const allTotal = S.records.filter(r=>r.date.startsWith(`${S.rptY}-`)).reduce((s,r)=>s+recTotal(r),0);
-    // 修改寬度為 65px
-    html += `<div class="card" style="padding:0; border:none; background:transparent; position:relative;">
-               <div style="position:absolute; left:0; top:0; width:65px; height:260px; z-index:5; background:var(--bg); pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
-               <div class="chart-scroll-wrap" style="margin:0; padding-left:65px;"><div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
-               <div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div>
+    html += `<div class="card" style="padding:16px 0;">
+               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding:0 16px; -webkit-overflow-scrolling:touch;">
+                 <div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
+               </div>
+               <div style="padding:0 16px;">
+                 <div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div>
+                 <div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div>
+               </div>
              </div>`;
   } else {
     const days = trend.getDays();
@@ -615,10 +619,10 @@ function renderRptTrend() {
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const chartWidth = curT === 'month' ? `250%` : '100%'; 
-    // 修改寬度為 65px
-    html += `<div class="card" style="padding:0; border:none; background:transparent; position:relative;">
-               <div style="position:absolute; left:0; top:0; width:65px; height:260px; z-index:5; background:var(--bg); pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
-               <div class="chart-scroll-wrap" style="margin:0; padding-left:65px;"><div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
+    html += `<div class="card" style="padding:16px 0;">
+               <div class="chart-scroll-wrap" style="margin:0; overflow-x:auto; overflow-y:hidden; padding:0 16px; -webkit-overflow-scrolling:touch;">
+                 <div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
+               </div>
              </div>`;
   }
   
@@ -626,11 +630,10 @@ function renderRptTrend() {
   drawTrendBar('trend-chart', labels, datasets);
 }
 
-// 替換：增加 ticks 的 padding
+// 替換：統一使用單一畫布繪製，消除分離感
 function drawTrendBar(canvasId, labels, datasets) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  if (S.charts['trend-y-axis']) { S.charts['trend-y-axis'].destroy(); }
   
   const topTotalPlugin = {
     id: 'topTotalPlugin',
@@ -653,48 +656,28 @@ function drawTrendBar(canvasId, labels, datasets) {
     }
   };
 
-  // 共用 Y 軸設定，修正千位縮寫並增加右側 padding 確保數字能完整顯示
-  const yOpts = { 
-    stacked: true, beginAtZero: true, suggestedMax: 500, 
-    ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 }, padding: 4 }, 
-    grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
-  };
-
-  // 主圖表 (可滾動)
   S.charts[canvasId] = new Chart(ctx, { 
     type: 'bar', 
     data: { labels, datasets }, 
     plugins: [topTotalPlugin],
     options: { 
       responsive: true, maintainAspectRatio: false, 
-      layout: { padding: { top: 20 } },
-      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } }, 
+      layout: { padding: { top: 20, right: 10 } },
+      plugins: { 
+        legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, 
+        tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } 
+      }, 
       scales: { 
         x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 0 }, grid: { display: false } }, 
-        y: { ...yOpts, ticks: { ...yOpts.ticks, color: 'transparent' } }
+        y: { 
+          stacked: true, beginAtZero: true, suggestedMax: 500, 
+          ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
+          grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
+        } 
       }, 
       animation: { duration: 400 } 
     } 
   });
-
-  // 固定 Y 軸圖表
-  const axisCtx = document.getElementById('trend-y-axis')?.getContext('2d');
-  if (axisCtx) {
-    S.charts['trend-y-axis'] = new Chart(axisCtx, {
-      type: 'bar',
-      data: { labels, datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        layout: { padding: { top: 20 } },
-        plugins: { legend: { display: true, position: 'top', labels: { color: 'transparent', font: { size: 11 }, boxWidth: 12 } }, tooltip: { enabled: false } },
-        scales: {
-          x: { stacked: true, ticks: { font: { size: 10 }, color: 'transparent' }, grid: { display: false } },
-          y: { ...yOpts, grid: { display: false, drawBorder: false } }
-        },
-        animation: false
-      }
-    });
-  }
 }
 
 // 重構：靈活設定 3 個不同的月份或年份進行比較
@@ -818,13 +801,19 @@ function drawBar(canvasId, labels, data, color) {
 function changeVehMonth(offset) { S.vehM += offset; if (S.vehM < 1) { S.vehM = 12; S.vehY--; } if (S.vehM > 12) { S.vehM = 1; S.vehY++; } renderVehicles(); }
 function selectVehicle(id) { S.selVehicleId = id; _syncVehSelectorActive(id); renderVehicleContent(); }
 
+// 替換：針對容器加上強制允許滑動的屬性
 function renderVehicles() {
-  const container = document.getElementById('vehicle-content'); const selectorContainer = document.getElementById('veh-selector-container');
+  const container = document.getElementById('vehicle-content'); 
+  const selectorContainer = document.getElementById('veh-selector-container');
+  
+  // 確保容器具備滑動能力
+  container.style.minHeight = '0';
+  container.style.WebkitOverflowScrolling = 'touch';
+
   document.getElementById('veh-month-label').textContent = `${S.vehY} 年 ${S.vehM} 月`;
   if (S.vehicles.length === 0) { selectorContainer.innerHTML = ''; container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return; }
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
 
-  // 加上「選擇車輛」標題
   let selectorHtml = `<div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">選擇車輛</div>`;
   selectorHtml += `<div style="display:flex; gap:12px; margin-bottom:12px; overflow-x:auto; padding:4px 4px 8px;">`;
   
