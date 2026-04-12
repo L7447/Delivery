@@ -160,7 +160,6 @@ function switchVehicleTab(tab, index) { S.vehicleTab = tab; document.getElementB
 
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-// 替換：加入嚴謹的安全防護，確保初次載入不會因為資料異常而中斷卡住
 function renderHome() {
   try {
     const today = todayStr(); const dayRecs = getDayRecs(today) || [];
@@ -173,22 +172,25 @@ function renderHome() {
       return { ...p, sum: recs.reduce((s, r) => s + recTotal(r), 0), orders: recs.reduce((s, r) => s + pf(r.orders), 0), hours: recs.reduce((s, r) => s + pf(r.hours), 0) };
     }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
-    let topHtml = `<div class="home-top-fixed"><div class="home-header"><div class="home-pg-title">今日概況</div><div class="home-pg-date"><b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b></div></div><div class="today-hero">`;
-    if (platStats.length > 0) { topHtml += `<div class="hero-plat-list">`; platStats.forEach(p => { topHtml += `<div class="hero-plat-row" style="background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};"><span class="hp-name">${p.name}收入：</span><span class="hp-sum">$ ${fmt(p.sum)}</span><span class="hp-ord">${p.orders} 單</span><span class="hp-hrs">${p.hours > 0 ? fmtHours(p.hours) : 0}</span></div>`; }); topHtml += `</div>`; } 
+    // 加上內聯樣式 padding:16px 16px 0 保證即使 CSS 遺漏也不會被頂部切掉
+    let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;"><div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;"><div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:800; color:var(--t1); line-height:1.2;">今日概況</div><div class="home-pg-date" style="font-size:13px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);"><b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b></div></div><div class="today-hero">`;
+    
+    if (platStats.length > 0) { topHtml += `<div class="hero-plat-list" style="display:flex; flex-direction:column; gap:4px;">`; platStats.forEach(p => { topHtml += `<div class="hero-plat-row" style="display:flex; align-items:center; padding:8px 14px; border-radius:12px; font-size:13px; font-weight:600; background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};"><span class="hp-name" style="width:35%; white-space:nowrap;">${p.name}收入：</span><span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right;">$ ${fmt(p.sum)}</span><span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span><span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span></div>`; }); topHtml += `</div>`; } 
     else { topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`; }
 
     const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
     topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card'); topHtml += `</div>`;
 
     const isPunched = S.punch && S.punch.date === today; let punchStatusStr = '離線';
-    if (isPunched && S.punch.startTime) { 
-      // 修復舊版 iOS 解析時間異常的問題
+    if (isPunched && S.punch && typeof S.punch.startTime === 'string') { 
       const startParts = S.punch.startTime.split(':');
-      const startMs = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), parseInt(startParts[0]||0), parseInt(startParts[1]||0)).getTime(); 
-      const diffMin = Math.floor((Date.now() - startMs) / 60000); 
-      punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`; 
+      if(startParts.length >= 2) {
+        const startMs = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), parseInt(startParts[0]||0), parseInt(startParts[1]||0)).getTime(); 
+        const diffMin = Math.floor((Date.now() - startMs) / 60000); 
+        punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`; 
+      }
     }
-    topHtml += `<div class="punch-card-new"><div class="punch-status-left"><div class="punch-dot-new ${isPunched ? 'online' : ''}"></div><span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span></div><button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}</button></div></div>`;
+    topHtml += `<div class="punch-card-new" style="background:linear-gradient(145deg, #ffffff, #f9fafb); border:1px solid #f3f4f6; border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin:8px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);"><div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;"><div class="punch-dot-new ${isPunched ? 'online' : ''}"></div><span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span></div><button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}</button></div></div>`;
 
     if (!S.homeSubTab) S.homeSubTab = 'schedule'; let bottomHtml = ``;
     if (S.homeSubTab === 'schedule') {
@@ -214,7 +216,8 @@ function renderHome() {
         });
       } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`; }
     } else if (S.homeSubTab === 'goal') {
-      const weekly = pf(S.settings.goals?.weekly); const monthly = pf(S.settings.goals?.monthly);
+      const goals = S.settings.goals || {}; // 安全防護，避免 goals 為 undefined 導致報錯中斷
+      const weekly = pf(goals.weekly); const monthly = pf(goals.monthly);
       if (weekly > 0 || monthly > 0) {
         bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
         if (weekly > 0) {
@@ -234,7 +237,7 @@ function renderHome() {
     const topEl = document.getElementById('home-top-content'); const botEl = document.getElementById('home-bottom-content');
     if (topEl) topEl.innerHTML = topHtml; if (botEl) botEl.innerHTML = bottomHtml;
   } catch (error) {
-    console.error("首頁渲染錯誤：", error);
+    console.error("首頁渲染安全攔截：", error);
   }
 }
 
@@ -540,7 +543,6 @@ window.navTrend = function(dir) {
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
-// 替換：改用「直欄式」排列，避免小螢幕上換行造成分隔線錯位，並將展開按鈕完美置中
 function renderRptOverview() {
   const recs = getMonthRecs(S.rptY, S.rptM);
   const total = recs.reduce((s,r)=>s+recTotal(r), 0); const income = recs.reduce((s,r)=>s+pf(r.income), 0);
@@ -553,14 +555,15 @@ function renderRptOverview() {
       <button class="mbtn" onclick="navRptMonth(1)">▶</button>
     </div>`;
 
+  // 移除 summary-card class，徹底擺脫全域 nowrap 設定的干擾
   html += `
-    <div class="summary-card" style="margin-bottom:20px; background:#FFFFE0; border:1px solid #f0e6cc; border-radius:16px; position:relative;">
-      <div class="sum-top" onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; position:relative;">
+    <div style="margin-bottom:20px; background:#FFFFE0; border:1px solid #f0e6cc; border-radius:16px; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; position:relative; cursor:pointer;">
         <div style="text-align:center; margin-bottom:16px;">
           <div style="font-size:12px; color:var(--t3); font-weight:700; margin-bottom:6px; letter-spacing:1px;">本月總收入</div>
           <div style="font-family:var(--mono); font-size:32px; font-weight:800; color:var(--t1); line-height:1;">$ ${fmt(total)}</div>
         </div>
-        <div style="display:flex; justify-content:center; align-items:center; gap:10px;">
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px; white-space:normal;">
           <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
             <span style="background:#dcfce7; color:#16a34a; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700;">行程</span>
             <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:#16a34a;">$${fmt(income)}</span>
@@ -576,11 +579,11 @@ function renderRptOverview() {
             <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:#2563eb;">$${fmt(tips)}</span>
           </div>
         </div>
-        <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="position:absolute; bottom:-14px; left:50%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 4px 6px rgba(0,0,0,0.1); color:#f97316; font-size:12px; z-index:10; display:flex; align-items:center; justify-content:center;">▼</div>
+        <div id="rpt-overview-col-btn" style="position:absolute; bottom:-14px; left:50%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; border-radius:50%; box-shadow:0 4px 6px rgba(0,0,0,0.1); color:#f97316; font-size:10px; z-index:10; display:flex; align-items:center; justify-content:center; transition:transform 0.35s ease;">▼</div>
       </div>
-      <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease;">
+      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease;">
         <div style="border-top:1px dashed #d1d5db; margin:8px 16px;"></div>
-        <div style="padding:8px 16px 16px;">
+        <div style="padding:8px 16px 16px; white-space:normal;">
           <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed rgba(0,0,0,0.05);">
             <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:#9ca3af; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">接單數</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:600;">單</span></span></div>
             <div style="color:rgba(0,0,0,0.05); margin:0 12px;">│</div>
