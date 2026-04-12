@@ -1179,13 +1179,25 @@ async function doReset() {
 }
 
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); }
-function init() { loadAll(); if (!S.platforms || !S.platforms.length) { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); savePlatforms(); } goPage('home'); }
 
-// 改成：等瀏覽器完成第一次繪製後再初始化，避免 flex 排版尚未就緒導致首頁版面錯亂
-window.addEventListener('load', () => {
-  init();
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => renderHome());
+// 修正：init 直接設定初始狀態，不透過 goPage，
+// 避免移除/重加 active class 觸發 CSS transition，導致首頁版面在初次繪製時空白
+function init() {
+  loadAll();
+  if (!S.platforms || !S.platforms.length) {
+    S.platforms = DEFAULT_PLATFORMS.map(p=>({...p}));
+    savePlatforms();
+  }
+  S.tab = 'home';
+  document.body.setAttribute('data-tab', 'home');
+  document.querySelectorAll('.ni[data-pg]').forEach(n => {
+    const isActive = n.dataset.pg === 'home';
+    n.classList.toggle('active', isActive);
+    const img = n.querySelector('.ni-img');
+    if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
-});
+  // page-home 已在 HTML 中預設為 active，直接渲染內容即可
+  renderHome();
+}
+init();
 /* ══ 7. 設定管理與啟動 結束 ═══════════════════════════════════ */
