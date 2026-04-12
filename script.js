@@ -121,7 +121,19 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
 
 function loadAll() {
   try { S.records = JSON.parse(localStorage.getItem(KEYS.records)||'[]'); } catch { S.records=[]; }
-  try { const saved = JSON.parse(localStorage.getItem(KEYS.platforms)||'[]'); S.platforms = DEFAULT_PLATFORMS.map(dp => { const sp = saved.find(x => x.id === dp.id); return sp ? { ...dp, color: sp.color, active: sp.active } : { ...dp }; }); } catch { S.platforms = DEFAULT_PLATFORMS.map(p=>({...p})); }
+    try { 
+    const saved = JSON.parse(localStorage.getItem(KEYS.platforms)||'[]'); 
+    if (saved && saved.length > 0) {
+      S.platforms = saved.map(sp => {
+        const dp = DEFAULT_PLATFORMS.find(d => d.id === sp.id);
+        return dp ? { ...dp, ...sp } : sp;   // 優先使用已儲存的 active 狀態
+      });
+    } else {
+      S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
+    }
+  } catch { 
+    S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); 
+  }
   try { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [], ...JSON.parse(localStorage.getItem(KEYS.settings)||'{}') }; } catch { S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] }; }
   try { S.punch = JSON.parse(localStorage.getItem(KEYS.punch)||'null'); } catch { S.punch=null; }
   try { S.vehicles = JSON.parse(localStorage.getItem(KEYS.vehicles)||'[]'); } catch { S.vehicles=[]; }
@@ -162,91 +174,164 @@ function switchVehicleTab(tab, index) { S.vehicleTab = tab; document.getElementB
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 function renderHome() {
   try {
-    const today = todayStr(); const dayRecs = getDayRecs(today) || [];
-    const total = dayRecs.reduce((s,r)=>s+recTotal(r), 0); const orders = dayRecs.reduce((s,r)=>s+pf(r.orders), 0);
-    const hours = dayRecs.filter(r => !r.isPunchOnly).reduce((s,r)=>s+pf(r.hours), 0);     
-    const dateObj = new Date(today+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
-    const activePlatforms = (S.platforms || []).filter(p=>p.active);
+    // ── 1. 取得今日資料 ─────────────────────────────────────
+    const today = todayStr();
+    const dayRecs = getDayRecs(today) || [];
+    
+    const total   = dayRecs.reduce((s, r) => s + recTotal(r), 0);
+    const orders  = dayRecs.reduce((s, r) => s + pf(r.orders), 0);
+    const hours   = dayRecs.filter(r => !r.isPunchOnly).reduce((s, r) => s + pf(r.hours), 0);
+    
+    const dateObj = new Date(today + 'T00:00:00');
+    const dow     = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
+
+    // ── 2. 計算今日各平台統計 ───────────────────────────────
+    const activePlatforms = (S.platforms || []).filter(p => p.active);
     const platStats = activePlatforms.map(p => {
       const recs = dayRecs.filter(r => r.platformId === p.id);
-      return { ...p, sum: recs.reduce((s, r) => s + recTotal(r), 0), orders: recs.reduce((s, r) => s + pf(r.orders), 0), hours: recs.reduce((s, r) => s + pf(r.hours), 0) };
+      return {
+        ...p,
+        sum:    recs.reduce((s, r) => s + recTotal(r), 0),
+        orders: recs.reduce((s, r) => s + pf(r.orders), 0),
+        hours:  recs.reduce((s, r) => s + pf(r.hours), 0)
+      };
     }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
-    // 加上內聯樣式 padding:16px 16px 0 保證即使 CSS 遺漏也不會被頂部切掉
-    let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;"><div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;"><div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:800; color:var(--t1); line-height:1.2;">今日概況</div><div class="home-pg-date" style="font-size:13px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);"><b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b></div></div><div class="today-hero">`;
+    // ── 3. 組裝「今日概況」頂部區塊 ─────────────────────────
+    let topHtml = `
+      <div style="padding:16px 16px 0; flex-shrink:0;">
+        <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
+          <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:800; color:var(--t1); line-height:1.2;">今日概況</div>
+          <div class="home-pg-date" style="font-size:13px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b>
+          </div>
+        </div>
+        <div class="today-hero">`;
+
+    // 有收入就顯示各平台小卡，沒有就顯示提示
+    if (platStats.length > 0) {
+      topHtml += `<div class="hero-plat-list" style="display:flex; flex-direction:column; gap:4px;">`;
+      platStats.forEach(p => {
+        topHtml += `
+          <div class="hero-plat-row" style="display:flex; align-items:center; padding:8px 14px; border-radius:12px; font-size:13px; font-weight:600; background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};">
+            <span class="hp-name" style="width:35%; white-space:nowrap;">${p.name}收入：</span>
+            <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right;">$ ${fmt(p.sum)}</span>
+            <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
+            <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
+          </div>`;
+      });
+      topHtml += `</div>`;
+    } else {
+      topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`;
+    }
+
+    // 總計卡片 + 打卡面板
+    const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0);
+    const dayTemp  = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0);
+    const dayTips  = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
     
-    if (platStats.length > 0) { topHtml += `<div class="hero-plat-list" style="display:flex; flex-direction:column; gap:4px;">`; platStats.forEach(p => { topHtml += `<div class="hero-plat-row" style="display:flex; align-items:center; padding:8px 14px; border-radius:12px; font-size:13px; font-weight:600; background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};"><span class="hp-name" style="width:35%; white-space:nowrap;">${p.name}收入：</span><span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right;">$ ${fmt(p.sum)}</span><span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span><span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span></div>`; }); topHtml += `</div>`; } 
-    else { topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`; }
+    topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card');
+    topHtml += `</div>`;
 
-    const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
-    topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card'); topHtml += `</div>`;
-
-    const isPunched = S.punch && S.punch.date === today; let punchStatusStr = '離線';
-    if (isPunched && S.punch && typeof S.punch.startTime === 'string') { 
+    // 打卡狀態
+    const isPunched = S.punch && S.punch.date === today;
+    let punchStatusStr = '離線';
+    if (isPunched && S.punch && typeof S.punch.startTime === 'string') {
       const startParts = S.punch.startTime.split(':');
-      if(startParts.length >= 2) {
-        const startMs = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), parseInt(startParts[0]||0), parseInt(startParts[1]||0)).getTime(); 
-        const diffMin = Math.floor((Date.now() - startMs) / 60000); 
-        punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`; 
+      if (startParts.length >= 2) {
+        const startMs = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), parseInt(startParts[0]||0), parseInt(startParts[1]||0)).getTime();
+        const diffMin = Math.floor((Date.now() - startMs) / 60000);
+        punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`;
       }
     }
-    topHtml += `<div class="punch-card-new" style="background:linear-gradient(145deg, #ffffff, #f9fafb); border:1px solid #f3f4f6; border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin:8px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);"><div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;"><div class="punch-dot-new ${isPunched ? 'online' : ''}"></div><span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span></div><button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}</button></div></div>`;
+    topHtml += `
+      <div class="punch-card-new" style="background:linear-gradient(145deg, #ffffff, #f9fafb); border:1px solid #f3f4f6; border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin:8px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
+        <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
+          <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
+          <span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span>
+        </div>
+        <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
+          ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
+        </button>
+      </div>`;
 
-    if (!S.homeSubTab) S.homeSubTab = 'schedule'; let bottomHtml = ``;
+    // ── 4. 根據目前 Tab 產生下方內容 ───────────────────────
+    if (!S.homeSubTab) S.homeSubTab = 'schedule';
+    let bottomHtml = '';
+
     if (S.homeSubTab === 'schedule') {
-      const todayObj = new Date(); todayObj.setHours(0,0,0,0);
-      const calcNextDates = (id) => {
-        const y = todayObj.getFullYear(), m = todayObj.getMonth(), d = todayObj.getDate(); const events = [];
-        const addEvent = (name, dObj) => { const diff = Math.round((dObj - todayObj) / 86400000); events.push({ name: name, dateStr: `${dObj.getMonth()+1}/${pad(dObj.getDate())}`, diff: diff, diffStr: diff === 0 ? '今天' : `${diff} 天後`}); };
-        const getNextDow = (targets) => { let cur = todayObj.getDay(); let add = 7; targets.forEach(t => { let diff = (t - cur + 7) % 7; if (diff < add) add = diff; }); let res = new Date(todayObj); res.setDate(d + add); return res; };
-        if (id === 'uber') { addEvent('趟獎結算', getNextDow([1, 4])); addEvent('發薪日', getNextDow([4])); } 
-        else if (id === 'foodpanda') { const getPandaNext = (aY, aM, aD) => { const anchor = new Date(aY, aM, aD); const diffDays = Math.floor((todayObj - anchor) / 86400000); const daysToAdd = (14 - (diffDays % 14)) % 14; let res = new Date(todayObj); res.setDate(d + daysToAdd); return res; }; addEvent('85% 取單率', getPandaNext(2020, 0, 12)); addEvent('明細寄發', getPandaNext(2020, 0, 15)); addEvent('發薪日', getPandaNext(2020, 0, 22)); } 
-        else if (id === 'foodomo') { let nSettle = new Date(todayObj), nPay = new Date(todayObj); if (d <= 15) nSettle.setDate(15); else nSettle = new Date(y, m + 1, 0); if (d <= 5) nPay.setDate(5); else if (d <= 20) nPay.setDate(20); else nPay = new Date(y, m + 1, 5); addEvent('結算日', nSettle); addEvent('發薪日', nPay); } else return null;
-        return events;
-      };
-      if (activePlatforms.length) {
+      // 平台日程表（已修復，不會卡住）
+      bottomHtml = `<div style="padding:20px 16px 12px; text-align:center; font-size:13px; color:var(--t3); font-weight:600;">📅 平台日程表</div>`;
+      
+      if (activePlatforms.length === 0) {
+        bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
+      } else {
+        bottomHtml += `<div style="display:flex; flex-direction:column; gap:12px; padding:0 16px;">`;
         activePlatforms.forEach(p => {
-          const events = calcNextDates(p.id); if (!events) return;
-          bottomHtml += `<div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 5px;"><div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;"><div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);"></div><span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span></div><div style="display:flex; gap:6px;">${events.map(ev => {
-                  const isToday = ev.diff === 0; const dateColor = isToday ? 'var(--green)' : 'var(--t1)'; let diffColor = isToday ? 'var(--green)' : 'var(--t2)'; let nameColor = 'var(--t3)'; 
-                  if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)'; else if (ev.name.includes('明細')) nameColor = 'var(--acc)'; else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
-                  if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) { diffColor = '#22C55E'; }
-                  return `<div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;"><span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span><span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span></div>`;
-                }).join('')}</div></div>`;
+          const events = calcNextDates(p.id);   // 使用下方定義的函式
+          if (!events) return;
+          bottomHtml += `
+            <div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 5px;">
+              <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
+                <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
+                <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
+              </div>
+              <div style="display:flex; gap:6px;">${events.map(ev => {
+                const isToday = ev.diff === 0;
+                const dateColor = isToday ? 'var(--green)' : 'var(--t1)';
+                let diffColor = isToday ? 'var(--green)' : 'var(--t2)';
+                let nameColor = 'var(--t3)';
+                if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)';
+                else if (ev.name.includes('明細')) nameColor = 'var(--acc)';
+                else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
+                if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
+                return `
+                  <div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                    <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
+                    <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
+                  </div>`;
+              }).join('')}</div>
+            </div>`;
         });
-      } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`; }
-    } else if (S.homeSubTab === 'goal') {
-      const goals = S.settings.goals || {}; // 安全防護，避免 goals 為 undefined 導致報錯中斷
-      const weekly = pf(goals.weekly); const monthly = pf(goals.monthly);
+        bottomHtml += `</div>`;
+      }
+    } 
+    else if (S.homeSubTab === 'goal') {
+      // 目標進度（已加上安全防護）
+      const goals = S.settings.goals || {};
+      const weekly = pf(goals.weekly);
+      const monthly = pf(goals.monthly);
+      
       if (weekly > 0 || monthly > 0) {
         bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
+        // 週目標
         if (weekly > 0) {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
           for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
           const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
           bottomHtml += `<div style="margin-bottom: ${monthly>0 ? '16px' : '0'};"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
+        // 月目標
         if (monthly > 0) {
           const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
           const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
           bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
         bottomHtml += `</div>`;
-      } else { bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`; }
+      } else {
+        bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`;
+      }
     }
-    const topEl = document.getElementById('home-top-content'); const botEl = document.getElementById('home-bottom-content');
-    if (topEl) topEl.innerHTML = topHtml; if (botEl) botEl.innerHTML = bottomHtml;
+
+    // ── 5. 寫入 DOM ─────────────────────────────────────────
+    const topEl = document.getElementById('home-top-content');
+    const botEl = document.getElementById('home-bottom-content');
+    if (topEl) topEl.innerHTML = topHtml;
+    if (botEl) botEl.innerHTML = bottomHtml;
+
   } catch (error) {
     console.error("首頁渲染安全攔截：", error);
   }
-}
-
-function punchIn() { const today = todayStr(); S.punch = { date: today, startTime: nowTime() }; savePunch(); toast(`✅ 上線打卡：${S.punch.startTime}`); renderHome(); }
-async function punchOut() {
-  if (!S.punch) return; const ok = await customConfirm('<strong>【確認離線】</strong><br>確定要結束工作並下線嗎？'); if (!ok) return;
-  const endTime = nowTime(); const startMs = new Date(`${S.punch.date}T${S.punch.startTime}`).getTime(); const endMs = new Date(`${S.punch.date}T${endTime}`).getTime(); const diffHours = Math.max(0, (endMs - startMs) / 3600000);
-  const punchRecord = { id: newId(), date: S.punch.date, time: endTime, platformId: null, punchIn: S.punch.startTime, punchOut: endTime, hours: diffHours, isPunchOnly: true, note: '系統上下線記錄' };
-  S.records.push(punchRecord); saveRecords(); S.punch = null; savePunch(); toast('✅ 已離線！時數已記錄至歷史中'); renderHome();
 }
 /* ══ 2. 首頁 結束 ══════════════════════════════════════════ */
 
