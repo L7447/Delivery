@@ -109,7 +109,7 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
       </div>
       <div id="${cardId}" class="summary-collapse" style="max-height:0px; overflow:hidden; transition: max-height 0.3s ease;">
         <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:6px 0;"></div>
-        <div style="text-align:center; font-size:12px; font-weight:600; color:var(--t2); padding:4px 0;">
+        <div style="text-align:center; font-size:12px; font-weight:500; color:var(--red); padding:4px 0;">
           平均：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgPerOrder)}</span> /單
           <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
           效率：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordersPerHour}</span> 單/時
@@ -301,8 +301,8 @@ function buildRecItem(r) {
         </div>
       </div>
       <div id="${cid}" class="hrc-collapse" style="background:#f8fafc; text-align:center; font-size:12px; font-weight:600; color:var(--t2); overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:1px dashed #cbd5e1; margin-bottom:6px;"></div>
-        <div style="padding-bottom:8px;">
+        <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
+        <div style="text-align:center; font-size:12px; font-weight:500; color:var(--red); padding:4px 0;">
           平均：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgOrd)}</span> /單
           <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
           效率：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordHr}</span> 單/時
@@ -592,9 +592,8 @@ function renderRptOverview() {
 }
 
 /* ══ 5. 收入分析 開始 ════════════════════════════════════ */
-// (保留前面的程式碼)
 
-// 替換：本月趨勢分成上下兩張圖，避免橫向滑動問題
+// 替換：移除本月趨勢強制的 Y 軸最大值，讓其自動隨資料縮放 (與本週趨勢相同)
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
   const trends =[
@@ -667,22 +666,12 @@ function renderRptTrend() {
              </div>`;
     el.innerHTML = html;
     
-    // 將兩張圖表的最高點統一，確保比例視覺一致
-    let maxVal = 0;
-    plats.forEach(p => {
-      const dataAll = days.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
-      const m = Math.max(...dataAll);
-      if (m > maxVal) maxVal = m;
-    });
-    // 預留標籤空間
-    maxVal = maxVal > 0 ? maxVal * 1.2 : 500;
-
-    drawTrendBar('trend-chart-1', labels1, datasets1, true, maxVal);
-    // 第二張圖隱藏圖例，節省空間
-    drawTrendBar('trend-chart-2', labels2, datasets2, false, maxVal);
+    // 直接呼叫 drawTrendBar，不再傳入強制的最大刻度 (maxScale = null)
+    drawTrendBar('trend-chart-1', labels1, datasets1, true, null);
+    drawTrendBar('trend-chart-2', labels2, datasets2, false, null);
   }
   else {
-    // 週趨勢 (7天)，不需要拆分
+    // 週趨勢 (7天)
     const days = trend.getDays();
     const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
     const datasets = [];
@@ -699,7 +688,7 @@ function renderRptTrend() {
   }
 }
 
-// 替換：單純繪製直條圖，支援自訂最高刻度
+// 替換：移除強制的 max 屬性設定
 function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = null) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
@@ -726,11 +715,15 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
   };
 
   const yOpts = { 
-    stacked: true, beginAtZero: true, suggestedMax: maxScale || 500, 
+    stacked: true, 
+    beginAtZero: true, 
+    // 若沒有強制傳入 maxScale，就預設給一個 suggestedMax 讓圖表不會太扁
+    suggestedMax: maxScale || 500, 
     ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
     grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
   };
   
+  // 只有當傳入 maxScale 時，才鎖死最大值
   if (maxScale) yOpts.max = maxScale;
 
   S.charts[canvasId] = new Chart(ctx, { 
