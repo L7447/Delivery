@@ -235,13 +235,15 @@ async function punchOut() {
 
 
 /* ══ 3. 查看記錄 (包含精簡美化的卡片生成) 開始 ════════════════════ */
+// 替換：改用 scrollHeight 動態獲取實際高度，取代寫死的 80px
 function foldCard(id, e) {
   e.stopPropagation();
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '80px'; btn.style.transform = 'rotate(180deg)'; } 
+  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = el.scrollHeight + 'px'; btn.style.transform = 'rotate(180deg)'; } 
   else { el.style.maxHeight = '0px'; btn.style.transform = 'rotate(0deg)'; }
 }
 
+// 替換：確保 orders 與 hours 使用 pf() 轉為數字，計算才能正確顯示
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
   if (r.isPunchOnly) {
@@ -256,14 +258,15 @@ function buildRecItem(r) {
   }
   const plat = getPlatform(r.platformId); const total = recTotal(r);
   const totalBonus = pf(r.bonus) + pf(r.tempBonus);
-  const avgOrd = r.orders > 0 ? Math.round(total/r.orders) : 0;
-  const ordHr = r.hours > 0 ? (r.orders/r.hours).toFixed(1) : 0;
-  const avgHr = r.hours > 0 ? Math.round(total/r.hours) : 0;
+  const _orders = pf(r.orders); const _hours = pf(r.hours); // 確保轉為數字
+  const avgOrd = _orders > 0 ? Math.round(total / _orders) : 0;
+  const ordHr = _hours > 0 ? (_orders / _hours).toFixed(1) : 0;
+  const avgHr = _hours > 0 ? Math.round(total / _hours) : 0;
   
   let tagsHtml = '';
-  if (r.orders > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.orders} 單</span>`;
-  if (r.mileage > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.mileage} km</span>`; // 顯示里程
-  if (r.hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(r.hours)}</span>`;
+  if (_orders > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${_orders} 單</span>`;
+  if (r.mileage > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.mileage} km</span>`; 
+  if (_hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(_hours)}</span>`;
   if (totalBonus > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
   if (r.tips > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-tips">小費 $${fmt(r.tips)}</span>`;
 
@@ -274,7 +277,7 @@ function buildRecItem(r) {
         <div class="hrc-row1">
           <span class="hrc-plat-tag" style="background:${plat.color};">${plat.name}</span>
           <span>${r.time||''}</span>
-          ${r.note ? `<span class="h-div"></span><span style="color:var(--t3);">📝 ${r.note}</span>` : ''}
+          ${r.note ? `<span class="h-div"></span><span style="color:var(--t3);"> ${r.note}</span>` : ''}
         </div>
         <div class="hrc-row2">
           <span class="hrc-amt">$${fmt(total)}</span>
@@ -551,7 +554,7 @@ function renderRptOverview() {
   if (platData.length>1) drawPie('plat-pie', platData.map(p=>p.name), platData.map(p=>p.val), platData.map(p=>p.color));
 }
 
-// 趨勢圖改為多平台堆疊（Stacked）
+// 替換：產生兩層式佈局，達成固定 Y 軸不隨 X 軸滾動
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
   const trends =[
@@ -584,7 +587,11 @@ function renderRptTrend() {
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const allTotal = S.records.filter(r=>r.date.startsWith(`${S.rptY}-`)).reduce((s,r)=>s+recTotal(r),0);
-    html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div></div>`;
+    html += `<div class="card" style="padding:0; border:none; background:transparent; position:relative;">
+               <div style="position:absolute; left:0; top:0; width:45px; height:260px; z-index:5; background:var(--bg); pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
+               <div class="chart-scroll-wrap" style="margin:0; padding-left:45px;"><div style="min-width:100%; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
+               <div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div>
+             </div>`;
   } else {
     const days = trend.getDays();
     labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
@@ -593,19 +600,22 @@ function renderRptTrend() {
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const chartWidth = curT === 'month' ? `250%` : '100%'; 
-    html += `<div class="card" style="padding:0; border:none; background:transparent;"><div class="chart-scroll-wrap" style="margin:0;"><div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div></div>`;
+    html += `<div class="card" style="padding:0; border:none; background:transparent; position:relative;">
+               <div style="position:absolute; left:0; top:0; width:45px; height:260px; z-index:5; background:var(--bg); pointer-events:none;"><canvas id="trend-y-axis"></canvas></div>
+               <div class="chart-scroll-wrap" style="margin:0; padding-left:45px;"><div style="min-width:${chartWidth}; height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>
+             </div>`;
   }
   
   el.innerHTML = html; 
   drawTrendBar('trend-chart', labels, datasets);
 }
 
-// 支援在堆疊最頂端繪製總額的自訂外掛
+// 替換：雙圖表對齊並修正 y 軸小數點 (1.5k) 顯示格式
 function drawTrendBar(canvasId, labels, datasets) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
+  if (S.charts['trend-y-axis']) { S.charts['trend-y-axis'].destroy(); }
   
-  // 自訂外掛：在最上方顯示加總金額
   const topTotalPlugin = {
     id: 'topTotalPlugin',
     afterDatasetsDraw: (chart) => {
@@ -627,21 +637,48 @@ function drawTrendBar(canvasId, labels, datasets) {
     }
   };
 
+  // 共用 Y 軸設定，修正千位縮寫(例如 1500 顯示為 1.5k)
+  const yOpts = { 
+    stacked: true, beginAtZero: true, suggestedMax: 500, 
+    ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
+    grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
+  };
+
+  // 主圖表 (可滾動)
   S.charts[canvasId] = new Chart(ctx, { 
     type: 'bar', 
     data: { labels, datasets }, 
     plugins: [topTotalPlugin],
     options: { 
-      responsive:true, maintainAspectRatio:false, 
+      responsive: true, maintainAspectRatio: false, 
       layout: { padding: { top: 20 } },
-      plugins:{ legend:{display:true, position:'top', labels:{font:{size:11}, boxWidth:12}}, tooltip:{ mode:'index', intersect:false, callbacks:{ label:c=>`${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` }} }, 
-      scales:{ 
-        x:{ stacked:true, ticks:{font:{size:10}, maxRotation:0}, grid:{display:false}}, 
-        y:{ stacked:true, beginAtZero:true, suggestedMax:500, ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:10}}, grid:{color:'rgba(0,0,0,.05)', drawBorder:false}} 
+      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } }, 
+      scales: { 
+        x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 0 }, grid: { display: false } }, 
+        y: { ...yOpts, ticks: { ...yOpts.ticks, color: 'transparent' } } // 讓文字透明保留左側空間
       }, 
-      animation:{ duration:400 } 
+      animation: { duration: 400 } 
     } 
   });
+
+  // 固定 Y 軸圖表
+  const axisCtx = document.getElementById('trend-y-axis')?.getContext('2d');
+  if (axisCtx) {
+    S.charts['trend-y-axis'] = new Chart(axisCtx, {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { top: 20 } },
+        plugins: { legend: { display: true, position: 'top', labels: { color: 'transparent', font: { size: 11 }, boxWidth: 12 } }, tooltip: { enabled: false } },
+        scales: {
+          x: { stacked: true, ticks: { font: { size: 10 }, color: 'transparent' }, grid: { display: false } },
+          y: { ...yOpts, grid: { display: false, drawBorder: false } }
+        },
+        animation: false
+      }
+    });
+  }
 }
 
 // 重構：靈活設定 3 個不同的月份或年份進行比較
@@ -747,17 +784,16 @@ function drawPie(canvasId, labels, data, colors) {
   S.charts[canvasId] = new Chart(ctx, { type: 'doughnut', data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] }, options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ display:true, position:'bottom', labels:{font:{size:11},padding:8} } }, animation:{ duration:400 } } });
 }
 
-// 修正：加入 interaction mode 讓手指觸控更容易，並修改 y 軸配置修復預設為 0.2 的問題
 function drawLine(canvasId, labels, datasets) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  S.charts[canvasId] = new Chart(ctx, { type: 'line', data: { labels, datasets: datasets.map(d=>({ label:d.label, data:d.data, borderColor:d.color, backgroundColor:d.color+'22', borderWidth:2, pointRadius:3, hitRadius:20, tension:.3, fill:true }))}, options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false }, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, scales:{ x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true}}, y:{beginAtZero:true, suggestedMax:500, ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} }, animation:{ duration:400 } } });
+  S.charts[canvasId] = new Chart(ctx, { type: 'line', data: { labels, datasets: datasets.map(d=>({ label:d.label, data:d.data, borderColor:d.color, backgroundColor:d.color+'22', borderWidth:2, pointRadius:3, hitRadius:20, tension:.3, fill:true }))}, options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false }, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, scales:{ x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true}}, y:{beginAtZero:true, suggestedMax:500, ticks:{callback:v=>v>=1000?(v/1000).toFixed(1).replace('.0','')+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} }, animation:{ duration:400 } } });
 }
 
 function drawBar(canvasId, labels, data, color) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  S.charts[canvasId] = new Chart(ctx, { type: 'bar', data: { labels, datasets:[{ data, backgroundColor:color+'99', borderRadius:6, borderWidth:0 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, scales:{ x:{ticks:{font:{size:10}},grid:{display:false}}, y:{ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} }, animation:{ duration:400 } } });
+  S.charts[canvasId] = new Chart(ctx, { type: 'bar', data: { labels, datasets:[{ data, backgroundColor:color+'99', borderRadius:6, borderWidth:0 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>`NT$ ${fmt(c.parsed.y)}` }} }, scales:{ x:{ticks:{font:{size:10}},grid:{display:false}}, y:{ticks:{callback:v=>v>=1000?(v/1000).toFixed(1).replace('.0','')+'k':v,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}} }, animation:{ duration:400 } } });
 }
 /* ══ 5. 收入分析 結束 ══════════════════════════════════════════ */
 
@@ -874,6 +910,7 @@ function openAddVehRec(recordId = null) {
   switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); openOverlay('veh-rec-add-page');
 }
 
+// 替換：控制底部面板動態轉換為電動車使用量顯示模式
 function switchVehFormTab(type, index) {
   S.addVehRecType = type; document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`; 
   document.getElementById('btn-form-fuel').classList.toggle('active', type === 'fuel'); document.getElementById('btn-form-maint').classList.toggle('active', type === 'maintenance'); 
@@ -883,25 +920,22 @@ function switchVehFormTab(type, index) {
   const isEV = v && v.defaultFuel === 'electric';
 
   if (type === 'fuel') {
-    // 若為電動車，隱藏油價/公升/折扣/燃料選擇，只顯示里程
     document.getElementById('vr-fuel-type').parentElement.style.display = isEV ? 'none' : 'flex';
     document.getElementById('vr-discount').parentElement.style.display = isEV ? 'none' : 'flex';
     document.getElementById('vr-liters').parentElement.style.display = isEV ? 'none' : 'flex';
     document.getElementById('vr-price').parentElement.style.display = isEV ? 'none' : 'flex';
-    document.getElementById('vr-before-total').parentElement.style.display = isEV ? 'none' : 'block';
     
     document.getElementById('vr-prev-km').parentElement.querySelector('label').textContent = isEV ? '上次總量紀錄' : '上次里程 (km)';
     document.getElementById('vr-curr-km').parentElement.querySelector('label').textContent = isEV ? '現在總量紀錄' : '加油里程 (km)';
     
-    // 如果是電動車，幫它插入一個唯讀的「使用量 (km)」
-    if (isEV) {
-       let evUse = document.getElementById('vr-ev-usage');
-       if(!evUse) {
-         document.getElementById('vr-curr-km').parentElement.insertAdjacentHTML('afterend', `<div class="fg" style="flex:1" id="vr-ev-usage"><label>使用量 (km)</label><input type="text" class="finp" id="vr-ev-calc" readonly style="background:transparent; border:none; font-weight:bold; color:var(--acc); padding:10px 0;"></div>`);
-         evUse = document.getElementById('vr-ev-usage');
-       } else { evUse.style.display = 'flex'; }
-    } else {
-       if(document.getElementById('vr-ev-usage')) document.getElementById('vr-ev-usage').style.display = 'none';
+    // 動態切換底部的總計顯示面板
+    const totalPanel = document.getElementById('vr-fuel-total-panel');
+    if (totalPanel) {
+      if (isEV) {
+        totalPanel.innerHTML = `<div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">使用量： <span style="font-size:24px; color:var(--acc);" id="vr-ev-calc">0</span> <span style="font-size:14px; color:var(--t1);">(km)</span></div>`;
+      } else {
+        totalPanel.innerHTML = `<div style="font-size:12px; color:var(--t3);">折扣前總額：NT$ <span id="vr-before-total">0</span></div><div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">付款金額：<span style="font-size:24px; color:var(--acc);" id="vr-final-total">0</span></div>`;
+      }
     }
   }
 
@@ -918,23 +952,37 @@ function calcVehFuel() {
   const curr = pf(document.getElementById('vr-curr-km').value);
   if (document.getElementById('vr-ev-calc')) {
     const diff = curr - prev;
-    document.getElementById('vr-ev-calc').value = diff > 0 ? `${diff} km` : '0 km';
+    document.getElementById('vr-ev-calc').textContent = diff > 0 ? diff : '0';
   }
 
-  const liters = pf(document.getElementById('vr-liters').value); const price = pf(document.getElementById('vr-price').value); const discount = pf(document.getElementById('vr-discount').value); const before = Math.round(liters * price); const final = Math.round(Math.max(0, before - discount)); 
+  const liters = pf(document.getElementById('vr-liters') ? document.getElementById('vr-liters').value : 0); 
+  const price = pf(document.getElementById('vr-price') ? document.getElementById('vr-price').value : 0); 
+  const discount = pf(document.getElementById('vr-discount') ? document.getElementById('vr-discount').value : 0); 
+  const before = Math.round(liters * price); 
+  const final = Math.round(Math.max(0, before - discount)); 
   if (document.getElementById('vr-before-total')) document.getElementById('vr-before-total').textContent = fmt(before); 
   if (document.getElementById('vr-final-total')) document.getElementById('vr-final-total').textContent = fmt(final); 
 }
 
-function calcVehFuel() { const liters = pf(document.getElementById('vr-liters').value); const price = pf(document.getElementById('vr-price').value); const discount = pf(document.getElementById('vr-discount').value); const before = Math.round(liters * price); const final = Math.round(Math.max(0, before - discount)); document.getElementById('vr-before-total').textContent = fmt(before); document.getElementById('vr-final-total').textContent = fmt(final); }
-
 function confirmAddVehRec() {
   const checkImg = document.getElementById('veh-save-img'); const checkBtn = document.getElementById('veh-save-btn'); if (checkBtn.disabled) return; if (!S.selVehicleId) { toast('請先選擇車輛'); return; }
-  let amount = 0; if (S.addVehRecType === 'fuel') { amount = pf(document.getElementById('vr-final-total').textContent.replace(/,/g,'')); if (amount <= 0) { toast('金額不能為 0'); return; } } else { amount = pf(document.getElementById('vm-amount').value); if (amount <= 0 || currentSelItems.length === 0) { toast('請選擇保養項目並輸入金額'); return; } }
+  let amount = 0; 
+  if (S.addVehRecType === 'fuel') { 
+    const finalTotalEl = document.getElementById('vr-final-total');
+    if (finalTotalEl) {
+      amount = pf(finalTotalEl.textContent.replace(/,/g,'')); 
+      if (amount <= 0) { toast('金額不能為 0'); return; }
+    } else {
+      amount = 0; // 電動車沒有付款金額
+    }
+  } else { 
+    amount = pf(document.getElementById('vm-amount').value); 
+    if (amount <= 0 || currentSelItems.length === 0) { toast('請選擇保養項目並輸入金額'); return; } 
+  }
   checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 3000);
   setTimeout(() => {
     checkImg.style.transform = 'scale(1)'; const commonData = { id: editingVehRecId || newId(), vehicleId: S.selVehicleId, type: S.addVehRecType, date: document.getElementById('vr-date').value, time: document.getElementById('vr-time').value, amount: amount }; let specificData = {};
-    if (S.addVehRecType === 'fuel') { specificData = { fuelType: document.getElementById('vr-fuel-type').value, discount: pf(document.getElementById('vr-discount').value), prevKm: pf(document.getElementById('vr-prev-km').value), km: pf(document.getElementById('vr-curr-km').value), liters: pf(document.getElementById('vr-liters').value), price: pf(document.getElementById('vr-price').value) }; } 
+    if (S.addVehRecType === 'fuel') { specificData = { fuelType: document.getElementById('vr-fuel-type') ? document.getElementById('vr-fuel-type').value : 'electric', discount: pf(document.getElementById('vr-discount')?document.getElementById('vr-discount').value:0), prevKm: pf(document.getElementById('vr-prev-km').value), km: pf(document.getElementById('vr-curr-km').value), liters: pf(document.getElementById('vr-liters')?document.getElementById('vr-liters').value:0), price: pf(document.getElementById('vr-price')?document.getElementById('vr-price').value:0) }; } 
     else { const shop = document.getElementById('vm-shop').value.trim(); if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } specificData = { km: pf(document.getElementById('vm-km').value), items: currentSelItems, shop: shop, payMethod: document.getElementById('vm-pay-method').value, note: document.getElementById('vm-note').value }; }
     const finalRec = { ...commonData, ...specificData }; if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } else { S.vehicleRecs.push(finalRec); toast('✅ 記錄已新增'); }
     editingVehRecId = null; saveVehicleRecs(); checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; closeOverlay('veh-rec-add-page'); renderVehicles();
