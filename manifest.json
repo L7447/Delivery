@@ -1,0 +1,14 @@
+{
+  "name": "外送記帳",
+  "short_name": "外送記帳",
+  "description": "外送員專用收入記帳 App，支援多平台、打卡、獎勵與報表",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF8F4",
+  "theme_color": "#FF6B35",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}
