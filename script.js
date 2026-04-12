@@ -501,78 +501,76 @@ function cancelAddRecord() {
 /* ══ 4. 新增記錄 結束 ════════════════════════════════════ */
 
 
-/* ══ 5. 收入分析 開始 (包含全新的比較功能、趨勢圖與精美總覽卡) ═════════════════ */
+/* ══ 5. 收入分析 開始 ════════════════════════════════════ */
 function renderReport() {
-  document.getElementById('rpt-label').textContent = `${S.rptY} 年 ${S.rptM} 月`;
+  if (!S.trendDate) S.trendDate = new Date();
   if (S.rptView === 'overview') renderRptOverview(); 
   if (S.rptView === 'trend') renderRptTrend();
   if (S.rptView === 'compare') renderRptCompare(); 
   if (S.rptView === 'top3') renderRptTop3();
 }
+
+// 總覽與 TOP3 專用的月份切換
+window.navRptMonth = function(dir) {
+  S.rptM += dir;
+  if(S.rptM < 1) { S.rptM = 12; S.rptY--; }
+  if(S.rptM > 12) { S.rptM = 1; S.rptY++; }
+  renderReport();
+}
+
+// 趨勢專用的日期切換 (週/月/年)
+window.navTrend = function(dir) {
+  let d = new Date(S.trendDate || new Date());
+  if (S.trendMode === 'week') d.setDate(d.getDate() + dir * 7);
+  else if (S.trendMode === 'month') d.setMonth(d.getMonth() + dir);
+  else if (S.trendMode === 'year') d.setFullYear(d.getFullYear() + dir);
+  S.trendDate = d;
+  renderRptTrend();
+}
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
-// 重構：總覽版面採用精美的折疊卡片設計
 function renderRptOverview() {
   const recs = getMonthRecs(S.rptY, S.rptM);
   const total = recs.reduce((s,r)=>s+recTotal(r), 0); const income = recs.reduce((s,r)=>s+pf(r.income), 0);
   const bonus = recs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus), 0); const tips = recs.reduce((s,r)=>s+pf(r.tips), 0);
   const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
 
-  // 全新黃底版面設計
-  let html = `
+  // 新增獨立月份切換器
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
+      <button class="mbtn" onclick="navRptMonth(-1)">◀</button>
+      <span style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--acc);">${S.rptY} 年 ${S.rptM} 月</span>
+      <button class="mbtn" onclick="navRptMonth(1)">▶</button>
+    </div>`;
+
+  html += `
     <div class="summary-card" style="margin-bottom:12px; background:#FFFFE0; border:1px solid #f0e6cc; border-radius:16px; position:relative;">
       <div class="sum-top" onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; position:relative;">
-        
         <div style="text-align:center; margin-bottom:16px;">
           <div style="font-size:12px; color:var(--t3); font-weight:700; margin-bottom:6px; letter-spacing:1px;">本月總收入</div>
           <div style="font-family:var(--mono); font-size:32px; font-weight:800; color:var(--t1); line-height:1;">$ ${fmt(total)}</div>
         </div>
-        
         <div style="display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="background:#dcfce7; color:#16a34a; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">行程</span>
-            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#16a34a;">$${fmt(income)}</span>
-          </div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="background:#dcfce7; color:#16a34a; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">行程</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#16a34a;">$${fmt(income)}</span></div>
           <div style="color:#d1d5db;">│</div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="background:#fef3c7; color:#d97706; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">獎勵</span>
-            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#d97706;">$${fmt(bonus)}</span>
-          </div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="background:#fef3c7; color:#d97706; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">獎勵</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#d97706;">$${fmt(bonus)}</span></div>
           <div style="color:#d1d5db;">│</div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="background:#e0f2fe; color:#2563eb; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">小費</span>
-            <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#2563eb;">$${fmt(tips)}</span>
-          </div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="background:#e0f2fe; color:#2563eb; font-size:11px; padding:4px 8px; border-radius:6px; font-weight:700;">小費</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#2563eb;">$${fmt(tips)}</span></div>
         </div>
-
         <div id="rpt-overview-col-btn" class="sum-toggle-btn" style="top:auto; bottom:-12px; left:90%; transform:translateX(-50%) rotate(0deg); width:28px; height:28px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05); color:#f97316; font-size:12px; z-index:2;">▼</div>
       </div>
-      
       <div id="rpt-overview-col" class="summary-collapse" style="max-height:0px; overflow:hidden;">
         <div style="border-top:1px dashed #d1d5db; margin:8px 16px;"></div>
         <div style="padding:8px 16px 16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed rgba(0,0,0,0.05);">
-            <div style="flex:1; display:flex; align-items:center; gap:8px;">
-              <span style="background:#9ca3af; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">接單數</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:600;">單</span></span>
-            </div>
+            <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:#9ca3af; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">接單數</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)} <span style="font-size:11px; font-weight:600;">單</span></span></div>
             <div style="color:rgba(0,0,0,0.05); margin:0 12px;">│</div>
-            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
-              <span style="background:#8b5cf6; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">總工時</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#8b5cf6;">${fmtHours(hours)}</span>
-            </div>
+            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;"><span style="background:#8b5cf6; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">總工時</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#8b5cf6;">${fmtHours(hours)}</span></div>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0;">
-            <div style="flex:1; display:flex; align-items:center; gap:8px;">
-              <span style="background:#3b82f6; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">時薪</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#3b82f6;">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'} <span style="font-size:11px; font-weight:600;">/h</span></span>
-            </div>
+            <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:#3b82f6; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">時薪</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#3b82f6;">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'} <span style="font-size:11px; font-weight:600;">/h</span></span></div>
             <div style="color:rgba(0,0,0,0.05); margin:0 12px;">│</div>
-            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
-              <span style="background:#ea580c; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">均單</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#ea580c;">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'} <span style="font-size:11px; font-weight:600;">/單</span></span>
-            </div>
+            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;"><span style="background:#ea580c; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">均單</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#ea580c;">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'} <span style="font-size:11px; font-weight:600;">/單</span></span></div>
           </div>
         </div>
       </div>
@@ -582,10 +580,7 @@ function renderRptOverview() {
   const platData = activePlats.map(p=>({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
   
   if (platData.length > 1) {
-    html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">各平台佔比</div><div style="position:relative;height:220px;margin-bottom:10px"><canvas id="plat-pie"></canvas></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        ${platData.map(p=>{ const pct = total>0?Math.round(p.val/total*100):0; return `<div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></div><span style="flex:1;font-size:13px">${p.name}</span><span style="font-family:var(--mono);font-size:13px;color:var(--t2)">${pct}%</span><span style="font-family:var(--mono);font-size:13px;font-weight:600">NT$ ${fmt(p.val)}</span></div>`; }).join('')}
-      </div></div>`;
+    html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">各平台佔比</div><div style="position:relative;height:220px;margin-bottom:10px"><canvas id="plat-pie"></canvas></div><div style="display:flex;flex-direction:column;gap:6px">${platData.map(p=>{ const pct = total>0?Math.round(p.val/total*100):0; return `<div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></div><span style="flex:1;font-size:13px">${p.name}</span><span style="font-family:var(--mono);font-size:13px;color:var(--t2)">${pct}%</span><span style="font-family:var(--mono);font-size:13px;font-weight:600">NT$ ${fmt(p.val)}</span></div>`; }).join('')}</div></div>`;
   }
   document.getElementById('rv-overview').innerHTML = html;
   if (platData.length>1) drawPie('plat-pie', platData.map(p=>p.name), platData.map(p=>p.val), platData.map(p=>p.color));
@@ -593,26 +588,47 @@ function renderRptOverview() {
 
 /* ══ 5. 收入分析 開始 ════════════════════════════════════ */
 
-// 替換：移除本月趨勢強制的 Y 軸最大值，讓其自動隨資料縮放 (與本週趨勢相同)
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
+  if (!S.trendDate) S.trendDate = new Date();
+  const td = new Date(S.trendDate);
+  let navLabel = '';
+
   const trends =[
-    { key:'week',  label:'本週趨勢',   getDays: () => { 
-        const d = new Date(); const day = d.getDay() || 7; 
-        const start = new Date(d); start.setDate(start.getDate() - day + 1);
+    { key:'week',  label:'週趨勢',   getDays: () => { 
+        const day = td.getDay() || 7; 
+        const start = new Date(td); start.setDate(start.getDate() - day + 1);
+        const end = new Date(start); end.setDate(end.getDate() + 6);
+        navLabel = `${pad(start.getMonth()+1)}/${pad(start.getDate())} ~ ${pad(end.getMonth()+1)}/${pad(end.getDate())}`;
         return Array.from({length:7}, (_,i)=>{
            const nd = new Date(start); nd.setDate(nd.getDate() + i);
            return `${nd.getFullYear()}-${pad(nd.getMonth()+1)}-${pad(nd.getDate())}`;
         });
       }
     },
-    { key:'month', label:'本月趨勢',   getDays: () => { const n=new Date(S.rptY,S.rptM,0).getDate(); return Array.from({length:n},(_,i)=>`${S.rptY}-${pad(S.rptM)}-${pad(i+1)}`); } },
-    { key:'year',  label:'年趨勢',    getDays: () => Array.from({length:12},(_,i)=>null) },
+    { key:'month', label:'月趨勢',   getDays: () => { 
+        navLabel = `${td.getFullYear()} 年 ${td.getMonth()+1} 月`;
+        const n=new Date(td.getFullYear(), td.getMonth()+1, 0).getDate(); 
+        return Array.from({length:n},(_,i)=>`${td.getFullYear()}-${pad(td.getMonth()+1)}-${pad(i+1)}`); 
+      } 
+    },
+    { key:'year',  label:'年趨勢',    getDays: () => { 
+        navLabel = `${td.getFullYear()} 年`;
+        return Array.from({length:12},(_,i)=>null); 
+      } 
+    },
   ];
+  
   const curT = S.trendMode||'month'; const trend = trends.find(t=>t.key===curT)||trends[1];
+  const days = trend.getDays(); // 觸發計算日期陣列與 navLabel
 
   let html = `<div style="display:flex;gap:6px;margin-bottom:10px">
     ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:6px;border-radius:var(--rs);border:1px solid ${curT===t.key?'var(--acc)':'var(--border)'};background:${curT===t.key?'var(--acc-d)':'var(--sf2)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:12px;cursor:pointer;font-family:var(--sans);font-weight:${curT===t.key?'700':'500'}">${t.label}</button>`).join('')}
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
+    <button class="mbtn" onclick="navTrend(-1)">◀</button>
+    <span style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--acc);">${navLabel}</span>
+    <button class="mbtn" onclick="navTrend(1)">▶</button>
   </div>`;
 
   const plats = S.platforms.filter(p=>p.active);
@@ -621,70 +637,37 @@ function renderRptTrend() {
     const labels = Array.from({length:12},(_,i)=>`${i+1}月`);
     const datasets = [];
     plats.forEach(p => {
-      const data = Array.from({length:12}, (_,i)=> getMonthRecs(S.rptY, i+1).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
+      // 年趨勢要依賴獨立的 td
+      const data = Array.from({length:12}, (_,i)=> getMonthRecs(td.getFullYear(), i+1).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
-    const allTotal = S.records.filter(r=>r.date.startsWith(`${S.rptY}-`)).reduce((s,r)=>s+recTotal(r),0);
+    const allTotal = S.records.filter(r=>r.date.startsWith(`${td.getFullYear()}-`)).reduce((s,r)=>s+recTotal(r),0);
     
-    html += `<div class="card">
-               <div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
-               <div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div>
-               <div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div>
-             </div>`;
-    el.innerHTML = html;
-    drawTrendBar('trend-chart', labels, datasets);
+    html += `<div class="card"><div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div></div>`;
+    el.innerHTML = html; drawTrendBar('trend-chart', labels, datasets);
   } 
   else if (curT === 'month') {
-    // 將月份拆成兩半：1~15日 和 16~月底
-    const days = trend.getDays();
-    const days1 = days.slice(0, 15);
-    const days2 = days.slice(15);
-    
+    const days1 = days.slice(0, 15); const days2 = days.slice(15);
     const labels1 = days1.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
     const labels2 = days2.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
-    
-    const datasets1 = [];
-    const datasets2 = [];
-    
+    const datasets1 = []; const datasets2 = [];
     plats.forEach(p => {
       const data1 = days1.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       const data2 = days2.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
-      
-      if (data1.some(v => v > 0) || data2.some(v => v > 0)) {
-        datasets1.push({ label: p.name, data: data1, backgroundColor: p.color, borderRadius: 4 });
-        datasets2.push({ label: p.name, data: data2, backgroundColor: p.color, borderRadius: 4 });
-      }
+      if (data1.some(v => v > 0) || data2.some(v => v > 0)) { datasets1.push({ label: p.name, data: data1, backgroundColor: p.color, borderRadius: 4 }); datasets2.push({ label: p.name, data: data2, backgroundColor: p.color, borderRadius: 4 }); }
     });
-
-    html += `<div class="card" style="margin-bottom:12px;">
-               <div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">上旬 (1-15日)</div>
-               <div style="height:220px; position:relative;"><canvas id="trend-chart-1"></canvas></div>
-             </div>
-             <div class="card">
-               <div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">下旬 (16-月底)</div>
-               <div style="height:220px; position:relative;"><canvas id="trend-chart-2"></canvas></div>
-             </div>`;
-    el.innerHTML = html;
-    
-    // 直接呼叫 drawTrendBar，不再傳入強制的最大刻度 (maxScale = null)
-    drawTrendBar('trend-chart-1', labels1, datasets1, true, null);
-    drawTrendBar('trend-chart-2', labels2, datasets2, false, null);
+    html += `<div class="card" style="margin-bottom:12px;"><div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">上旬 (1-15日)</div><div style="height:220px; position:relative;"><canvas id="trend-chart-1"></canvas></div></div><div class="card"><div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">下旬 (16-月底)</div><div style="height:220px; position:relative;"><canvas id="trend-chart-2"></canvas></div></div>`;
+    el.innerHTML = html; drawTrendBar('trend-chart-1', labels1, datasets1, true, null); drawTrendBar('trend-chart-2', labels2, datasets2, false, null);
   }
   else {
-    // 週趨勢 (7天)
-    const days = trend.getDays();
     const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
     const datasets = [];
     plats.forEach(p => {
       const data = days.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
-    
-    html += `<div class="card">
-               <div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div>
-             </div>`;
-    el.innerHTML = html;
-    drawTrendBar('trend-chart', labels, datasets);
+    html += `<div class="card"><div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>`;
+    el.innerHTML = html; drawTrendBar('trend-chart', labels, datasets);
   }
 }
 
@@ -824,7 +807,15 @@ function renderRptTop3() {
   const el = document.getElementById('rv-top3'); const monthRecs = getMonthRecs(S.rptY, S.rptM); const dayMap = {};
   monthRecs.forEach(r => { dayMap[r.date] = (dayMap[r.date]||0) + recTotal(r); });
   const sorted = Object.entries(dayMap).sort((a,b)=>b[1]-a[1]); const medals = ['🥇','🥈','🥉'];
-  let html = `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 3 日</div>`;
+
+  // 新增獨立月份切換器
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
+      <button class="mbtn" onclick="navRptMonth(-1)">◀</button>
+      <span style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--acc);">${S.rptY} 年 ${S.rptM} 月</span>
+      <button class="mbtn" onclick="navRptMonth(1)">▶</button>
+    </div>`;
+
+  html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 3 日</div>`;
   if (!sorted.length) { html += `<div class="empty-tip">本月暫無記錄</div>`; } else {
     sorted.slice(0,3).forEach(([date,total],i) => {
       const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = recs.reduce((s,r)=>s+pf(r.hours),0);
@@ -920,8 +911,21 @@ function renderVehicleContent() {
   const typeRecs = monthRecs.filter(r => r.type === S.vehicleTab);
   if (typeRecs.length === 0) { html += `<div class="empty-tip">本月尚未新增資料</div>`; } else {
     typeRecs.sort((a, b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'')).forEach(r => {
-      const isFuel = r.type === 'fuel'; const icon = isFuel ? '⛽' : '🔧'; const mainText = isFuel ? `${r.fuelType||'95 無鉛'} ($${r.price||0}/L)` : r.items.join(', '); const kmText = isFuel ? `${r.prevKm} → ${r.km} km` : `${r.km} km`;
-      // 全新精簡明亮的記錄區塊設計
+      const isFuel = r.type === 'fuel'; 
+      const isEV = r.fuelType === 'electric'; // 判斷是否為電動車燃料
+      const icon = isFuel ? (isEV ? '⚡' : '⛽') : '🔧'; 
+      const mainText = isFuel ? (isEV ? '電池交換' : `${r.fuelType||'95 無鉛'} ($${r.price||0}/L)`) : r.items.join(', '); 
+      const kmText = isFuel ? `${r.prevKm} → ${r.km} km` : `${r.km} km`;
+      
+      // 電動車燃料顯示使用里程，一般油車或維修顯示金額
+      let rightText = `-$${fmt(r.amount)}`;
+      let rightColor = 'var(--t1)';
+      if (isFuel && isEV) {
+          const diff = pf(r.km) - pf(r.prevKm);
+          rightText = `${diff > 0 ? diff : 0} km`;
+          rightColor = 'var(--acc)';
+      }
+
       html += `
         <div onclick="openAddVehRec('${r.id}')" style="background:#fff; border-bottom:1px solid #f3f4f6; padding:10px 4px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
           <div style="display:flex; align-items:center; gap:12px;">
@@ -931,7 +935,7 @@ function renderVehicleContent() {
               <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
             </div>
           </div>
-          <div style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">-$${fmt(r.amount)}</div>
+          <div style="font-family:var(--mono); font-size:15px; font-weight:800; color:${rightColor};">${rightText}</div>
         </div>`;
     });
   }
