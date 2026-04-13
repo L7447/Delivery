@@ -64,6 +64,19 @@ function openOverlay(id)  { document.getElementById(id)?.classList.add('show'); 
 function closeOverlay(id) { document.getElementById(id)?.classList.remove('show'); }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
+/* 退出按鈕點擊動畫：換圖、延遲 1.5 秒後執行動作 */
+function animateClose(btn, action) {
+  const img = btn.querySelector('img');
+  if (!img) { action(); return; }
+  img.src = 'images/close2.png';
+  btn.style.pointerEvents = 'none'; // 鎖定按鈕防止連點
+  setTimeout(() => {
+    action();
+    img.src = 'images/close1.png'; // 恢復原狀以供下次開啟
+    btn.style.pointerEvents = 'auto';
+  }, 1500);
+}
+
 function toggleSummaryCard(id) {
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
   const t = btn.style.transform || 'rotate(0deg)';
