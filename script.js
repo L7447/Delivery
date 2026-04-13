@@ -375,6 +375,57 @@ function renderHome() {
     document.getElementById('home-bottom-content').innerHTML = `<div class="empty-tip">渲染發生錯誤，請重新整理頁面。</div>`;
   }
 }
+
+/* === 打卡功能 === */
+function punchIn() {
+  const d = new Date();
+  S.punch = {
+    date: todayStr(),
+    startTime: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    timestamp: d.getTime()
+  };
+  savePunch();
+  toast('▶ 已上線打卡');
+  renderHome();
+}
+
+async function punchOut() {
+  if (!S.punch) return;
+  const ok = await customConfirm('確定要下線並將工時存入記錄嗎？');
+  if (!ok) return;
+
+  const now = new Date();
+  // 取得上線時間戳，若沒有則從日期與字串還原
+  const startMs = S.punch.timestamp || new Date(`${S.punch.date}T${S.punch.startTime}:00`).getTime();
+  const endMs = now.getTime();
+  
+  // 計算經過了幾個小時
+  let hoursVal = (endMs - startMs) / 3600000;
+  if (hoursVal < 0) hoursVal = 0;
+
+  // 建立一筆專屬的「純打卡紀錄」
+  const rec = {
+    id: newId(),
+    date: S.punch.date,
+    time: nowTime(),
+    platformId: '', 
+    isPunchOnly: true,
+    punchIn: S.punch.startTime,
+    punchOut: nowTime(),
+    hours: hoursVal,
+    orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
+  };
+
+  S.records.push(rec);
+  saveRecords();
+  
+  // 清除打卡狀態
+  S.punch = null;
+  savePunch();
+  
+  toast('⏹ 已下線，工時已記錄');
+  renderHome();
+}
 /* ══ 2. 首頁 結束 ══════════════════════════════════════════ */
 
 /* ══ 3. 查看記錄 開始 ════════════════════════════════════ */
