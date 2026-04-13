@@ -206,3 +206,8 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 .scooter-mask { mask-size: contain; -webkit-mask-size: contain; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; mask-position: center; -webkit-mask-position: center; width: 32px; height: 32px; }
 .item-chip { padding: 6px 12px; border-radius: 20px; background: var(--sf2); color: var(--t2); border: 1px solid var(--border); font-size: 12px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
 .item-chip.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+/* ══ 現金小費專屬樣式 ══ */
+.finp-ct { background: #f0fdf4; border: 1px solid #86efac; color: #14532d; font-weight: 700; }
+.finp-ct:focus { border-color: #22c55e; background: #fff; }
+.cashtip-card { background: #f0fdf4; border: 1px solid #bbf7d0; }
