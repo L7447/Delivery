@@ -46,8 +46,11 @@
   <!-- ══ 新增外送記錄 ════════════════════════════════ -->
   <section class="page" id="page-add" style="padding:16px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <div style="width:30px;"></div> 
-      <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>    
+      <!-- 將左側改為圖片按鈕 -->
+      <button onclick="animateClose(this, () => cancelAddRecord())" style="width:30px; height:30px; background:transparent; border:none; cursor:pointer; padding:0; outline:none;">
+        <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+      </button>
+      <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>
       <button id="add-save-btn" onclick="confirmAddRecord()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none; transition:transform 0.2s;">
         <img id="add-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
       </button>
@@ -181,8 +184,7 @@
     <div class="ni" data-pg="settings" data-img1="images/settings1.png" data-img2="images/settings2.png"><img class="ni-img" src="images/settings1.png"><span class="lb">設定</span></div>
   </nav>
 
-</div><div class="overlay-page" id="search-page">
-  <div class="top-bar"><button class="bar-btn" onclick="closeOverlay('search-page')">✕</button><h2>🔍 搜尋記錄</h2><div style="width:36px"></div></div>
+</div><div class="top-bar"><button class="bar-btn" onclick="animateClose(this, () => closeOverlay('search-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>🔍 搜尋記錄</h2><div style="width:36px"></div></div>
   <div class="overlay-body">
     <div style="display:flex;gap:8px;margin-bottom:10px"><input type="text" class="finp" id="search-kw" placeholder="關鍵字、平台名稱、金額..." style="flex:1"><button onclick="doSearch()" class="btn-acc" style="padding:10px 16px;border-radius:var(--rs);white-space:nowrap">搜尋</button></div>
     <div style="display:flex;gap:8px;margin-bottom:14px"><input type="date" class="finp" id="search-from" style="flex:1"><input type="date" class="finp" id="search-to" style="flex:1"></div>
@@ -191,13 +193,13 @@
 </div>
 
 <div class="overlay-page" id="sub-page">
-  <div class="top-bar"><button class="bar-btn" onclick="closeOverlay('sub-page')">✕</button><h2 id="sub-title">設定</h2><div style="width:36px"></div></div>
+  <div class="top-bar"><button class="bar-btn" onclick="animateClose(this, () => closeOverlay('sub-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2 id="sub-title">設定</h2><div style="width:36px"></div></div>
   <div class="overlay-body" id="sub-body"></div>
 </div>
 
 <div id="detail-overlay">
   <div id="detail-box">
-    <div class="top-bar" style="border-radius:20px 20px 0 0"><button class="bar-btn" onclick="closeDetailOverlay()">✕</button><h2>記錄詳情</h2><div style="width:36px"></div></div>
+    <div class="top-bar" style="border-radius:20px 20px 0 0"><button class="bar-btn" onclick="animateClose(this, () => closeDetailOverlay())"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>記錄詳情</h2><div style="width:36px"></div></div>
     <div id="detail-body" style="padding:16px 16px 32px;overflow-y:auto;max-height:70vh"></div>
   </div>
 </div>
@@ -218,7 +220,7 @@
 
 <div class="overlay-page" id="full-calendar-overlay" style="background:var(--bg); z-index:900;">
   <div class="top-bar">
-    <button class="bar-btn" onclick="closeFullCalendar()">✕</button>
+    <button class="bar-btn" onclick="animateClose(this, () => closeFullCalendar())"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
     <div style="display:flex;align-items:center;gap:12px;"><button class="mbtn" onclick="changeFullCalMonth(-1)">◀</button><h2 id="fc-title" style="font-size:18px;min-width:100px;text-align:center;"></h2><button class="mbtn" onclick="changeFullCalMonth(1)">▶</button></div>
     <div style="width:36px"></div>
   </div>
@@ -230,13 +232,13 @@
 </div>
 
 <div class="overlay-page" id="vehicle-add-page">
-  <div class="top-bar"><button class="bar-btn" onclick="closeOverlay('vehicle-add-page')">✕</button><h2>新增車輛</h2><div style="width:36px"></div></div>
+  <div class="top-bar"><button class="bar-btn" onclick="animateClose(this, () => closeOverlay('vehicle-add-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>新增車輛</h2><div style="width:36px"></div></div>
   <div class="overlay-body" id="vehicle-add-body"></div>
 </div>
 
 <div class="overlay-page" id="veh-rec-add-page">
   <div class="top-bar">
-    <button class="bar-btn" onclick="closeOverlay('veh-rec-add-page')">✕</button>
+    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('about-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
     <h2 id="veh-rec-title">新增車輛記錄</h2>
     <button id="veh-save-btn" onclick="confirmAddVehRec()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none; transition:transform 0.2s;">
       <img id="veh-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
