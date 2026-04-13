@@ -32,7 +32,7 @@ const pf = v => parseFloat(v)||0;
 const getPlatform = id => S.platforms.find(p=>p.id===id)||{name:'未知',color:'#999'};
 const getDayRecs = date => S.records.filter(r=>r.date===date);
 const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
-const recTotal = r => pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips);
+const recTotal = r => r.isCashTip ? 0 : (pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips));
 
 function fmtHours(hVal) {
   const h = pf(hVal); if (h <= 0) return '0';
@@ -399,7 +399,25 @@ function toggleCalendarGrid() {
 
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
+  if (r.isCashTip) {
+    const plat = getPlatform(r.platformId);
+    return `
+      <div class="hist-rec-card cashtip-card" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
+        <div class="hrc-top" style="padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="hrc-plat-tag" style="background:${plat.color};">${plat.name}</span>
+              <span style="font-size:11px; font-weight:700; color:#16a34a;">💵 現金小費</span>
+              <span style="font-size:11px; color:var(--t3);">${r.time||''}</span>
+            </div>
+            ${r.note ? `<div style="font-size:11px; color:var(--t2); font-weight:600;">${r.note}</div>` : ''}
+          </div>
+          <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a;">$${fmt(r.cashTipAmt)}</div>
+        </div>
+      </div>`;
+  }
   if (r.isPunchOnly) {
+  // ...(保留原本接下來的程式碼)
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
         <span style="background:var(--t2); color:#fff; font-size:10px; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.5px;">🕒 上線打卡</span>
@@ -549,11 +567,23 @@ function renderFullCalendar() {
 function renderHistRecords(ds) {
   const d = new Date(ds+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][d.getDay()];
   document.getElementById('hist-day-label').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（星期${dow}）記錄`;
-  const recs = getDayRecs(ds); const total = recs.reduce((s,r)=>s+recTotal(r), 0); const sumEl = document.getElementById('hist-day-summary');
-  if (total > 0) {
+  const recs = getDayRecs(ds); const total = recs.reduce((s,r)=>s+recTotal(r), 0); 
+  const cashTips = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
+  const sumEl = document.getElementById('hist-day-summary');
+  
+  if (total > 0 || cashTips > 0) {
     const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0); const dayBonus = recs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = recs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = recs.reduce((s,r)=>s+pf(r.tips), 0);
-    sumEl.innerHTML = buildSummaryCard('當日', total, orders, hours, dayBonus, dayTemp, dayTips, 'hist-day-card');
+    
+    let sumHtml = total > 0 ? buildSummaryCard('當日', total, orders, hours, dayBonus, dayTemp, dayTips, 'hist-day-card') : '';
+    if (cashTips > 0) {
+      sumHtml += `<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:10px 16px; margin:4px 2px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; font-weight:700; color:#15803d;">💵 當日現金小費 (不計入總收入)</span>
+        <span style="font-family:var(--mono); font-size:16px; font-weight:800; color:#16a34a;">$${fmt(cashTips)}</span>
+      </div>`;
+    }
+    sumEl.innerHTML = sumHtml;
   } else { sumEl.innerHTML = ''; }
+  
   const listEl = document.getElementById('hist-rec-list');
   if (!recs.length) { listEl.innerHTML = `<div class="empty-tip">✨ 這天沒有記錄</div>`; return; }
   listEl.innerHTML = recs.slice().sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
@@ -581,16 +611,52 @@ function doSearch() {
 function openAddPage(record=null, prefill={}) {
   S.editingId = record ? record.id : null; S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
-  document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
-  let totalHours = pf(record?.hours || prefill.hours || 0); let h = Math.floor(totalHours); let m = Math.round((totalHours - h) * 60);
-  document.getElementById('f-hrs-val').value = h > 0 ? h : ''; document.getElementById('f-min-val').value = m > 0 ? m : '';
-  document.getElementById('f-orders').value = record?.orders || ''; 
-  document.getElementById('f-mileage').value = record?.mileage || ''; 
-  document.getElementById('f-income').value = record?.income || '';
-  document.getElementById('f-bonus').value = record?.bonus || ''; document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
-  document.getElementById('f-tips').value = record?.tips || ''; document.getElementById('f-note').value = record?.note || '';
+  
+  if (record && record.isCashTip) {
+    switchAddTab('cashtip', 1);
+    document.getElementById('f-ct-date').value = record.date || todayStr();
+    document.getElementById('f-ct-time').value = record.time || nowTime();
+    document.getElementById('f-ct-given').value = record.givenAmt || '';
+    document.getElementById('f-ct-cost').value = record.costAmt || '';
+    document.getElementById('f-ct-amount').value = record.cashTipAmt || '';
+    document.getElementById('f-ct-note').value = record.note || '';
+  } else {
+    switchAddTab('regular', 0);
+    document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
+    let totalHours = pf(record?.hours || prefill.hours || 0); let h = Math.floor(totalHours); let m = Math.round((totalHours - h) * 60);
+    document.getElementById('f-hrs-val').value = h > 0 ? h : ''; document.getElementById('f-min-val').value = m > 0 ? m : '';
+    document.getElementById('f-orders').value = record?.orders || ''; 
+    document.getElementById('f-income').value = record?.income || '';
+    document.getElementById('f-bonus').value = record?.bonus || ''; document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
+    document.getElementById('f-tips').value = record?.tips || ''; document.getElementById('f-note').value = record?.note || '';
+  }
+  
   renderPlatformChips(); calcAddTotal(); goPage('add');
 }
+
+function switchAddTab(tab, idx) {
+  S.addTab = tab;
+  document.getElementById('add-tab-bg').style.transform = `translateX(${idx * 100}%)`;
+  document.getElementById('add-tab-bg').style.background = tab === 'cashtip' ? 'var(--green)' : 'var(--acc)';
+  document.getElementById('btn-add-regular').classList.toggle('active', tab === 'regular');
+  document.getElementById('btn-add-cashtip').classList.toggle('active', tab === 'cashtip');
+  document.getElementById('add-form-regular').style.display = tab === 'regular' ? 'block' : 'none';
+  document.getElementById('add-form-cashtip').style.display = tab === 'cashtip' ? 'block' : 'none';
+  
+  if(tab === 'cashtip') {
+    document.getElementById('f-ct-date').value = document.getElementById('f-ct-date').value || todayStr();
+    document.getElementById('f-ct-time').value = document.getElementById('f-ct-time').value || nowTime();
+  }
+}
+
+function calcCashTip() {
+  const given = pf(document.getElementById('f-ct-given').value);
+  const cost = pf(document.getElementById('f-ct-cost').value);
+  if (given > 0 && cost > 0 && given >= cost) {
+    document.getElementById('f-ct-amount').value = given - cost;
+  }
+}
+
 function renderPlatformChips() { const container = document.getElementById('platform-chips'); const active = S.platforms.filter(p=>p.active); if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id; container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${p.id}')"><span>${p.name}</span></div>`).join(''); }
 function selectPlatform(id) { S.selPlatformId = id; renderPlatformChips(); }
 function calcAddTotal() { const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const tempBonus = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value); const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total); }
@@ -599,18 +665,27 @@ function addWeatherTag(tag) { const noteEl = document.getElementById('f-note'); 
 async function confirmAddRecord() {
   const checkImg = document.getElementById('add-save-img'); const checkBtn = document.getElementById('add-save-btn');
   if (checkBtn.disabled) return; if (!S.selPlatformId) { toast('請先選擇平台'); return; }
-  const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
-  if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
+  
+  let rec = { id: S.editingId || newId(), platformId: S.selPlatformId };
+
+  if (S.addTab === 'cashtip') {
+    const amt = pf(document.getElementById('f-ct-amount').value);
+    if (amt <= 0) { toast('請輸入現金小費金額'); return; }
+    rec = { ...rec, isCashTip: true, date: document.getElementById('f-ct-date').value, time: document.getElementById('f-ct-time').value, givenAmt: pf(document.getElementById('f-ct-given').value), costAmt: pf(document.getElementById('f-ct-cost').value), cashTipAmt: amt, note: document.getElementById('f-ct-note').value.trim() };
+  } else {
+    const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
+    if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
+    const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
+    rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: nowTime(), punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
+  }
   
   if (S.editingId) {
-    const ok = await customConfirm('是否確認要儲存修改後的記錄？');
-    if (!ok) return;
+    const ok = await customConfirm('是否確認要儲存修改後的記錄？'); if (!ok) return;
   }
 
   checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 3000); 
   setTimeout(() => {
-    checkImg.style.transform = 'scale(1)'; const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
-    const rec = { id: S.editingId || newId(), date: document.getElementById('f-date').value || todayStr(), time: nowTime(), platformId: S.selPlatformId, punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), mileage: pf(document.getElementById('f-mileage').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
+    checkImg.style.transform = 'scale(1)'; 
     if (S.editingId) { const idx = S.records.findIndex(r => r.id === S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } else { S.records.push(rec); toast('✅ 記錄成功！'); }
     saveRecords(); S.editingId = null; checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; goPage('home'); 
   }, 3000); 
@@ -653,6 +728,7 @@ function renderRptOverview() {
   const total = recs.reduce((s,r)=>s+recTotal(r), 0); const income = recs.reduce((s,r)=>s+pf(r.income), 0);
   const bonus = recs.reduce((s,r)=>s+pf(r.bonus)+pf(r.tempBonus), 0); const tips = recs.reduce((s,r)=>s+pf(r.tips), 0);
   const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0);
+  const cashTipTotal = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
 
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
       <button class="mbtn" onclick="navRptMonth(-1)">◀</button>
@@ -699,6 +775,9 @@ function renderRptOverview() {
             <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:flex-end;"><span style="background:#ea580c; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">均單</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#ea580c;">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'} <span style="font-size:11px; font-weight:600;">/單</span></span></div>
           </div>
         </div>
+        ${cashTipTotal > 0 ? `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px dashed rgba(0,0,0,0.05);">
+            <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:#16a34a; color:#fff; font-size:11px; padding:4px 8px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span></div>
+          </div>` : ''}
       </div>
     </div>`;
 
