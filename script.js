@@ -89,49 +89,46 @@ function toggleSummaryCard(id) {
   }
 }
 
+/* ══ 替換：產生總結卡片 (與單筆記錄外觀完全統一) ══ */
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
   const totalBonus = bonus + tempBonus; 
-  let tags = '';
-  if (totalBonus > 0) tags += `<span style="background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; margin-right:4px;">獎勵 $${fmt(totalBonus)}</span>`;
-  if (tips > 0) tags += `<span style="background:#dbeafe; color:#2563eb; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">小費 $${fmt(tips)}</span>`;
+  let tagsHtml = '';
+  if (orders > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmt(orders)} 單</span>`;
+  if (hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(hours)}</span>`;
+  if (totalBonus > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
+  if (tips > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-tips">小費 $${fmt(tips)}</span>`;
 
-  const avgPerOrder = orders > 0 ? Math.round(total / orders) : 0;
-  const avgPerHour = hours > 0 ? Math.round(total / hours) : 0;
-  const ordersPerHour = hours > 0 ? (orders / hours).toFixed(1) : 0;
+  const avgOrd = orders > 0 ? Math.round(total / orders) : 0;
+  const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
+  const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
   return `
-    <div style="background:#fff; border:2px solid var(--border); border-radius:12px; margin-bottom:8px; box-shadow:0 4px 6px rgba(0,0,0,0.02); position:relative; overflow:hidden;">
-      <!-- 右上角方形展開按鈕 -->
-      <div id="${cardId}-btn" onclick="toggleSummaryCard('${cardId}')" style="position:absolute; top:8px; right:8px; width:26px; height:26px; background:var(--sf2); border-radius:6px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer; transition:transform 0.3s; z-index:2; font-weight:900;">▼</div>
-      
-      <div onclick="toggleSummaryCard('${cardId}')" style="padding:12px; cursor:pointer;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div>
-            <div style="font-size:12px; font-weight:800; color:var(--t2); margin-bottom:6px;">${title}</div>
-            <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-              <span style="font-size:11px; font-weight:700; color:var(--t2); background:#f1f5f9; padding:2px 8px; border-radius:6px;">${orders>0?fmt(orders):'0'} 單</span>
-              <span style="font-size:11px; font-weight:700; color:var(--t2); background:#f1f5f9; padding:2px 8px; border-radius:6px;">${hours>0?fmtHours(hours):'0m'}</span>
-            </div>
-            <div>${tags}</div>
-          </div>
-          <div style="text-align:right; padding-right:32px;">
-            <div style="font-family:var(--mono); font-size:24px; font-weight:900; color:var(--acc); line-height:1.1;">$${fmt(total)}</div>
-          </div>
+    <div class="hist-rec-card" style="border: 2px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+      <div class="hrc-top" onclick="foldCard('${cardId}', event)">
+        <div class="hrc-toggle" id="${cardId}-btn">▼</div>
+        <div class="hrc-row1">
+          <span class="hrc-plat-tag" style="background:var(--t2);">${title}</span>
+        </div>
+        <div class="hrc-row2">
+          <span class="hrc-amt" style="color:var(--acc);">$${fmt(total)}</span>
+          ${tagsHtml}
         </div>
       </div>
-      
-      <div id="${cardId}" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease; background:#fafaf9;">
-        <!-- 折疊展開後才顯示的虛線與內容 -->
-        <div style="border-top:1px dashed #d1d5db; margin:0 12px;"></div>
-        <div style="padding:8px 12px 2px; display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:var(--t2);">
-          <span>均單 <span style="font-family:var(--mono); color:var(--blue); font-size:14px; font-weight:800;">$${fmt(avgPerOrder)}</span></span>
-          <span>時薪 <span style="font-family:var(--mono); color:var(--blue); font-size:14px; font-weight:800;">$${fmt(avgPerHour)}</span></span>
-          <span>效率 <span style="font-family:var(--mono); color:var(--blue); font-size:14px; font-weight:800;">${ordersPerHour}</span></span>
+      <div id="${cardId}" class="hrc-collapse" style="background:#f8fafc; overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
+        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--red);">
+          <span>均單 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgOrd)}</span></span>
+          <div class="h-div"></div>
+          <span>效率 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordHr}</span></span>
+          <div class="h-div"></div>
+          <span>時薪 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgHr)}</span></span>
         </div>
       </div>
     </div>`;
 }
+
+
 
 // 修復：計算平台日程表的函式
 function calcNextDates(id) {
@@ -463,6 +460,7 @@ function toggleCalendarGrid() {
   }
 }
 
+/* ══ 替換：產生單筆記錄卡片 (修正摺疊內容置中與 h-div) ══ */
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
   if (r.isCashTip) {
@@ -483,7 +481,6 @@ function buildRecItem(r) {
       </div>`;
   }
   if (r.isPunchOnly) {
-  // ...(保留原本接下來的程式碼)
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
         <span style="background:var(--t2); color:#fff; font-size:10px; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.5px;">🕒 上線打卡</span>
@@ -493,6 +490,7 @@ function buildRecItem(r) {
         <span style="font-size:13px; font-weight:800; color:var(--t2); font-family:var(--mono);">${fmtHours(r.hours)}</span>
       </div>`;
   }
+  
   const plat = getPlatform(r.platformId); const total = recTotal(r);
   const totalBonus = pf(r.bonus) + pf(r.tempBonus);
   const _orders = pf(r.orders); const _hours = pf(r.hours);
@@ -509,8 +507,8 @@ function buildRecItem(r) {
 
   return `
     <div class="hist-rec-card" data-id="${r.id}">
-      <div class="hrc-top" onclick="openDetailOverlay('${r.id}')">
-        <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${cid}', event)">▼</div>
+      <div class="hrc-top" onclick="foldCard('${cid}', event)">
+        <div class="hrc-toggle" id="${cid}-btn">▼</div>
         <div class="hrc-row1">
           <span class="hrc-plat-tag" style="background:${plat.color};">${plat.name}</span>
           <span>${r.time||''}</span>
@@ -521,14 +519,15 @@ function buildRecItem(r) {
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cid}" class="hrc-collapse" style="background:#f8fafc; text-align:center; font-size:12px; font-weight:600; color:var(--t2); overflow:hidden; transition:max-height 0.3s ease;">
+      <div id="${cid}" class="hrc-collapse" style="background:#f8fafc; overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
-        <div style="text-align:center; font-size:12px; font-weight:500; color:var(--red); padding:4px 0;">
-          平均：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgOrd)}</span> /單
-          <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
-          效率：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordHr}</span> 單/時
-          <span style="color:rgba(0,0,0,0.1); margin:0 6px;">│</span>
-          時薪：<span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgHr)}</span> /時
+        <!-- 修正置中與使用 h-div -->
+        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--red);">
+          <span>均單 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgOrd)}</span></span>
+          <div class="h-div"></div>
+          <span>效率 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordHr}</span></span>
+          <div class="h-div"></div>
+          <span>時薪 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgHr)}</span></span>
         </div>
       </div>
     </div>`;
@@ -789,6 +788,7 @@ window.navTrend = function(dir) {
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
+/* ══ 替換：收入總覽頁面 ══ */
 function renderRptOverview() {
   if (!S.rptOverviewFilter) S.rptOverviewFilter = 'all';
   const allMonthRecs = getMonthRecs(S.rptY, S.rptM);
@@ -815,15 +815,6 @@ function renderRptOverview() {
       <button class="mbtn" onclick="navRptMonth(1)">▶</button>
     </div>`;
 
-  // 切換「全部 / 各家平台」的按鈕列
-  html += `<div style="display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px;">
-    <button onclick="S.rptOverviewFilter='all'; renderReport()" style="flex-shrink:0; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${isAll ? 'background:var(--acc); color:#fff; box-shadow:0 4px 8px rgba(255,107,53,0.3);' : 'background:var(--sf2); color:var(--t2);'}">全部</button>`;
-  activePlats.forEach(p => {
-    let isActive = S.rptOverviewFilter === p.id;
-    html += `<button onclick="S.rptOverviewFilter='${p.id}'; renderReport()" style="flex-shrink:0; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${isActive ? `background:${p.color}; color:#fff; box-shadow:0 4px 8px ${p.color}50;` : `background:${p.color}15; color:${p.color};`}">${p.name}</button>`;
-  });
-  html += `</div>`;
-
   // 精簡高對比總收入框
   html += `
     <div style="background:#fff; border:2px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
@@ -840,9 +831,8 @@ function renderRptOverview() {
       </div>
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background:#fafaf9;">
-        <!-- 折疊後才出現的虛線 -->
         <div style="border-top:1px dashed #d1d5db; margin:0 16px;"></div>
-        <div style="padding:12px 16px 2px;"> <!-- 底部內距 2px -->
+        <div style="padding:12px 16px 2px;">
           <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
             <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">接單</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--t1);">${fmt(orders)}</span></div>
             <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:center;"><span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">工時</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--t1);">${fmtHours(hours)}</span></div>
@@ -860,72 +850,76 @@ function renderRptOverview() {
       </div>
     </div>`;
 
-  // 圓餅圖與列表分析區塊
+  // 結構佔比分析卡片 (包含平台切換與圓餅圖)
+  html += `<div class="card" style="border:1px solid var(--border);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="font-size:13px; font-weight:800; color:var(--t2);">📊 結構佔比分析</div>
+    </div>`;
+
+  // 將平台切換按鈕放在卡片內部
+  html += `<div style="display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
+    <button onclick="S.rptOverviewFilter='all'; renderReport()" style="flex-shrink:0; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${isAll ? 'background:var(--acc); color:#fff; box-shadow:0 2px 6px rgba(255,107,53,0.3);' : 'background:var(--sf2); color:var(--t2);'}">全部</button>`;
+  activePlats.forEach(p => {
+    let isActive = S.rptOverviewFilter === p.id;
+    html += `<button onclick="S.rptOverviewFilter='${p.id}'; renderReport()" style="flex-shrink:0; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${isActive ? `background:${p.color}; color:#fff; box-shadow:0 2px 6px ${p.color}50;` : `background:${p.color}15; color:${p.color};`}">${p.name}</button>`;
+  });
+  html += `</div>`;
+
+  // 圓餅圖與列表分析邏輯
   let pieLabels = [], pieData = [], pieColors = [], listHtml = '';
   
   if (isAll && total > 0) {
-    // 顯示「全部平台佔比」
     const platData = activePlats.map(p => ({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
-    pieLabels = platData.map(p=>p.name);
-    pieData = platData.map(p=>p.val);
-    pieColors = platData.map(p=>p.color);
+    pieLabels = platData.map(p=>p.name); pieData = platData.map(p=>p.val); pieColors = platData.map(p=>p.color);
     
     listHtml = platData.map(p => {
       const pct = Math.round(p.val / total * 100);
       return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
         <div style="width:12px; height:12px; border-radius:4px; background:${p.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${p.name}</span>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--t3); margin-right:12px;">${pct}%</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1);">$${fmt(p.val)}</span>
+        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct}%</span>
+        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$${fmt(p.val)}</span>
       </div>`;
     }).join('');
     
   } else if (!isAll && total > 0) {
-    // 顯示「單一平台的結構佔比」(行程 / 獎勵 / 小費)
-    pieLabels = ['行程', '獎勵', '小費'];
-    pieData = [income, bonus, tips];
-    pieColors = ['#22c55e', '#f59e0b', '#3b82f6']; // 綠、橘、藍
-    
-    const details = [
-      { name: '行程收入', val: income, color: '#22c55e' },
-      { name: '獎勵金額', val: bonus, color: '#f59e0b' },
-      { name: 'APP小費', val: tips, color: '#3b82f6' }
-    ].filter(d => d.val > 0);
+    pieLabels = ['行程', '獎勵', '小費']; pieData = [income, bonus, tips]; pieColors = ['#22c55e', '#f59e0b', '#3b82f6'];
+    const details = [{ name: '行程收入', val: income, color: '#22c55e' }, { name: '獎勵金額', val: bonus, color: '#f59e0b' }, { name: 'APP小費', val: tips, color: '#3b82f6' }].filter(d => d.val > 0);
     
     listHtml = details.map(d => {
       const pct = Math.round(d.val / total * 100);
       return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
         <div style="width:12px; height:12px; border-radius:4px; background:${d.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${d.name}</span>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--t3); margin-right:12px;">${pct}%</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1);">$${fmt(d.val)}</span>
+        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct}%</span>
+        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$${fmt(d.val)}</span>
       </div>`;
     }).join('');
   }
 
   if (total > 0) {
-    html += `<div class="card" style="border:1px solid var(--border);">
-      <div style="font-size:13px; font-weight:800; color:var(--t2); margin-bottom:16px;">📊 結構佔比分析</div>
+    html += `
       <div style="position:relative; height:180px; margin-bottom:16px;">
         <canvas id="plat-pie"></canvas>
       </div>
       <div style="display:flex; flex-direction:column;">
         <div style="display:flex; align-items:center; padding:8px 0; border-bottom:2px solid var(--border);">
           <span style="flex:1; font-size:12px; font-weight:800; color:var(--t3);">項目</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); width:40px; text-align:right;">佔比</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); width:60px; text-align:right;">金額</span>
+          <span style="font-size:12px; font-weight:800; color:var(--t3); width:50px; text-align:right;">佔比</span>
+          <span style="font-size:12px; font-weight:800; color:var(--t3); width:80px; text-align:right;">金額</span>
         </div>
         ${listHtml}
         <div style="display:flex; align-items:center; padding:12px 0 4px;">
           <span style="flex:1; font-size:14px; font-weight:900; color:var(--acc);">總計</span>
-          <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t3); margin-right:12px;">100%</span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--acc);">$${fmt(total)}</span>
+          <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t3); width:50px; text-align:right;">100%</span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--acc); width:80px; text-align:right;">$${fmt(total)}</span>
         </div>
-      </div>
-    </div>`;
+      </div>`;
   } else {
-    html += `<div class="empty-tip">本區間尚未有收入記錄</div>`;
+    html += `<div class="empty-tip" style="padding:16px 0;">所選平台本區間無記錄</div>`;
   }
+
+  html += `</div>`; // 結束佔比卡片
 
   document.getElementById('rv-overview').innerHTML = html;
   
