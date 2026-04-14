@@ -60,7 +60,7 @@ function runSaveProgress(callback) {
   ov.classList.add('show');
   
   let start = null;
-  const duration = 2000; // 總時間 2000 毫秒 (2秒)
+  const duration = 15000; // 總時間 2000 毫秒 (2秒)
 
   // 動畫繪製函式
   function animate(timestamp) {
@@ -79,7 +79,7 @@ function runSaveProgress(callback) {
       setTimeout(() => {
         ov.classList.remove('show');
         callback();
-      }, 100);
+      }, 1000);
     }
   }
   
