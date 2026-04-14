@@ -90,7 +90,7 @@ function toggleSummaryCard(id) {
   }
 }
 
-/* ══ 替換：產生總結卡片 (與單筆記錄外觀完全統一) ══ */
+/* ══ 替換：產生總結卡片 (統一版面、背景 #FFF0F5、深色數據) ══ */
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
   const totalBonus = bonus + tempBonus; 
@@ -116,14 +116,14 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cardId}" class="hrc-collapse" style="background:#f8fafc; overflow:hidden; transition:max-height 0.3s ease;">
+      <div id="${cardId}" class="hrc-collapse" style="background:#FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
-        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--red);">
-          <span>均單 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgOrd)}</span></span>
-          <div class="h-div"></div>
-          <span>效率 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordHr}</span></span>
-          <div class="h-div"></div>
-          <span>時薪 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgHr)}</span></span>
+        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
+          <div style="flex:1; text-align:center;">均單 <br><span style="font-family:var(--mono); color:#9a3412; font-size:14px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div class="h-div" style="height:20px;"></div>
+          <div style="flex:1; text-align:center;">效率 <br><span style="font-family:var(--mono); color:#065f46; font-size:14px; font-weight:800;">${ordHr} <small style="font-size:10px">單/h</small></span></div>
+          <div class="h-div" style="height:20px;"></div>
+          <div style="flex:1; text-align:center;">時薪 <br><span style="font-family:var(--mono); color:#1e3a8a; font-size:14px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
@@ -542,15 +542,15 @@ function buildRecItem(r) {
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cid}" class="hrc-collapse" style="background:#f8fafc; overflow:hidden; transition:max-height 0.3s ease;">
+
+      <div id="${cid}" class="hrc-collapse" style="background:#FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
-        <!-- 修正置中，使用 flex 均分寬度保證居中對齊 -->
         <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">均單 <br><span style="font-family:var(--mono); color:var(--gold); font-size:14px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div style="flex:1; text-align:center;">均單 <br><span style="font-family:var(--mono); color:#9a3412; font-size:14px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">效率 <br><span style="font-family:var(--mono); color:var(--acc); font-size:14px; font-weight:800;">${ordHr} <small style="font-size:10px">單/h</small></span></div>
+          <div style="flex:1; text-align:center;">效率 <br><span style="font-family:var(--mono); color:#065f46; font-size:14px; font-weight:800;">${ordHr} <small style="font-size:10px">單/h</small></span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪 <br><span style="font-family:var(--mono); color:var(--blue); font-size:14px; font-weight:800;">$${fmt(avgHr)}</span></div>
+          <div style="flex:1; text-align:center;">時薪 <br><span style="font-family:var(--mono); color:#1e3a8a; font-size:14px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
@@ -562,8 +562,20 @@ if (!S.histFilter) S.histFilter = 'all';
 
 function navHistGroup(dir, mode) {
   let d = new Date(S.histNavDate);
-  if (mode === 'week') d.setDate(d.getDate() + (dir * 7)); if (mode === 'biweek') d.setDate(d.getDate() + (dir * 14));
-  if (mode === 'month') d.setMonth(d.getMonth() + dir); if (mode === 'year') d.setFullYear(d.getFullYear() + dir);
+  if (mode === 'week') { d.setDate(d.getDate() + (dir * 7)); } 
+  if (mode === 'biweek') { d.setDate(d.getDate() + (dir * 14)); }
+  if (mode === 'halfmonth') {
+    let isFirstHalf = d.getDate() <= 15;
+    if (dir === 1) {
+      if (isFirstHalf) d.setDate(16);
+      else { d.setMonth(d.getMonth() + 1); d.setDate(1); }
+    } else if (dir === -1) {
+      if (isFirstHalf) { d.setMonth(d.getMonth() - 1); d.setDate(16); }
+      else d.setDate(1);
+    }
+  }
+  if (mode === 'month') { d.setMonth(d.getMonth() + dir); } 
+  if (mode === 'year') { d.setFullYear(d.getFullYear() + dir); }
   S.histNavDate = d; renderHistory();
 }
 function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
@@ -603,14 +615,24 @@ function renderHistCalendarGrid() {
   grid.querySelectorAll('.month-cell[data-ds]').forEach(cell => { cell.addEventListener('click', () => { S.selDate = cell.dataset.ds; grid.querySelectorAll('.month-cell').forEach(c => c.classList.toggle('sel', c.dataset.ds === S.selDate)); renderHistRecords(S.selDate); }); });
 }
 
+/* 尋找 renderHistGroupView() 中這段邏輯，將 halfmonth 條件加進去 */
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content'); const nd = new Date(S.histNavDate); let startD, endD, labelStr;
   if (mode === 'week') { const day = nd.getDay() || 7; startD = new Date(nd); startD.setDate(startD.getDate() - day + 1); endD = new Date(startD); endD.setDate(endD.getDate() + 6); labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`; } 
   else if (mode === 'biweek') { const anchor = new Date(2025, 10, 10); const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime(); const diffDays = Math.floor(diffTime / 86400000); const cycleOffset = Math.floor(diffDays / 14); startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14); endD = new Date(startD); endD.setDate(endD.getDate() + 13); let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : ''; labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`; } 
+  else if (mode === 'halfmonth') { 
+    let isFirstHalf = nd.getDate() <= 15;
+    if (isFirstHalf) {
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth(), 15); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (上)`;
+    } else {
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 16); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (下)`;
+    }
+  }
   else if (mode === 'month') { startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`; } 
   else if (mode === 'year') { startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()}年`; }
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`; const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
+  /* ... 後面程式碼不變 ... */
   let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr); if (S.histFilter !== 'all') recs = recs.filter(r => r.platformId === S.histFilter);
   let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('');
   let html = `<div style="padding: 0 16px; flex-shrink:0;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);"><div style="display:flex; align-items:center; gap:8px;"><button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button><span style="font-family:var(--mono); font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc); letter-spacing:0.5px;">${labelStr}</span><button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button></div><select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select></div></div><div style="padding: 0 16px 24px; flex:1; overflow-y:auto; min-height:0; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:0;">`;
