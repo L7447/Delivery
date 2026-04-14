@@ -113,7 +113,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .hist-rec-card { background: #fff; border: 1.5px solid #708090; border-radius: 16px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
 .punch-card-compact { display: flex; align-items: center; padding: 10px 12px; cursor: pointer; }
 .hrc-top { padding: 8px 10px; position: relative; cursor: pointer; }
-.hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
+.hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
 .hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--t2); font-weight: 600; margin-bottom: 6px; }
 .hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hrc-amt { font-family: var(--mono); font-size: 16px; font-weight: 800; color: var(--t1); }
@@ -122,7 +122,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .lbl-bonus { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .lbl-tips { background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .hrc-toggle { position: absolute; right: 10px; top: 10px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; border-radius: 50%; color: #94a3b8; font-size: 12px; cursor: pointer; transition: transform 0.3s; }
-.hrc-collapse { background: #f8fafc; border-top: 1px dashed #cbd5e1; display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.hrc-collapse { background: #f8fafc; border-top: 1.5px dashed #778899; display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
 .hrc-col-item { flex: 1; padding: 8px 4px; display: flex; flex-direction: column; gap: 2px; color: var(--t2); font-weight: 600; }
 .hrc-col-val { font-family: var(--mono); font-size: 13px; font-weight: 800; color: var(--blue); }
 .hrc-punch-tag { background: var(--t3); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-flex; }
