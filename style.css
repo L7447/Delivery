@@ -136,7 +136,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .chart-scroll-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px; }
 
 .set-sec { margin-bottom: 20px; }
-.set-sec h3 { font-size: 11px; color: var(--t3); letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
+.set-sec h3 { font-size: 11px; color: var(--blue); letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
 .set-list { background: var(--sf); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
 .set-row { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 14px; cursor: pointer; transition: .12s; }
 .set-row:last-child { border-bottom: none; }
