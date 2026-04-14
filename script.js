@@ -116,14 +116,14 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cardId}" class="hrc-collapse" style="background: hsla(60, 100%, 85%, 0.85); overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:3px dashed #cbd5e1; margin-bottom:3px;"></div>
+      <div id="${cardId}" class="hrc-collapse" style="background: #E6E6FA; overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
         <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">單均： <span style="font-family:var(--mono); color: hsl(190, 100%, 50%); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div style="flex:1; text-align:center;">單均： <span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
           <div style="flex:1; text-align:center;">時均： <span style="font-family:var(--mono); color: #ff0000; font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(78, 255, 0);font-size:11px">單/h</small></span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: rgb(0, 80, 255); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
+          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: #1E90FF; font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
@@ -348,7 +348,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = '#0040ff';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border: 5px dotted #009dff; border-radius: 20px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border: 5px double #009dff; border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
