@@ -901,12 +901,12 @@ function renderRptOverview() {
 
   // 精簡高對比總收入框
   html += `
-    <div style="background: hsl(60, 100%, 95%); border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
+    <div style="background: #ffffff; border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
       <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: #ffffff; border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; cursor:pointer; text-align:center;">
         <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00ff00; line-height:1;">$${fmt(total)}</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: hsl(120, 70%, 50%); line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
           <div style="background: hsl(60, 100%, 80%); color: #d97706; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
@@ -916,7 +916,7 @@ function renderRptOverview() {
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #FFF0F5;">
         <!-- 虛線往上調整 (margin 修改) -->
-        <div style="border-top:2.5px dashed #1a5dc3; margin:-2px 16px 6px;"></div>
+        <div style="border-top:2.5px dashed #1a5dc3; margin:-10px 16px 6px;"></div>
         
         <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center;">
           <!-- 左半邊：接單、時薪 -->
@@ -944,11 +944,11 @@ function renderRptOverview() {
               <span style="background: #ff0000; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">一單</span>
               <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #ff0000;">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'}</span>
             </div>
-          </div>
 
           <!-- 加大垂直分隔線 -->
           <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
 
+          </div>
         </div>
         
         ${cashTipTotal > 0 ? `
