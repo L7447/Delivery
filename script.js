@@ -348,7 +348,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border: 1.5px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border: 2px dashed var(--blue1); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
