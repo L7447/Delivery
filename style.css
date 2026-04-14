@@ -214,3 +214,18 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 .finp-ct { background: #f0fdf4; border: 1px solid #86efac; color: #14532d; font-weight: 700; }
 .finp-ct:focus { border-color: #22c55e; background: #fff; }
 .cashtip-card { background: #f0fdf4; border: 1px solid #bbf7d0; }
+
+/* ══ 撥動開關 (Toggle Switch) 樣式 ══ */
+.switch { position: relative; display: inline-block; width: 46px; height: 26px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 26px; }
+.slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+input:checked + .slider { background-color: #22C55E; }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* ══ 自訂儲存進度條 樣式 ══ */
+#progress-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 9999; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+#progress-overlay.show { display: flex; opacity: 1; pointer-events: auto; }
+.progress-box { background: var(--sf); padding: 24px; border-radius: 20px; width: 75%; max-width: 280px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.progress-bar-bg { width: 100%; height: 12px; background: #f1f5f9; border-radius: 12px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+.progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--acc2), var(--acc)); border-radius: 12px; }
