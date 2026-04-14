@@ -116,14 +116,14 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cardId}" class="hrc-collapse" style="background:#FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
+      <div id="${cardId}" class="hrc-collapse" style="background: hsla(60, 100%, 80%, 0.90); overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="border-top:2px dashed #cbd5e1; margin-bottom:3px;"></div>
         <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">均單 <br><span style="font-family:var(--mono); color:#9a3412; font-size:14px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div style="flex:1; text-align:center;">均單 <span style="font-family:var(--mono); color: #02bbff; font-size:16px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">效率 <br><span style="font-family:var(--mono); color:#065f46; font-size:14px; font-weight:800;">${ordHr} <small style="font-size:10px">單/h</small></span></div>
+          <div style="flex:1; text-align:center;">效率 <br><span style="font-family:var(--mono); color: #ff1515; font-size:16px; font-weight:800;">${ordHr} <small style="color: #11d067;font-size:10px">單/h</small></span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪 <br><span style="font-family:var(--mono); color:#1e3a8a; font-size:14px; font-weight:800;">$${fmt(avgHr)}</span></div>
+          <div style="flex:1; text-align:center;">時薪 <br><span style="font-family:var(--mono); color: #0048ff; font-size:16px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
@@ -328,7 +328,7 @@ function renderHome() {
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
-        bottomHtml += `<div style="display:flex; flex-direction:column; gap:6px; padding:0 10px;">`;
+        bottomHtml += `<div style="display:flex; flex-direction:column; gap:6px; padding:0 5px;">`;
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
           if (!events) return;
@@ -348,7 +348,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border: 3px groove var(--blue1); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border: 3.5px inset var(--blue1); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
