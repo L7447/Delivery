@@ -112,7 +112,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 
 .hist-rec-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
 .punch-card-compact { display: flex; align-items: center; padding: 10px 12px; cursor: pointer; }
-.hrc-top { padding: 5px 2px; position: relative; cursor: pointer; }
+.hrc-top { padding: 5px 5px; position: relative; cursor: pointer; }
 .hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
 .hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--t2); font-weight: 600; margin-bottom: 6px; }
 .hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
