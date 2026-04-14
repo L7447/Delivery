@@ -32,13 +32,15 @@
     <div style="padding: 16px 16px 0; text-align: center;">
       <div class="home-pg-title" style="display:inline-block;">查看記錄</div>
     </div>
-    <div class="slide-tabs tabs-5" style="margin: 12px 16px 8px;">
+    <!-- 替換原本的 tabs-5 區塊 -->
+    <div class="slide-tabs tabs-6" style="margin: 12px 16px 8px;">
       <div class="slide-bg" id="hist-tab-bg" style="transform: translateX(0%);"></div>
       <button class="slide-btn active" id="btn-hist-day" onclick="switchHistTab('day', 0)">日</button>
       <button class="slide-btn" id="btn-hist-week" onclick="switchHistTab('week', 1)">週</button>
       <button class="slide-btn" id="btn-hist-biweek" onclick="switchHistTab('biweek', 2)">雙週</button>
-      <button class="slide-btn" id="btn-hist-month" onclick="switchHistTab('month', 3)">月</button>
-      <button class="slide-btn" id="btn-hist-year" onclick="switchHistTab('year', 4)">年</button>
+      <button class="slide-btn" id="btn-hist-halfmonth" onclick="switchHistTab('halfmonth', 3)">半月</button>
+      <button class="slide-btn" id="btn-hist-month" onclick="switchHistTab('month', 4)">月</button>
+      <button class="slide-btn" id="btn-hist-year" onclick="switchHistTab('year', 5)">年</button>
     </div>
     <div id="hist-content" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
   </section>
@@ -299,11 +301,51 @@
     <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">宮美1<span style="font-size:1px; color:#ffffff;">.</span>00人團隊製作  2026 © v1.4.14.115</div>
     
     <div style="width:100%; margin-top:32px; padding:0 24px;">
+      <!-- 官方網站 -->
       <div style="padding:16px 0; border-bottom:1px solid #f3f4f6; font-size:15px; font-weight:500; color:var(--t1);">官方網站</div>
-      <div style="padding:16px 0; border-bottom:1px solid #f3f4f6; font-size:15px; font-weight:500; color:var(--t1);">隱私權政策</div>
+      
+      <!-- 特別致謝 -->
+      <div style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
+        <div style="font-size:15px; font-weight:500; color:var(--t1); margin-bottom:8px;">特別感謝</div>
+        <div style="font-size:13px; color:var(--t2); line-height:1.6;">
+          特別感謝 XXX 提供的想法<br>
+          <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="color:var(--blue); text-decoration:none; font-weight:600;">點擊前往 Facebook 貼文連結</a>
+        </div>
+      </div>
+      
+      <!-- 隱私權政策 -->
+      <div style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
+        <div style="font-size:15px; font-weight:500; color:var(--t1); margin-bottom:12px;">APP 隱私權政策</div>
+        <div style="font-size:12px; color:var(--t2); line-height:1.8; background:#f9fafb; padding:12px; border-radius:8px;">
+          <strong style="color:var(--t1);">1. 我們收集的資訊</strong><br>
+          • 基本帳號資料（如電子郵件、使用者名稱）<br>
+          • 使用過程產生的操作紀錄與偏好設定<br>
+          • 必要的裝置資訊（如系統版本、錯誤紀錄），用於改善服務<br><br>
+          
+          <strong style="color:var(--t1);">2. 我們如何使用資訊</strong><br>
+          • 提供並維護 APP 功能<br>
+          • 改善使用體驗與修正錯誤<br>
+          • 推送通知或必要的服務訊息<br><br>
+          
+          <strong style="color:var(--t1);">3. 資訊分享</strong><br>
+          • 我們不會出售您的個人資料<br>
+          • 僅在法律要求或必要合作（如雲端服務供應商）時才會分享<br><br>
+          
+          <strong style="color:var(--t1);">4. 資料安全</strong><br>
+          • 使用加密技術保護您的資訊<br>
+          • 僅授權人員可存取相關資料<br><br>
+          
+          <strong style="color:var(--t1);">5. 您的權利</strong><br>
+          • 您可隨時查詢、更正或刪除個人資料<br>
+          • 您可聯繫我們停止使用或刪除帳號<br><br>
+          
+          <strong style="color:var(--t1);">6. 聯絡方式</strong><br>
+          如有任何隱私問題，請透過 APP 內「聯絡我們」功能與我們聯繫。
+        </div>
+      </div>
+      <div style="height:40px;"></div>
     </div>
   </div>
-</div>
 
 <script src="/script.js"></script>
 </body>
