@@ -608,17 +608,19 @@ function navHistGroup(dir, mode) {
 }
 function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
 
+/* ══ 替換：統一讓查看紀錄外層負責上下滾動 ══ */
 function renderHistory() { 
   const content = document.getElementById('hist-content');
+  
+  // 統一所有模式下的滾動屬性，保證必定有上下捲動軸
+  content.style.overflowY = 'auto';
+  content.style.overflowX = 'hidden';
+  content.style.display = 'block';
+  content.style.WebkitOverflowScrolling = 'touch';
+  
   if (S.histTab === 'day') {
-    content.style.overflowY = 'auto';
-    content.style.overflowX = 'hidden';
-    content.style.display = 'block';
-    content.style.WebkitOverflowScrolling = 'touch';
     renderHistDayView(); 
   } else {
-    content.style.overflowY = 'hidden';
-    content.style.display = 'flex';
     renderHistGroupView(S.histTab); 
   }
 }
@@ -663,7 +665,18 @@ function renderHistGroupView(mode) {
   /* ... 後面程式碼不變 ... */
   let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr); if (S.histFilter !== 'all') recs = recs.filter(r => r.platformId === S.histFilter);
   let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('');
-  let html = `<div style="padding: 0 16px; flex-shrink:0;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);"><div style="display:flex; align-items:center; gap:8px;"><button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button><span style="font-family:var(--mono); font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc); letter-spacing:0.5px;">${labelStr}</span><button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button></div><select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select></div></div><div style="padding: 0 16px 24px; flex:1; overflow-y:auto; min-height:0; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:0;">`;
+  // 替換這段 html 組合：移除原本卡住滾動的 flex:1 與 overflow-y:auto
+  let html = `<div style="padding: 0 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="mbtn" onclick="navHistGroup(-1, '${mode}')">◀</button>
+        <span style="font-family:var(--mono); font-size:14px; font-weight:700; width:125px; text-align:center; color:var(--acc); letter-spacing:0.5px;">${labelStr}</span>
+        <button class="mbtn" onclick="navHistGroup(1, '${mode}')">▶</button>
+      </div>
+      <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:600;" onchange="changeHistFilter(this.value)">${platOpts}</select>
+    </div>
+  </div>
+  <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:0;">`;
   
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
     const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
@@ -906,7 +919,7 @@ function renderRptOverview() {
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; cursor:pointer; text-align:center;">
         <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: hsl(120, 50%, 50%); line-height:1;">$${fmt(total)}</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
           <div style="background: hsl(60, 100%, 80%); color: #d97706; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
@@ -916,7 +929,7 @@ function renderRptOverview() {
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: hsl(340, 100%, 98%);">
         <!-- 虛線往上調整 (margin 修改) -->
-        <div style="border-top:2.5px dashed #1a5dc3; margin-bottom:3px;"></div>
+        <div style="border-top:2.5px dashed #1a5dc3; margin-bottom:12px;"></div>
         
         <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center;">
           <!-- 左半邊：接單、時薪 -->
@@ -951,9 +964,9 @@ function renderRptOverview() {
         <div style="border-top:1px dashed rgba(0,0,0,0.05); margin:6px 16px;"></div>
         <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 16px 12px;">
           <span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
-          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
           <!-- 加大垂直分隔線 -->
           <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
