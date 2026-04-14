@@ -71,7 +71,7 @@ function runSaveProgress(callback) {
   setTimeout(() => {
     ov.classList.remove('show');
     callback();
-  }, 2000);
+  }, 1500);
 }
 
 function customConfirm(msg) {
@@ -99,7 +99,7 @@ function animateClose(btn, action) {
     action();
     img.src = 'images/close1.png'; // 恢復原狀以供下次開啟
     btn.style.pointerEvents = 'auto';
-  }, 500);
+  }, 400);
 }
 
 function toggleSummaryCard(id) {
