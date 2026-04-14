@@ -67,7 +67,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 @keyframes blinkEffect { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } 100% { opacity: 1; transform: scale(1); } }
 .punch-dot-new.online { background: #22C55E; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); animation: blinkEffect 1.2s ease-in-out infinite; }
 
-.icon-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--sf2); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--t2); -webkit-tap-highlight-color: transparent; }
+.icon-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--sf); border: 1.5px solid var(--blue); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--t2); -webkit-tap-highlight-color: transparent; }
 .fg { display: flex; flex-direction: column; gap: 4px; }
 .fg label { font-size: 11px; color: var(--t3); letter-spacing: .5px; }
 .form-lbl { font-size: 11px; color: var(--t3); letter-spacing: .5px; margin-bottom: 8px; }
