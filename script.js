@@ -50,28 +50,41 @@ function toast(msg, ms=2200) {
   setTimeout(()=>el.classList.remove('show'), ms);
 }
 
-/* ══ 執行2秒圓角進度條動畫 ══ */
+/* ══ 執行2秒原生進度條動畫 ══ */
 function runSaveProgress(callback) {
   const ov = document.getElementById('progress-overlay');
   const fill = document.getElementById('progress-fill');
   
-  // 重置進度條
-  fill.style.transition = 'none';
-  fill.style.width = '0%';
+  // 顯示遮罩並將進度歸零
+  fill.value = 0;
   ov.classList.add('show');
   
-  // 強制重繪以確保 0% 狀態被套用
-  void fill.offsetWidth; 
-  
-  // 啟動動畫 (設定為 2 秒)
-  fill.style.transition = 'width 2s linear';
-  fill.style.width = '100%';
+  let start = null;
+  const duration = 2000; // 總時間 2000 毫秒 (2秒)
 
-  // 動畫結束後執行動作並關閉
-  setTimeout(() => {
-    ov.classList.remove('show');
-    callback();
-  }, 2000);
+  // 動畫繪製函式
+  function animate(timestamp) {
+    if (!start) start = timestamp;
+    const elapsed = timestamp - start;
+    
+    // 計算目前的百分比 (最高 100)
+    const percentage = Math.min((elapsed / duration) * 100, 100);
+    fill.value = percentage;
+
+    if (elapsed < duration) {
+      // 若時間未到 2 秒，繼續下一幀動畫
+      requestAnimationFrame(animate);
+    } else {
+      // 動畫結束，稍微停頓 0.1 秒後關閉視窗 (視覺體驗較佳)
+      setTimeout(() => {
+        ov.classList.remove('show');
+        callback();
+      }, 100);
+    }
+  }
+  
+  // 啟動動畫
+  requestAnimationFrame(animate);
 }
 
 function customConfirm(msg) {
