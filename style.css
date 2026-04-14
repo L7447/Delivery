@@ -165,9 +165,11 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .progress-fill { height: 100%; border-radius: 4px; transition: width .4s; }
 
 .slide-tabs { position: relative; display: flex; background: rgba(0,0,0,0.06); border-radius: 999px; padding: 4px; margin-bottom: 12px; }
+/* 加入 tabs-6 寬度設定 */
 .tabs-2 .slide-bg { width: calc(50% - 4px); }
 .tabs-4 .slide-bg { width: calc(25% - 2px); }
 .tabs-5 .slide-bg { width: calc(20% - 1.6px); }
+.tabs-6 .slide-bg { width: calc(16.666% - 1.33px); }
 .slide-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: 999px; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s; z-index: 0; }
 body[data-tab="home"] .slide-bg    { background: var(--acc);   box-shadow: 0 4px 10px rgba(255,107,53, 0.4); }
 body[data-tab="history"] .slide-bg { background: var(--blue);  box-shadow: 0 4px 10px rgba(59,130,246, 0.4); }
