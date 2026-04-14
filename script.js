@@ -357,7 +357,7 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 1px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
+            <div style="border: 1px solid ${p.color}; background: ${p.color}10; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; gap:5px; margin-bottom: 2px;">
                 <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
                 <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -372,7 +372,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = '#0040ff';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border-top: 3px solid #FF69B4; border-right: 3px solid #FF1493; border-bottom: 3px solid #009dff; border-left: 3px solid #00FFFF; border-radius: 12px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border-top: 3.5px solid #FF69B4; border-right: 3.5px solid #FF1493; border-bottom: 3.5px solid #009dff; border-left: 3.5px solid #00FFFF; border-radius: 12px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
@@ -964,9 +964,9 @@ function renderRptOverview() {
         <div style="border-top:1px dashed rgba(0,0,0,0.05); margin:6px 16px;"></div>
         <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 16px 12px;">
           <span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
           <!-- 加大垂直分隔線 -->
           <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
-          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
@@ -1415,7 +1415,17 @@ function openAddVehRec(recordId = null) {
     document.getElementById('vm-km').value = r?.km || ''; document.getElementById('vm-shop').value = r?.shop || ''; document.getElementById('vm-pay-method').value = r?.payMethod || '現金'; document.getElementById('vm-amount').value = r?.amount || ''; document.getElementById('vm-note').value = r?.note || ''; renderShopHistory(); 
   }
   switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); openOverlay('veh-rec-add-page');
+
+  /* 尋找 openAddVehRec 函式，在結尾處加上這一段 */
+  switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); 
+  openOverlay('veh-rec-add-page');
+
+  // 若為新增燃料記錄且未手動填寫油價，開啟時自動抓取最新油價
+  if (!isEdit && S.addVehRecType === 'fuel' && !document.getElementById('vr-price').value) {
+    fetchAutoGasPrice();
+  }
 }
+
 
 function switchVehFormTab(type, index) {
   S.addVehRecType = type; document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`; 
@@ -1730,6 +1740,91 @@ function openPrivacyPolicy() {
   // 動態提高 sub-page 的 z-index，使其能完美覆蓋在 about-page 之上
   document.getElementById('sub-page').style.zIndex = '1100';
   openOverlay('sub-page');
+}
+
+/* ══ 驗證工時輸入限制 ══ */
+function enforceTimeLimits() {
+  const hEl = document.getElementById('f-hrs-val');
+  const mEl = document.getElementById('f-min-val');
+  
+  if (hEl.value !== '') {
+    let h = parseInt(hEl.value);
+    if (h < 0) hEl.value = 0;
+    if (h > 24) hEl.value = 24;
+  }
+  if (mEl.value !== '') {
+    let m = parseInt(mEl.value);
+    if (m < 0) mEl.value = 0;
+    if (m > 59) mEl.value = 59;
+  }
+  // 當輸入 24 小時時，分鐘自動鎖定為 0
+  if (parseInt(hEl.value) === 24) {
+    mEl.value = 0;
+  }
+}
+
+/* ══ 驗證工時邏輯規則 (失去焦點時觸發) ══ */
+function enforceTimeRules() {
+  const hEl = document.getElementById('f-hrs-val');
+  const mEl = document.getElementById('f-min-val');
+  let h = parseInt(hEl.value || 0);
+  let m = parseInt(mEl.value || 0);
+
+  if (h === 24) {
+    mEl.value = 0;
+  } else if (h === 0) {
+    // 當小時輸入0時，若使用者有輸入且分鐘為0，強制改為1分鐘以符合防呆
+    if (m === 0 && (hEl.value !== '' || mEl.value !== '')) {
+       mEl.value = 1;
+       toast('⏱️ 工時不能為 0，已自動設為 1 分鐘');
+    }
+  }
+}
+
+/* ══ 自動抓取中油歷史油價網頁資料 ══ */
+async function fetchAutoGasPrice() {
+  const fuelType = document.getElementById('vr-fuel-type');
+  if (!fuelType || fuelType.value === 'electric') return;
+  
+  try {
+    // 透過 AllOrigins CORS Proxy 讀取中油網頁
+    const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.cpc.com.tw/historyprice.aspx?n=2890'));
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    // 將回傳的 HTML 字串解析為 DOM 節點
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data.contents, "text/html");
+    
+    // 尋找資料表中的第一筆資料 (最新油價)
+    const rows = doc.querySelectorAll('table tr');
+    let dataRow = null;
+    for(let i = 0; i < rows.length; i++) {
+      if(rows[i].querySelector('td')) {
+        dataRow = rows[i];
+        break; // 找到第一列有 td 標籤的即為最新牌價
+      }
+    }
+    
+    if (!dataRow) return;
+    const tds = dataRow.querySelectorAll('td');
+    let price = 0;
+    const typeStr = fuelType.value;
+    
+    // 中油歷史表格欄位固定為：[0]日期, [1]92, [2]95, [3]98, [4]柴油
+    if (typeStr === '92' && tds.length > 1) price = parseFloat(tds[1].textContent.trim());
+    else if (typeStr === '95' && tds.length > 2) price = parseFloat(tds[2].textContent.trim());
+    else if (typeStr === '98' && tds.length > 3) price = parseFloat(tds[3].textContent.trim());
+    else if (typeStr === '柴油' && tds.length > 4) price = parseFloat(tds[4].textContent.trim());
+    
+    if (price > 0 && !isNaN(price)) {
+      document.getElementById('vr-price').value = price;
+      calcVehFuel(); // 觸發總額重算
+      toast(`⛽ 已載入中油最新牌價：$${price}`);
+    }
+  } catch(e) {
+    console.error('取得油價失敗:', e);
+  }
 }
 
 /* ══ 全部功能都開發完畢，準備正式上線時，再把這段程式碼改回原本的「註冊」代碼，並把 sw.js 的版本號加 1 ═══════════════════════════════════ */
