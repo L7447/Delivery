@@ -1455,7 +1455,7 @@ function renderSettings() {
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置所有設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
   </div></div>
   <div style="margin-top:24px; padding-bottom:16px; text-align:center;">
-      <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--t3); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
+      <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--blue); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
   </div>`;
   document.getElementById('settings-content').innerHTML = html;
 }
