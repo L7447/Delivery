@@ -1781,49 +1781,78 @@ function enforceTimeRules() {
   }
 }
 
-/* ══ 自動抓取中油歷史油價網頁資料 ══ */
+/* ══ 自動抓取中油歷史油價網頁資料 (強化版) ══ */
 async function fetchAutoGasPrice() {
   const fuelType = document.getElementById('vr-fuel-type');
   if (!fuelType || fuelType.value === 'electric') return;
   
+  // 建立提示框讓使用者知道正在抓取
+  toast('⛽ 正在抓取中油最新牌價...', 1500);
+
   try {
-    // 透過 AllOrigins CORS Proxy 讀取中油網頁
-    const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.cpc.com.tw/historyprice.aspx?n=2890'));
-    if (!res.ok) return;
-    const data = await res.json();
+    const cpcUrl = encodeURIComponent('https://www.cpc.com.tw/historyprice.aspx?n=2890');
+    let htmlText = '';
     
-    // 將回傳的 HTML 字串解析為 DOM 節點
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(data.contents, "text/html");
-    
-    // 尋找資料表中的第一筆資料 (最新油價)
-    const rows = doc.querySelectorAll('table tr');
-    let dataRow = null;
-    for(let i = 0; i < rows.length; i++) {
-      if(rows[i].querySelector('td')) {
-        dataRow = rows[i];
-        break; // 找到第一列有 td 標籤的即為最新牌價
-      }
+    // 使用雙重備用 Proxy 確保能繞過 CORS 阻擋
+    try {
+      const res1 = await fetch(`https://api.allorigins.win/raw?url=${cpcUrl}`);
+      if (!res1.ok) throw new Error('Proxy 1 failed');
+      htmlText = await res1.text();
+    } catch (e1) {
+      const res2 = await fetch(`https://api.codetabs.com/v1/proxy?quest=${cpcUrl}`);
+      htmlText = await res2.text();
     }
     
-    if (!dataRow) return;
+    // 解析 HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, "text/html");
+    
+    // 尋找中油的資料表格，自動判斷哪一列是最新油價
+    const tables = doc.querySelectorAll('table');
+    let dataRow = null;
+    
+    for (let t of tables) {
+      const rows = t.querySelectorAll('tr');
+      for (let r of rows) {
+        const tds = r.querySelectorAll('td');
+        // 中油油價表至少有 5 欄 (日期, 92, 95, 98, 柴油)
+        if (tds.length >= 5) {
+          const firstTd = tds[0].textContent.trim();
+          // 判斷第一個欄位是否包含日期斜線 (如 2024/04/15)
+          if (firstTd.includes('/')) {
+            dataRow = r;
+            break; // 找到第一筆(最新的一天)就跳出
+          }
+        }
+      }
+      if (dataRow) break;
+    }
+    
+    if (!dataRow) {
+      console.log('找不到中油油價資料表');
+      return;
+    }
+    
     const tds = dataRow.querySelectorAll('td');
     let price = 0;
     const typeStr = fuelType.value;
     
-    // 中油歷史表格欄位固定為：[0]日期, [1]92, [2]95, [3]98, [4]柴油
-    if (typeStr === '92' && tds.length > 1) price = parseFloat(tds[1].textContent.trim());
-    else if (typeStr === '95' && tds.length > 2) price = parseFloat(tds[2].textContent.trim());
-    else if (typeStr === '98' && tds.length > 3) price = parseFloat(tds[3].textContent.trim());
-    else if (typeStr === '柴油' && tds.length > 4) price = parseFloat(tds[4].textContent.trim());
+    // 取得對應油品的數值
+    if (typeStr === '92') price = parseFloat(tds[1].textContent.trim());
+    else if (typeStr === '95') price = parseFloat(tds[2].textContent.trim());
+    else if (typeStr === '98') price = parseFloat(tds[3].textContent.trim());
+    else if (typeStr === '柴油') price = parseFloat(tds[4].textContent.trim());
     
     if (price > 0 && !isNaN(price)) {
       document.getElementById('vr-price').value = price;
       calcVehFuel(); // 觸發總額重算
-      toast(`⛽ 已載入中油最新牌價：$${price}`);
+      toast(`✅ 已載入最新牌價：$${price}`);
+    } else {
+      toast('⚠️ 抓取油價失敗，請手動輸入');
     }
   } catch(e) {
     console.error('取得油價失敗:', e);
+    toast('⚠️ 抓取油價失敗，請手動輸入');
   }
 }
 
