@@ -914,9 +914,9 @@ function renderRptOverview() {
         </div>
       </div>
 
-      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #FFF0F5;">
+      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: hsl(340, 100%, 98%);">
         <!-- 虛線往上調整 (margin 修改) -->
-        <div style="border-top:2.5px dashed #1a5dc3; margin:-10px 16px 6px;"></div>
+        <div style="border-top:2.5px dashed #1a5dc3; margin:5px 16px 6px;"></div>
         
         <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center;">
           <!-- 左半邊：接單、時薪 -->
@@ -944,10 +944,6 @@ function renderRptOverview() {
               <span style="background: #ff0000; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">一單</span>
               <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #ff0000;">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'}</span>
             </div>
-
-          <!-- 加大垂直分隔線 -->
-          <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
-
           </div>
         </div>
         
@@ -957,6 +953,8 @@ function renderRptOverview() {
           <span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
         </div>` : ''}
+        <!-- 加大垂直分隔線 -->
+        <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
       </div>
     </div>`;
 
