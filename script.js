@@ -372,7 +372,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = '#0040ff';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border-top: 2px solid #00FFFF; border-right: 2px solid #00FFFF; border-bottom: 2px solid #009dff; border-left: 2px solid #009dff; border-radius: 12px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border-top: 2px solid #FF69B4; border-right: 2px solid #FF69B4; border-bottom: 2px solid #009dff; border-left: 2px solid #009dff; border-radius: 12px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
@@ -916,7 +916,7 @@ function renderRptOverview() {
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: hsl(340, 100%, 98%);">
         <!-- 虛線往上調整 (margin 修改) -->
-        <div style="border-top:2.5px dashed #1a5dc3; margin:5px 16px 6px;"></div>
+        <div style="border-top:2.5px dashed #1a5dc3;"></div>
         
         <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center;">
           <!-- 左半邊：接單、時薪 -->
@@ -952,9 +952,9 @@ function renderRptOverview() {
         <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 16px 12px;">
           <span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
+          <!-- 加大垂直分隔線 -->
+          <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
         </div>` : ''}
-        <!-- 加大垂直分隔線 -->
-        <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
       </div>
     </div>`;
 
