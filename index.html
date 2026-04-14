@@ -75,11 +75,17 @@
       </div>
       <div style="margin-bottom:16px;">
         <div class="form-lbl">⏱ 累計工時</div>
+        <!-- 替換原本的 f-hrs-val 與 f-min-val 區塊 -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="fg" style="position:relative;"><input type="number" class="finp" id="f-hrs-val" placeholder="0" inputmode="numeric" style="padding-right:32px;"><span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">時</span></div>
-          <div class="fg" style="position:relative;"><input type="number" class="finp" id="f-min-val" placeholder="0" inputmode="numeric" style="padding-right:32px;"><span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">分</span></div>
+          <div class="fg" style="position:relative;">
+            <input type="number" class="finp" id="f-hrs-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()">
+            <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">時</span>
+          </div>
+          <div class="fg" style="position:relative;">
+            <input type="number" class="finp" id="f-min-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()">
+            <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">分</span>
+          </div>
         </div>
-      </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
         <div class="fg"><label>💰 行程收入 (NT$)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
         <div class="fg"><label>🤑 小費 (NT$)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
@@ -267,7 +273,15 @@
     </div>
     <div id="form-area-fuel">
       <div style="display:flex; gap:10px; margin-bottom:12px;">
-        <div class="fg" style="flex:1"><label>汽油類型</label><select class="fsel" id="vr-fuel-type"><option value="92">92 無鉛</option><option value="95" selected>95 無鉛</option><option value="98">98 無鉛</option><option value="柴油">柴油</option></select></div>
+        <!-- 替換 vr-fuel-type 下拉選單區塊 -->
+        <div class="fg" style="flex:1"><label>汽油類型</label>
+          <select class="fsel" id="vr-fuel-type" onchange="fetchAutoGasPrice()">
+            <option value="92">92 無鉛</option>
+            <option value="95" selected>95 無鉛</option>
+            <option value="98">98 無鉛</option>
+            <option value="柴油">柴油</option>
+          </select>
+        </div>
         <div class="fg" style="flex:1"><label>折扣 (NT$)</label><input type="number" class="finp" id="vr-discount" value="0" oninput="calcVehFuel()"></div>
       </div>
       <div style="display:flex; gap:10px; margin-bottom:12px;">
