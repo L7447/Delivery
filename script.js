@@ -117,8 +117,8 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
         </div>
       </div>
       <div id="${cardId}" class="hrc-collapse" style="background: #FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
-        <div style="padding:8px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
+        <div style="border-top:3px solid #778899; margin-bottom:3px;"></div>
+        <div style="padding:8px 12px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">單均： <span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
           <div style="flex:1; text-align:center;">時均： <span style="font-family:var(--mono); color: #ff0000; font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單/h</small></span></div>
@@ -492,7 +492,7 @@ function buildRecItem(r) {
     const plat = getPlatform(r.platformId);
     return `
       <div class="hist-rec-card cashtip-card" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
-        <div class="hrc-top" style="padding:4px 6px; display:flex; justify-content:space-between; align-items:center;">
+        <div class="hrc-top" style="padding:6px 10px; display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; flex-direction:column; gap:6px;">
             <div style="display:flex; align-items:center; gap:6px;">
               <span class="hrc-plat-tag" style="background:${plat.color};">${plat.name}</span>
