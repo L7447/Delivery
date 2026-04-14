@@ -141,7 +141,7 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
         </div>
       </div>
       <div id="${cardId}" class="hrc-collapse" style="background: #FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:3px solid #778899; margin-bottom:3px;"></div>
+        <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
         <div style="padding:8px 12px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
@@ -572,7 +572,7 @@ function buildRecItem(r) {
       </div>
 
       <div id="${cid}" class="hrc-collapse" style="background: rgba(255, 240, 245, 0.90); overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:2px dashed #708090; margin-bottom:3px;"></div>
+        <div style="border-top:3px dashed #708090; margin-bottom:3px;"></div>
         <div style="padding:8px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
@@ -906,7 +906,7 @@ function renderRptOverview() {
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; cursor:pointer; text-align:center;">
         <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: hsl(120, 70%, 50%); line-height:1;">$${fmt(total)}</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: hsl(120, 50%, 50%); line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
           <div style="background: hsl(60, 100%, 80%); color: #d97706; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
@@ -916,7 +916,7 @@ function renderRptOverview() {
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: hsl(340, 100%, 98%);">
         <!-- 虛線往上調整 (margin 修改) -->
-        <div style="border-top:2.5px dashed #1a5dc3;"></div>
+        <div style="border-top:2.5px dashed #1a5dc3; margin-bottom:3px;"></div>
         
         <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center;">
           <!-- 左半邊：接單、時薪 -->
