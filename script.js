@@ -1601,6 +1601,59 @@ async function doReset() {
   toast('已重置所有設定和資料'); 
   renderHome(); renderSettings(); 
 }
+
+/* ══ 關於我們：彈窗內容渲染函式 ══ */
+function openSpecialThanks() {
+  document.getElementById('sub-title').textContent = '特別致謝';
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
+      <p style="margin-bottom:16px; font-weight:500;">💡 特別感謝 XXX 提供的功能想法與建議，讓這個 APP 變得更好用！</p>
+      <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background:var(--blue-d); color:var(--blue); text-decoration:none; border-radius:12px; font-weight:700;">
+        前往 Facebook 貼文連結
+      </a>
+    </div>
+  `;
+  // 動態提高 sub-page 的 z-index，使其能完美覆蓋在 about-page 之上
+  document.getElementById('sub-page').style.zIndex = '1100';
+  openOverlay('sub-page');
+}
+
+function openPrivacyPolicy() {
+  document.getElementById('sub-title').textContent = '隱私權政策';
+  document.getElementById('sub-body').innerHTML = `
+    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
+      <strong style="color:var(--acc); font-size:15px;">1. 我們收集的資訊</strong><br>
+      • 基本帳號資料（如電子郵件、使用者名稱）<br>
+      • 使用過程產生的操作紀錄與偏好設定<br>
+      • 必要的裝置資訊（如系統版本、錯誤紀錄），用於改善服務<br><br>
+
+      <strong style="color:var(--acc); font-size:15px;">2. 我們如何使用資訊</strong><br>
+      • 提供並維護 APP 功能<br>
+      • 改善使用體驗與修正錯誤<br>
+      • 推送通知或必要的服務訊息<br><br>
+
+      <strong style="color:var(--acc); font-size:15px;">3. 資訊分享</strong><br>
+      • 我們不會出售您的個人資料<br>
+      • 僅在法律要求或必要合作（如雲端服務供應商）時才會分享<br><br>
+
+      <strong style="color:var(--acc); font-size:15px;">4. 資料安全</strong><br>
+      • 使用加密技術保護您的資訊<br>
+      • 僅授權人員可存取相關資料<br><br>
+
+      <strong style="color:var(--acc); font-size:15px;">5. 您的權利</strong><br>
+      • 您可隨時查詢、更正或刪除個人資料<br>
+      • 您可聯繫我們停止使用或刪除帳號<br><br>
+
+      <strong style="color:var(--acc); font-size:15px;">6. 聯絡方式</strong><br>
+      如有任何隱私問題，請透過 APP 內「聯絡我們」功能與我們聯繫。
+      <div style="height:32px;"></div>
+    </div>
+  `;
+  // 動態提高 sub-page 的 z-index，使其能完美覆蓋在 about-page 之上
+  document.getElementById('sub-page').style.zIndex = '1100';
+  openOverlay('sub-page');
+}
+
 /* ══ 全部功能都開發完畢，準備正式上線時，再把這段程式碼改回原本的「註冊」代碼，並把 sw.js 的版本號加 1 ═══════════════════════════════════ */
 /* if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); } */
 /* 開發測試用：強制註銷所有 Service Worker，避免快取舊檔案 */
