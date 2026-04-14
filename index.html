@@ -216,13 +216,12 @@
   </div>
 </div>
 
-<!-- 將這段加入在 <div id="toast"></div> 的上方 -->
+<!-- 替換原本的 progress-overlay 區塊 -->
 <div id="progress-overlay">
   <div class="progress-box">
     <div style="font-size:14px; font-weight:700; margin-bottom:12px; color:var(--t1);" id="progress-text">⏳ 資料儲存中...</div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="progress-fill"></div>
-    </div>
+    <!-- 改用原生的 progress 標籤 -->
+    <progress id="progress-fill" value="0" max="100"></progress>
   </div>
 </div>
 
