@@ -105,7 +105,7 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
   return `
-    <div class="hist-rec-card" style="border: 2px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+    <div class="hist-rec-card" style="border: 2px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
       <div class="hrc-top" onclick="foldCard('${cardId}', event)">
         <div class="hrc-toggle" id="${cardId}-btn">▼</div>
         <div class="hrc-row1">
@@ -116,12 +116,12 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cardId}" class="hrc-collapse" style="background: #E6E6FA; overflow:hidden; transition:max-height 0.3s ease;">
+      <div id="${cardId}" class="hrc-collapse" style="background: #FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
         <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">單均： <span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時均： <span style="font-family:var(--mono); color: #ff0000; font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(78, 255, 0);font-size:11px">單/h</small></span></div>
+          <div style="flex:1; text-align:center;">時均： <span style="font-family:var(--mono); color: #ff0000; font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單/h</small></span></div>
           <div class="h-div" style="height:20px;"></div>
           <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: #1E90FF; font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
@@ -492,7 +492,7 @@ function buildRecItem(r) {
     const plat = getPlatform(r.platformId);
     return `
       <div class="hist-rec-card cashtip-card" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
-        <div class="hrc-top" style="padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+        <div class="hrc-top" style="padding:4px 2px; display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; flex-direction:column; gap:6px;">
             <div style="display:flex; align-items:center; gap:6px;">
               <span class="hrc-plat-tag" style="background:${plat.color};">${plat.name}</span>
@@ -547,14 +547,14 @@ function buildRecItem(r) {
         </div>
       </div>
 
-      <div id="${cid}" class="hrc-collapse" style="background:#FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
-        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">均單 <br><span style="font-family:var(--mono); color:#9a3412; font-size:14px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+      <div id="${cid}" class="hrc-collapse" style="background: rgba(255, 240, 245, 0.90); overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="border-top:2px dashed #708090; margin-bottom:3px;"></div>
+        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
+          <div style="flex:1; text-align:center;">單均： <br><span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">效率 <br><span style="font-family:var(--mono); color:#065f46; font-size:14px; font-weight:800;">${ordHr} <small style="font-size:10px">單/h</small></span></div>
+          <div style="flex:1; text-align:center;">時均： <br><span style="font-family:var(--mono); color: #ff0000; font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單/h</small></span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪 <br><span style="font-family:var(--mono); color:#1e3a8a; font-size:14px; font-weight:800;">$${fmt(avgHr)}</span></div>
+          <div style="flex:1; text-align:center;">時薪： <br><span style="font-family:var(--mono); color: #1E90FF; font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
