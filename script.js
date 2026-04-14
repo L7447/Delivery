@@ -10,7 +10,8 @@ const DEFAULT_PLATFORMS = [
   { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日結算｜雙週三明細｜雙週三發薪' },
   { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
-const DEFAULT_SETTINGS = { goals: { weekly: 0, monthly: 0 }, rewards: [], shopHistory: [] };
+// 加入 yearly: 0
+const DEFAULT_SETTINGS = { goals: { weekly: 0, monthly: 0, yearly: 0 }, rewards: [], shopHistory: [] };
 
 const S = {
   tab: 'home', rptY: new Date().getFullYear(), rptM: new Date().getMonth()+1, rptView: 'overview',
@@ -353,24 +354,44 @@ function renderHome() {
         bottomHtml += `</div>`;
       }
     } 
+
     else if (S.homeSubTab === 'goal') {
       const goals = S.settings.goals || {};
       const weekly = pf(goals.weekly);
       const monthly = pf(goals.monthly);
+      const yearly = pf(goals.yearly);
       
-      if (weekly > 0 || monthly > 0) {
-        bottomHtml += `<div class="card" style="border: 2px solid var(--border);">`;
+      if (weekly > 0 || monthly > 0 || yearly > 0) {
+        bottomHtml += `<div class="card" style="border: 2px solid var(--border); display:flex; flex-direction:column; gap:16px;">`;
+        
+        // 本週目標 (計算剩餘天數)
         if (weekly > 0) {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
           for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
           const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `<div style="margin-bottom: ${monthly>0 ? '16px' : '0'};"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          const remainDaysW = 7 - wDay;
+          
+          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${remainDaysW} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
+        
+        // 本月目標 (計算剩餘天數)
         if (monthly > 0) {
           const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
           const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度</span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          const remainDaysM = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate();
+          
+          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${remainDaysM} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
+        
+        // 本年目標 (計算剩餘天數)
+        if (yearly > 0) {
+          const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
+          const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); const yColor = yPct >= 100 ? 'var(--green)' : yPct >= 70 ? 'var(--blue)' : 'var(--red)';
+          const remainDaysY = Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000);
+          
+          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">👑 本年目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${remainDaysY} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${yColor}">${yPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${yPct}%;background:${yColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(yearTotal)}</span><span>${yRemain>0?`還差 $ ${fmt(yRemain)}`:'🎉 已達標！'}</span></div></div>`;
+        }
+
         bottomHtml += `</div>`;
       } else {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`;
@@ -460,7 +481,7 @@ function toggleCalendarGrid() {
   }
 }
 
-/* ══ 替換：產生單筆記錄卡片 (修正摺疊內容置中與 h-div) ══ */
+/* ══ 替換：產生單筆記錄卡片 (修正點擊事件、備註紅字、摺疊內容置中) ══ */
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
   if (r.isCashTip) {
@@ -474,7 +495,7 @@ function buildRecItem(r) {
               <span style="font-size:11px; font-weight:700; color:#16a34a;">💵 現金小費</span>
               <span style="font-size:11px; color:var(--t3);">${r.time||''}</span>
             </div>
-            ${r.note ? `<div style="font-size:11px; color:var(--t2); font-weight:600;">${r.note}</div>` : ''}
+            ${r.note ? `<div style="font-size:11px; color:var(--red); font-weight:700;">${r.note}</div>` : ''}
           </div>
           <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a;">$${fmt(r.cashTipAmt)}</div>
         </div>
@@ -507,12 +528,14 @@ function buildRecItem(r) {
 
   return `
     <div class="hist-rec-card" data-id="${r.id}">
-      <div class="hrc-top" onclick="foldCard('${cid}', event)">
-        <div class="hrc-toggle" id="${cid}-btn">▼</div>
+      <!-- 外層加上 onclick 開啟詳情 -->
+      <div class="hrc-top" onclick="openDetailOverlay('${r.id}')">
+        <!-- ▼ 折疊按鈕：獨立事件折疊卡片 -->
+        <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${cid}', event)">▼</div>
         <div class="hrc-row1">
           <span class="hrc-plat-tag" style="background:${plat.color};">${plat.name}</span>
           <span>${r.time||''}</span>
-          ${r.note ? `<span class="h-div"></span><span style="color:var(--t3);"> ${r.note}</span>` : ''}
+          ${r.note ? `<span class="h-div"></span><span style="color:var(--red); font-weight:700;"> ${r.note}</span>` : ''}
         </div>
         <div class="hrc-row2">
           <span class="hrc-amt">$${fmt(total)}</span>
@@ -521,13 +544,13 @@ function buildRecItem(r) {
       </div>
       <div id="${cid}" class="hrc-collapse" style="background:#f8fafc; overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:1px dashed #cbd5e1; margin-bottom:3px;"></div>
-        <!-- 修正置中與使用 h-div -->
-        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--red);">
-          <span>均單 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgOrd)}</span></span>
-          <div class="h-div"></div>
-          <span>效率 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">${ordHr}</span></span>
-          <div class="h-div"></div>
-          <span>時薪 <span style="font-family:var(--mono); color:var(--blue); font-size:13px; font-weight:800;">$${fmt(avgHr)}</span></span>
+        <!-- 修正置中，使用 flex 均分寬度保證居中對齊 -->
+        <div style="padding:8px 0; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
+          <div style="flex:1; text-align:center;">均單 <br><span style="font-family:var(--mono); color:var(--gold); font-size:14px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div class="h-div" style="height:20px;"></div>
+          <div style="flex:1; text-align:center;">效率 <br><span style="font-family:var(--mono); color:var(--acc); font-size:14px; font-weight:800;">${ordHr} <small style="font-size:10px">單/h</small></span></div>
+          <div class="h-div" style="height:20px;"></div>
+          <div style="flex:1; text-align:center;">時薪 <br><span style="font-family:var(--mono); color:var(--blue); font-size:14px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
@@ -831,22 +854,44 @@ function renderRptOverview() {
       </div>
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background:#fafaf9;">
-        <div style="border-top:1px dashed #d1d5db; margin:0 16px;"></div>
-        <div style="padding:12px 16px 2px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
-            <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">接單</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--t1);">${fmt(orders)}</span></div>
-            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:center;"><span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">工時</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--t1);">${fmtHours(hours)}</span></div>
+        <!-- 虛線往上調整 (margin 修改) -->
+        <div style="border-top:1px dashed #d1d5db; margin:-2px 16px 6px;"></div>
+        
+        <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center;">
+          <!-- 左半邊：接單、時薪 -->
+          <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-right:12px;">
+              <span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">接單</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-right:12px;">
+              <span style="background:var(--blue); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">時薪</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--blue);">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'}</span>
+            </div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
-            <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:var(--blue); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">時薪</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--blue);">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'}</span></div>
-            <div style="flex:1; display:flex; align-items:center; gap:8px; justify-content:center;"><span style="background:var(--gold); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">均單</span><span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--gold);">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'}</span></div>
+
+          <!-- 加大垂直分隔線 -->
+          <div style="width:2px; height:48px; background:#cbd5e1; border-radius:1px;"></div>
+
+          <!-- 右半邊：工時、均單 -->
+          <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-left:12px;">
+              <span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">工時</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmtHours(hours)}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-left:12px;">
+              <span style="background:var(--gold); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">均單</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--gold);">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'}</span>
+            </div>
           </div>
-          ${cashTipTotal > 0 ? `
-          <div style="border-top:1px dashed rgba(0,0,0,0.05); margin:6px 0;"></div>
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
-            <div style="flex:1; display:flex; align-items:center; gap:8px;"><span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span><span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span></div>
-          </div>` : ''}
         </div>
+        
+        ${cashTipTotal > 0 ? `
+        <div style="border-top:1px dashed rgba(0,0,0,0.05); margin:6px 16px;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 16px 12px;">
+          <span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
+        </div>` : ''}
       </div>
     </div>`;
 
@@ -1393,13 +1438,15 @@ function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); sav
 /* ══ 7. 設定管理與啟動 開始 ═══════════════════════════════════ */
 function renderSettings() {
   const goals = S.settings.goals||{};
+  // 更新設定清單的說明，補上年目標
   const html  = `
   <div class="set-sec"><h3>平台管理</h3><div class="set-list"><div class="set-row" onclick="openPlatformList()"><span class="sn"><div style="font-weight:500">🏪 平台列表與設定</div><div class="sn-sub">目前啟用 ${S.platforms.filter(p=>p.active).length} 個平台</div></span><span class="arr">›</span></div></div></div>
-  <div class="set-sec"><h3>目標設定</h3><div class="set-list"><div class="set-row" onclick="openGoalSettings()"><span class="sn"><div>週/月收入目標</div><div class="sn-sub">週目標：NT$ ${fmt(goals.weekly||0)}　月目標：NT$ ${fmt(goals.monthly||0)}</div></span><span class="arr">›</span></div></div></div>
+  <div class="set-sec"><h3>目標設定</h3><div class="set-list"><div class="set-row" onclick="openGoalSettings()"><span class="sn"><div>收入目標設定</div><div class="sn-sub">週：$${fmt(goals.weekly||0)}　月：$${fmt(goals.monthly||0)}　年：$${fmt(goals.yearly||0)}</div></span><span class="arr">›</span></div></div></div>
   <div class="set-sec"><h3>獎勵清單</h3><div class="set-list">
       ${(S.settings.rewards||[]).map((r,i)=>`<div class="set-row"><span class="sn"><div>${r.name}</div><div class="sn-sub">${getPlatform(r.platformId).name}　≥${r.minOrders}單　NT$ ${fmt(r.amount)}</div></span><button onclick="event.stopPropagation();deleteReward(${i})" class="del-btn">✕</button></div>`).join('')}
       <div class="set-row" onclick="openAddReward()"><span style="font-size:20px">➕</span><span class="sn">新增獎勵項目</span></div>
   </div></div>
+
   <div class="set-sec"><h3>資料管理</h3><div class="set-list">
       <div class="set-row" onclick="doBackup()"><span class="sn">📥 備份資料（JSON）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 還原備份</span><span class="arr">↑</span></div>
@@ -1443,8 +1490,62 @@ function openPlatformEdit(id) {
 }
 
 function savePlatformEdit(id) { const p = S.platforms.find(x=>x.id===id); if (!p) return; p.color = document.getElementById('sp-color').value.trim() || p.color; p.active = document.getElementById('sp-active').checked; savePlatforms(); toast('✅ 平台已更新'); if (S.tab === 'home') renderHome(); renderSettings(); openPlatformList(); }
-function openGoalSettings() { document.getElementById('sub-title').textContent = '目標設定'; document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); const g = S.settings.goals||{}; document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>📅 週目標（NT$）</label><input type="number" class="finp" id="g-weekly" value="${g.weekly||0}" inputmode="decimal"></div><div class="fg" style="margin-bottom:14px"><label>📆 月目標（NT$）</label><input type="number" class="finp" id="g-monthly" value="${g.monthly||0}" inputmode="decimal"></div><button onclick="saveGoals()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">儲存目標</button>`; openOverlay('sub-page'); }
-function saveGoals() { S.settings.goals = { weekly: pf(document.getElementById('g-weekly').value), monthly: pf(document.getElementById('g-monthly').value) }; saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 目標已儲存'); }
+function openGoalSettings() { 
+  document.getElementById('sub-title').textContent = '目標設定'; 
+  document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); 
+  const g = S.settings.goals || {}; 
+  
+  // 檢查是否為 0，若是則輸出空字串，透過 placeholder 提示，移除預設 0 的困擾
+  const wVal = g.weekly > 0 ? g.weekly : '';
+  const mVal = g.monthly > 0 ? g.monthly : '';
+  const yVal = g.yearly > 0 ? g.yearly : '';
+
+  // 美化版面配置
+  document.getElementById('sub-body').innerHTML = `
+    <div style="background:var(--sf2); padding:16px; border-radius:12px; margin-bottom:20px;">
+      <div style="font-size:12px; color:var(--t2); line-height:1.6; font-weight:600;">
+        💡 設定您的外送收入目標。<br>設定後即可在首頁「目標進度」追蹤您的達標狀況與剩餘天數！
+      </div>
+    </div>
+    
+    <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">📊 週目標 (NT$)</label>
+        <input type="number" class="finp" id="g-weekly" value="${wVal}" placeholder="請輸入本週目標金額" inputmode="decimal" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+      </div>
+      
+      <div style="border-top:1px dashed var(--border);"></div>
+      
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">📈 月目標 (NT$)</label>
+        <input type="number" class="finp" id="g-monthly" value="${mVal}" placeholder="請輸入本月目標金額" inputmode="decimal" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+      </div>
+
+      <div style="border-top:1px dashed var(--border);"></div>
+
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">👑 年目標 (NT$)</label>
+        <input type="number" class="finp" id="g-yearly" value="${yVal}" placeholder="請輸入本年目標金額" inputmode="decimal" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+      </div>
+    </div>
+    
+    <button onclick="saveGoals()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 儲存目標設定</button>
+  `; 
+  openOverlay('sub-page'); 
+}
+
+function saveGoals() { 
+  S.settings.goals = { 
+    weekly: pf(document.getElementById('g-weekly').value), 
+    monthly: pf(document.getElementById('g-monthly').value),
+    yearly: pf(document.getElementById('g-yearly').value)
+  }; 
+  saveSettings(); 
+  closeOverlay('sub-page'); 
+  renderSettings(); 
+  if(S.tab === 'home') renderHome();
+  toast('✅ 目標已儲存'); 
+}
 function openAddReward() { document.getElementById('sub-title').textContent = '新增獎勵項目'; document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div><div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div class="fg"><label>最低單數</label><input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div><div class="fg"><label>上限單數（0=無限）</label><input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div></div><div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label><input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div><button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增獎勵</button>`; openOverlay('sub-page'); }
 function saveNewReward() { const name = document.getElementById('rw-name').value.trim(); if (!name) { toast('請輸入獎勵名稱'); return; } if (!S.settings.rewards) S.settings.rewards=[]; S.settings.rewards.push({ id: newId(), name, platformId: document.getElementById('rw-plat').value, minOrders: pf(document.getElementById('rw-min').value), maxOrders: pf(document.getElementById('rw-max').value), amount: pf(document.getElementById('rw-amt').value) }); saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 獎勵已新增'); }
 async function deleteReward(i) { const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); if (!ok) return; S.settings.rewards.splice(i,1); saveSettings(); renderSettings(); toast('已刪除'); }
