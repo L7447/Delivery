@@ -74,7 +74,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .form-lbl { font-size: 11px; color: var(--t3); letter-spacing: .5px; margin-bottom: 8px; }
 .finp, .fsel { width: 100%; padding: 10px 12px; background: var(--sf2); border: 1px solid var(--border); border-radius: var(--rs); color: var(--t1); font-size: 14px; font-family: var(--sans); outline: none; appearance: none; transition: border-color .15s; }
 .finp:focus, .fsel:focus { border-color: var(--acc); background: var(--sf); }
-.empty-tip { text-align: center; padding: 32px 0; color: var(--t3); font-size: 13px; line-height: 2; }
+.empty-tip { text-align: center; padding: 3px 0; color: #1E90FF; font-size: 13px; line-height: 2; }
 .card { background: var(--sf); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; }
 
 .btn-acc { background: var(--acc); color: #fff; border: none; border-radius: var(--rs); font-size: 14px; font-family: var(--sans); font-weight: 600; cursor: pointer; }
@@ -110,9 +110,9 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .btn-go-online { background: #22C55E; color: #fff; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25); }
 .btn-go-offline { background: #EF4444; color: #fff; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); }
 
-.hist-rec-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
+.hist-rec-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
 .punch-card-compact { display: flex; align-items: center; padding: 10px 12px; cursor: pointer; }
-.hrc-top { padding: 10px 12px; position: relative; cursor: pointer; }
+.hrc-top { padding: 5px 2px; position: relative; cursor: pointer; }
 .hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
 .hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--t2); font-weight: 600; margin-bottom: 6px; }
 .hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
