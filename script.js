@@ -372,7 +372,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = '#0040ff';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border-top: 2px solid blue; border-right: 2px solid blue; border-bottom: 2px solid #009dff; border-left: 2px solid #009dff; border-radius: 12px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border-top: 2px solid #00FFFF; border-right: 2px solid #00FFFF; border-bottom: 2px solid #009dff; border-left: 2px solid #009dff; border-radius: 12px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
@@ -902,15 +902,15 @@ function renderRptOverview() {
   // 精簡高對比總收入框
   html += `
     <div style="background:#fff; border:2px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:28px; height:28px; background:var(--sf2); border-radius:6px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: #ffffff; border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; cursor:pointer; text-align:center;">
-        <div style="font-size:12px; font-weight:800; color:var(--t3); margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color:var(--acc); line-height:1;">$${fmt(total)}</div>
+        <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00ff00; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
-          <div style="background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
-          <div style="background:#e0f2fe; color:#2563eb; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
+          <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
+          <div style="background: hsl(60, 100%, 80%); color: #d97706; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
+          <div style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
         </div>
       </div>
 
@@ -922,7 +922,7 @@ function renderRptOverview() {
           <!-- 左半邊：接單、時薪 -->
           <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding-right:12px;">
-              <span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">接單</span>
+              <span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">完成訂單</span>
               <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmt(orders)}</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; padding-right:12px;">
@@ -941,7 +941,7 @@ function renderRptOverview() {
               <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmtHours(hours)}</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; padding-left:12px;">
-              <span style="background:var(--gold); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">均單</span>
+              <span style="background:var(--gold); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">一單</span>
               <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--gold);">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'}</span>
             </div>
           </div>
