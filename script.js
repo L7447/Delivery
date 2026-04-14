@@ -50,6 +50,30 @@ function toast(msg, ms=2200) {
   setTimeout(()=>el.classList.remove('show'), ms);
 }
 
+/* ══ 執行2秒圓角進度條動畫 ══ */
+function runSaveProgress(callback) {
+  const ov = document.getElementById('progress-overlay');
+  const fill = document.getElementById('progress-fill');
+  
+  // 重置進度條
+  fill.style.transition = 'none';
+  fill.style.width = '0%';
+  ov.classList.add('show');
+  
+  // 強制重繪以確保 0% 狀態被套用
+  void fill.offsetWidth; 
+  
+  // 啟動動畫 (設定為 2 秒)
+  fill.style.transition = 'width 2s linear';
+  fill.style.width = '100%';
+
+  // 動畫結束後執行動作並關閉
+  setTimeout(() => {
+    ov.classList.remove('show');
+    callback();
+  }, 2000);
+}
+
 function customConfirm(msg) {
   return new Promise(resolve => {
     const ov = document.getElementById('confirm-overlay');
@@ -793,16 +817,27 @@ async function confirmAddRecord() {
     rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: nowTime(), punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
   }
   
+  /* 尋找 confirmAddRecord() 函式，替換其下半部程式碼 */
   if (S.editingId) {
     const ok = await customConfirm('是否確認要儲存修改後的記錄？'); if (!ok) return;
   }
 
-  checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 1500); 
-  setTimeout(() => {
-    checkImg.style.transform = 'scale(1)'; 
-    if (S.editingId) { const idx = S.records.findIndex(r => r.id === S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } else { S.records.push(rec); toast('✅ 記錄成功！'); }
-    saveRecords(); S.editingId = null; checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; goPage('home'); 
-  }, 1500); 
+  checkBtn.disabled = true; 
+  // 啟動 2 秒進度條動畫
+  runSaveProgress(() => {
+    if (S.editingId) { 
+      const idx = S.records.findIndex(r => r.id === S.editingId); 
+      if (idx >= 0) S.records[idx] = rec; 
+      toast('✅ 記錄已更新'); 
+    } else { 
+      S.records.push(rec); 
+      toast('✅ 記錄成功！'); 
+    }
+    saveRecords(); 
+    S.editingId = null; 
+    checkBtn.disabled = false; 
+    goPage('home'); 
+  });
 }
 
 function cancelAddRecord() {
@@ -1433,14 +1468,25 @@ function confirmAddVehRec() {
     amount = pf(document.getElementById('vm-amount').value); 
     if (amount <= 0 || currentSelItems.length === 0) { toast('請選擇保養項目並輸入金額'); return; } 
   }
-  checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 1500);
-  setTimeout(() => {
-    checkImg.style.transform = 'scale(1)'; const commonData = { id: editingVehRecId || newId(), vehicleId: S.selVehicleId, type: S.addVehRecType, date: document.getElementById('vr-date').value, time: document.getElementById('vr-time').value, amount: amount }; let specificData = {};
+
+  checkBtn.disabled = true; 
+  // 啟動 2 秒進度條動畫
+  runSaveProgress(() => {
+    const commonData = { id: editingVehRecId || newId(), vehicleId: S.selVehicleId, type: S.addVehRecType, date: document.getElementById('vr-date').value, time: document.getElementById('vr-time').value, amount: amount }; 
+    let specificData = {};
     if (S.addVehRecType === 'fuel') { specificData = { fuelType: document.getElementById('vr-fuel-type') ? document.getElementById('vr-fuel-type').value : 'electric', discount: pf(document.getElementById('vr-discount')?document.getElementById('vr-discount').value:0), prevKm: pf(document.getElementById('vr-prev-km').value), km: pf(document.getElementById('vr-curr-km').value), liters: pf(document.getElementById('vr-liters')?document.getElementById('vr-liters').value:0), price: pf(document.getElementById('vr-price')?document.getElementById('vr-price').value:0) }; } 
     else { const shop = document.getElementById('vm-shop').value.trim(); if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } specificData = { km: pf(document.getElementById('vm-km').value), items: currentSelItems, shop: shop, payMethod: document.getElementById('vm-pay-method').value, note: document.getElementById('vm-note').value }; }
-    const finalRec = { ...commonData, ...specificData }; if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } else { S.vehicleRecs.push(finalRec); toast('✅ 記錄已新增'); }
-    editingVehRecId = null; saveVehicleRecs(); checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; closeOverlay('veh-rec-add-page'); renderVehicles();
-  }, 1500);
+    
+    const finalRec = { ...commonData, ...specificData }; 
+    if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } 
+    else { S.vehicleRecs.push(finalRec); toast('✅ 記錄已新增'); }
+    
+    editingVehRecId = null; 
+    saveVehicleRecs(); 
+    checkBtn.disabled = false; 
+    closeOverlay('veh-rec-add-page'); 
+    renderVehicles();
+  });
 }
 
 async function deleteVehRecFromEdit() { const ok = await customConfirm('確定刪除此記錄嗎？<br><strong>此動作無法復原。</strong>'); if(!ok) return; S.vehicleRecs = S.vehicleRecs.filter(r => r.id !== editingVehRecId); saveVehicleRecs(); closeOverlay('veh-rec-add-page'); toast('✅ 記錄已刪除'); renderVehicles(); }
@@ -1486,6 +1532,7 @@ function renderSettings() {
   document.getElementById('settings-content').innerHTML = html;
 }
 
+/* 替換 openPlatformList 函式，並加上 togglePlatform 函式 */
 function openPlatformList() {
   document.getElementById('sub-title').textContent = '平台列表';
   document.getElementById('sub-body').innerHTML = `
@@ -1497,15 +1544,31 @@ function openPlatformList() {
             <div style="font-weight:600">${p.name}</div>
             <div class="sn-sub">${p.active ? '✅ 已啟用' : '⭕ 已停用'}</div>
           </div>
-          <span class="arr">›</span>
+          <!-- 撥動開關 (stopPropagation 阻止點擊開關時進入編輯頁) -->
+          <label class="switch" onclick="event.stopPropagation()">
+            <input type="checkbox" ${p.active ? 'checked' : ''} onchange="togglePlatform('${p.id}', this.checked)">
+            <span class="slider"></span>
+          </label>
         </div>
       `).join('')}
     </div>
     <div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">
-      💡 點擊平台可自訂顏色與啟用狀態
+      💡 點擊平台名稱可進入自訂顏色與詳細設定
     </div>`;
   
   openOverlay('sub-page');
+}
+
+/* 新增的獨立快速切換函式 */
+function togglePlatform(id, isChecked) {
+  const p = S.platforms.find(x => x.id === id);
+  if (p) {
+    p.active = isChecked;
+    savePlatforms();
+    if (S.tab === 'home') renderHome();
+    renderSettings();
+    openPlatformList(); // 重新渲染列表以更新文字狀態
+  }
 }
 
 function openPlatformEdit(id) {
