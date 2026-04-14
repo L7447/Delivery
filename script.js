@@ -7,7 +7,7 @@
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS = [
   { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一、四結算｜每週四發薪' },
-  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日結算｜雙週三明細｜雙週三發薪' },
+  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日結算｜結算後週三明細｜隔週三發薪' },
   { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
 // 加入 yearly: 0
@@ -75,7 +75,7 @@ function animateClose(btn, action) {
     action();
     img.src = 'images/close1.png'; // 恢復原狀以供下次開啟
     btn.style.pointerEvents = 'auto';
-  }, 1000);
+  }, 500);
 }
 
 function toggleSummaryCard(id) {
@@ -159,12 +159,18 @@ function calcNextDates(id) {
       if (dw === 4) { addEv('結算', d); addEv('發薪', d); }
     }
   } else if (id === 'foodpanda') {
-    const anchor = new Date(2024, 0, 7); // 雙週循環基準日
+    // 根據最新班表，以 2023年12月24日 (雙週循環的週日結算日) 為絕對基準日
+    const anchor = new Date(2023, 11, 24); 
     for(let i=0; i<=14; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
-      let diffDays = Math.floor((d - anchor) / 86400000);
+      let diffDays = Math.round((d - anchor) / 86400000);
+      
+      // 結算日：每 14 天的週期結尾 (週日)
       if (diffDays % 14 === 0) addEv('結算', d);
-      if ((diffDays - 3) % 14 === 0) addEv('明細/發薪', d);
+      // 明細寄發日：結算後 3 天 (週三)
+      if ((diffDays - 3) % 14 === 0) addEv('明細', d);
+      // 報酬發放日：結算後 10 天 (下週三)
+      if ((diffDays - 10) % 14 === 0) addEv('發薪', d);
     }
   } else if (id === 'foodomo') {
     for(let i=0; i<=31; i++) {
@@ -319,8 +325,6 @@ function renderHome() {
     let bottomHtml = '';
 
     if (S.homeSubTab === 'schedule') {
-      bottomHtml = `<div style="padding:20px 16px 12px; text-align:center; font-size:13px; color:var(--t3); font-weight:600;">📅 平台日程表</div>`;
-      
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
@@ -329,7 +333,7 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 5px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 3px;">
               <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
                 <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
                 <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -344,7 +348,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = 'var(--blue)';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border: 1px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border: 1.5px solid var(--blue); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
