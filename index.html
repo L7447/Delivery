@@ -216,6 +216,16 @@
   </div>
 </div>
 
+<!-- 將這段加入在 <div id="toast"></div> 的上方 -->
+<div id="progress-overlay">
+  <div class="progress-box">
+    <div style="font-size:14px; font-weight:700; margin-bottom:12px; color:var(--t1);" id="progress-text">⏳ 資料儲存中...</div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <input type="file" id="restore-file" accept=".json" style="display:none">
