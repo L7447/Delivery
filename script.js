@@ -168,7 +168,7 @@ function calcNextDates(id) {
       // 結算日：每 14 天的週期結尾 (週日)
       if (diffDays % 14 === 0) addEv('結算', d);
       // 明細寄發日：結算後 3 天 (週三)
-      if ((diffDays - 3) % 14 === 0) addEv('明細', d);
+      if ((diffDays - 3) % 14 === 0) addEv('明細寄發日', d);
       // 報酬發放日：結算後 10 天 (下週三)
       if ((diffDays - 10) % 14 === 0) addEv('發薪', d);
     }
@@ -333,8 +333,8 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 3px;">
-              <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
+              <div style="display:flex; align-items:center; gap:5px; margin-bottom: 2px;">
                 <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
                 <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
               </div>
@@ -349,7 +349,7 @@ function renderHome() {
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
                   <div style="flex:1; background: var(--sf); border: 2px dashed var(--blue1); border-radius: 16px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
-                    <span style="font-size:11px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
+                    <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
               }).join('')}</div>
