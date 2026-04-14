@@ -223,9 +223,34 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 input:checked + .slider { background-color: #22C55E; }
 input:checked + .slider:before { transform: translateX(20px); }
 
-/* ══ 自訂儲存進度條 樣式 ══ */
+/* ══ 原生儲存進度條 (<progress>) 樣式 ══ */
 #progress-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 9999; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 #progress-overlay.show { display: flex; opacity: 1; pointer-events: auto; }
 .progress-box { background: var(--sf); padding: 24px; border-radius: 20px; width: 75%; max-width: 280px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-.progress-bar-bg { width: 100%; height: 12px; background: #f1f5f9; border-radius: 12px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
-.progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--acc2), var(--acc)); border-radius: 12px; }
+
+progress {
+  width: 100%;
+  height: 40px;
+  position: relative;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border-radius: 20px;
+  overflow: hidden;
+  border: none;
+  /* Firefox 的背景色是由 progress 本身控制 */
+  background-color: #1A1A1A; 
+}
+
+/* 針對 Chrome / Safari / Edge */
+progress::-webkit-progress-bar {
+  background-color: #1A1A1A;
+}
+progress::-webkit-progress-value {
+  background-color: #FFFFFF;
+}
+
+/* 針對 Firefox (Firefox 是用 -bar 來控制進度條顏色) */
+progress::-moz-progress-bar {
+  background-color: #FFFFFF;
+}
