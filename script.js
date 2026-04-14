@@ -75,7 +75,7 @@ function animateClose(btn, action) {
     action();
     img.src = 'images/close1.png'; // 恢復原狀以供下次開啟
     btn.style.pointerEvents = 'auto';
-  }, 1500);
+  }, 1000);
 }
 
 function toggleSummaryCard(id) {
@@ -771,12 +771,12 @@ async function confirmAddRecord() {
     const ok = await customConfirm('是否確認要儲存修改後的記錄？'); if (!ok) return;
   }
 
-  checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 3000); 
+  checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 1500); 
   setTimeout(() => {
     checkImg.style.transform = 'scale(1)'; 
     if (S.editingId) { const idx = S.records.findIndex(r => r.id === S.editingId); if (idx >= 0) S.records[idx] = rec; toast('✅ 記錄已更新'); } else { S.records.push(rec); toast('✅ 記錄成功！'); }
     saveRecords(); S.editingId = null; checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; goPage('home'); 
-  }, 3000); 
+  }, 1500); 
 }
 
 function cancelAddRecord() {
@@ -1407,14 +1407,14 @@ function confirmAddVehRec() {
     amount = pf(document.getElementById('vm-amount').value); 
     if (amount <= 0 || currentSelItems.length === 0) { toast('請選擇保養項目並輸入金額'); return; } 
   }
-  checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 3000);
+  checkBtn.disabled = true; checkImg.src = 'images/Check2.png'; checkImg.style.transform = 'scale(1.3)'; toast('⏳ 記錄儲存中...', 1500);
   setTimeout(() => {
     checkImg.style.transform = 'scale(1)'; const commonData = { id: editingVehRecId || newId(), vehicleId: S.selVehicleId, type: S.addVehRecType, date: document.getElementById('vr-date').value, time: document.getElementById('vr-time').value, amount: amount }; let specificData = {};
     if (S.addVehRecType === 'fuel') { specificData = { fuelType: document.getElementById('vr-fuel-type') ? document.getElementById('vr-fuel-type').value : 'electric', discount: pf(document.getElementById('vr-discount')?document.getElementById('vr-discount').value:0), prevKm: pf(document.getElementById('vr-prev-km').value), km: pf(document.getElementById('vr-curr-km').value), liters: pf(document.getElementById('vr-liters')?document.getElementById('vr-liters').value:0), price: pf(document.getElementById('vr-price')?document.getElementById('vr-price').value:0) }; } 
     else { const shop = document.getElementById('vm-shop').value.trim(); if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } specificData = { km: pf(document.getElementById('vm-km').value), items: currentSelItems, shop: shop, payMethod: document.getElementById('vm-pay-method').value, note: document.getElementById('vm-note').value }; }
     const finalRec = { ...commonData, ...specificData }; if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } else { S.vehicleRecs.push(finalRec); toast('✅ 記錄已新增'); }
     editingVehRecId = null; saveVehicleRecs(); checkImg.src = 'images/Check1.png'; checkBtn.disabled = false; closeOverlay('veh-rec-add-page'); renderVehicles();
-  }, 3000);
+  }, 1500);
 }
 
 async function deleteVehRecFromEdit() { const ok = await customConfirm('確定刪除此記錄嗎？<br><strong>此動作無法復原。</strong>'); if(!ok) return; S.vehicleRecs = S.vehicleRecs.filter(r => r.id !== editingVehRecId); saveVehicleRecs(); closeOverlay('veh-rec-add-page'); toast('✅ 記錄已刪除'); renderVehicles(); }
