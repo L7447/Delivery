@@ -50,41 +50,28 @@ function toast(msg, ms=2200) {
   setTimeout(()=>el.classList.remove('show'), ms);
 }
 
-/* ══ 執行2秒原生進度條動畫 ══ */
+/* ══ 執行2秒加大版進度條動畫 ══ */
 function runSaveProgress(callback) {
   const ov = document.getElementById('progress-overlay');
-  const fill = document.getElementById('progress-fill');
+  const fill = document.getElementById('big-progress-fill');
   
-  // 顯示遮罩並將進度歸零
-  fill.value = 0;
+  // 重置進度條
+  fill.style.transition = 'none';
+  fill.style.width = '0%';
   ov.classList.add('show');
   
-  let start = null;
-  const duration = 15000; // 總時間 2000 毫秒 (2秒)
-
-  // 動畫繪製函式
-  function animate(timestamp) {
-    if (!start) start = timestamp;
-    const elapsed = timestamp - start;
-    
-    // 計算目前的百分比 (最高 100)
-    const percentage = Math.min((elapsed / duration) * 100, 100);
-    fill.value = percentage;
-
-    if (elapsed < duration) {
-      // 若時間未到 2 秒，繼續下一幀動畫
-      requestAnimationFrame(animate);
-    } else {
-      // 動畫結束，稍微停頓 0.1 秒後關閉視窗 (視覺體驗較佳)
-      setTimeout(() => {
-        ov.classList.remove('show');
-        callback();
-      }, 1000);
-    }
-  }
+  // 強制重繪以確保 0% 狀態被套用
+  void fill.offsetWidth; 
   
-  // 啟動動畫
-  requestAnimationFrame(animate);
+  // 啟動動畫 (設定為 2 秒，使用 ease-in-out 讓速度更有節奏感)
+  fill.style.transition = 'width 2s cubic-bezier(0.4, 0, 0.2, 1)';
+  fill.style.width = '100%';
+
+  // 動畫結束後執行動作並關閉
+  setTimeout(() => {
+    ov.classList.remove('show');
+    callback();
+  }, 2000);
 }
 
 function customConfirm(msg) {
