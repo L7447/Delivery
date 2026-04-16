@@ -86,6 +86,7 @@
             <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">分</span>
           </div>
         </div>
+      </div>  
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
         <div class="fg"><label>💰 行程收入 (NT$)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
         <div class="fg"><label>🤑 小費 (NT$)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
@@ -192,7 +193,12 @@
     <div class="ni" data-pg="settings" data-img1="images/settings1.png" data-img2="images/settings2.png"><img class="ni-img" src="images/settings1.png"><span class="lb">設定</span></div>
   </nav>
 
-</div><div class="top-bar"><button class="bar-btn" onclick="animateClose(this, () => closeOverlay('search-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>🔍 搜尋記錄</h2><div style="width:36px"></div></div>
+<div class="overlay-page" id="search-page">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('search-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+    <h2>🔍 搜尋記錄</h2>
+    <div style="width:36px"></div>
+  </div>
   <div class="overlay-body">
     <div style="display:flex;gap:8px;margin-bottom:10px"><input type="text" class="finp" id="search-kw" placeholder="關鍵字、平台名稱、金額..." style="flex:1"><button onclick="doSearch()" class="btn-acc" style="padding:10px 16px;border-radius:var(--rs);white-space:nowrap">搜尋</button></div>
     <div style="display:flex;gap:8px;margin-bottom:14px"><input type="date" class="finp" id="search-from" style="flex:1"><input type="date" class="finp" id="search-to" style="flex:1"></div>
