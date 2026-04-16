@@ -357,7 +357,7 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}6; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}9; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
                 <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
                 <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -372,7 +372,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = '#0040ff';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border: 5px solid #009dff; border-radius: 15px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="flex:1; background: var(--sf); border: 3px solid #009dff; border-radius: 20px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
                     <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
