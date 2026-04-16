@@ -1407,16 +1407,24 @@ function openAddVehRec(recordId = null) {
   document.getElementById('vr-date').value = r ? r.date : todayStr(); document.getElementById('vr-time').value = r ? (r.time || nowTime()) : nowTime();
   currentSelItems = (r && r.type === 'maintenance') ? [...r.items] :[];
   
+  /* 替換 openAddVehRec 函式的下半部 */
   if (S.addVehRecType === 'fuel') { 
     document.getElementById('vr-fuel-type').value = r?.fuelType || (v ? v.defaultFuel : '95'); 
-    document.getElementById('vr-discount').value = r?.discount || '0'; document.getElementById('vr-prev-km').value = r?.prevKm || ''; document.getElementById('vr-curr-km').value = r?.km || ''; document.getElementById('vr-liters').value = r?.liters || ''; document.getElementById('vr-price').value = r?.price || ''; 
+    document.getElementById('vr-discount').value = r?.discount || '0'; 
+    document.getElementById('vr-prev-km').value = r?.prevKm || ''; 
+    document.getElementById('vr-curr-km').value = r?.km || ''; 
+    document.getElementById('vr-liters').value = r?.liters || ''; 
+    document.getElementById('vr-price').value = r?.price || ''; 
     calcVehFuel(); 
   } else { 
-    document.getElementById('vm-km').value = r?.km || ''; document.getElementById('vm-shop').value = r?.shop || ''; document.getElementById('vm-pay-method').value = r?.payMethod || '現金'; document.getElementById('vm-amount').value = r?.amount || ''; document.getElementById('vm-note').value = r?.note || ''; renderShopHistory(); 
+    document.getElementById('vm-km').value = r?.km || ''; 
+    document.getElementById('vm-shop').value = r?.shop || ''; 
+    document.getElementById('vm-pay-method').value = r?.payMethod || '現金'; 
+    document.getElementById('vm-amount').value = r?.amount || ''; 
+    document.getElementById('vm-note').value = r?.note || ''; 
+    renderShopHistory(); 
   }
-  switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); openOverlay('veh-rec-add-page');
-
-  /* 尋找 openAddVehRec 函式，在結尾處加上這一段 */
+  
   switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); 
   openOverlay('veh-rec-add-page');
 
@@ -1781,33 +1789,39 @@ function enforceTimeRules() {
   }
 }
 
-/* ══ 自動抓取中油歷史油價網頁資料 (強化版) ══ */
+/* ══ 自動抓取中油歷史油價網頁資料 (支援快取記憶防阻擋) ══ */
+let cachedGasPrices = null; // 用來記憶本次開啟 APP 時抓到的油價
+
 async function fetchAutoGasPrice() {
   const fuelType = document.getElementById('vr-fuel-type');
   if (!fuelType || fuelType.value === 'electric') return;
   
-  // 建立提示框讓使用者知道正在抓取
+  // 若已經抓過，直接使用記憶的價格 (瞬間完成，不會被代理伺服器阻擋)
+  if (cachedGasPrices) {
+    applyGasPrice(fuelType.value);
+    return;
+  }
+
   toast('⛽ 正在抓取中油最新牌價...', 1500);
 
   try {
     const cpcUrl = encodeURIComponent('https://www.cpc.com.tw/historyprice.aspx?n=2890');
     let htmlText = '';
     
-    // 使用雙重備用 Proxy 確保能繞過 CORS 阻擋
+    // 雙重備用 Proxy 確保能繞過 CORS
     try {
       const res1 = await fetch(`https://api.allorigins.win/raw?url=${cpcUrl}`);
       if (!res1.ok) throw new Error('Proxy 1 failed');
       htmlText = await res1.text();
     } catch (e1) {
       const res2 = await fetch(`https://api.codetabs.com/v1/proxy?quest=${cpcUrl}`);
+      if (!res2.ok) throw new Error('Proxy 2 failed');
       htmlText = await res2.text();
     }
     
-    // 解析 HTML
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlText, "text/html");
     
-    // 尋找中油的資料表格，自動判斷哪一列是最新油價
     const tables = doc.querySelectorAll('table');
     let dataRow = null;
     
@@ -1815,13 +1829,11 @@ async function fetchAutoGasPrice() {
       const rows = t.querySelectorAll('tr');
       for (let r of rows) {
         const tds = r.querySelectorAll('td');
-        // 中油油價表至少有 5 欄 (日期, 92, 95, 98, 柴油)
         if (tds.length >= 5) {
           const firstTd = tds[0].textContent.trim();
-          // 判斷第一個欄位是否包含日期斜線 (如 2024/04/15)
           if (firstTd.includes('/')) {
             dataRow = r;
-            break; // 找到第一筆(最新的一天)就跳出
+            break; 
           }
         }
       }
@@ -1829,29 +1841,37 @@ async function fetchAutoGasPrice() {
     }
     
     if (!dataRow) {
-      console.log('找不到中油油價資料表');
-      return;
+      // 找不到表格時不再安靜退出，丟出錯誤讓 catch 捕捉並顯示失敗訊息
+      throw new Error('找不到中油油價資料表');
     }
     
     const tds = dataRow.querySelectorAll('td');
-    let price = 0;
-    const typeStr = fuelType.value;
     
-    // 取得對應油品的數值
-    if (typeStr === '92') price = parseFloat(tds[1].textContent.trim());
-    else if (typeStr === '95') price = parseFloat(tds[2].textContent.trim());
-    else if (typeStr === '98') price = parseFloat(tds[3].textContent.trim());
-    else if (typeStr === '柴油') price = parseFloat(tds[4].textContent.trim());
+    // 將所有油品價格一次性記憶起來
+    cachedGasPrices = {
+      '92': parseFloat(tds[1].textContent.trim()),
+      '95': parseFloat(tds[2].textContent.trim()),
+      '98': parseFloat(tds[3].textContent.trim()),
+      '柴油': parseFloat(tds[4].textContent.trim())
+    };
     
-    if (price > 0 && !isNaN(price)) {
-      document.getElementById('vr-price').value = price;
-      calcVehFuel(); // 觸發總額重算
-      toast(`✅ 已載入最新牌價：$${price}`);
-    } else {
-      toast('⚠️ 抓取油價失敗，請手動輸入');
-    }
+    applyGasPrice(fuelType.value);
+
   } catch(e) {
     console.error('取得油價失敗:', e);
+    toast('⚠️ 抓取油價失敗，請手動輸入');
+  }
+}
+
+// 獨立拉出的填入油價函式
+function applyGasPrice(typeStr) {
+  if (!cachedGasPrices) return;
+  const price = cachedGasPrices[typeStr];
+  if (price > 0 && !isNaN(price)) {
+    document.getElementById('vr-price').value = price;
+    calcVehFuel(); // 觸發總額重算
+    toast(`✅ 已載入最新牌價：$${price}`);
+  } else {
     toast('⚠️ 抓取油價失敗，請手動輸入');
   }
 }
