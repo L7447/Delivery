@@ -1611,7 +1611,7 @@ function openBackgroundSettings() {
   const bgs =[
     { id: '', name: '預設 (隨分頁切換)', type: 'color', val: '' },
     { id: '#fafafa', name: '淺色主題', type: 'color', val: '#f9f9f9' },
-    { id: '#999999', name: '深色主題', type: 'color', val: '#25252a' },
+    { id: '#25252a', name: '深色主題', type: 'color', val: '#25252a' },
     { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
     { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
     { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' }
