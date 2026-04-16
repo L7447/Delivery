@@ -29,12 +29,12 @@
   --nav:      64px;             
 }
 
-body[data-tab="home"]     { --bg: hsl(30, 100%, 97%); } 
-body[data-tab="history"]  { --bg: hsl(210, 100%, 97%); } 
-body[data-tab="add"]      { --bg: hsl(180, 100%, 97%); } 
-body[data-tab="report"]   { --bg: hsl(142, 100%, 97%); } 
-body[data-tab="vehicles"] { --bg: hsl(282, 100%, 97%); } 
-body[data-tab="settings"] { --bg: hsl(0, 0%, 80%); } 
+body[data-tab="home"]     { --bg: #f0f0f0; } 
+body[data-tab="history"]  { --bg: #f1f1f1; } 
+body[data-tab="add"]      { --bg: #f2f2f2; } 
+body[data-tab="report"]   { --bg: #f3f3f3; } 
+body[data-tab="vehicles"] { --bg: #f4f4f4; } 
+body[data-tab="settings"] { --bg: #f9f9f9; } 
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--bg); transition: background 0.3s ease; color: var(--t1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
