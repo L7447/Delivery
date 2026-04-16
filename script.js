@@ -5,13 +5,25 @@
 
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
-const DEFAULT_PLATFORMS = [
+const DEFAULT_PLATFORMS =[
   { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一、四結算｜每週四發薪' },
-  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日結算｜結算後週三明細｜隔週三發薪' },
+  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日結算｜結算後週三寄明細｜再隔週三發薪' },
   { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
-// 加入 yearly: 0
-const DEFAULT_SETTINGS = { goals: { weekly: 0, monthly: 0, yearly: 0 }, rewards: [], shopHistory: [] };
+
+const DEFAULT_SETTINGS = { 
+  goals: { weekly: 0, monthly: 0, yearly: 0 }, 
+  rewards:[], 
+  shopHistory:[],
+  themeMode: 'light', // light, dark, auto
+  autoDarkStart: '18:00',
+  autoDarkEnd: '06:00',
+  autoBackup: false
+};
+
+// 帳號登入系統狀態
+let USER = JSON.parse(localStorage.getItem('delivery_user') || '{"email":null,"verified":false,"loggedIn":false,"joinDate":null}');
+function saveUser() { localStorage.setItem('delivery_user', JSON.stringify(USER)); }
 
 const S = {
   tab: 'home', rptY: new Date().getFullYear(), rptM: new Date().getMonth()+1, rptView: 'overview',
@@ -164,14 +176,14 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           ${tagsHtml}
         </div>
       </div>
-      <div id="${cardId}" class="hrc-collapse" style="background: #FFF0F5; overflow:hidden; transition:max-height 0.3s ease;">
+      <div id="${cardId}" class="hrc-collapse" style="background: var(--collapse-bg); overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
         <div style="padding:8px 12px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: #ff0000; font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span></div>
+          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: #1E90FF; font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
+          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
@@ -595,14 +607,14 @@ function buildRecItem(r) {
         </div>
       </div>
 
-      <div id="${cid}" class="hrc-collapse" style="background: rgba(255, 240, 245, 0.90); overflow:hidden; transition:max-height 0.3s ease;">
+      <div id="${cid}" class="hrc-collapse" style="background: var(--collapse-bg); overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #708090; margin-bottom:3px;"></div>
         <div style="padding:8px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: #00BFFF; font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: #ff0000; font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span></div>
+          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span></div>
           <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: #1E90FF; font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
+          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
         </div>
       </div>
     </div>`;
@@ -1566,16 +1578,31 @@ function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); sav
 
 /* ══ 7. 設定管理與啟動 ═══════════════════════════════════ */
 function renderSettings() {
+  const isLogged = USER.loggedIn;
+  const accStr = isLogged ? `👤 帳號：${USER.email}` : `✉️ 登入 / 註冊帳號`;
+
   const html  = `
+  <div class="set-sec"><h3>帳號與雲端</h3><div class="set-list">
+    <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div>
+    <div class="set-row">
+      <span class="sn">☁️ 雲端自動備份</span>
+      <label class="switch" onclick="event.stopPropagation()">
+        <input type="checkbox" ${S.settings.autoBackup ? 'checked' : ''} onchange="toggleAutoBackup(this.checked)" ${!isLogged ? 'disabled' : ''}>
+        <span class="slider"></span>
+      </label>
+    </div>
+    ${!isLogged ? '<div style="font-size:11px;color:var(--red);padding:6px 16px;background:var(--red-d);">*請先登入帳號以啟用自動備份功能</div>' : ''}
+  </div></div>
+
   <div class="set-sec"><h3>功能設定</h3><div class="set-list">
     <div class="set-row" onclick="openPlatformList()"><span class="sn">🏪 平台列表與設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
-    <div class="set-row" onclick="openBackgroundSettings()"><span class="sn">🎨 更換背景主題</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 外觀與主題設定</span><span class="arr">›</span></div>
   </div></div>
 
   <div class="set-sec"><h3>資料管理</h3><div class="set-list">
-      <div class="set-row" onclick="doBackup()"><span class="sn">📥 備份資料（JSON）</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="doBackup()"><span class="sn">📥 手動備份（JSON）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="doExportCSV()"><span class="sn">📊 匯出試算表（CSV）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
@@ -1585,6 +1612,211 @@ function renderSettings() {
       <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--blue); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
   </div>`;
   document.getElementById('settings-content').innerHTML = html;
+}
+
+/* ══ 帳號驗證與登入系統 ══ */
+function openAuthModal() {
+  document.getElementById('sub-title').textContent = '登入/註冊帳號';
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6; background:var(--sf2); padding:12px; border-radius:12px;">
+        💡 只需輸入您的 E-mail，系統將自動寄送驗證碼。<br>首次登入將自動建立全新帳號。
+      </p>
+      <div class="fg" style="margin-bottom:20px;">
+        <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
+        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="font-size:16px; padding:12px;">
+      </div>
+      <button onclick="sendAuthCode()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">寄送驗證碼</button>
+    </div>
+  `;
+  openOverlay('sub-page');
+}
+
+function sendAuthCode() {
+  const email = document.getElementById('auth-email').value.trim();
+  if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式'); return; }
+  
+  showProgress('發送驗證碼中...');
+  setTimeout(() => {
+    finishProgress(() => {
+      document.getElementById('sub-body').innerHTML = `
+        <div style="padding:16px;">
+          <p style="font-size:13px;color:var(--t2);margin-bottom:16px; background:var(--sf2); padding:12px; border-radius:12px; line-height:1.6;">
+            ✅ 驗證碼已發送至 <b>${email}</b><br>
+            <span style="color:var(--t3);font-size:11px;">(※本機展示版，隨便輸入6位數字即可驗證通過)</span>
+          </p>
+          <div class="fg" style="margin-bottom:20px;">
+            <label style="font-weight:700; color:var(--t1);">6位數驗證碼</label>
+            <input type="number" class="finp" id="auth-code" placeholder="123456" inputmode="numeric" style="font-size:24px; letter-spacing:8px; text-align:center; padding:12px; font-family:var(--mono);">
+          </div>
+          <button onclick="verifyAuthCode('${email}')" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">驗證並登入</button>
+        </div>
+      `;
+    });
+  }, 1000);
+}
+
+function verifyAuthCode(email) {
+  const code = document.getElementById('auth-code').value.trim();
+  if(code.length < 4) { toast('請輸入正確的驗證碼'); return; }
+  
+  showProgress('帳號驗證中...');
+  setTimeout(() => {
+    finishProgress(() => {
+      USER = { email: email, verified: true, loggedIn: true, joinDate: todayStr() };
+      saveUser();
+      toast('✅ 登入成功');
+      closeOverlay('sub-page');
+      renderSettings();
+    });
+  }, 1000);
+}
+
+function openAccountStats() {
+  document.getElementById('sub-title').textContent = '帳號與資料資訊';
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div class="card" style="text-align:center; padding:24px 16px;">
+        <div style="font-size:48px; margin-bottom:8px;">🧑‍🚀</div>
+        <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">${USER.email}</div>
+        <div style="font-size:12px; color:#fff; background:var(--green); display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700;">✓ 已驗證帳號</div>
+      </div>
+      <div class="set-list" style="margin-bottom:20px;">
+        <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600;">${USER.joinDate || '未知'}</span></div>
+        <div class="set-row"><span class="sn">本機總記錄數</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600;">${S.records.length} 筆</span></div>
+        <div class="set-row"><span class="sn">雲端備份狀態</span><span style="font-family:var(--mono);color:${S.settings.autoBackup?'var(--green)':'var(--t3)'};font-weight:700;">${S.settings.autoBackup?'自動同步中':'未啟用'}</span></div>
+      </div>
+      <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
+    </div>
+  `;
+  openOverlay('sub-page');
+}
+
+function logoutAccount() {
+  USER = { email: null, verified: false, loggedIn: false, joinDate: null };
+  saveUser();
+  S.settings.autoBackup = false; 
+  saveSettings();
+  toast('已登出帳號');
+  closeOverlay('sub-page');
+  renderSettings();
+}
+
+function toggleAutoBackup(checked) {
+  if(!USER.loggedIn && checked) { toast('請先登入帳號'); return; }
+  S.settings.autoBackup = checked;
+  saveSettings();
+  toast(checked ? '☁️ 已啟用自動備份' : '已關閉自動備份');
+  renderSettings();
+}
+
+/* ══ 升級版：外觀與主題設定 (深色模式與自訂背景) ══ */
+function openThemeSettings() {
+  document.getElementById('sub-title').textContent = '外觀與主題設定';
+  
+  const tm = S.settings.themeMode || 'light';
+  const as = S.settings.autoDarkStart || '18:00';
+  const ae = S.settings.autoDarkEnd || '06:00';
+  const bg = S.settings.bg || '';
+  
+  const bgs =[
+    { id: '', name: '預設無背景 (建議)', type: 'color', val: 'var(--bg)' },
+    { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
+    { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
+    { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' }
+  ];
+
+  window._tmpTheme = { tm, as, ae, bg };
+
+  let html = `
+  <div style="padding:4px 12px 16px;">
+    <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">🌗 外觀模式</h4>
+    <div class="slide-tabs tabs-3" style="margin-bottom:12px;">
+      <div class="slide-bg" id="theme-tab-bg" style="transform: translateX(${tm==='light'?0:(tm==='dark'?100:200)}%);"></div>
+      <button class="slide-btn ${tm==='light'?'active':''}" onclick="selThemeMode('light')">淺色</button>
+      <button class="slide-btn ${tm==='dark'?'active':''}" onclick="selThemeMode('dark')">深色</button>
+      <button class="slide-btn ${tm==='auto'?'active':''}" onclick="selThemeMode('auto')">定時自動</button>
+    </div>
+    
+    <div id="auto-theme-times" style="display:${tm==='auto'?'block':'none'}; background:var(--sf2); padding:12px 16px; border-radius:12px; margin-bottom:20px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-size:13px; font-weight:700; color:var(--t1);">🌙 開啟深色時間</span>
+        <input type="time" class="finp" id="tmp-auto-start" value="${as}" style="width:130px; padding:8px;">
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; font-weight:700; color:var(--t1);">☀️ 關閉深色時間</span>
+        <input type="time" class="finp" id="tmp-auto-end" value="${ae}" style="width:130px; padding:8px;">
+      </div>
+    </div>
+
+    <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">🎨 自訂背景圖片</h4>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px;">
+  `;
+
+  bgs.forEach(b => {
+    const isSelected = bg === b.id;
+    let preview = b.type === 'color' 
+        ? `<div style="width:32px;height:32px;border-radius:8px;background:${b.val};border:1px solid var(--border);"></div>` 
+        : `<div style="width:32px;height:32px;border-radius:8px;background:url('${b.val}') center/cover;border:1px solid var(--border);"></div>`;
+        
+    html += `<div class="theme-bg-option" data-bgid="${b.id}" onclick="selThemeBg('${b.id}', this)" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:2px solid ${isSelected?'var(--acc)':'transparent'};background:var(--sf);cursor:pointer;box-shadow:${isSelected?'0 4px 12px rgba(255,107,53,0.15)':'0 2px 4px rgba(0,0,0,0.03)'};">
+      ${preview}
+      <span style="flex:1;font-size:14px;font-weight:600;color:${isSelected?'var(--acc)':'var(--t1)'}">${b.name}</span>
+      <span class="chk-icon" style="color:var(--acc);font-size:18px;font-weight:900;display:${isSelected?'block':'none'};">✓</span>
+    </div>`;
+  });
+
+  html += `
+    </div>
+    <button onclick="applyThemeSettings()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs);box-shadow:0 4px 12px rgba(255,107,53,0.3);">✅ 套用設定</button>
+  </div>`;
+  
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
+}
+
+window.selThemeMode = function(mode) {
+  window._tmpTheme.tm = mode;
+  const btns = document.querySelectorAll('#theme-tab-bg ~ button');
+  btns.forEach(b => b.classList.remove('active'));
+  if(mode==='light'){ btns[0].classList.add('active'); document.getElementById('theme-tab-bg').style.transform='translateX(0%)'; }
+  if(mode==='dark'){ btns[1].classList.add('active'); document.getElementById('theme-tab-bg').style.transform='translateX(100%)'; }
+  if(mode==='auto'){ btns[2].classList.add('active'); document.getElementById('theme-tab-bg').style.transform='translateX(200%)'; }
+  document.getElementById('auto-theme-times').style.display = mode === 'auto' ? 'block' : 'none';
+}
+
+window.selThemeBg = function(bgId, el) {
+  window._tmpTheme.bg = bgId;
+  document.querySelectorAll('.theme-bg-option').forEach(opt => {
+    opt.style.borderColor = 'transparent';
+    opt.style.boxShadow = '0 2px 4px rgba(0,0,0,0.03)';
+    opt.querySelector('span:nth-child(2)').style.color = 'var(--t1)';
+    opt.querySelector('.chk-icon').style.display = 'none';
+  });
+  el.style.borderColor = 'var(--acc)';
+  el.style.boxShadow = '0 4px 12px rgba(255,107,53,0.15)';
+  el.querySelector('span:nth-child(2)').style.color = 'var(--acc)';
+  el.querySelector('.chk-icon').style.display = 'block';
+}
+
+window.applyThemeSettings = function() {
+  S.settings.themeMode = window._tmpTheme.tm;
+  if (window._tmpTheme.tm === 'auto') {
+    S.settings.autoDarkStart = document.getElementById('tmp-auto-start').value;
+    S.settings.autoDarkEnd = document.getElementById('tmp-auto-end').value;
+  }
+  S.settings.bg = window._tmpTheme.bg;
+  saveSettings();
+  
+  showProgress('套用主題中...');
+  setTimeout(() => {
+    finishProgress(() => {
+      applyTheme();
+      applyBackground();
+      toast('🎨 主題設定已套用');
+      closeOverlay('sub-page');
+    });
+  }, 600);
 }
 
 /* ══ 獎勵項目設定彈窗 ══ */
@@ -1603,46 +1835,6 @@ function openRewardSettings() {
   
   document.getElementById('sub-body').innerHTML = html;
   openOverlay('sub-page');
-}
-
-/* ══ 更換背景設定彈窗 ══ */
-function openBackgroundSettings() {
-  document.getElementById('sub-title').textContent = '更換背景主題';
-  const bgs =[
-    { id: '', name: '預設 (隨分頁切換)', type: 'color', val: '' },
-    { id: '#fafafa', name: '淺色主題', type: 'color', val: '#f9f9f9' },
-    { id: '#25252a', name: '深色主題', type: 'color', val: '#25252a' },
-    { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
-    { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
-    { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' }
-  ];
-  
-  let html = `<div style="display:flex; flex-direction:column; gap:12px;">`;
-  bgs.forEach(b => {
-    const isSelected = (S.settings.bg || '') === b.id;
-    let preview = '';
-    if (b.type === 'color') {
-      preview = `<div style="width:36px;height:36px;border-radius:8px;background:${b.val || '#eee'};border:1px solid var(--border);"></div>`;
-    } else {
-      preview = `<div style="width:36px;height:36px;border-radius:8px;background:url('${b.val}') center/cover;border:1px solid var(--border);"></div>`;
-    }
-    
-    html += `<div onclick="setBackground('${b.id}')" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:2px solid ${isSelected?'var(--acc)':'var(--border)'};background:var(--sf);cursor:pointer;box-shadow:${isSelected?'0 4px 12px rgba(255,107,53,0.2)':'none'};">
-      ${preview}
-      <span style="flex:1;font-size:14px;font-weight:600;color:${isSelected?'var(--acc)':'var(--t1)'}">${b.name}</span>
-      ${isSelected ? `<span style="color:var(--acc);font-size:18px;font-weight:900;">✓</span>` : ''}
-    </div>`;
-  });
-  html += `</div>`;
-  document.getElementById('sub-body').innerHTML = html;
-  openOverlay('sub-page');
-}
-
-function setBackground(id) {
-  S.settings.bg = id;
-  saveSettings();
-  applyBackground();
-  openBackgroundSettings(); // 刷新打勾狀態
 }
 
 /* 替換 openPlatformList 函式，並加上 togglePlatform 函式 */
@@ -1960,27 +2152,52 @@ if ('serviceWorker' in navigator) {
   console.log('SW 已強制註銷，目前不會快取檔案。');
 }
 
-/* ══ 背景主題套用函式 ══ */
+/* ══ 背景主題與深色模式套用函式 ══ */
+function applyTheme() {
+  const mode = S.settings.themeMode || 'light';
+  let isDark = false;
+  
+  if (mode === 'dark') {
+    isDark = true;
+  } else if (mode === 'auto') {
+    const now = new Date();
+    const current = now.getHours() * 60 + now.getMinutes();
+    const [sH, sM] = (S.settings.autoDarkStart || '18:00').split(':').map(Number);
+    const[eH, eM] = (S.settings.autoDarkEnd || '06:00').split(':').map(Number);
+    const start = sH * 60 + sM;
+    const end = eH * 60 + eM;
+    
+    if (start < end) {
+      isDark = current >= start && current <= end;
+    } else {
+      isDark = current >= start || current <= end;
+    }
+  }
+  
+  document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+}
+
 function applyBackground() {
   const bg = S.settings.bg;
   const root = document.documentElement;
-  if (bg) {
-    if (bg.startsWith('#')) {
-      document.body.style.background = bg;
-      root.style.setProperty('--bg-header', bg + 'EE'); // 加入微透明度供毛玻璃使用
-    } else {
-      document.body.style.background = `url('${bg}') center/cover fixed no-repeat`;
-      root.style.setProperty('--bg-header', 'rgba(255, 255, 255, 0.7)'); // 圖片底圖時用白色透光
-    }
+  // 背景圖片不影響深色模式獨立運作
+  if (bg && bg !== '#fafafa' && bg !== '#424242') {
+    document.body.style.background = `url('${bg}') center/cover fixed no-repeat`;
+    root.style.setProperty('--bg-header', 'rgba(255, 255, 255, 0.3)');
   } else {
-    document.body.style.background = ''; // 恢復 CSS 預設
+    document.body.style.background = ''; // 使用深淺模式的預設背景
     root.style.setProperty('--bg-header', 'var(--bg)');
   }
 }
 
 function init() {
   loadAll();
-  applyBackground(); // <-- 在初始化時套用背景
+  applyTheme();      // 啟動時偵測深色模式
+  applyBackground(); // 套用背景圖片
+  
+  // 每 60 秒檢查一次是否達到自動切換深色的時間
+  setInterval(applyTheme, 60000); 
+
   if (!S.platforms || !S.platforms.length) {
     S.platforms = DEFAULT_PLATFORMS.map(p=>({...p}));
     savePlatforms();
