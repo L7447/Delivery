@@ -29,159 +29,142 @@
   </section>
 
   <section class="page" id="page-history" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
-    <div style="padding: 16px 16px 0; text-align: center;">
-      <div class="home-pg-title" style="display:inline-block;">查看記錄</div>
-    </div>
-    <!-- 替換原本的 tabs-5 區塊 -->
-    <div class="slide-tabs tabs-6" style="margin: 12px 16px 8px;">
-      <div class="slide-bg" id="hist-tab-bg" style="transform: translateX(0%);"></div>
-      <button class="slide-btn active" id="btn-hist-day" onclick="switchHistTab('day', 0)">日</button>
-      <button class="slide-btn" id="btn-hist-week" onclick="switchHistTab('week', 1)">週</button>
-      <button class="slide-btn" id="btn-hist-biweek" onclick="switchHistTab('biweek', 2)">雙週</button>
-      <button class="slide-btn" id="btn-hist-halfmonth" onclick="switchHistTab('halfmonth', 3)">半月</button>
-      <button class="slide-btn" id="btn-hist-month" onclick="switchHistTab('month', 4)">月</button>
-      <button class="slide-btn" id="btn-hist-year" onclick="switchHistTab('year', 5)">年</button>
+    <div class="fixed-header">
+      <div class="home-pg-title" style="display:block; text-align:center; margin:0;">查看記錄</div>
+      <div class="slide-tabs tabs-6" style="margin: 12px 0 0;">
+        <div class="slide-bg" id="hist-tab-bg" style="transform: translateX(0%);"></div>
+        <button class="slide-btn active" id="btn-hist-day" onclick="switchHistTab('day', 0)">日</button>
+        <button class="slide-btn" id="btn-hist-week" onclick="switchHistTab('week', 1)">週</button>
+        <button class="slide-btn" id="btn-hist-biweek" onclick="switchHistTab('biweek', 2)">雙週</button>
+        <button class="slide-btn" id="btn-hist-halfmonth" onclick="switchHistTab('halfmonth', 3)">半月</button>
+        <button class="slide-btn" id="btn-hist-month" onclick="switchHistTab('month', 4)">月</button>
+        <button class="slide-btn" id="btn-hist-year" onclick="switchHistTab('year', 5)">年</button>
+      </div>
     </div>
     <div id="hist-content" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
   </section>
 
   <!-- ══ 新增外送記錄 ════════════════════════════════ -->
-  <section class="page" id="page-add" style="padding:16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <!-- 將左側改為圖片按鈕 -->
-      <button onclick="animateClose(this, () => cancelAddRecord())" style="width:30px; height:30px; background:transparent; border:none; cursor:pointer; padding:0; outline:none;">
-        <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
-      </button>
-      <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>
-      <button id="add-save-btn" onclick="confirmAddRecord()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none; transition:transform 0.2s;">
-        <img id="add-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
-      </button>
-    </div>
-
-    <!-- 切換標籤 -->
-    <div class="slide-tabs tabs-2" style="margin-bottom:16px;">
-      <div class="slide-bg" id="add-tab-bg" style="transform: translateX(0%); background:var(--acc);"></div>
-      <button class="slide-btn active" id="btn-add-regular" onclick="switchAddTab('regular', 0)">行程記錄</button>
-      <button class="slide-btn" id="btn-add-cashtip" onclick="switchAddTab('cashtip', 1)">現金小費</button>
-    </div>
-
-    <div style="margin-bottom:16px;"><div class="form-lbl">🚴 選擇平台</div><div id="platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div></div>
-
-    <!-- 一般行程表單 -->
-    <div id="add-form-regular">
-      <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px;">
-        <div class="fg"><label>📆 日期</label><input type="date" class="finp" id="f-date"></div>
-        <div class="fg"><label>📦 單數</label><input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()"></div>
+  <section class="page" id="page-add" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+    <div class="fixed-header">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <button onclick="animateClose(this, () => cancelAddRecord())" style="width:30px; height:30px; background:transparent; border:none; cursor:pointer; padding:0; outline:none;">
+          <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+        </button>
+        <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>
+        <button id="add-save-btn" onclick="confirmAddRecord()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none; transition:transform 0.2s;">
+          <img id="add-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
+        </button>
       </div>
-      <div style="margin-bottom:16px;">
-        <div class="form-lbl">⏱ 累計工時</div>
-        <!-- 替換原本的 f-hrs-val 與 f-min-val 區塊 -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="fg" style="position:relative;">
-            <input type="number" class="finp" id="f-hrs-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()">
-            <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">時</span>
-          </div>
-          <div class="fg" style="position:relative;">
-            <input type="number" class="finp" id="f-min-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()">
-            <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">分</span>
+      <div class="slide-tabs tabs-2" style="margin-bottom:0;">
+        <div class="slide-bg" id="add-tab-bg" style="transform: translateX(0%); background:var(--acc);"></div>
+        <button class="slide-btn active" id="btn-add-regular" onclick="switchAddTab('regular', 0)">行程記錄</button>
+        <button class="slide-btn" id="btn-add-cashtip" onclick="switchAddTab('cashtip', 1)">現金小費</button>
+      </div>
+    </div>
+
+    <div style="flex:1; overflow-y:auto; padding:12px 16px 24px;">
+      <div style="margin-bottom:16px;"><div class="form-lbl">🚴 選擇平台</div><div id="platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div></div>
+      <div id="add-form-regular">
+        <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="fg"><label>📆 日期</label><input type="date" class="finp" id="f-date"></div>
+          <div class="fg"><label>📦 單數</label><input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()"></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div class="form-lbl">⏱ 累計工時</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="fg" style="position:relative;"><input type="number" class="finp" id="f-hrs-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()"><span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">時</span></div>
+            <div class="fg" style="position:relative;"><input type="number" class="finp" id="f-min-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()"><span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">分</span></div>
           </div>
         </div>
-      </div>  
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-        <div class="fg"><label>💰 行程收入 (NT$)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
-        <div class="fg"><label>🤑 小費 (NT$)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-        <div class="fg"><label>🎁 固定獎勵</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
-        <div class="fg"><label>⚡ 臨時獎勵</label><input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
-      </div>
-      <div style="background:var(--sf2); padding:12px 16px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:13px; color:var(--acc); font-weight:600;">本筆總收入</span>
-        <div style="font-family:var(--mono); font-size:28px; font-weight:800; color:var(--acc);">NT$ <span id="add-total-val">0</span></div>
-      </div>
-      <div class="fg" style="margin-bottom:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-          <label>📝 備註</label>
-          <button type="button" onclick="addWeatherTag('🌧️下雨')" style="background:var(--blue-d); color:var(--blue); border:none; padding:4px 8px; border-radius:12px; font-size:11px; cursor:pointer;">+ 🌧️下雨</button>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="fg"><label>💰 行程收入 (NT$)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+          <div class="fg"><label>🤑 小費 (NT$)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
         </div>
-        <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事" style="margin-top:6px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div class="fg"><label>🎁 固定獎勵</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+          <div class="fg"><label>⚡ 臨時獎勵</label><input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+        </div>
+        <div style="background:var(--sf2); padding:12px 16px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; color:var(--acc); font-weight:600;">本筆總收入</span>
+          <div style="font-family:var(--mono); font-size:28px; font-weight:800; color:var(--acc);">NT$ <span id="add-total-val">0</span></div>
+        </div>
+        <div class="fg" style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <label>📝 備註</label>
+            <button type="button" onclick="addWeatherTag('🌧️下雨')" style="background:var(--blue-d); color:var(--blue); border:none; padding:4px 8px; border-radius:12px; font-size:11px; cursor:pointer;">+ 🌧️下雨</button>
+          </div>
+          <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事" style="margin-top:6px;">
+        </div>
       </div>
-    </div>
-
-    <!-- 現金小費表單 (預設隱藏) -->
-    <div id="add-form-cashtip" style="display:none;">
-      <div style="color:var(--red); font-size:18px; font-weight:900; text-align:center; margin-bottom:16px; background:var(--red-d); padding:8px; border-radius:8px;">純記錄，不加入總收入計算</div>
-      <div style="display:flex; gap:12px; margin-bottom:16px;">
-        <div class="fg" style="flex:1.5"><label>📆 日期</label><input type="date" class="finp finp-ct" id="f-ct-date"></div>
-        <div class="fg" style="flex:1"><label>⏱ 時間</label><input type="time" class="finp finp-ct" id="f-ct-time"></div>
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-        <div class="fg"><label>🤝 客人給的金額</label><input type="number" class="finp finp-ct" id="f-ct-given" placeholder="0" inputmode="numeric" oninput="calcCashTip()"></div>
-        <div class="fg"><label>🧾 應收金額</label><input type="number" class="finp finp-ct" id="f-ct-cost" placeholder="0" inputmode="numeric" oninput="calcCashTip()"></div>
-      </div>
-      <div class="fg" style="margin-bottom:20px;">
-        <label>💵 現金小費金額 (自動計算/可手動改)</label>
-        <input type="number" class="finp finp-ct" id="f-ct-amount" placeholder="0" inputmode="numeric" style="font-size:24px; font-family:var(--mono);">
-      </div>
-      <div class="fg" style="margin-bottom:20px;">
-        <label>📝 備註</label>
-        <input type="text" class="finp finp-ct" id="f-ct-note" placeholder="小費記錄記事">
+      <div id="add-form-cashtip" style="display:none;">
+        <div style="color:var(--red); font-size:18px; font-weight:900; text-align:center; margin-bottom:16px; background:var(--red-d); padding:8px; border-radius:8px;">純記錄，不加入總收入計算</div>
+        <div style="display:flex; gap:12px; margin-bottom:16px;">
+          <div class="fg" style="flex:1.5"><label>📆 日期</label><input type="date" class="finp finp-ct" id="f-ct-date"></div>
+          <div class="fg" style="flex:1"><label>⏱ 時間</label><input type="time" class="finp finp-ct" id="f-ct-time"></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div class="fg"><label>🤝 客人給的金額</label><input type="number" class="finp finp-ct" id="f-ct-given" placeholder="0" inputmode="numeric" oninput="calcCashTip()"></div>
+          <div class="fg"><label>🧾 應收金額</label><input type="number" class="finp finp-ct" id="f-ct-cost" placeholder="0" inputmode="numeric" oninput="calcCashTip()"></div>
+        </div>
+        <div class="fg" style="margin-bottom:20px;">
+          <label>💵 現金小費金額 (自動計算/可手動改)</label>
+          <input type="number" class="finp finp-ct" id="f-ct-amount" placeholder="0" inputmode="numeric" style="font-size:24px; font-family:var(--mono);">
+        </div>
+        <div class="fg" style="margin-bottom:20px;"><label>📝 備註</label><input type="text" class="finp finp-ct" id="f-ct-note" placeholder="小費記錄記事"></div>
       </div>
     </div>
   </section>
 
-  <section class="page" id="page-report">
-    <div class="pg-title">收入分析</div>
-    
-    <!-- 修復 BUG：保留隱藏節點，避免 script.js 找不到元素綁定事件而導致 App 當機 -->
-    <div style="display:none;">
-      <button id="rpt-prev"></button>
-      <span id="rpt-label"></span>
-      <button id="rpt-next"></button>
-    </div>
-
-    <div class="slide-tabs tabs-4" id="rpt-tabs">
-      <div class="slide-bg" id="rpt-tab-bg" style="transform: translateX(0%);"></div>
-      <button class="slide-btn active" onclick="switchRptTab('overview', 0, this)">總覽</button>
-      <button class="slide-btn" onclick="switchRptTab('trend', 1, this)">趨勢</button>
-      <button class="slide-btn" onclick="switchRptTab('compare', 2, this)">比較</button>
-      <button class="slide-btn" onclick="switchRptTab('top3', 3, this)">TOP3</button>
-    </div>
-    <div id="rv-overview"></div><div id="rv-trend" style="display:none"></div><div id="rv-compare" style="display:none"></div><div id="rv-top3" style="display:none"></div>
-  </section>
-
-  <section class="page" id="page-vehicles" style="padding: 16px 16px 0; display:flex; flex-direction:column; overflow:hidden;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-shrink:0;">
-      <div style="width:28px;"></div>
-      <div class="pg-title" style="margin:0;">車輛管理</div>
-      <button onclick="openAddVehicle()" title="新增車輛" style="width:45px; height:45px; padding:0; background:transparent; border:none; cursor:pointer;">
-        <img src="images/scooter.png" alt="新增車輛" style="width:100%; height:100%; object-fit:contain;">
-      </button>
-    </div>
-    
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-shrink:0;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <button class="mbtn" onclick="changeVehMonth(-1)">◀</button>
-        <h2 id="veh-month-label" style="font-size:14px; font-weight:800; color:var(--t1);"></h2>
-        <button class="mbtn" onclick="changeVehMonth(1)">▶</button>
+  <section class="page" id="page-report" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+    <div class="fixed-header">
+      <div class="pg-title" style="margin-bottom:12px;">收入分析</div>
+      <div class="slide-tabs tabs-4" id="rpt-tabs" style="margin-bottom:0;">
+        <div class="slide-bg" id="rpt-tab-bg" style="transform: translateX(0%);"></div>
+        <button class="slide-btn active" onclick="switchRptTab('overview', 0, this)">總覽</button>
+        <button class="slide-btn" onclick="switchRptTab('trend', 1, this)">趨勢</button>
+        <button class="slide-btn" onclick="switchRptTab('compare', 2, this)">比較</button>
+        <button class="slide-btn" onclick="switchRptTab('top3', 3, this)">TOP3</button>
       </div>
-      <button onclick="openAddVehRec()" style="padding: 8px 12px; background: #eff6ff; border: 3px dashed #3b82f6; border-radius: 12px; color: #3b82f6; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">+ 新增車輛記錄</button>
     </div>
-
-    <div id="veh-selector-container" style="flex-shrink:0;"></div>
-
-    <div class="slide-tabs tabs-2" style="margin-bottom:12px; flex-shrink:0;">
-      <div class="slide-bg" id="veh-tab-bg" style="transform: translateX(0%);"></div>
-      <button class="slide-btn active" id="btn-veh-fuel" onclick="switchVehicleTab('fuel', 0)">車輛燃料</button>
-      <button class="slide-btn" id="btn-veh-maint" onclick="switchVehicleTab('maintenance', 1)">保養維修</button>
+    <div style="flex:1; overflow-y:auto; padding:12px 16px 24px;">
+      <div id="rv-overview"></div><div id="rv-trend" style="display:none"></div><div id="rv-compare" style="display:none"></div><div id="rv-top3" style="display:none"></div>
     </div>
-
-    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding-bottom:24px;"></div>
+    <div style="display:none;"><button id="rpt-prev"></button><span id="rpt-label"></span><button id="rpt-next"></button></div>
   </section>
 
-  <section class="page" id="page-settings">
-    <div class="pg-title">功能設定</div>
-    <div id="settings-content"></div>
+  <section class="page" id="page-vehicles" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+    <div class="fixed-header">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div style="width:45px;"></div>
+        <div class="pg-title" style="margin:0;">車輛管理</div>
+        <button onclick="openAddVehicle()" title="新增車輛" style="width:45px; height:45px; padding:0; background:transparent; border:none; cursor:pointer;">
+          <img src="images/scooter.png" alt="新增車輛" style="width:100%; height:100%; object-fit:contain;">
+        </button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="mbtn" onclick="changeVehMonth(-1)">◀</button>
+          <h2 id="veh-month-label" style="font-size:14px; font-weight:800; color:var(--t1);"></h2>
+          <button class="mbtn" onclick="changeVehMonth(1)">▶</button>
+        </div>
+        <button onclick="openAddVehRec()" style="padding: 8px 12px; background: #eff6ff; border: 3px dashed #3b82f6; border-radius: 12px; color: #3b82f6; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">+ 新增車輛記錄</button>
+      </div>
+      <div id="veh-selector-container"></div>
+      <div class="slide-tabs tabs-2" style="margin-bottom:0;">
+        <div class="slide-bg" id="veh-tab-bg" style="transform: translateX(0%);"></div>
+        <button class="slide-btn active" id="btn-veh-fuel" onclick="switchVehicleTab('fuel', 0)">車輛燃料</button>
+        <button class="slide-btn" id="btn-veh-maint" onclick="switchVehicleTab('maintenance', 1)">保養維修</button>
+      </div>
+    </div>
+    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding:12px 16px 24px;"></div>
+  </section>
+
+  <section class="page" id="page-settings" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+    <div class="fixed-header">
+      <div class="pg-title" style="margin:0;">功能設定</div>
+    </div>
+    <div id="settings-content" style="flex:1; overflow-y:auto; padding:12px 16px 24px;"></div>
   </section>
 
   <nav id="nav">
