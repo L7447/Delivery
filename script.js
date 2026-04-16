@@ -381,7 +381,7 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}20; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
                 <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
                 <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -946,7 +946,7 @@ function renderRptOverview() {
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
-          <div style="background: hsl(60, 100%, 80%); color: #ff8800; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
+          <div style="background: hsl(32, 100%, 90%); color: #ff8800; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
           <div style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
         </div>
       </div>
@@ -1610,8 +1610,8 @@ function openBackgroundSettings() {
   document.getElementById('sub-title').textContent = '更換背景主題';
   const bgs =[
     { id: '', name: '預設 (隨分頁切換)', type: 'color', val: '' },
-    { id: '#fafafa', name: '淺色主題', type: 'color', val: '#fafafa' },
-    { id: '#999999', name: '深色主題', type: 'color', val: '#999999' },
+    { id: '#fafafa', name: '淺色主題', type: 'color', val: '#f9f9f9' },
+    { id: '#999999', name: '深色主題', type: 'color', val: '#25252a' },
     { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
     { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
     { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' }
