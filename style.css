@@ -29,12 +29,12 @@
   --nav:      64px;             
 }
 
-body[data-tab="home"]     { --bg: #f9f9f9; } 
+body[data-tab="home"]     { --bg: #999999; } 
 body[data-tab="history"]  { --bg: #f9f9f9; } 
 body[data-tab="add"]      { --bg: #f9f9f9; } 
 body[data-tab="report"]   { --bg: #f9f9f9; } 
-body[data-tab="vehicles"] { --bg: #7f7f7f; } 
-body[data-tab="settings"] { --bg: #777777; } 
+body[data-tab="vehicles"] { --bg: #999999; } 
+body[data-tab="settings"] { --bg: #888888; } 
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--bg); transition: background 0.3s ease; color: var(--t1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
@@ -260,4 +260,15 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: #FFFFFF;
   /* 魔法屬性：讓文字在遇到白色進度條覆蓋時，自動反轉為黑色 */
   mix-blend-mode: difference; 
+}
+
+/* ══ 固定頂部的毛玻璃標題層 ══ */
+.fixed-header {
+  padding: 16px 16px 12px;
+  flex-shrink: 0;
+  background: var(--bg-header, var(--bg));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 20;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
