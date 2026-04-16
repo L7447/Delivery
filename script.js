@@ -22,7 +22,16 @@ const DEFAULT_SETTINGS = {
 };
 
 // 帳號登入系統狀態
+/* 替換原本的 USER 宣告，並加上模擬資料庫 DB_USERS */
 let USER = JSON.parse(localStorage.getItem('delivery_user') || '{"email":null,"verified":false,"loggedIn":false,"joinDate":null}');
+function saveUser() { localStorage.setItem('delivery_user', JSON.stringify(USER)); }
+
+// 模擬後端資料庫：儲存所有註冊的帳號資訊以供統計
+let DB_USERS = JSON.parse(localStorage.getItem('delivery_db_users') || '[]');
+function saveDbUsers() { localStorage.setItem('delivery_db_users', JSON.stringify(DB_USERS)); }
+
+// 暫存驗證碼
+let tempAuthCode = '';
 function saveUser() { localStorage.setItem('delivery_user', JSON.stringify(USER)); }
 
 const S = {
@@ -272,12 +281,25 @@ function loadAll() {
   try { S.vehicleRecs = JSON.parse(localStorage.getItem(KEYS.vehicleRecs)||'[]'); } catch { S.vehicleRecs=[]; }
 }  
 
-function saveRecords()     { localStorage.setItem(KEYS.records,   JSON.stringify(S.records));     }
+/* 替換原本的 saveRecords 等儲存函式 */
+function performAutoBackup() {
+  if (S.settings.autoBackup && USER.loggedIn) {
+    const backupData = { records: S.records, vehicles: S.vehicles, vehicleRecs: S.vehicleRecs };
+    localStorage.setItem('delivery_local_backup', JSON.stringify(backupData));
+    
+    // 記錄當下備份時間
+    const now = new Date();
+    S.settings.lastBackup = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    localStorage.setItem(KEYS.settings, JSON.stringify(S.settings));
+  }
+}
+
+function saveRecords()     { localStorage.setItem(KEYS.records,   JSON.stringify(S.records)); performAutoBackup(); }
 function savePlatforms()   { localStorage.setItem(KEYS.platforms, JSON.stringify(S.platforms));   }
 function saveSettings()    { localStorage.setItem(KEYS.settings,  JSON.stringify(S.settings));    }
 function savePunch()       { localStorage.setItem(KEYS.punch,     JSON.stringify(S.punch));       }
-function saveVehicles()    { localStorage.setItem(KEYS.vehicles,  JSON.stringify(S.vehicles));    }
-function saveVehicleRecs() { localStorage.setItem(KEYS.vehicleRecs,JSON.stringify(S.vehicleRecs)); }
+function saveVehicles()    { localStorage.setItem(KEYS.vehicles,  JSON.stringify(S.vehicles)); performAutoBackup(); }
+function saveVehicleRecs() { localStorage.setItem(KEYS.vehicleRecs,JSON.stringify(S.vehicleRecs)); performAutoBackup(); }
 
 function goPage(name) {
   S.tab = name;
@@ -295,7 +317,16 @@ function goPage(name) {
   if (name === 'vehicles') renderVehicles(); 
   if (name === 'settings') renderSettings();
 }
-document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { const pg = el.dataset.pg; if (pg === 'add' && S.tab !== 'add') openAddPage(); else goPage(pg); }));
+/* 替換導覽列切換邏輯，未登入禁止進入新增頁面 */
+document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
+  const pg = el.dataset.pg; 
+  if (pg === 'add') {
+    if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增記錄'); return; }
+    if (S.tab !== 'add') openAddPage(); 
+  } else {
+    goPage(pg); 
+  }
+}));
 
 function switchHomeTab(tab, index) { S.homeSubTab = tab; document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); renderHome(); }
 function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
@@ -1430,8 +1461,13 @@ let editingVehRecId = null;
 const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
 const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞車來令片', '後輪', '前輪', '其它'];
 
+/* 替換 openAddVehRec 的開頭 */
 function openAddVehRec(recordId = null) {
-  editingVehRecId = recordId; const isEdit = !!recordId; if (!isEdit && S.vehicles.length === 0) { toast('請先新增車輛'); return; }
+  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增車輛記錄'); return; }
+  
+  editingVehRecId = recordId; const isEdit = !!recordId; 
+  if (!isEdit && S.vehicles.length === 0) { toast('請先新增車輛'); return; }
+  // ... 下方維持原狀 ...
   document.getElementById('veh-rec-title').textContent = isEdit ? '編輯車輛記錄' : '新增車輛記錄'; document.getElementById('veh-rec-del-btn').style.display = isEdit ? 'block' : 'none';
   
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
@@ -1580,46 +1616,54 @@ function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); sav
 function renderSettings() {
   const isLogged = USER.loggedIn;
   const accStr = isLogged ? `👤 帳號：${USER.email}` : `✉️ 登入 / 註冊帳號`;
+  
+  // 判斷深色模式狀態顯示
+  let themeStatus = '';
+  if (S.settings.themeMode === 'auto') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(已開啟定時自動切換)</span>';
+  else if (S.settings.themeMode === 'dark') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(深色模式)</span>';
 
   const html  = `
-  <div class="set-sec"><h3>帳號與雲端</h3><div class="set-list">
+  <div class="set-sec"><h3>帳號與備份</h3><div class="set-list">
     <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div>
     <div class="set-row">
-      <span class="sn">☁️ 雲端自動備份</span>
+      <span class="sn">
+        <div>💾 本機自動備份</div>
+        <div class="sn-sub" style="color:var(--text-blue); font-weight:600;">${S.settings.autoBackup ? '最後備份：' + (S.settings.lastBackup || '尚未備份') : '未啟用'}</div>
+      </span>
       <label class="switch" onclick="event.stopPropagation()">
         <input type="checkbox" ${S.settings.autoBackup ? 'checked' : ''} onchange="toggleAutoBackup(this.checked)" ${!isLogged ? 'disabled' : ''}>
         <span class="slider"></span>
       </label>
     </div>
-    ${!isLogged ? '<div style="font-size:11px;color:var(--red);padding:6px 16px;background:var(--red-d);">*請先登入帳號以啟用自動備份功能</div>' : ''}
+    ${!isLogged ? '<div style="font-size:11px;color:var(--text-red);padding:6px 16px;background:var(--red-d);">*請先登入帳號以啟用本機自動備份功能</div>' : ''}
   </div></div>
 
   <div class="set-sec"><h3>功能設定</h3><div class="set-list">
     <div class="set-row" onclick="openPlatformList()"><span class="sn">🏪 平台列表與設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
-    <div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 外觀與主題設定</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 外觀與主題設定${themeStatus}</span><span class="arr">›</span></div>
   </div></div>
 
   <div class="set-sec"><h3>資料管理</h3><div class="set-list">
-      <div class="set-row" onclick="doBackup()"><span class="sn">📥 手動備份（JSON）</span><span class="arr">↓</span></div>
-      <div class="set-row" onclick="doRestore()"><span class="sn">📤 還原備份</span><span class="arr">↑</span></div>
+      <div class="set-row" onclick="doBackup()"><span class="sn">📥 手動匯出（JSON）</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="doRestore()"><span class="sn">📤 手動還原</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="doExportCSV()"><span class="sn">📊 匯出試算表（CSV）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
   </div></div>
   <div style="margin-top:24px; padding-bottom:16px; text-align:center;">
-      <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--blue); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
+      <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--text-blue); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
   </div>`;
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ══ 帳號驗證與登入系統 ══ */
+/* ══ 帳號驗證與登入系統 (支援資料庫註冊模擬) ══ */
 function openAuthModal() {
   document.getElementById('sub-title').textContent = '登入/註冊帳號';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6; background:var(--sf2); padding:12px; border-radius:12px;">
+      <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6; background:var(--bg-input); padding:12px; border-radius:12px;">
         💡 只需輸入您的 E-mail，系統將自動寄送驗證碼。<br>首次登入將自動建立全新帳號。
       </p>
       <div class="fg" style="margin-bottom:20px;">
@@ -1639,31 +1683,46 @@ function sendAuthCode() {
   showProgress('發送驗證碼中...');
   setTimeout(() => {
     finishProgress(() => {
+      // 模擬後端：產生 6 位數亂數驗證碼
+      tempAuthCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // 模擬後端資料庫：建立待驗證使用者
+      let userObj = DB_USERS.find(u => u.email === email);
+      if (!userObj) {
+        userObj = { email: email, verified: false, joinDate: todayStr() };
+        DB_USERS.push(userObj);
+        saveDbUsers();
+      }
+
       document.getElementById('sub-body').innerHTML = `
         <div style="padding:16px;">
-          <p style="font-size:13px;color:var(--t2);margin-bottom:16px; background:var(--sf2); padding:12px; border-radius:12px; line-height:1.6;">
-            ✅ 驗證碼已發送至 <b>${email}</b><br>
-            <span style="color:var(--t3);font-size:11px;">(※本機展示版，隨便輸入6位數字即可驗證通過)</span>
+          <p style="font-size:13px;color:var(--t2);margin-bottom:16px; background:var(--bg-input); padding:12px; border-radius:12px; line-height:1.6;">
+            ✅ 系統已寄出驗證信至 <b>${email}</b><br>
+            <span style="color:var(--text-red);font-size:12px;font-weight:700;display:inline-block;margin-top:6px;">(※模擬信件，您的驗證碼為：${tempAuthCode})</span>
           </p>
           <div class="fg" style="margin-bottom:20px;">
             <label style="font-weight:700; color:var(--t1);">6位數驗證碼</label>
-            <input type="number" class="finp" id="auth-code" placeholder="123456" inputmode="numeric" style="font-size:24px; letter-spacing:8px; text-align:center; padding:12px; font-family:var(--mono);">
+            <input type="number" class="finp" id="auth-code" placeholder="請輸入 6 位數字" inputmode="numeric" style="font-size:24px; letter-spacing:8px; text-align:center; padding:12px; font-family:var(--mono);">
           </div>
           <button onclick="verifyAuthCode('${email}')" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">驗證並登入</button>
         </div>
       `;
     });
-  }, 1000);
+  }, 1200);
 }
 
 function verifyAuthCode(email) {
   const code = document.getElementById('auth-code').value.trim();
-  if(code.length < 4) { toast('請輸入正確的驗證碼'); return; }
+  if(code !== tempAuthCode) { toast('⚠️ 驗證碼錯誤，請重新輸入'); return; }
   
   showProgress('帳號驗證中...');
   setTimeout(() => {
     finishProgress(() => {
-      USER = { email: email, verified: true, loggedIn: true, joinDate: todayStr() };
+      // 更新模擬資料庫狀態
+      let userObj = DB_USERS.find(u => u.email === email);
+      if (userObj) { userObj.verified = true; saveDbUsers(); }
+
+      USER = { email: email, verified: true, loggedIn: true, joinDate: userObj.joinDate };
       saveUser();
       toast('✅ 登入成功');
       closeOverlay('sub-page');
@@ -1673,19 +1732,32 @@ function verifyAuthCode(email) {
 }
 
 function openAccountStats() {
-  document.getElementById('sub-title').textContent = '帳號與資料資訊';
+  document.getElementById('sub-title').textContent = '帳號與後台統計';
+  
+  // 計算模擬資料庫的統計資料
+  const totalUsers = DB_USERS.length;
+  const verifiedUsers = DB_USERS.filter(u => u.verified).length;
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <div class="card" style="text-align:center; padding:24px 16px;">
+      <div class="card" style="text-align:center; padding:24px 16px; background:var(--collapse-bg); border-color:var(--border);">
         <div style="font-size:48px; margin-bottom:8px;">🧑‍🚀</div>
         <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">${USER.email}</div>
         <div style="font-size:12px; color:#fff; background:var(--green); display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700;">✓ 已驗證帳號</div>
       </div>
+      <h4 style="font-size:12px; color:var(--t3); margin-bottom:8px;">個人資料</h4>
       <div class="set-list" style="margin-bottom:20px;">
-        <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600;">${USER.joinDate || '未知'}</span></div>
-        <div class="set-row"><span class="sn">本機總記錄數</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600;">${S.records.length} 筆</span></div>
-        <div class="set-row"><span class="sn">雲端備份狀態</span><span style="font-family:var(--mono);color:${S.settings.autoBackup?'var(--green)':'var(--t3)'};font-weight:700;">${S.settings.autoBackup?'自動同步中':'未啟用'}</span></div>
+        <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${USER.joinDate || '未知'}</span></div>
+        <div class="set-row"><span class="sn">個人總記錄數</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${S.records.length} 筆</span></div>
       </div>
+      
+      <h4 style="font-size:12px; color:var(--t3); margin-bottom:8px;">系統註冊統計 (模擬後端 API)</h4>
+      <div class="set-list" style="margin-bottom:24px;">
+        <div class="set-row"><span class="sn">總申請人數</span><span style="font-family:var(--mono);color:var(--t1);font-weight:700;">${totalUsers} 人</span></div>
+        <div class="set-row"><span class="sn">已完成驗證</span><span style="font-family:var(--mono);color:var(--green);font-weight:700;">${verifiedUsers} 人</span></div>
+        <div class="set-row"><span class="sn">未驗證(Pending)</span><span style="font-family:var(--mono);color:var(--text-red);font-weight:700;">${totalUsers - verifiedUsers} 人</span></div>
+      </div>
+
       <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
     </div>
   `;
@@ -1706,7 +1778,8 @@ function toggleAutoBackup(checked) {
   if(!USER.loggedIn && checked) { toast('請先登入帳號'); return; }
   S.settings.autoBackup = checked;
   saveSettings();
-  toast(checked ? '☁️ 已啟用自動備份' : '已關閉自動備份');
+  if (checked) performAutoBackup(); // 開啟時立刻備份一次
+  toast(checked ? '💾 已啟用本機自動備份' : '已關閉自動備份');
   renderSettings();
 }
 
