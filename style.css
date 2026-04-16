@@ -29,12 +29,12 @@
   --nav:      64px;             
 }
 
-body[data-tab="home"]     { --bg: #999999; } 
+body[data-tab="home"]     { --bg: #f9f9f9; } 
 body[data-tab="history"]  { --bg: #f9f9f9; } 
 body[data-tab="add"]      { --bg: #f9f9f9; } 
 body[data-tab="report"]   { --bg: #f9f9f9; } 
-body[data-tab="vehicles"] { --bg: #999999; } 
-body[data-tab="settings"] { --bg: #888888; } 
+body[data-tab="vehicles"] { --bg: #f9f9f9; } 
+body[data-tab="settings"] { --bg: #f9f9f9; } 
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--bg); transition: background 0.3s ease; color: var(--t1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
