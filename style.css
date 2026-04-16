@@ -318,3 +318,8 @@ body[data-theme="dark"] .hist-rec-card { background: #1e1e1e; border-color: #444
 body[data-theme="dark"] .cashtip-card { background: #1a3a22; border-color: #22c55e !important; }
 body[data-theme="dark"] .punch-card-new { background: #1e1e1e; border-color: #333; }
 body[data-theme="dark"] .progress-box { background: #1e1e1e; }
+/* 將這段加在 style.css 最下方的 深色模式 區塊內 */
+body[data-theme="dark"] .slide-bg { 
+  background-color: #3b82f6 !important; 
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important; 
+}
