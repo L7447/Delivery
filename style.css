@@ -272,3 +272,49 @@ input:checked + .slider:before { transform: translateX(20px); }
   z-index: 20;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
+
+/* ══ 新增 tabs-3 寬度設定 ══ */
+.tabs-3 .slide-bg { width: calc(33.333% - 2.66px); }
+
+/* ══ 擴充亮色模式的專屬變數 (用於卡片背景與高亮文字) ══ */
+:root {
+  --collapse-bg: #FFF0F5;
+  --text-red: #ff0000;
+  --text-blue: #1E90FF;
+  --text-cyan: #00BFFF;
+  --bg-input: var(--sf2);
+}
+
+/* ══ 深色模式 (Dark Mode) 全域變數覆蓋 ══ */
+body[data-theme="dark"] {
+  --bg: #121212 !important;
+  --sf: #1e1e1e !important;
+  --sf2: #2a2a2a !important;
+  --bg-input: #333333;
+  --border: rgba(255, 255, 255, 0.08) !important;
+  --t1: #f3f4f6 !important;
+  --t2: #d1d5db !important;
+  --t3: #9ca3af !important;
+  --bg-header: rgba(18, 18, 18, 0.85) !important;
+  
+  /* 高對比與卡片配色調整 */
+  --collapse-bg: #2a2a2a;
+  --text-red: #ff6b6b;
+  --text-blue: #60a5fa;
+  --text-cyan: #22d3ee;
+}
+
+/* 深色模式下的細節元件修正 */
+body[data-theme="dark"] .finp, 
+body[data-theme="dark"] .fsel { background: var(--bg-input); color: var(--t1); border-color: #444; }
+body[data-theme="dark"] .mbtn { background: #2a2a2a; border-color: #444; color: var(--acc); }
+body[data-theme="dark"] .mbtn:active { background: #333; }
+body[data-theme="dark"] #nav { background: #1e1e1e; border-top-color: #333; }
+body[data-theme="dark"] .month-cell.month-dow { color: #60a5fa; }
+body[data-theme="dark"] .fc-grid { background: #333; border-color: #333; }
+body[data-theme="dark"] .fc-cell { background: #1e1e1e; }
+body[data-theme="dark"] .fc-cell.empty { background: #121212; }
+body[data-theme="dark"] .hist-rec-card { background: #1e1e1e; border-color: #444 !important; }
+body[data-theme="dark"] .cashtip-card { background: #1a3a22; border-color: #22c55e !important; }
+body[data-theme="dark"] .punch-card-new { background: #1e1e1e; border-color: #333; }
+body[data-theme="dark"] .progress-box { background: #1e1e1e; }
