@@ -274,7 +274,16 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 /* ══ 新增 tabs-3 寬度設定 ══ */
-.tabs-3 .slide-bg { width: calc(33.333% - 2.66px); }
+/* 替換原本的 .tabs-3 .slide-bg */
+.tabs-3 .slide-bg { 
+  width: calc(33.333% - 2.66px); 
+  background-color: var(--acc); /* 淺色模式給予顯眼的橘色 */
+  box-shadow: 0 4px 10px rgba(255,107,53, 0.4);
+}
+body[data-theme="dark"] .tabs-3 .slide-bg { 
+  background-color: #3b82f6 !important; /* 深色模式給予藍色 */
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4) !important; 
+}
 
 /* ══ 擴充亮色模式的專屬變數 (用於卡片背景與高亮文字) ══ */
 :root {
