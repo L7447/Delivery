@@ -33,8 +33,8 @@ body[data-tab="home"]     { --bg: #f9f9f9; }
 body[data-tab="history"]  { --bg: #f9f9f9; } 
 body[data-tab="add"]      { --bg: #f9f9f9; } 
 body[data-tab="report"]   { --bg: #f9f9f9; } 
-body[data-tab="vehicles"] { --bg: #fafafa; } 
-body[data-tab="settings"] { --bg: #424242; } 
+body[data-tab="vehicles"] { --bg: #7f7f7f; } 
+body[data-tab="settings"] { --bg: #777777; } 
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--bg); transition: background 0.3s ease; color: var(--t1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
