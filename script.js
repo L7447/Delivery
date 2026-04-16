@@ -50,28 +50,52 @@ function toast(msg, ms=2200) {
   setTimeout(()=>el.classList.remove('show'), ms);
 }
 
-/* ══ 執行2秒加大版進度條動畫 ══ */
-function runSaveProgress(callback) {
+/* ══ 智慧型進度條動畫 (支援儲存與載入) ══ */
+let isSimulatingProgress = false;
+
+function showProgress(text) {
   const ov = document.getElementById('progress-overlay');
   const fill = document.getElementById('big-progress-fill');
+  const txt = document.getElementById('big-progress-text');
   
-  // 重置進度條
+  txt.textContent = text;
   fill.style.transition = 'none';
   fill.style.width = '0%';
   ov.classList.add('show');
   
-  // 強制重繪以確保 0% 狀態被套用
-  void fill.offsetWidth; 
+  void fill.offsetWidth; // 強制重繪
   
-  // 啟動動畫 (設定為 2 秒，使用 ease-in-out 讓速度更有節奏感)
-  fill.style.transition = 'width 2s cubic-bezier(0.4, 0, 0.2, 1)';
-  fill.style.width = '100%';
+  // 啟動緩步前進的模擬進度 (3秒跑到 85%)
+  fill.style.transition = 'width 3s cubic-bezier(0.1, 0.8, 0.2, 1)';
+  fill.style.width = '85%';
+  isSimulatingProgress = true;
+}
 
-  // 動畫結束後執行動作並關閉
+function finishProgress(callback) {
+  const ov = document.getElementById('progress-overlay');
+  const fill = document.getElementById('big-progress-fill');
+  
+  if (!isSimulatingProgress) {
+    if (callback) callback();
+    return;
+  }
+  
+  // 瞬間衝向 100%
+  fill.style.transition = 'width 0.4s ease-out';
+  fill.style.width = '100%';
+  
+  // 動畫結束後隱藏
   setTimeout(() => {
     ov.classList.remove('show');
-    callback();
-  }, 1500);
+    isSimulatingProgress = false;
+    if (callback) callback();
+  }, 450); 
+}
+
+// 保留給舊的儲存流程呼叫
+function runSaveProgress(callback) {
+  showProgress('資料儲存中...');
+  setTimeout(() => { finishProgress(callback); }, 1200); 
 }
 
 function customConfirm(msg) {
@@ -357,7 +381,7 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}9; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}10; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
                 <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
                 <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -372,8 +396,8 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) nameColor = '#0040ff';
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div style="flex:1; background: var(--sf); border: 3px solid #009dff; border-radius: 20px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
-                    <span style="font-size:12px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
+                  <div style="flex:1; background: var(--sf); border: 2px solid #10a3ff; border-radius: 20px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                    <span style="font-size:14px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
               }).join('')}</div>
@@ -1540,29 +1564,85 @@ function renderShopHistory() { if (!S.settings.shopHistory) S.settings.shopHisto
 function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); saveSettings(); renderShopHistory(); }
 /* ══ 6. 車輛管理 結束 ══════════════════════════════════════════ */
 
-/* ══ 7. 設定管理與啟動 開始 ═══════════════════════════════════ */
+/* ══ 7. 設定管理與啟動 ═══════════════════════════════════ */
 function renderSettings() {
-  const goals = S.settings.goals||{};
-  // 更新設定清單的說明，補上年目標
   const html  = `
-  <div class="set-sec"><h3>平台管理</h3><div class="set-list"><div class="set-row" onclick="openPlatformList()"><span class="sn"><div style="font-weight:500">🏪 平台列表與設定</div><div class="sn-sub">目前啟用 ${S.platforms.filter(p=>p.active).length} 個平台</div></span><span class="arr">›</span></div></div></div>
-  <div class="set-sec"><h3>目標設定</h3><div class="set-list"><div class="set-row" onclick="openGoalSettings()"><span class="sn"><div>收入目標設定</div><div class="sn-sub">週：$${fmt(goals.weekly||0)}　月：$${fmt(goals.monthly||0)}　年：$${fmt(goals.yearly||0)}</div></span><span class="arr">›</span></div></div></div>
-  <div class="set-sec"><h3>獎勵清單</h3><div class="set-list">
-      ${(S.settings.rewards||[]).map((r,i)=>`<div class="set-row"><span class="sn"><div>${r.name}</div><div class="sn-sub">${getPlatform(r.platformId).name}　≥${r.minOrders}單　NT$ ${fmt(r.amount)}</div></span><button onclick="event.stopPropagation();deleteReward(${i})" class="del-btn">✕</button></div>`).join('')}
-      <div class="set-row" onclick="openAddReward()"><span style="font-size:20px">➕</span><span class="sn">新增獎勵項目</span></div>
+  <div class="set-sec"><h3>功能設定</h3><div class="set-list">
+    <div class="set-row" onclick="openPlatformList()"><span class="sn">🏪 平台列表與設定</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openBackgroundSettings()"><span class="sn">🎨 更換背景主題</span><span class="arr">›</span></div>
   </div></div>
 
   <div class="set-sec"><h3>資料管理</h3><div class="set-list">
       <div class="set-row" onclick="doBackup()"><span class="sn">📥 備份資料（JSON）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="doExportCSV()"><span class="sn">📊 匯出試算表（CSV）</span><span class="arr">↓</span></div>
-      <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料 (保留設定)</span><span class="arr" style="color:var(--red)">!</span></div>
-      <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置所有設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
+      <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
+      <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
   </div></div>
   <div style="margin-top:24px; padding-bottom:16px; text-align:center;">
       <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--blue); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
   </div>`;
   document.getElementById('settings-content').innerHTML = html;
+}
+
+/* ══ 獎勵項目設定彈窗 ══ */
+function openRewardSettings() {
+  document.getElementById('sub-title').textContent = '獎勵項目設定';
+  let html = `<div class="set-list" style="margin-bottom:16px;">`;
+  if (!S.settings.rewards || S.settings.rewards.length === 0) {
+    html += `<div style="padding:16px; text-align:center; color:var(--t3); font-size:13px;">目前無設定任何獎勵</div>`;
+  } else {
+    S.settings.rewards.forEach((r,i) => {
+      html += `<div class="set-row"><span class="sn"><div>${r.name}</div><div class="sn-sub">${getPlatform(r.platformId).name}　≥${r.minOrders}單　NT$ ${fmt(r.amount)}</div></span><button onclick="event.stopPropagation();deleteReward(${i});openRewardSettings()" class="del-btn">✕</button></div>`;
+    });
+  }
+  html += `</div>`;
+  html += `<button onclick="openAddReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:700;border-radius:var(--rs);box-shadow:0 4px 12px rgba(255,107,53,0.3);">➕ 新增獎勵項目</button>`;
+  
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
+}
+
+/* ══ 更換背景設定彈窗 ══ */
+function openBackgroundSettings() {
+  document.getElementById('sub-title').textContent = '更換背景主題';
+  const bgs =[
+    { id: '', name: '預設 (隨分頁切換)', type: 'color', val: '' },
+    { id: '#fafafa', name: '淺色主題', type: 'color', val: '#fafafa' },
+    { id: '#999999', name: '深色主題', type: 'color', val: '#999999' },
+    { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
+    { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
+    { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' }
+  ];
+  
+  let html = `<div style="display:flex; flex-direction:column; gap:12px;">`;
+  bgs.forEach(b => {
+    const isSelected = (S.settings.bg || '') === b.id;
+    let preview = '';
+    if (b.type === 'color') {
+      preview = `<div style="width:36px;height:36px;border-radius:8px;background:${b.val || '#eee'};border:1px solid var(--border);"></div>`;
+    } else {
+      preview = `<div style="width:36px;height:36px;border-radius:8px;background:url('${b.val}') center/cover;border:1px solid var(--border);"></div>`;
+    }
+    
+    html += `<div onclick="setBackground('${b.id}')" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:2px solid ${isSelected?'var(--acc)':'var(--border)'};background:var(--sf);cursor:pointer;box-shadow:${isSelected?'0 4px 12px rgba(255,107,53,0.2)':'none'};">
+      ${preview}
+      <span style="flex:1;font-size:14px;font-weight:600;color:${isSelected?'var(--acc)':'var(--t1)'}">${b.name}</span>
+      ${isSelected ? `<span style="color:var(--acc);font-size:18px;font-weight:900;">✓</span>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
+}
+
+function setBackground(id) {
+  S.settings.bg = id;
+  saveSettings();
+  applyBackground();
+  openBackgroundSettings(); // 刷新打勾狀態
 }
 
 /* 替換 openPlatformList 函式，並加上 togglePlatform 函式 */
@@ -1575,7 +1655,7 @@ function openPlatformList() {
           <div class="plat-color-dot" style="background:${p.color}"></div>
           <div class="sn">
             <div style="font-weight:600">${p.name}</div>
-            <div class="sn-sub">${p.active ? '✅ 已啟用' : '⭕ 已停用'}</div>
+            <div class="sn-sub">${p.active ? '✅ 已啟用' : '❌ 已停用'}</div>
           </div>
           <!-- 撥動開關 (stopPropagation 阻止點擊開關時進入編輯頁) -->
           <label class="switch" onclick="event.stopPropagation()">
@@ -1796,19 +1876,18 @@ async function fetchAutoGasPrice() {
   const fuelType = document.getElementById('vr-fuel-type');
   if (!fuelType || fuelType.value === 'electric') return;
   
-  // 若已經抓過，直接使用記憶的價格 (瞬間完成，不會被代理伺服器阻擋)
   if (cachedGasPrices) {
     applyGasPrice(fuelType.value);
     return;
   }
 
-  toast('⛽ 正在抓取中油最新牌價...', 1500);
+  // 替換原本的 toast 為全新進度條動畫
+  showProgress('油價載入中...');
 
   try {
     const cpcUrl = encodeURIComponent('https://www.cpc.com.tw/historyprice.aspx?n=2890');
     let htmlText = '';
     
-    // 雙重備用 Proxy 確保能繞過 CORS
     try {
       const res1 = await fetch(`https://api.allorigins.win/raw?url=${cpcUrl}`);
       if (!res1.ok) throw new Error('Proxy 1 failed');
@@ -1821,7 +1900,6 @@ async function fetchAutoGasPrice() {
     
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlText, "text/html");
-    
     const tables = doc.querySelectorAll('table');
     let dataRow = null;
     
@@ -1831,23 +1909,15 @@ async function fetchAutoGasPrice() {
         const tds = r.querySelectorAll('td');
         if (tds.length >= 5) {
           const firstTd = tds[0].textContent.trim();
-          if (firstTd.includes('/')) {
-            dataRow = r;
-            break; 
-          }
+          if (firstTd.includes('/')) { dataRow = r; break; }
         }
       }
       if (dataRow) break;
     }
     
-    if (!dataRow) {
-      // 找不到表格時不再安靜退出，丟出錯誤讓 catch 捕捉並顯示失敗訊息
-      throw new Error('找不到中油油價資料表');
-    }
+    if (!dataRow) throw new Error('找不到中油油價資料表');
     
     const tds = dataRow.querySelectorAll('td');
-    
-    // 將所有油品價格一次性記憶起來
     cachedGasPrices = {
       '92': parseFloat(tds[1].textContent.trim()),
       '95': parseFloat(tds[2].textContent.trim()),
@@ -1855,11 +1925,13 @@ async function fetchAutoGasPrice() {
       '柴油': parseFloat(tds[4].textContent.trim())
     };
     
-    applyGasPrice(fuelType.value);
+    // 取代原本的 applyGasPrice()，包在進度完成事件中
+    finishProgress(() => { applyGasPrice(fuelType.value); });
 
   } catch(e) {
     console.error('取得油價失敗:', e);
-    toast('⚠️ 抓取油價失敗，請手動輸入');
+    // 失敗時也要確實關閉進度條
+    finishProgress(() => { toast('⚠️ 抓取油價失敗，請手動輸入'); });
   }
 }
 
@@ -1888,8 +1960,27 @@ if ('serviceWorker' in navigator) {
   console.log('SW 已強制註銷，目前不會快取檔案。');
 }
 
+/* ══ 背景主題套用函式 ══ */
+function applyBackground() {
+  const bg = S.settings.bg;
+  const root = document.documentElement;
+  if (bg) {
+    if (bg.startsWith('#')) {
+      document.body.style.background = bg;
+      root.style.setProperty('--bg-header', bg + 'EE'); // 加入微透明度供毛玻璃使用
+    } else {
+      document.body.style.background = `url('${bg}') center/cover fixed no-repeat`;
+      root.style.setProperty('--bg-header', 'rgba(255, 255, 255, 0.7)'); // 圖片底圖時用白色透光
+    }
+  } else {
+    document.body.style.background = ''; // 恢復 CSS 預設
+    root.style.setProperty('--bg-header', 'var(--bg)');
+  }
+}
+
 function init() {
   loadAll();
+  applyBackground(); // <-- 在初始化時套用背景
   if (!S.platforms || !S.platforms.length) {
     S.platforms = DEFAULT_PLATFORMS.map(p=>({...p}));
     savePlatforms();
