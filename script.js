@@ -428,7 +428,8 @@ function renderHome() {
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
-        bottomHtml += `<div style="display:flex; flex-direction:column; gap:4px; padding:0 3px;">`;
+        // 👈 加入大外框：背景適應深淺模式(var(--sf))，內距5px，圓角25px
+        bottomHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
           if (!events) return;
@@ -876,17 +877,108 @@ function switchAddTab(tab, idx) {
   }
 }
 
+/* ══ 替換：修復小費計算BUG與重置表單功能 ══ */
 function calcCashTip() {
   const given = pf(document.getElementById('f-ct-given').value);
-  const cost = pf(document.getElementById('f-ct-cost').value);
-  if (given > 0 && cost > 0 && given >= cost) {
+  const costStr = document.getElementById('f-ct-cost').value.trim();
+  
+  // 當應收金額被清空時，自動將小費歸零
+  if (costStr === '') {
+    document.getElementById('f-ct-amount').value = '';
+    return;
+  }
+  
+  const cost = pf(costStr);
+  if (given > 0 && cost >= 0 && given >= cost) {
     document.getElementById('f-ct-amount').value = given - cost;
+  } else {
+    document.getElementById('f-ct-amount').value = '';
   }
 }
 
+// 建立重置表單函式
+function resetAddForm() {
+  document.getElementById('f-orders').value = '';
+  document.getElementById('f-hrs-val').value = '';
+  document.getElementById('f-min-val').value = '';
+  document.getElementById('f-income').value = '';
+  document.getElementById('f-bonus').value = '';
+  document.getElementById('f-temp-bonus').value = '';
+  document.getElementById('f-tips').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('add-total-val').textContent = '0';
+  document.getElementById('f-ct-given').value = '';
+  document.getElementById('f-ct-cost').value = '';
+  document.getElementById('f-ct-amount').value = '';
+  document.getElementById('f-ct-note').value = '';
+  S.editingId = null;
+}
+
 function renderPlatformChips() { const container = document.getElementById('platform-chips'); const active = S.platforms.filter(p=>p.active); if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id; container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${p.id}')"><span>${p.name}</span></div>`).join(''); }
-function selectPlatform(id) { S.selPlatformId = id; renderPlatformChips(); }
-function calcAddTotal() { const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const tempBonus = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value); const total = income + bonus + tempBonus + tips; document.getElementById('add-total-val').textContent = fmt(total); }
+/* 替換原有的 selectPlatform */
+function selectPlatform(id) { 
+  S.selPlatformId = id; 
+  renderPlatformChips(); 
+  calcAddTotal(); // 👈 切換平台時，自動檢查是否有符合的獎勵
+}
+/* ══ 替換：帶入自動獎勵計算與總額 ══ */
+function calcAddTotal() { 
+  calcAutoReward(); // 👈 計算行程輸入時，是否達成獎勵門檻
+
+  const income = pf(document.getElementById('f-income').value); 
+  const bonus = pf(document.getElementById('f-bonus').value); 
+  const tempBonus = pf(document.getElementById('f-temp-bonus').value); 
+  const tips = pf(document.getElementById('f-tips').value); 
+  const total = income + bonus + tempBonus + tips; 
+  document.getElementById('add-total-val').textContent = fmt(total); 
+}
+
+function calcAutoReward() {
+  const platId = S.selPlatformId;
+  const dStr = document.getElementById('f-date') ? document.getElementById('f-date').value : todayStr();
+  const curOrders = pf(document.getElementById('f-orders') ? document.getElementById('f-orders').value : 0);
+  if(!platId || !dStr || curOrders <= 0) return;
+
+  let totalAutoBonus = 0;
+  
+  (S.settings.rewards ||[]).forEach(r => {
+    if(r.platformId !== platId) return;
+    // 判斷日期 (若開啟循環則預設為有效)
+    if(!r.recurring && (dStr < r.startDate || dStr > r.endDate)) return;
+
+    // 計算這段期間內已經累積的單數
+    let accum = 0;
+    S.records.forEach(rec => {
+        if(rec.id === S.editingId || rec.platformId !== platId) return;
+        if(r.recurring || (rec.date >= r.startDate && rec.date <= r.endDate)) {
+            accum += pf(rec.orders);
+        }
+    });
+    
+    const newTotal = accum + curOrders;
+    let achievedBonus = 0;
+    let previousHighest = 0;
+
+    // 檢查階距
+    (r.tiers ||[]).forEach(t => {
+        if(accum >= pf(t.orders)) previousHighest = Math.max(previousHighest, pf(t.amount));
+        if(newTotal >= pf(t.orders)) achievedBonus = Math.max(achievedBonus, pf(t.amount));
+    });
+
+    if (achievedBonus > previousHighest) {
+        totalAutoBonus += (achievedBonus - previousHighest);
+    }
+  });
+
+  if(totalAutoBonus > 0) {
+      const bonusEl = document.getElementById('f-bonus');
+      if(!bonusEl.value || pf(bonusEl.value) === 0) {
+          bonusEl.value = totalAutoBonus;
+          toast(`🎁 達標！自動帶入獎勵 $${totalAutoBonus}`);
+      }
+  }
+}
+
 function addWeatherTag(tag) { const noteEl = document.getElementById('f-note'); if (!noteEl.value.includes(tag)) { noteEl.value = (noteEl.value + ' ' + tag).trim(); } }
 
 async function confirmAddRecord() {
@@ -923,7 +1015,7 @@ async function confirmAddRecord() {
       toast('✅ 記錄成功！'); 
     }
     saveRecords(); 
-    S.editingId = null; 
+    resetAddForm(); // 👈 加入這行，儲存後清空表單
     checkBtn.disabled = false; 
     goPage('home'); 
   });
@@ -1003,36 +1095,24 @@ function renderRptOverview() {
         </div>
       </div>
 
-      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: hsl(340, 100%, 98%);">
-        <!-- 虛線往上調整 (margin 修改) -->
-        <div style="border-top:2.5px dashed #1a5dc3; margin-bottom:12px;"></div>
+      /* ══ 替換：收入分析總覽，風格統一 ══ */
+      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
+        <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
         
-        <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center;">
-          <!-- 左半邊：接單、時薪 -->
-          <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding-right:12px;">
-              <span style="background: #ff7700; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">完成訂單</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #ff7700;">${fmt(orders)}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding-right:12px;">
-              <span style="background:var(--blue); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">時薪</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--blue);">${hours>0?`$${fmt(Math.round(total/hours))}`:'—'}</span>
-            </div>
+        <!-- 改為與查看記錄相同的 3 等分布局與顏色 -->
+        <div style="padding:8px 12px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
+          <div style="flex:1; text-align:center;">
+            一單： <br><span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
           </div>
-
-          <!-- 加大垂直分隔線 -->
-          <div style="width:2px; height:48px; background:#cbd5e1; border-radius:1px;"></div>
-
-          <!-- 右半邊：工時、均單 -->
-          <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding-left:12px;">
-              <span style="background:var(--t3); color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">工時</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--t1);">${fmtHours(hours)}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding-left:12px;">
-              <span style="background: #ff0000; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">一單</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #ff0000;">${orders>0?`$${fmt(Math.round(total/orders))}`:'—'}</span>
-            </div>
+          <div class="h-div" style="height:30px;"></div>
+          
+          <div style="flex:1; text-align:center;">
+            1 h： <br><span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
+          </div>
+          <div class="h-div" style="height:30px;"></div>
+          
+          <div style="flex:1; text-align:center;">
+            時薪： <br><span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
           </div>
         </div>
         
@@ -1041,8 +1121,6 @@ function renderRptOverview() {
         <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 16px 12px;">
           <span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
-          <!-- 加大垂直分隔線 -->
-          <div style="width:2px; height:24px; background:#cbd5e1; border-radius:1px;"></div>
         </div>` : ''}
       </div>
     </div>`;
@@ -1654,9 +1732,10 @@ function renderSettings() {
     <div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 外觀與主題設定${themeStatus}</span><span class="arr">›</span></div>
   </div></div>
 
-  <div class="set-sec"><h3>資料管理</h3><div class="set-list">
-      <div class="set-row" onclick="doBackup()"><span class="sn">📥 手動匯出（JSON）</span><span class="arr">↓</span></div>
-      <div class="set-row" onclick="doRestore()"><span class="sn">📤 手動還原</span><span class="arr">↑</span></div>
+  <div class="set-sec"><h3>資料管理與備份</h3><div class="set-list">
+      <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 另存新檔至本機 (JSON)</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
+      <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="doExportCSV()"><span class="sn">📊 匯出試算表（CSV）</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
@@ -1915,15 +1994,12 @@ async function checkAccountStatus() {
 }
 
 // 攔截 confirmAddRecord (新增記錄) 加入檢查
+/* ══ 替換：移除煩人的驗證進度條，登入後直接放行 ══ */
 const originalConfirmAddRecord = confirmAddRecord;
 confirmAddRecord = async function() {
   if (!USER.loggedIn) { toast('⚠️ 請先登入帳號'); return; }
-  
-  showProgress('驗證權限中...');
-  const isActive = await checkAccountStatus();
-  finishProgress(() => {
-    if (isActive) originalConfirmAddRecord();
-  });
+  // 取消原本的「驗證權限中...」進度條，直接執行新增動作
+  originalConfirmAddRecord();
 }
 
 /* ══ 登出清空權限 ══ */
@@ -2056,22 +2132,45 @@ window.applyThemeSettings = function() {
   }, 600);
 }
 
-/* ══ 獎勵項目設定彈窗 ══ */
+/* ══ 補齊：進階獎勵項目設定彈窗 ══ */
 function openRewardSettings() {
   document.getElementById('sub-title').textContent = '獎勵項目設定';
   let html = `<div class="set-list" style="margin-bottom:16px;">`;
+  
   if (!S.settings.rewards || S.settings.rewards.length === 0) {
     html += `<div style="padding:16px; text-align:center; color:var(--t3); font-size:13px;">目前無設定任何獎勵</div>`;
   } else {
-    S.settings.rewards.forEach((r,i) => {
-      html += `<div class="set-row"><span class="sn"><div>${r.name}</div><div class="sn-sub">${getPlatform(r.platformId).name}　≥${r.minOrders}單　NT$ ${fmt(r.amount)}</div></span><button onclick="event.stopPropagation();deleteReward(${i});openRewardSettings()" class="del-btn">✕</button></div>`;
+    S.settings.rewards.forEach((r, i) => {
+      // 組合階距顯示字串
+      let tiersStr = (r.tiers ||[]).map(t => `滿${t.orders}單 $${t.amount}`).join('｜');
+      let dateStr = r.recurring ? '🔄 每週固定循環' : `📅 ${r.startDate} ~ ${r.endDate}`;
+      
+      html += `
+        <div class="set-row" style="align-items:flex-start;">
+          <span class="sn" style="flex:1;">
+            <div style="font-weight:700; color:var(--t1); margin-bottom:4px;">${r.name}</div>
+            <div class="sn-sub" style="color:var(--acc); font-weight:600; margin-bottom:2px;">${getPlatform(r.platformId).name}</div>
+            <div class="sn-sub" style="font-size:10px;">${dateStr}</div>
+            <div class="sn-sub" style="font-size:11px; margin-top:4px; color:var(--text-blue); font-family:var(--mono);">${tiersStr}</div>
+          </span>
+          <button onclick="event.stopPropagation(); deleteReward(${i});" class="del-btn" style="margin-top:4px;">✕</button>
+        </div>`;
     });
   }
   html += `</div>`;
-  html += `<button onclick="openAddReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:700;border-radius:var(--rs);box-shadow:0 4px 12px rgba(255,107,53,0.3);">➕ 新增獎勵項目</button>`;
+  html += `<button onclick="openAddReward()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs);box-shadow:0 4px 12px rgba(255,107,53,0.3);">➕ 新增獎勵項目</button>`;
   
   document.getElementById('sub-body').innerHTML = html;
   openOverlay('sub-page');
+}
+
+async function deleteReward(i) { 
+  const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); 
+  if (!ok) return; 
+  S.settings.rewards.splice(i, 1); 
+  saveSettings(); 
+  openRewardSettings(); // 重新渲染彈窗內的清單
+  toast('✅ 獎勵已刪除'); 
 }
 
 /* 替換 openPlatformList 函式，並加上 togglePlatform 函式 */
@@ -2177,9 +2276,72 @@ function saveGoals() {
   if(S.tab === 'home') renderHome();
   toast('✅ 目標已儲存'); 
 }
-function openAddReward() { document.getElementById('sub-title').textContent = '新增獎勵項目'; document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); document.getElementById('sub-body').innerHTML = `<div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div><div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div class="fg"><label>最低單數</label><input type="number" class="finp" id="rw-min" value="0" inputmode="numeric"></div><div class="fg"><label>上限單數（0=無限）</label><input type="number" class="finp" id="rw-max" value="0" inputmode="numeric"></div></div><div class="fg" style="margin-bottom:14px"><label>獎勵金額（NT$）</label><input type="number" class="finp" id="rw-amt" value="0" inputmode="decimal"></div><button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:var(--rs)">新增獎勵</button>`; openOverlay('sub-page'); }
-function saveNewReward() { const name = document.getElementById('rw-name').value.trim(); if (!name) { toast('請輸入獎勵名稱'); return; } if (!S.settings.rewards) S.settings.rewards=[]; S.settings.rewards.push({ id: newId(), name, platformId: document.getElementById('rw-plat').value, minOrders: pf(document.getElementById('rw-min').value), maxOrders: pf(document.getElementById('rw-max').value), amount: pf(document.getElementById('rw-amt').value) }); saveSettings(); closeOverlay('sub-page'); renderSettings(); toast('✅ 獎勵已新增'); }
-async function deleteReward(i) { const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); if (!ok) return; S.settings.rewards.splice(i,1); saveSettings(); renderSettings(); toast('已刪除'); }
+/* ══ 替換：進階獎勵介面與邏輯 ══ */
+let tempTiers =[];
+
+function openAddReward() { 
+  document.getElementById('sub-title').textContent = '新增進階獎勵項目'; 
+  tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
+  renderRewardForm();
+}
+
+window.addRewardTier = function() {
+  tempTiers.push({orders:0, amount:0});
+  renderRewardForm();
+}
+
+function renderRewardForm() {
+  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); 
+  let tiersHtml = '';
+  tempTiers.forEach((t, idx) => {
+    tiersHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;background:var(--bg-input);padding:8px;border-radius:8px;">
+      <div class="fg"><label>第 ${idx+1} 階 (單數)</label><input type="number" class="finp" value="${t.orders}" onchange="tempTiers[${idx}].orders=this.value"></div>
+      <div class="fg"><label>獎金 (NT$)</label><input type="number" class="finp" value="${t.amount}" onchange="tempTiers[${idx}].amount=this.value"></div>
+    </div>`;
+  });
+
+  document.getElementById('sub-body').innerHTML = `
+    <div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div>
+    <div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <div class="fg" style="flex:1;"><label>開始日期</label><input type="date" class="finp" id="rw-start" value="${todayStr()}"></div>
+      <div class="fg" style="flex:1;"><label>結束日期</label><input type="date" class="finp" id="rw-end" value="${todayStr()}"></div>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding:10px; background:var(--bg-input); border-radius:8px;">
+      <span style="font-size:13px; font-weight:700; color:var(--t1);">🔄 固定循環 (每週自動套用)</span>
+      <label class="switch"><input type="checkbox" id="rw-recurring"><span class="slider"></span></label>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px; color:var(--t3); font-weight:700;">設定獎勵階距</label>
+      ${tiersHtml}
+      <button onclick="addRewardTier()" style="width:100%; padding:8px; border:1px dashed var(--acc); background:transparent; color:var(--acc); border-radius:8px; cursor:pointer; font-weight:700; margin-top:4px;">+ 再新增一階獎勵</button>
+    </div>
+    <button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); margin-top:8px;">✅ 儲存獎勵</button>
+  `; 
+  openOverlay('sub-page'); 
+}
+
+function saveNewReward() { 
+  const name = document.getElementById('rw-name').value.trim(); 
+  if (!name) { toast('請輸入獎勵名稱'); return; } 
+  if (!S.settings.rewards) S.settings.rewards=[]; 
+  
+  const tiers = tempTiers.map(t => ({ orders: pf(t.orders), amount: pf(t.amount) })).filter(t => t.orders > 0 && t.amount > 0);
+  if(tiers.length === 0) { toast('請至少設定一階有效的獎勵'); return; }
+
+  S.settings.rewards.push({ 
+    id: newId(), name, 
+    platformId: document.getElementById('rw-plat').value, 
+    startDate: document.getElementById('rw-start').value,
+    endDate: document.getElementById('rw-end').value,
+    recurring: document.getElementById('rw-recurring').checked,
+    tiers: tiers
+  }); 
+  saveSettings(); 
+  closeOverlay('sub-page'); 
+  renderSettings(); 
+  toast('✅ 獎勵已新增'); 
+}
 
 function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記帳_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
 function doRestore() { const fi = document.getElementById('restore-file'); fi.onchange = async () => { const file = fi.files[0]; if(!file) return; try { const text = await file.text(); const data = JSON.parse(text); const ok = await customConfirm('確定用此備份<strong>覆蓋</strong>現有資料？'); if (!ok) return; if (data.records) { S.records=data.records; saveRecords(); } if (data.platforms) { S.platforms=data.platforms; savePlatforms(); } if (data.settings) { S.settings=data.settings; saveSettings(); } if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } toast('✅ 還原成功'); renderSettings(); renderHome(); } catch { toast('❌ 檔案格式錯誤'); } fi.value=''; }; fi.click(); }
@@ -2425,6 +2587,80 @@ function applyBackground() {
     document.body.style.background = ''; // 使用深淺模式的預設背景
     root.style.setProperty('--bg-header', 'var(--bg)');
   }
+}
+
+/* ══ 真正儲存為實體檔案至本機資料夾 (File System API 或 下載) ══ */
+async function doBackupToFile() {
+  const data = { 
+    exportedAt: new Date().toISOString(), 
+    records: S.records, 
+    platforms: S.platforms, 
+    settings: S.settings, 
+    vehicles: S.vehicles, 
+    vehicleRecs: S.vehicleRecs 
+  };
+  
+  const jsonStr = JSON.stringify(data, null, 2);
+  const fileName = `Delivery_Backup_${todayStr()}.json`;
+
+  try {
+    // 優先嘗試使用 File System Access API (支援 Chrome/Edge/Android)
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types:[{ description: 'JSON File', accept: { 'application/json': ['.json'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(jsonStr);
+      await writable.close();
+      toast('✅ 成功儲存至本機資料夾！');
+    } else {
+      // 蘋果 iOS / Safari 降級使用傳統下載模式
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('✅ 備份檔已下載');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error(err);
+      toast('⚠️ 儲存失敗或取消');
+    }
+  }
+}
+
+/* ══ 備份至 Google Drive 引導 ══ */
+function backupToGoogleDrive() {
+  // 由於純前端無法直接偷偷把檔案塞進使用者的 Google 雲端
+  // 最佳做法是：先讓使用者下載檔案，然後開啟 Google Drive 網頁讓他們上傳
+  
+  customConfirm(`
+    <div style="text-align:center;">
+      <div style="font-size:40px; margin-bottom:12px;">☁️</div>
+      <h3 style="margin-bottom:8px; color:var(--t1);">備份至 Google 雲端硬碟</h3>
+      <p style="font-size:13px; color:var(--t2); line-height:1.6; text-align:left;">
+        基於安全性限制，網頁無法直接存取您的雲端硬碟。<br><br>
+        點擊「確定」後，系統將：<br>
+        1. 先將備份檔 <b>下載至您的手機</b><br>
+        2. 接著 <b>開啟 Google Drive 網頁</b><br>
+        請您手動將剛才下載的檔案上傳至雲端！
+      </p>
+    </div>
+  `).then(ok => {
+    if (ok) {
+      // 1. 先觸發下載
+      doBackupToFile();
+      
+      // 2. 延遲 1.5 秒後開啟 Google Drive
+      setTimeout(() => {
+        window.open('https://drive.google.com/drive/my-drive', '_blank');
+      }, 1500);
+    }
+  });
 }
 
 function init() {
