@@ -1095,7 +1095,7 @@ function renderRptOverview() {
         </div>
       </div>
 
-      /* ══ 替換：收入分析總覽，風格統一 ══ */
+
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
         <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
         
