@@ -1679,7 +1679,7 @@ function openAuthModal() {
       </p>
       <div class="fg" style="margin-bottom:16px;">
         <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
-        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="font-size:16px; padding:12px;">
+        <input type="email" class="finp" id="auth-email" placeholder="輸入您的Gmail信箱地址" style="font-size:16px; padding:12px;">
       </div>
       <div class="fg" style="margin-bottom:24px;">
         <label style="font-weight:700; color:var(--t1);">密碼 (至少 6 個字元)</label>
