@@ -1090,8 +1090,10 @@ function renderRptOverview() {
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
-          <div class="h-div" style="background: hsl(32, 100%, 90%); color: #ff8800; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
-          <div class="h-div" style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
+          <div class="h-div" style="height:30px;"></div>
+          <div style="background: hsl(32, 100%, 90%); color: #ff8800; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
+          <div class="h-div" style="height:30px;"></div>
+          <div style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
 
