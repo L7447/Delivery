@@ -434,7 +434,7 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}20; border-radius: 22px; padding: 8px 10px; margin-bottom: 2px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}30; border-radius: 18px; padding: 8px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
                 <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
                 <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
@@ -2686,9 +2686,9 @@ function backupToGoogleDrive() {
       <h3 style="margin-bottom:8px; color:var(--t1);">備份至 Google 雲端硬碟</h3>
       <p style="font-size:13px; color:var(--t2); line-height:1.6; text-align:left;">
         請先下載「Google雲端硬碟APP」，並登入您的帳號。<br><br>
-        依照下方指示，點擊「確定」後：<br>
-        1. 會跳出【下載視窗】，請點擊「<b>儲存位置</b>」按鈕。<br>
-        2. 請您手動選擇「Google雲端硬碟」備份保存！
+        依照下方指示：<br>
+        1. 點擊「確定」後，會跳出【下載視窗】，請點擊「<b>儲存位置</b>」按鈕。<br>
+        2. 請您選擇「Google雲端硬碟」，然後按「<b>儲存！</b>」即可完成備份。<br>
       </p>
     </div>
   `).then(ok => {
