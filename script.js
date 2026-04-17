@@ -1089,11 +1089,11 @@ function renderRptOverview() {
         <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
-          <div style="background: hsl(32, 100%, 90%); color: #ff8800; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
-          <div style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
+          <span class="h-div"></span><span class="hrc-stat">行程 $${_orders}</span>
+          <span class="h-div"></span><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>
+          <span class="h-div"></span><span class="lbl-tips">小費 $${fmt(tips)}</span>
         </div>
-      </div>
+      </div> 
 
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
@@ -1102,17 +1102,17 @@ function renderRptOverview() {
         <!-- 改為與查看記錄相同的 3 等分布局與顏色 -->
         <div style="padding:8px 12px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">
-            一單： <br><span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
+            一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
           </div>
           <div class="h-div" style="height:30px;"></div>
           
           <div style="flex:1; text-align:center;">
-            1 h： <br><span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
+            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
           </div>
           <div class="h-div" style="height:30px;"></div>
           
           <div style="flex:1; text-align:center;">
-            時薪： <br><span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
+            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
           </div>
         </div>
         
