@@ -22,8 +22,8 @@ const DEFAULT_SETTINGS = {
 };
 
 // 帳號登入系統狀態
-/* 替換原本的 USER 宣告，並加上模擬資料庫 DB_USERS */
-let USER = JSON.parse(localStorage.getItem('delivery_user') || '{"email":null,"verified":false,"loggedIn":false,"joinDate":null}');
+// 替換原本的 USER 宣告
+let USER = JSON.parse(localStorage.getItem('delivery_user') || '{"email":null,"verified":false,"loggedIn":false,"joinDate":null,"token":null,"role":"user"}');
 function saveUser() { localStorage.setItem('delivery_user', JSON.stringify(USER)); }
 
 // 模擬後端資料庫：儲存所有註冊的帳號資訊以供統計
@@ -1667,19 +1667,25 @@ function renderSettings() {
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ══ 帳號驗證與登入系統 (支援資料庫註冊模擬) ══ */
+/* ══ 帳號驗證與登入系統 (加入密碼機制) ══ */
 function openAuthModal() {
   document.getElementById('sub-title').textContent = '登入/註冊帳號';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
       <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6; background:var(--bg-input); padding:12px; border-radius:12px;">
-        💡 只需輸入您的 E-mail，系統將自動寄送驗證碼。<br>首次登入將自動建立全新帳號。
+        💡 <b>一鍵登入/註冊：</b><br>
+        若您已有帳號，輸入密碼即可快速登入。<br>
+        若是首次使用，系統將自動為您建立帳號，並寄送驗證碼至信箱！
       </p>
-      <div class="fg" style="margin-bottom:20px;">
+      <div class="fg" style="margin-bottom:16px;">
         <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
         <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="font-size:16px; padding:12px;">
       </div>
-      <button onclick="sendAuthCode()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">寄送驗證碼</button>
+      <div class="fg" style="margin-bottom:24px;">
+        <label style="font-weight:700; color:var(--t1);">密碼 (至少 6 個字元)</label>
+        <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼 (作為註冊或登入用)" style="font-size:16px; padding:12px;">
+      </div>
+      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入 / 註冊帳號</button>
     </div>
   `;
   openOverlay('sub-page');
@@ -1689,37 +1695,51 @@ function openAuthModal() {
 const API_BASE_URL = 'https://delivery-api-0494.onrender.com/api';
 
 /* ══ 寄送真實 Email 驗證碼 ══ */
-async function sendAuthCode() {
+async function requestLogin() {
   const email = document.getElementById('auth-email').value.trim();
-  if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式'); return; }
+  const pwd = document.getElementById('auth-pwd').value.trim();
+  if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式（您的帳號@gmail.com）'); return; }
+  if(pwd.length < 6) { toast('密碼請至少輸入 6 個字元'); return; }
   
-  showProgress('發送驗證碼信件中...');
+  showProgress('登入連線中...');
   
   try {
-    const res = await fetch(`${API_BASE_URL}/auth/send`, {
+    // 呼叫更新後的 /auth/login API
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, password: pwd })
     });
     const data = await res.json();
     
     finishProgress(() => {
       if (data.success) {
-        document.getElementById('sub-body').innerHTML = `
-          <div style="padding:16px;">
-            <p style="font-size:13px;color:var(--t2);margin-bottom:16px; background:var(--bg-input); padding:12px; border-radius:12px; line-height:1.6;">
-              ✅ 系統已寄出驗證信至 <b>${email}</b><br>
-              <span style="color:var(--t3);font-size:12px;font-weight:600;">(請至信箱收取 6 位數驗證碼)</span>
-            </p>
-            <div class="fg" style="margin-bottom:20px;">
-              <label style="font-weight:700; color:var(--t1);">6位數驗證碼</label>
-              <input type="number" class="finp" id="auth-code" placeholder="請輸入信件中的數字" inputmode="numeric" style="font-size:24px; letter-spacing:8px; text-align:center; padding:12px; font-family:var(--mono);">
+        if (data.directLogin) {
+          // ✅ 舊用戶，密碼正確，直接瞬間登入
+          USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role };
+          saveUser();
+          toast('✅ 登入成功');
+          closeOverlay('sub-page');
+          renderSettings();
+        } else {
+          // 📧 新用戶或未驗證帳號，顯示驗證碼輸入畫面
+          document.getElementById('sub-body').innerHTML = `
+            <div style="padding:16px;">
+              <p style="font-size:13px;color:var(--t2);margin-bottom:16px; background:var(--bg-input); padding:12px; border-radius:12px; line-height:1.6;">
+                ✅ 系統已寄出驗證信至 <b>${email}</b><br>
+                <span style="color:var(--t3);font-size:12px;font-weight:600;">(請至信箱收取 6 位數驗證碼)</span>
+              </p>
+              <div class="fg" style="margin-bottom:20px;">
+                <label style="font-weight:700; color:var(--t1);">6位數驗證碼</label>
+                <input type="number" class="finp" id="auth-code" placeholder="請輸入信件中的數字" inputmode="numeric" style="font-size:24px; letter-spacing:8px; text-align:center; padding:12px; font-family:var(--mono);">
+              </div>
+              <button onclick="verifyAuthCode('${email}')" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">驗證並啟用帳號</button>
             </div>
-            <button onclick="verifyAuthCode('${email}')" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs);">驗證並登入</button>
-          </div>
-        `;
+          `;
+        }
       } else {
-        toast('發送失敗：' + data.message);
+        // ❌ 密碼錯誤等訊息
+        toast('⚠️ ' + data.message);
       }
     });
   } catch (err) {
@@ -1727,7 +1747,7 @@ async function sendAuthCode() {
   }
 }
 
-/* ══ 驗證 Email 驗證碼 ══ */
+/* ══ 驗證 Email 驗證碼 (儲存權限 role) ══ */
 async function verifyAuthCode(email) {
   const code = document.getElementById('auth-code').value.trim();
   if(code.length < 4) { toast('請輸入正確的驗證碼'); return; }
@@ -1743,7 +1763,8 @@ async function verifyAuthCode(email) {
     
     finishProgress(() => {
       if (data.success) {
-        USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString() };
+        // 👈 將 data.user.role (權限) 一併存入
+        USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role };
         saveUser();
         toast('✅ 登入成功');
         closeOverlay('sub-page');
@@ -1757,31 +1778,59 @@ async function verifyAuthCode(email) {
   }
 }
 
-/* ══ 權限管理與統計後台 (包含刪除帳號功能) ══ */
+/* ══ 帳號介面 (判斷是否為管理員) ══ */
 async function openAccountStats() {
-  document.getElementById('sub-title').textContent = '帳號與會員管理';
+  document.getElementById('sub-title').textContent = '帳號資訊';
   
-  // 顯示 Loading
-  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div>`;
+  // 1. 一般會員看見的基本畫面
+  let baseHtml = `
+    <div style="padding:16px;">
+      <div class="card" style="text-align:center; padding:24px 16px; background:var(--collapse-bg); border-color:var(--border);">
+        <div style="font-size:48px; margin-bottom:8px;">${USER.role === 'admin' ? '👑' : '🧑‍🚀'}</div>
+        <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">${USER.email}</div>
+        <div style="font-size:12px; color:#fff; background:var(--green); display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700;">✓ 已驗證帳號</div>
+      </div>
+      
+      <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">個人資料</h4>
+      <div class="set-list" style="margin-bottom:20px;">
+        <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${USER.joinDate || '未知'}</span></div>
+        <div class="set-row"><span class="sn">個人總記錄數</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${S.records.length} 筆</span></div>
+      </div>
+  `;
+
+  // 2. 如果不是管理員，直接加上登出按鈕並結束
+  if (USER.role !== 'admin') {
+    baseHtml += `<button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`;
+    document.getElementById('sub-body').innerHTML = baseHtml;
+    openOverlay('sub-page');
+    return;
+  }
+
+  // 3. 如果是管理員，去後端拉取所有人的資料
+  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入後台資料中...</div>`;
   openOverlay('sub-page');
 
   try {
-    // 呼叫後端取得所有用戶資料
-    const res = await fetch(`${API_BASE_URL}/admin/users`);
+    // 改成 POST 傳送管理員憑證給後端檢查
+    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminEmail: USER.email, token: USER.token })
+    });
     const data = await res.json();
     
-    if (!data.success) throw new Error();
+    if (!data.success) throw new Error(data.message);
     const users = data.users;
     const verifiedUsers = users.filter(u => u.verified).length;
 
     let adminHtml = '';
-    // 渲染帳號清單，讓管理員可以隨時刪除違規帳號
     users.forEach(u => {
       const vTag = u.verified ? '<span style="color:green;font-weight:700;">已驗證</span>' : '<span style="color:gray;">未驗證</span>';
+      const roleTag = u.role === 'admin' ? '👑 ' : '';
       adminHtml += `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">
           <div>
-            <div style="font-size:13px; font-weight:600; color:var(--t1);">${u.email}</div>
+            <div style="font-size:13px; font-weight:600; color:var(--t1);">${roleTag}${u.email}</div>
             <div style="font-size:11px; color:var(--t3);">${vTag} | ${new Date(u.createdAt).toLocaleDateString()}</div>
           </div>
           <button onclick="adminDeleteUser('${u.email}')" style="background:var(--red-d); color:var(--red); border:none; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">刪除</button>
@@ -1789,69 +1838,79 @@ async function openAccountStats() {
       `;
     });
 
-    document.getElementById('sub-body').innerHTML = `
-      <div style="padding:16px;">
-        <div class="card" style="text-align:center; padding:24px 16px; background:var(--collapse-bg); border-color:var(--border);">
-          <div style="font-size:48px; margin-bottom:8px;">🧑‍🚀</div>
-          <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">${USER.email}</div>
-          <div style="font-size:12px; color:#fff; background:var(--green); display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700;">✓ 已驗證帳號</div>
-        </div>
-        
-        <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">📊 系統註冊統計</h4>
-        <div class="set-list" style="margin-bottom:24px;">
-          <div class="set-row"><span class="sn">總申請人數</span><span style="font-family:var(--mono);color:var(--t1);font-weight:700;">${users.length} 人</span></div>
-          <div class="set-row"><span class="sn">已完成驗證</span><span style="font-family:var(--mono);color:var(--green);font-weight:700;">${verifiedUsers} 人</span></div>
-        </div>
-
-        <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">⚙️ 會員權限管理</h4>
-        <div class="card" style="max-height:200px; overflow-y:auto; padding:8px 12px; margin-bottom:24px;">
-          ${adminHtml}
-        </div>
-
-        <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
+    document.getElementById('sub-body').innerHTML = baseHtml + `
+      <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">📊 系統註冊統計 (管理員專屬)</h4>
+      <div class="set-list" style="margin-bottom:24px;">
+        <div class="set-row"><span class="sn">總申請人數</span><span style="font-family:var(--mono);color:var(--t1);font-weight:700;">${users.length} 人</span></div>
+        <div class="set-row"><span class="sn">已完成驗證</span><span style="font-family:var(--mono);color:var(--green);font-weight:700;">${verifiedUsers} 人</span></div>
       </div>
-    `;
+
+      <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">⚙️ 會員權限管理</h4>
+      <div class="card" style="max-height:200px; overflow-y:auto; padding:8px 12px; margin-bottom:24px;">
+        ${adminHtml}
+      </div>
+
+      <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
+    </div>`;
+
   } catch (err) {
-    document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--red);">連線伺服器失敗，無法載入統計資料</div>`;
+    document.getElementById('sub-body').innerHTML = baseHtml + `<div style="text-align:center; color:var(--red); margin-bottom:16px;">無法載入後台資料：${err.message}</div><button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`;
   }
 }
 
-/* 管理員刪除帳號 API 呼叫 */
+/* ══ 管理員刪除 API 呼叫 (帶上憑證) ══ */
 async function adminDeleteUser(targetEmail) {
   const ok = await customConfirm(`確定要強制刪除並封鎖 <b>${targetEmail}</b> 嗎？`);
   if(!ok) return;
   
   showProgress('刪除帳號中...');
   try {
-    await fetch(`${API_BASE_URL}/admin/users/${targetEmail}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE_URL}/admin/delete`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminEmail: USER.email, token: USER.token, targetEmail: targetEmail })
+    });
+    const data = await res.json();
+    
     finishProgress(() => {
-      toast('帳號已刪除');
-      if (targetEmail === USER.email) logoutAccount(); // 若刪除自己則直接登出
-      else openAccountStats(); // 重新載入清單
+      if(data.success) {
+        toast('帳號已刪除');
+        if (targetEmail === USER.email) logoutAccount(); 
+        else openAccountStats(); 
+      } else {
+        toast('刪除失敗：' + data.message);
+      }
     });
   } catch(err) {
-    finishProgress(() => toast('刪除失敗'));
+    finishProgress(() => toast('連線失敗'));
   }
 }
 
-/* 每次新增記錄前，強制檢查帳號是否還活著 (有沒有被管理員刪除) */
+/* ══ 踢下線檢查 (顯示共用時間) ══ */
 async function checkAccountStatus() {
   if (!USER.loggedIn) return false;
   try {
     const res = await fetch(`${API_BASE_URL}/auth/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: USER.email })
+      body: JSON.stringify({ email: USER.email, token: USER.token }) 
     });
     const data = await res.json();
+    
     if (!data.active) {
-      toast('⚠️ 您的帳號已被停權或刪除');
-      logoutAccount();
+      if (data.reason === 'kicked') {
+        // 👈 將後端傳來的踢人時間格式化顯示
+        const kickTime = new Date(data.kickedAt).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        toast(`⚠️ 此帳號已於 [${kickTime}] 在其他裝置登入，您已被強制登出`, 4000);
+      } else {
+        toast('⚠️ 您的帳號已被停權或刪除');
+      }
+      logoutAccount(); 
       return false;
     }
     return true;
   } catch(e) {
-    return true; // 沒網路時預設放行本機操作
+    return true; 
   }
 }
 
@@ -1867,8 +1926,9 @@ confirmAddRecord = async function() {
   });
 }
 
+/* ══ 登出清空權限 ══ */
 function logoutAccount() {
-  USER = { email: null, verified: false, loggedIn: false, joinDate: null };
+  USER = { email: null, verified: false, loggedIn: false, joinDate: null, token: null, role: 'user' };
   saveUser();
   S.settings.autoBackup = false; 
   saveSettings();
