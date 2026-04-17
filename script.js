@@ -1095,9 +1095,8 @@ function renderRptOverview() {
           <div class="h-div" style="height:30px;"></div>
           <div style="background: #e0f2fe; color: #2563eb; padding:7px 10px 4px 10px; border-radius:10px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
         </div>
-        <div style="border-top:3px dashed #778899; margin-top:10px;"></div>
       </div> 
-
+      <div style="border-top:3px dashed #778899; margin-top:3px;"></div>
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
         
@@ -1121,7 +1120,7 @@ function renderRptOverview() {
         
         ${cashTipTotal > 0 ? `
         <div style="border-top:2px dashed #cbd5e1;"></div>
-        <div style="display:flow-root; justify-content:space-between; align-items:center; padding:1px 1px 6px 6px;">
+        <div style="display:flow-root; justify-content:space-between; align-items:center; padding:1px 1px 8px 10px;">
           <span style="background: #16a34a; color: #fff; font-size:11px; padding:2px 6px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #16a34a;">$${fmt(cashTipTotal)}</span>
         </div>` : ''}
