@@ -1082,7 +1082,7 @@ function renderRptOverview() {
 
   // 精簡高對比總收入框
   html += `
-    <div style="background: #ffffff; border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
+    <div style="background: #ffffff; border:2px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
       <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: #ffffff; border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:5px; cursor:pointer; text-align:center;">
@@ -1102,19 +1102,19 @@ function renderRptOverview() {
         
         
         <!-- 改為與查看記錄相同的 3 等分布局與顏色 -->
-        <div style="padding:4px 10px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
+        <div style="padding:4px 10px; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">
-            一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
+            一單： <span style="font-family:var(--mono); color: #ff6600; font-size:19px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
           </div>
           <div class="h-div" style="height:30px;"></div>
           
           <div style="flex:1; text-align:center;">
-            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
+            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:19px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
           </div>
           <div class="h-div" style="height:30px;"></div>
           
           <div style="flex:1; text-align:center;">
-            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
+            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:19px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
           </div>
         </div>
         
