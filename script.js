@@ -1089,9 +1089,9 @@ function renderRptOverview() {
         <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <span class="h-div"></span><span class="hrc-stat">行程 $${_orders}</span>
-          <span class="h-div"></span><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>
-          <span class="h-div"></span><span class="lbl-tips">小費 $${fmt(tips)}</span>
+          <div class="h-div"><span class="hrc-stat">行程 $${_orders}</span></div>
+          <div class="h-div"><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span></div>
+          <div class="h-div"><span class="lbl-tips">小費 $${fmt(tips)}</span></div>
         </div>
       </div> 
 
