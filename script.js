@@ -1085,15 +1085,15 @@ function renderRptOverview() {
     <div style="background: #ffffff; border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
       <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: #ffffff; border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);">▼</div>
       
-      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px; cursor:pointer; text-align:center;">
+      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:5px; cursor:pointer; text-align:center;">
         <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:800; justify-content:center; align-items:center;">行程 $${fmt(income)}</div>
+          <div style="background: #dcfce7; color: #16a34a; padding:6px 10px 4px 10px; border-radius:10px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
           <div class="h-div" style="height:30px;"></div>
-          <div style="background: hsl(32, 100%, 90%); color: #ff8800; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:800; justify-content:center; align-items:center;">獎勵 $${fmt(bonus)}</div>
+          <div style="background: #fef3c7; color: #d97706; padding:7px 10px 4px 10px; border-radius:10px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
           <div class="h-div" style="height:30px;"></div>
-          <div style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:800; justify-content:center; align-items:center;">小費 $${fmt(tips)}</div>
+          <div style="background: #e0f2fe; color: #2563eb; padding:8px 10px 4px 10px; border-radius:10px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
 
