@@ -1089,17 +1089,17 @@ function renderRptOverview() {
         <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
+          <div style="background: #dcfce7; color: #16a34a; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:800; justify-content:center; align-items:center;">行程 $${fmt(income)}</div>
           <div class="h-div" style="height:30px;"></div>
-          <div style="background: hsl(32, 100%, 90%); color: #ff8800; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
+          <div style="background: hsl(32, 100%, 90%); color: #ff8800; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:800; justify-content:center; align-items:center;">獎勵 $${fmt(bonus)}</div>
           <div class="h-div" style="height:30px;"></div>
-          <div style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
+          <div style="background: #e0f2fe; color: #2563eb; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:800; justify-content:center; align-items:center;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
 
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
-        <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
+        <div style="border-top:3px dashed #778899; margin-bottom:2px;"></div>
         
         <!-- 改為與查看記錄相同的 3 等分布局與顏色 -->
         <div style="padding:8px 12px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
@@ -1119,9 +1119,9 @@ function renderRptOverview() {
         </div>
         
         ${cashTipTotal > 0 ? `
-        <div style="border-top:1px dashed rgba(0,0,0,0.05); margin:6px 16px;"></div>
+        <div style="border-top:2px dashed rgba(0,0,0,0.05); margin:2px 5px;"></div>
         <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 16px 12px;">
-          <span style="background:#16a34a; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
+          <span style="background: #16a34a; color: #fff; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:700;">現金小費 (不計總收)</span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#16a34a;">$${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
