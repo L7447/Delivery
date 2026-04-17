@@ -1098,7 +1098,7 @@ function renderRptOverview() {
       </div> 
       <div style="border-top:3px dashed #778899; margin-top:3px;"></div>
 
-      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
+      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: hsla(342, 100%, 98%, 0.90);">
         
         
         <!-- 改為與查看記錄相同的 3 等分布局與顏色 -->
