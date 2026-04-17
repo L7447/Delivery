@@ -896,8 +896,9 @@ function calcCashTip() {
   }
 }
 
-// 建立重置表單函式
+/* ══ 替換：重置新增記錄表單 ══ */
 function resetAddForm() {
+  document.getElementById('f-date').value = todayStr();
   document.getElementById('f-orders').value = '';
   document.getElementById('f-hrs-val').value = '';
   document.getElementById('f-min-val').value = '';
@@ -907,11 +908,17 @@ function resetAddForm() {
   document.getElementById('f-tips').value = '';
   document.getElementById('f-note').value = '';
   document.getElementById('add-total-val').textContent = '0';
+  
+  // 現金小費也歸零並恢復今日時間
+  document.getElementById('f-ct-date').value = todayStr();
+  document.getElementById('f-ct-time').value = nowTime();
   document.getElementById('f-ct-given').value = '';
   document.getElementById('f-ct-cost').value = '';
   document.getElementById('f-ct-amount').value = '';
   document.getElementById('f-ct-note').value = '';
+  
   S.editingId = null;
+  switchAddTab('regular', 0); // ✅ 強制切換回預設的「行程記錄」頁籤
 }
 
 function renderPlatformChips() { const container = document.getElementById('platform-chips'); const active = S.platforms.filter(p=>p.active); if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id; container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${p.id}')"><span>${p.name}</span></div>`).join(''); }
@@ -1042,9 +1049,11 @@ window.navRptMonth = function(dir) {
   renderReport();
 }
 
+/* ══ 替換：趨勢導航時間切換 ══ */
 window.navTrend = function(dir) {
   let d = new Date(S.trendDate || new Date());
   if (S.trendMode === 'week') d.setDate(d.getDate() + dir * 7);
+  else if (S.trendMode === '4week') d.setDate(d.getDate() + dir * 28); // 👈 加入4週(28天)切換
   else if (S.trendMode === 'month') d.setMonth(d.getMonth() + dir);
   else if (S.trendMode === 'year') d.setFullYear(d.getFullYear() + dir);
   S.trendDate = d;
@@ -1205,6 +1214,7 @@ function renderRptOverview() {
   }
 }
 
+/* ══ 替換：完整趨勢分析圖表 (加入 4 週趨勢) ══ */
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
   if (!S.trendDate) S.trendDate = new Date();
@@ -1223,6 +1233,14 @@ function renderRptTrend() {
         });
       }
     },
+    { key:'4week', label:'4週趨勢',  getDays: () => { 
+        const day = td.getDay() || 7; 
+        const start = new Date(td); start.setDate(start.getDate() - day + 1 - 21); // 回推 3 週
+        const end = new Date(td); end.setDate(end.getDate() - day + 7);
+        navLabel = `${pad(start.getMonth()+1)}/${pad(start.getDate())} ~ ${pad(end.getMonth()+1)}/${pad(end.getDate())}`;
+        return []; 
+      }
+    },
     { key:'month', label:'月趨勢',   getDays: () => { 
         navLabel = `${td.getFullYear()} 年 ${td.getMonth()+1} 月`;
         const n=new Date(td.getFullYear(), td.getMonth()+1, 0).getDate(); 
@@ -1233,14 +1251,15 @@ function renderRptTrend() {
         navLabel = `${td.getFullYear()} 年`;
         return Array.from({length:12},(_,i)=>null); 
       } 
-    },
+    }
   ];
   
-  const curT = S.trendMode||'month'; const trend = trends.find(t=>t.key===curT)||trends[1];
+  const curT = S.trendMode || 'month'; 
+  const trend = trends.find(t=>t.key===curT) || trends[2]; // 預設使用月趨勢
   const days = trend.getDays(); 
 
   let html = `<div style="display:flex;gap:6px;margin-bottom:10px">
-    ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:6px;border-radius:var(--rs);border:1px solid ${curT===t.key?'var(--acc)':'var(--border)'};background:${curT===t.key?'var(--acc-d)':'var(--sf2)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:12px;cursor:pointer;font-family:var(--sans);font-weight:${curT===t.key?'700':'500'}">${t.label}</button>`).join('')}
+    ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:6px;border-radius:var(--rs);border:1px solid ${curT===t.key?'var(--acc)':'var(--border)'};background:${curT===t.key?'var(--acc-d)':'var(--bg-input)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:12px;cursor:pointer;font-family:var(--sans);font-weight:${curT===t.key?'700':'500'}">${t.label}</button>`).join('')}
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
     <button class="mbtn" onclick="navTrend(-1)">◀</button>
@@ -1252,21 +1271,49 @@ function renderRptTrend() {
   
   if (curT === 'year') {
     const labels = Array.from({length:12},(_,i)=>`${i+1}月`);
-    const datasets = [];
+    const datasets =[];
     plats.forEach(p => {
       const data = Array.from({length:12}, (_,i)=> getMonthRecs(td.getFullYear(), i+1).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
     });
     const allTotal = S.records.filter(r=>r.date.startsWith(`${td.getFullYear()}-`)).reduce((s,r)=>s+recTotal(r),0);
-    
     html += `<div class="card"><div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div><div class="rpt-divider" style="margin-top:16px; margin-bottom:8px"></div><div class="rpt-total-row"><span class="rt-lbl gray">全年總收入</span><span class="rt-val" style="color:var(--green)">NT$ ${fmt(allTotal)}</span></div></div>`;
     el.innerHTML = html; drawTrendBar('trend-chart', labels, datasets);
   } 
+  else if (curT === '4week') {
+    // 獨立處理 4 週的繪圖資料
+    const labels = [];
+    const datasets =[];
+    const weekRanges =[];
+    
+    const day = td.getDay() || 7; 
+    const endOfThisWeek = new Date(td); endOfThisWeek.setDate(endOfThisWeek.getDate() + (7 - day));
+
+    for (let w=3; w>=0; w--) {
+      const startD = new Date(endOfThisWeek); startD.setDate(startD.getDate() - 6 - w*7);
+      const endD = new Date(startD); endD.setDate(endD.getDate() + 6);
+      labels.push(`${pad(startD.getMonth()+1)}/${pad(startD.getDate())} 起`); 
+      weekRanges.push({ start: startD, end: endD });
+    }
+
+    plats.forEach(p => {
+      const data = weekRanges.map(wt => {
+        const sStr = `${wt.start.getFullYear()}-${pad(wt.start.getMonth()+1)}-${pad(wt.start.getDate())}`;
+        const eStr = `${wt.end.getFullYear()}-${pad(wt.end.getMonth()+1)}-${pad(wt.end.getDate())}`;
+        return S.records.filter(r => r.platformId === p.id && r.date >= sStr && r.date <= eStr && !r.isPunchOnly).reduce((s,r)=>s+recTotal(r),0);
+      });
+      if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
+    });
+    
+    html += `<div class="card"><div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>`;
+    el.innerHTML = html; 
+    drawTrendBar('trend-chart', labels, datasets);
+  }
   else if (curT === 'month') {
     const days1 = days.slice(0, 15); const days2 = days.slice(15);
     const labels1 = days1.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
     const labels2 = days2.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
-    const datasets1 = []; const datasets2 = [];
+    const datasets1 = []; const datasets2 =[];
     plats.forEach(p => {
       const data1 = days1.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       const data2 = days2.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
@@ -1277,7 +1324,7 @@ function renderRptTrend() {
   }
   else {
     const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
-    const datasets = [];
+    const datasets =[];
     plats.forEach(p => {
       const data = days.map(d=> getDayRecs(d).filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0));
       if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
@@ -1412,6 +1459,7 @@ function renderRptCompare() {
   el.innerHTML = html;
 }
 
+/* ══ 替換：移除舊有圖表的 TOP3 分析 ══ */
 function renderRptTop3() {
   const el = document.getElementById('rv-top3'); const monthRecs = getMonthRecs(S.rptY, S.rptM); const dayMap = {};
   monthRecs.forEach(r => { dayMap[r.date] = (dayMap[r.date]||0) + recTotal(r); });
@@ -1424,22 +1472,17 @@ function renderRptTop3() {
     </div>`;
 
   html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 3 日</div>`;
-  if (!sorted.length) { html += `<div class="empty-tip">本月暫無記錄</div>`; } else {
+  if (!sorted.length) { 
+    html += `<div class="empty-tip">本月暫無記錄</div>`; 
+  } else {
     sorted.slice(0,3).forEach(([date,total],i) => {
       const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = recs.reduce((s,r)=>s+pf(r.hours),0);
       html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:28px">${medals[i]||'▶'}</span><div style="flex:1"><div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${orders>0?`${orders}單 `:''}${hours>0?`${fmtHours(hours)} `:''}</div></div><div style="font-family:var(--mono);font-size:18px;font-weight:800;color:var(--green)">$${fmt(total)}</div></div>`;
     });
   }
   html += `</div>`;
-  const weekTotals = [];
-  for (let w=3; w>=0; w--) {
-    const startD = new Date(); startD.setDate(startD.getDate()-w*7); const endD = new Date(startD); endD.setDate(endD.getDate()+6); let sum = 0;
-    S.records.forEach(r=>{ if(r.date>=`${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`&&r.date<=`${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`) sum += recTotal(r); });
-    weekTotals.push({ label:`第${w+1}週前`, val:sum });
-  }
-  weekTotals.reverse();
-  html += `<div class="card" style="margin-top:8px"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:10px">📅 近4週收入</div><div style="position:relative;height:160px"><canvas id="week-bar"></canvas></div></div>`;
-  el.innerHTML = html; drawBar('week-bar', weekTotals.map(w=>w.label.replace('第','W')), weekTotals.map(w=>w.val), '#FF6B35');
+  
+  el.innerHTML = html;
 }
 
 function drawPie(canvasId, labels, data, colors) {
@@ -2635,32 +2678,22 @@ async function doBackupToFile() {
   }
 }
 
-/* ══ 備份至 Google Drive 引導 ══ */
+/* ══ 替換：備份至 Google Drive 引導 ══ */
 function backupToGoogleDrive() {
-  // 由於純前端無法直接偷偷把檔案塞進使用者的 Google 雲端
-  // 最佳做法是：先讓使用者下載檔案，然後開啟 Google Drive 網頁讓他們上傳
-  
   customConfirm(`
     <div style="text-align:center;">
       <div style="font-size:40px; margin-bottom:12px;">☁️</div>
       <h3 style="margin-bottom:8px; color:var(--t1);">備份至 Google 雲端硬碟</h3>
       <p style="font-size:13px; color:var(--t2); line-height:1.6; text-align:left;">
-        基於安全性限制，網頁無法直接存取您的雲端硬碟。<br><br>
-        點擊「確定」後，系統將：<br>
-        1. 先將備份檔 <b>下載至您的手機</b><br>
-        2. 接著 <b>開啟 Google Drive 網頁</b><br>
-        請您手動將剛才下載的檔案上傳至雲端！
+        請先下載「Google雲端硬碟APP」，並登入您的帳號。<br><br>
+        依照下方指示，點擊「確定」後：<br>
+        1. 會跳出【下載視窗】，請點擊「<b>儲存位置</b>」按鈕。<br>
+        2. 請您手動選擇「Google雲端硬碟」備份保存！
       </p>
     </div>
   `).then(ok => {
     if (ok) {
-      // 1. 先觸發下載
-      doBackupToFile();
-      
-      // 2. 延遲 1.5 秒後開啟 Google Drive
-      setTimeout(() => {
-        window.open('https://drive.google.com/drive/my-drive', '_blank');
-      }, 1500);
+      doBackupToFile(); // 僅觸發下載，不開啟新網頁
     }
   });
 }
