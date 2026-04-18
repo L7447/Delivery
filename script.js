@@ -303,12 +303,13 @@ function performAutoBackup() {
   }
 }
 
-function saveRecords()     { localStorage.setItem(KEYS.records,   JSON.stringify(S.records)); performAutoBackup(); }
-function savePlatforms()   { localStorage.setItem(KEYS.platforms, JSON.stringify(S.platforms));   }
-function saveSettings()    { localStorage.setItem(KEYS.settings,  JSON.stringify(S.settings));    }
-function savePunch()       { localStorage.setItem(KEYS.punch,     JSON.stringify(S.punch));       }
-function saveVehicles()    { localStorage.setItem(KEYS.vehicles,  JSON.stringify(S.vehicles)); performAutoBackup(); }
-function saveVehicleRecs() { localStorage.setItem(KEYS.vehicleRecs,JSON.stringify(S.vehicleRecs)); performAutoBackup(); }
+/* ══ 替換：單純儲存功能 (已移除本機自動備份) ══ */
+function saveRecords()     { localStorage.setItem(KEYS.records,   JSON.stringify(S.records)); }
+function savePlatforms()   { localStorage.setItem(KEYS.platforms, JSON.stringify(S.platforms)); }
+function saveSettings()    { localStorage.setItem(KEYS.settings,  JSON.stringify(S.settings)); }
+function savePunch()       { localStorage.setItem(KEYS.punch,     JSON.stringify(S.punch)); }
+function saveVehicles()    { localStorage.setItem(KEYS.vehicles,  JSON.stringify(S.vehicles)); }
+function saveVehicleRecs() { localStorage.setItem(KEYS.vehicleRecs,JSON.stringify(S.vehicleRecs)); }
 
 function goPage(name) {
   S.tab = name;
@@ -410,11 +411,13 @@ function renderHome() {
         punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`;
       }
     }
+    /* 替換 renderHome() 中間的打卡與日程表區塊 */
+    // 修正離線字體顏色：使用 var(--t3) 讓他在深淺色下都不會太亮
     topHtml += `
-      <div class="punch-card-new" style="background:linear-gradient(145deg, #ffffff, #f9fafb); border:1px solid #f3f4f6; border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin:8px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
+      <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin:8px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
         <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
           <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
-          <span style="color:${isPunched ? 'var(--green)' : 'var(--t2)'}">${punchStatusStr}</span>
+          <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span>
         </div>
         <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
           ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
@@ -428,37 +431,44 @@ function renderHome() {
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
-        // 👈 加入大外框：背景適應深淺模式(var(--sf))，內距5px，圓角25px
+        // 大外框，背景白(自適應)，內距5px，圓角25px
         bottomHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
           if (!events) return;
+          
+          // 漸層背景與標籤美化
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}30; border-radius: 18px; padding: 8px 10px; margin-bottom: 2px;">
-              <div style="display:flex; align-items:center; gap:5px; margin-bottom: 5px;">
-                <div style="width:10px; height:10px; border-radius:50%; background:${p.color}; box-shadow: 0 0 0 3px rgba(255,255,255,0.95);"></div>
-                <span style="font-size:14px; font-weight:800; color:${p.color}; letter-spacing:0.5px;">${p.name}</span>
+            <div style="background: linear-gradient(135deg, ${p.color}15, ${p.color}35); border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
+              <div style="display:flex; align-items:center; margin-bottom: 10px;">
+                <span style="background:${p.color}; color:#fff; font-size:12px; font-weight:800; padding:4px 12px; border-radius:12px; letter-spacing:0.5px; box-shadow:0 2px 6px ${p.color}60;">${p.name}</span>
               </div>
               <div style="display:flex; gap:6px;">${events.map(ev => {
                 const isToday = ev.diff === 0;
                 const dateColor = isToday ? 'var(--green)' : 'var(--t1)';
                 let diffColor = isToday ? 'var(--green)' : 'var(--t2)';
+                
+                // 依照名稱決定框色與字色
                 let nameColor = 'var(--t3)';
-                if (ev.name.includes('結算') || ev.name.includes('取單')) nameColor = 'var(--red)';
-                else if (ev.name.includes('明細')) nameColor = 'var(--acc)';
-                else if (ev.name.includes('發薪')) nameColor = '#0040ff';
+                let borderColor = 'var(--border)';
+                if (ev.name.includes('結算') || ev.name.includes('取單')) { nameColor = 'var(--red)'; borderColor = 'var(--red)'; }
+                else if (ev.name.includes('明細')) { nameColor = 'var(--acc2)'; borderColor = 'var(--acc2)'; }
+                else if (ev.name.includes('發薪')) { nameColor = '#00BFFF'; borderColor = '#00BFFF'; }
+                
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
+                
+                // 👇 這裡的 background 改用 var(--schedule-bg)，dateColor 加上 var(--schedule-text) 確保字體對比度
                 return `
-                  <div style="flex:1; background: var(--sf); border: 2.5px solid #10a3ff; border-radius: 20px; padding: 4px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
-                    <span style="font-size:14px; color:${nameColor}; font-weight:800; margin-bottom:2px; letter-spacing:0.5px;">${ev.name}</span>
-                    <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:${dateColor};">${ev.dateStr} <span style="font-size:13px; font-weight:600; color:${diffColor};">(${ev.diffStr})</span></span>
+                  <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 2.5px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                    <span style="font-size:13px; color:${nameColor}; font-weight:900; margin-bottom:4px; letter-spacing:0.5px;">${ev.name}</span>
+                    <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--schedule-text);">${ev.dateStr} <span style="font-size:11px; font-weight:700; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
               }).join('')}</div>
             </div>`;
         });
         bottomHtml += `</div>`;
       }
-    } 
+    }
 
     else if (S.homeSubTab === 'goal') {
       const goals = S.settings.goals || {};
@@ -871,9 +881,17 @@ function switchAddTab(tab, idx) {
   document.getElementById('add-form-regular').style.display = tab === 'regular' ? 'block' : 'none';
   document.getElementById('add-form-cashtip').style.display = tab === 'cashtip' ? 'block' : 'none';
   
+  /* 替換 switchAddTab 內的小費時間邏輯 */
   if(tab === 'cashtip') {
-    document.getElementById('f-ct-date').value = document.getElementById('f-ct-date').value || todayStr();
-    document.getElementById('f-ct-time').value = document.getElementById('f-ct-time').value || nowTime();
+    if (!S.editingId) {
+      // 新增模式下，每次切換都強制刷新為現在時間
+      document.getElementById('f-ct-date').value = todayStr();
+      document.getElementById('f-ct-time').value = nowTime();
+    } else {
+      // 編輯模式下，若沒有值才帶入預設值
+      document.getElementById('f-ct-date').value = document.getElementById('f-ct-date').value || todayStr();
+      document.getElementById('f-ct-time').value = document.getElementById('f-ct-time').value || nowTime();
+    }
   }
 }
 
@@ -1023,6 +1041,8 @@ async function confirmAddRecord() {
     }
     saveRecords(); 
     resetAddForm(); // 👈 加入這行，儲存後清空表單
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    checkImg.src = isDark ? 'images/Check3.png' : 'images/Check1.png';
     checkBtn.disabled = false; 
     goPage('home'); 
   });
@@ -1713,6 +1733,8 @@ function confirmAddVehRec() {
     
     editingVehRecId = null; 
     saveVehicleRecs(); 
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    checkImg.src = isDark ? 'images/Check3.png' : 'images/Check1.png';
     checkBtn.disabled = false; 
     closeOverlay('veh-rec-add-page'); 
     renderVehicles();
@@ -1747,20 +1769,10 @@ function renderSettings() {
   if (S.settings.themeMode === 'auto') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(已開啟定時自動切換)</span>';
   else if (S.settings.themeMode === 'dark') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(深色模式)</span>';
 
+  /* 替換 renderSettings 裡面的 HTML 字串頭部 */
   const html  = `
-  <div class="set-sec"><h3>帳號與備份</h3><div class="set-list">
+  <div class="set-sec"><h3>帳號登入狀態</h3><div class="set-list">
     <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div>
-    <div class="set-row">
-      <span class="sn">
-        <div>💾 本機自動備份</div>
-        <div class="sn-sub" style="color:var(--text-blue); font-weight:600;">${S.settings.autoBackup ? '最後備份：' + (S.settings.lastBackup || '尚未備份') : '未啟用'}</div>
-      </span>
-      <label class="switch" onclick="event.stopPropagation()">
-        <input type="checkbox" ${S.settings.autoBackup ? 'checked' : ''} onchange="toggleAutoBackup(this.checked)" ${!isLogged ? 'disabled' : ''}>
-        <span class="slider"></span>
-      </label>
-    </div>
-    ${!isLogged ? '<div style="font-size:11px;color:var(--text-red);padding:6px 16px;background:var(--red-d);">*請先登入帳號以啟用本機自動備份功能</div>' : ''}
   </div></div>
 
   <div class="set-sec"><h3>功能設定</h3><div class="set-list">
@@ -2048,15 +2060,6 @@ function logoutAccount() {
   saveSettings();
   toast('已登出帳號');
   closeOverlay('sub-page');
-  renderSettings();
-}
-
-function toggleAutoBackup(checked) {
-  if(!USER.loggedIn && checked) { toast('請先登入帳號'); return; }
-  S.settings.autoBackup = checked;
-  saveSettings();
-  if (checked) performAutoBackup(); // 開啟時立刻備份一次
-  toast(checked ? '💾 已啟用本機自動備份' : '已關閉自動備份');
   renderSettings();
 }
 
@@ -2612,6 +2615,13 @@ function applyTheme() {
   }
   
   document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+  /* 在 applyTheme 函式的結尾加入： */
+  const checkImg1 = document.getElementById('add-save-img');
+  const checkImg2 = document.getElementById('veh-save-img');
+  const checkSrc = isDark ? 'images/Check3.png' : 'images/Check1.png';
+  if(checkImg1 && (checkImg1.src.includes('Check1.png') || checkImg1.src.includes('Check3.png'))) checkImg1.src = checkSrc;
+  if(checkImg2 && (checkImg2.src.includes('Check1.png') || checkImg2.src.includes('Check3.png'))) checkImg2.src = checkSrc;
 }
 
 function applyBackground() {
