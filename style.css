@@ -18,6 +18,9 @@
   --t3: rgba(11, 18, 32, 0.4); 
   --nav-text: var(--t3);
 
+  /* 輔助文字顏色 (亮色藍色、深色黃色) */
+  --hint-color: #3B82F6;
+
   /* 自適應元件色彩 (卡片邊框、小費背景等) */
   --card-border: #708090;
   --cashtip-bg: rgba(34, 197, 94, 0.08);
@@ -70,6 +73,7 @@
   --t2: rgba(230, 238, 248, 0.7);
   --t3: rgba(230, 238, 248, 0.4);
   --nav-text: #ffffff;
+  --hint-color: #FFEA00;
 
   --card-border: #444444;
   --cashtip-bg: #1a3a22;
@@ -105,6 +109,7 @@
     --t2: rgba(230, 238, 248, 0.7);
     --t3: rgba(230, 238, 248, 0.4);
     --nav-text: #ffffff;
+    --hint-color: #FFEA00;
 
     --card-border: #444444;
     --cashtip-bg: #1a3a22;
@@ -168,7 +173,26 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .form-lbl { font-size: 11px; color: var(--t3); letter-spacing: .5px; margin-bottom: 8px; }
 .finp, .fsel { width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--rs); color: var(--t1); font-size: 14px; font-family: var(--sans); outline: none; appearance: none; transition: border-color .15s; }
 .finp:focus, .fsel:focus { border-color: var(--acc); background: var(--sf); }
-.empty-tip { text-align: center; padding: 3px 0; color: var(--text-blue); font-size: 13px; line-height: 2; }
+.empty-tip { text-align: center; padding: 3px 0; color: var(--hint-color); font-size: 13px; line-height: 2; font-weight: 700; }
+
+/* ══ 新增頁-行程記錄輸入框專屬 (橘色) ══ */
+#add-form-regular .finp {
+  border: 1.5px solid var(--acc);
+  background: rgba(255, 107, 53, 0.05);
+  color: var(--acc);
+  font-weight: 700;
+}
+#add-form-regular .finp:focus { background: var(--sf); }
+
+/* ══ 新增車輛記錄輸入框專屬 (隨頁籤變色) ══ */
+#veh-rec-add-page .finp, #veh-rec-add-page .fsel {
+  border: 1.5px solid var(--veh-inp-border, var(--border));
+  background: var(--veh-inp-bg, var(--bg-input));
+  color: var(--veh-inp-color, var(--t1));
+  font-weight: 700;
+}
+#veh-rec-add-page .finp:focus, #veh-rec-add-page .fsel:focus { background: var(--sf); }
+
 .card { background: var(--sf); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; }
 
 .btn-acc { background: var(--acc); color: #fff; border: none; border-radius: var(--rs); font-size: 14px; font-family: var(--sans); font-weight: 600; cursor: pointer; }
