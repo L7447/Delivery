@@ -26,6 +26,9 @@
   --tab3-shadow: 0 4px 10px rgba(255,107,53, 0.4);
   --dow-color: #3B82F6;
 
+  --schedule-bg: #ffffff; /* 確保淺色模式下大框裡面是純白 */
+  --chart-text: #1C1917;  /* 圖表文字顏色 */
+
   /* 圖表與數據強調色 */
   --text-cyan: #0088aa;
   --text-red: #cc0000;
@@ -79,6 +82,9 @@
   --schedule-bg: #e5e7eb;
   --schedule-text: #1C1917;
 
+  /* 在這兩個深色模式區塊內加入： */
+  --chart-text: #e6eef8; /* 深色模式下圖表字體變亮 */
+
   --text-cyan: #22d3ee;
   --text-red: #ff6b6b;
   --text-blue: #60a5fa;
@@ -110,6 +116,9 @@
     /* 👇 同樣加入這兩行 */
     --schedule-bg: #e5e7eb;
     --schedule-text: #1C1917;
+
+    /* 在這兩個深色模式區塊內加入： */
+    --chart-text: #e6eef8; /* 深色模式下圖表字體變亮 */
 
     --text-cyan: #22d3ee;
     --text-red: #ff6b6b;
@@ -257,6 +266,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 
 /* ══ 頁籤系統 (Tabs) ══ */
 .slide-tabs { position: relative; display: flex; background: rgba(0,0,0,0.06); border-radius: 999px; padding: 4px; margin-bottom: 12px; }
+/* 替換原本的 tabs 設定 */
 .tabs-2 .slide-bg { width: calc(50% - 4px); }
 .tabs-3 .slide-bg { width: calc(33.333% - 2.66px); background-color: var(--tab3-bg); box-shadow: var(--tab3-shadow); }
 .tabs-4 .slide-bg { width: calc(25% - 2px); }
