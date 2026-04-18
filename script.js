@@ -467,7 +467,7 @@ function renderHome() {
       const yearly = pf(goals.yearly);
       
       if (weekly > 0 || monthly > 0 || yearly > 0) {
-        bottomHtml += `<div class="card" style="border: 2px solid var(--border); display:flex; flex-direction:column; gap:16px;">`;
+        bottomHtml += `<div class="card" style="border: 1px solid var(--border); display:flex; flex-direction:column; gap:16px;">`;
         
         // 本週目標 (計算剩餘天數)
         if (weekly > 0) {
@@ -1091,47 +1091,40 @@ function renderRptOverview() {
 
   // 精簡高對比總收入框
   html += `
-    <div style="background: #ffffff; border:2px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: #ffffff; border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);">▼</div>
+    <div style="background: var(--sf); border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: var(--sf2); border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
-      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:5px; cursor:pointer; text-align:center;">
-        <div style="font-size:12px; font-weight:800; color: #000000; margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #00BFFF; line-height:1;">$${fmt(total)}</div>
+      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px 12px; cursor:pointer; text-align:center;">
+        <div style="font-size:12px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: var(--text-cyan); line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background: #dcfce7; color: #16a34a; padding:7px 10px 4px 10px; border-radius:10px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
-          <div class="h-div" style="height:30px;"></div>
-          <div style="background: #fef3c7; color: #d97706; padding:7px 10px 4px 10px; border-radius:10px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
-          <div class="h-div" style="height:30px;"></div>
-          <div style="background: #e0f2fe; color: #2563eb; padding:7px 10px 4px 10px; border-radius:10px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
+          <div style="background: rgba(34,197,94,0.15); color: var(--green); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
+          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
+          <div style="background: rgba(59,130,246,0.15); color: var(--blue); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
-      <div style="border-top:3px dashed #778899; margin-top:3px;"></div>
 
-      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: hsla(342, 100%, 98%, 0.90);">
-        
-        
-        <!-- 改為與查看記錄相同的 3 等分布局與顏色 -->
-        <div style="padding:4px 10px; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
+      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
+        <div style="border-top:2px dashed var(--border);"></div>
+        <div style="padding:12px 10px; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">
-            一單： <span style="font-family:var(--mono); color: #ff6600; font-size:19px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
+            一單 <br><span style="font-family:var(--mono); color: var(--acc2); font-size:19px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
           </div>
           <div class="h-div" style="height:30px;"></div>
-          
           <div style="flex:1; text-align:center;">
-            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:19px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
+            1 h <br><span style="font-family:var(--mono); color: var(--text-red); font-size:19px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color:var(--t3);font-size:11px">單</small></span>
           </div>
           <div class="h-div" style="height:30px;"></div>
-          
           <div style="flex:1; text-align:center;">
-            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:19px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
+            時薪 <br><span style="font-family:var(--mono); color: var(--text-blue); font-size:19px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
           </div>
         </div>
         
         ${cashTipTotal > 0 ? `
-        <div style="border-top:2px dashed #cbd5e1;"></div>
-        <div style="display:flow-root; justify-content:space-between; align-items:center; padding:1px 1px 8px 10px;">
-          <span style="background: #16a34a; color: #fff; font-size:11px; padding:2px 6px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
-          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #16a34a;">$${fmt(cashTipTotal)}</span>
+        <div style="border-top:1px dashed var(--border);"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
+          <span style="background: rgba(22,163,74,0.2); color: var(--green); font-size:11px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);">$${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
@@ -1518,7 +1511,7 @@ function renderVehicles() {
   
   S.vehicles.forEach(v => {
     const isActive = v.id === S.selVehicleId;
-    selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')"><div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div><div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:#fff; border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div></div><span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span></div>`;
+    selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')"><div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div><div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:var(--sf); border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div></div><span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span></div>`;
   }); 
   selectorHtml += `</div>`; 
   selectorContainer.innerHTML = selectorHtml;
@@ -1604,7 +1597,7 @@ function openAddVehRec(recordId = null) {
   
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
   if (v) {
-    document.getElementById('veh-rec-veh-icons').innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;"><div style="width:50px; height:50px; border-radius:12px; background:#fff; border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:30px; height:30px;"></div></div><span style="font-size:11px; font-weight:700; color:var(--acc);">${v.name}</span></div>`;
+    document.getElementById('veh-rec-veh-icons').innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;"><div style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:30px; height:30px;"></div></div><span style="font-size:11px; font-weight:700; color:var(--acc);">${v.name}</span></div>`;
   }
 
   let r = null; if (isEdit) { r = S.vehicleRecs.find(x => x.id === recordId); S.addVehRecType = r.type; } else { S.addVehRecType = S.vehicleTab; }
@@ -2618,7 +2611,7 @@ function applyTheme() {
     }
   }
   
-  document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
 }
 
 function applyBackground() {
