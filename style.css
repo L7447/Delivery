@@ -16,6 +16,7 @@
   --t1: #0b1220; 
   --t2: rgba(11, 18, 32, 0.7); 
   --t3: rgba(11, 18, 32, 0.4); 
+  --nav-text: var(--t3);
 
   /* 自適應元件色彩 (卡片邊框、小費背景等) */
   --card-border: #708090;
@@ -65,6 +66,7 @@
   --t1: #e6eef8;
   --t2: rgba(230, 238, 248, 0.7);
   --t3: rgba(230, 238, 248, 0.4);
+  --nav-text: #ffffff;
 
   --card-border: #444444;
   --cashtip-bg: #1a3a22;
@@ -72,6 +74,10 @@
   --tab3-bg: #3b82f6;
   --tab3-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
   --dow-color: #60a5fa;
+
+  /* 👇 加入這兩行：深色模式時，日程表卡片背景變為淺灰，文字強制深色 */
+  --schedule-bg: #e5e7eb;
+  --schedule-text: #1C1917;
 
   --text-cyan: #22d3ee;
   --text-red: #ff6b6b;
@@ -92,6 +98,7 @@
     --t1: #e6eef8;
     --t2: rgba(230, 238, 248, 0.7);
     --t3: rgba(230, 238, 248, 0.4);
+    --nav-text: #ffffff;
 
     --card-border: #444444;
     --cashtip-bg: #1a3a22;
@@ -99,6 +106,10 @@
     --tab3-bg: #3b82f6;
     --tab3-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
     --dow-color: #60a5fa;
+
+    /* 👇 同樣加入這兩行 */
+    --schedule-bg: #e5e7eb;
+    --schedule-text: #1C1917;
 
     --text-cyan: #22d3ee;
     --text-red: #ff6b6b;
@@ -119,7 +130,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 #nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav); display: flex; align-items: center; justify-content: space-around; background: var(--sf); border-top: 1px solid var(--border); z-index: 90; padding: 0 4px env(safe-area-inset-bottom); }
 .ni { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 6px 10px; border-radius: var(--rs); transition: .15s; -webkit-tap-highlight-color: transparent; min-width: 48px; }
 .ni-img { width: 26px; height: 26px; object-fit: contain; transition: transform .15s; }
-.ni .lb { font-size: 10px; color: var(--t3); font-weight: 500; transition: color .15s; }
+.ni .lb { font-size: 10px; color: var(--nav-text); font-weight: 500; transition: color .15s; }
 .ni.active .lb { color: var(--acc); font-weight: 700; }
 .ni.active .ni-img { transform: scale(1.15); }
 
@@ -353,3 +364,4 @@ input:checked + .slider:before { transform: translateX(20px); }
   z-index: 20;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
+
