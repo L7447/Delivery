@@ -2213,7 +2213,13 @@ function openThemeSettings() {
     { id: '', name: '預設無背景 (建議)', type: 'color', val: 'var(--bg)' },
     { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
     { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
-    { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' }
+    { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' },
+    { id: 'background/bg4.jpg', name: '背景圖片 4', type: 'image', val: 'background/bg4.jpg' },    
+    { id: 'background/bg5.jpg', name: '背景圖片 5', type: 'image', val: 'background/bg5.jpg' },
+    { id: 'background/bg6.jpg', name: '背景圖片 6', type: 'image', val: 'background/bg6.jpg' },
+    { id: 'background/bg7.jpg', name: '背景圖片 7', type: 'image', val: 'background/bg7.jpg' },
+    { id: 'background/bg8.jpg', name: '背景圖片 8', type: 'image', val: 'background/bg8.jpg' },        
+    { id: 'background/bg9.jpg', name: '背景圖片 9', type: 'image', val: 'background/bg9.jpg' }
   ];
 
   window._tmpTheme = { tm, as, ae, bg };
