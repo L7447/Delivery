@@ -13,12 +13,14 @@ const DEFAULT_PLATFORMS =[
 
 const DEFAULT_SETTINGS = { 
   goals: { weekly: 0, monthly: 0, yearly: 0 }, 
-  rewards:[], 
+  rewards:[
+    // 內建熊貓預設獎勵 (加入 recurringDays 陣列判斷星期幾)
+    { id: 'fp_m_w', name: '週一至三獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [1,2,3], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
+    { id: 'fp_t_s', name: '週四至六獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [4,5,6], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
+    { id: 'fp_sun', name: '週日獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [0], tiers:[{orders:15, amount:75}, {orders:24, amount:150}, {orders:35, amount:350}, {orders:45, amount:500}] }
+  ], 
   shopHistory:[],
-  themeMode: 'light', // light, dark, auto
-  autoDarkStart: '18:00',
-  autoDarkEnd: '06:00',
-  autoBackup: false
+  themeMode: 'light', autoDarkStart: '18:00', autoDarkEnd: '06:00', autoBackup: false
 };
 
 // 帳號登入系統狀態
@@ -45,7 +47,11 @@ const S = {
   histFullCalY: new Date().getFullYear(), histFullCalM: new Date().getMonth()+1
 };
 
-function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+// 讓 todayStr 支援傳入自訂日期物件
+function todayStr(dObj) { 
+  const d = dObj || new Date(); 
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; 
+}
 function nowTime() { return new Date().toTimeString().slice(0,5); }
 const fmt = n => Number(n||0).toLocaleString('zh-TW', { minimumFractionDigits:0 });
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
@@ -340,7 +346,7 @@ document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('cli
 
 function switchHomeTab(tab, index) { S.homeSubTab = tab; document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); renderHome(); }
 function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
-function switchRptTab(tab, index, btnEl) { S.rptView = tab; document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); btnEl.classList.add('active'); ['overview','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; }); renderReport(); }
+function switchRptTab(tab, index, btnEl) { S.rptView = tab; document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); btnEl.classList.add('active');['overview','rewards','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; }); renderReport(); }
 function switchVehicleTab(tab, index) { S.vehicleTab = tab; document.getElementById('veh-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel'); document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance'); renderVehicleContent(); }
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
@@ -379,12 +385,13 @@ function renderHome() {
         <div class="today-hero">`;
 
     if (platStats.length > 0) {
-      topHtml += `<div class="hero-plat-list" style="display:flex; flex-direction:column; gap:4px;">`;
+      // 👈 加入與日程表相同的大外框 (白底/灰底自適應)
+      topHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
       platStats.forEach(p => {
         topHtml += `
-          <div class="hero-plat-row" style="display:flex; align-items:center; padding:8px 14px; border-radius:12px; font-size:13px; font-weight:600; background:${p.color}15; border: 1px solid ${p.color}60; color: ${p.color};">
+          <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1);">
             <span class="hp-name" style="width:35%; white-space:nowrap;">${p.name}收入：</span>
-            <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right;">$ ${fmt(p.sum)}</span>
+            <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
             <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
             <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
           </div>`;
@@ -946,9 +953,9 @@ function selectPlatform(id) {
   renderPlatformChips(); 
   calcAddTotal(); // 👈 切換平台時，自動檢查是否有符合的獎勵
 }
-/* ══ 替換：帶入自動獎勵計算與總額 ══ */
+/* ══ 替換：帶入自動獎勵計算與總額 (支援即時連動更新) ══ */
 function calcAddTotal() { 
-  calcAutoReward(); // 👈 計算行程輸入時，是否達成獎勵門檻
+  calcAutoReward(); // 👈 計算行程輸入時，立刻更新獎勵欄位
 
   const income = pf(document.getElementById('f-income').value); 
   const bonus = pf(document.getElementById('f-bonus').value); 
@@ -958,49 +965,61 @@ function calcAddTotal() {
   document.getElementById('add-total-val').textContent = fmt(total); 
 }
 
+// 取得獎勵判斷的起迄日期
+function getRewardWindow(dStr, r) {
+  if (!r.recurring) return { start: r.startDate, end: r.endDate };
+  const d = new Date(dStr);
+  const day = d.getDay();
+  // 處理特定星期幾的循環 (如熊貓一到三)
+  if (r.recurringDays && r.recurringDays.length > 0) {
+      if (!r.recurringDays.includes(day)) return null; 
+      let dWeekDay = day === 0 ? 7 : day;
+      let minDay = 7, maxDay = 1;
+      r.recurringDays.forEach(dw => { let w = dw === 0 ? 7 : dw; if(w < minDay) minDay = w; if(w > maxDay) maxDay = w; });
+      const startD = new Date(d); startD.setDate(d.getDate() - (dWeekDay - minDay));
+      const endD = new Date(d); endD.setDate(d.getDate() + (maxDay - dWeekDay));
+      return { start: todayStr(startD), end: todayStr(endD) };
+  }
+  // 傳統整週循環
+  const dWeekDay = day === 0 ? 7 : day;
+  const startD = new Date(d); startD.setDate(d.getDate() - dWeekDay + 1);
+  const endD = new Date(startD); endD.setDate(startD.getDate() + 6);
+  return { start: todayStr(startD), end: todayStr(endD) };
+}
+
 function calcAutoReward() {
   const platId = S.selPlatformId;
   const dStr = document.getElementById('f-date') ? document.getElementById('f-date').value : todayStr();
   const curOrders = pf(document.getElementById('f-orders') ? document.getElementById('f-orders').value : 0);
-  if(!platId || !dStr || curOrders <= 0) return;
+  const bonusEl = document.getElementById('f-bonus');
+
+  if(!platId || !dStr) return;
 
   let totalAutoBonus = 0;
   
   (S.settings.rewards ||[]).forEach(r => {
     if(r.platformId !== platId) return;
-    // 判斷日期 (若開啟循環則預設為有效)
-    if(!r.recurring && (dStr < r.startDate || dStr > r.endDate)) return;
+    const rWindow = getRewardWindow(dStr, r);
+    if(!rWindow) return;
 
-    // 計算這段期間內已經累積的單數
     let accum = 0;
     S.records.forEach(rec => {
-        if(rec.id === S.editingId || rec.platformId !== platId) return;
-        if(r.recurring || (rec.date >= r.startDate && rec.date <= r.endDate)) {
-            accum += pf(rec.orders);
-        }
+        if(rec.id === S.editingId || rec.platformId !== platId || rec.isPunchOnly) return;
+        if(rec.date >= rWindow.start && rec.date <= rWindow.end) accum += pf(rec.orders);
     });
     
     const newTotal = accum + curOrders;
     let achievedBonus = 0;
-    let previousHighest = 0;
 
-    // 檢查階距
     (r.tiers ||[]).forEach(t => {
-        if(accum >= pf(t.orders)) previousHighest = Math.max(previousHighest, pf(t.amount));
         if(newTotal >= pf(t.orders)) achievedBonus = Math.max(achievedBonus, pf(t.amount));
     });
-
-    if (achievedBonus > previousHighest) {
-        totalAutoBonus += (achievedBonus - previousHighest);
-    }
+    totalAutoBonus += achievedBonus;
   });
 
-  if(totalAutoBonus > 0) {
-      const bonusEl = document.getElementById('f-bonus');
-      if(!bonusEl.value || pf(bonusEl.value) === 0) {
-          bonusEl.value = totalAutoBonus;
-          toast(`🎁 達標！自動帶入獎勵 $${totalAutoBonus}`);
-      }
+  // 單數改變時，直接覆寫固定獎勵欄位 (若達標)
+  if (curOrders > 0) {
+    bonusEl.value = totalAutoBonus > 0 ? totalAutoBonus : '';
   }
 }
 
@@ -1057,9 +1076,101 @@ function cancelAddRecord() {
 function renderReport() {
   if (!S.trendDate) S.trendDate = new Date();
   if (S.rptView === 'overview') renderRptOverview(); 
+  if (S.rptView === 'rewards') renderRptRewards(); // 👈 加入這行
   if (S.rptView === 'trend') renderRptTrend();
   if (S.rptView === 'compare') renderRptCompare(); 
   if (S.rptView === 'top3') renderRptTop3();
+}
+
+/* ══ 全新：獎勵進度追蹤介面 ══ */
+function renderRptRewards() {
+  const el = document.getElementById('rv-rewards');
+  const dStr = todayStr(); // 預設查看「今天」所在的區間進度
+  let html = `<div style="font-size:12px; color:var(--t3); margin-bottom:12px; text-align:center;">目前顯示「本週 / 今日」所在區間之獎勵進度</div>`;
+  
+  const activeRewards = (S.settings.rewards ||[]).map(r => {
+    const rWindow = getRewardWindow(dStr, r);
+    if(!rWindow) return null;
+    
+    let accum = 0;
+    S.records.forEach(rec => {
+        if(rec.isPunchOnly || rec.platformId !== r.platformId) return;
+        if(rec.date >= rWindow.start && rec.date <= rWindow.end) accum += pf(rec.orders);
+    });
+    
+    return { ...r, window: rWindow, accum };
+  }).filter(Boolean);
+
+  if (activeRewards.length === 0) {
+    el.innerHTML = html + `<div class="empty-tip">本區間無啟用的獎勵設定</div>`;
+    return;
+  }
+
+  activeRewards.forEach(r => {
+    const plat = getPlatform(r.platformId);
+    let nextTierOrders = null;
+    let achievedBonus = 0;
+    
+    // 計算階距 UI
+    let tiersHtml = `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px;">`;
+    
+    const sortedTiers = [...(r.tiers || [])].sort((a,b) => a.orders - b.orders);
+    sortedTiers.forEach((t, i) => {
+      const isPassed = r.accum >= t.orders;
+      if (isPassed) achievedBonus = Math.max(achievedBonus, t.amount);
+      if (!isPassed && nextTierOrders === null) nextTierOrders = t.orders;
+      
+      const bgColor = isPassed ? plat.color : 'var(--bg-input)';
+      const textColor = isPassed ? '#fff' : 'var(--t3)';
+      const arrowColor = isPassed ? plat.color : 'var(--t3)';
+      
+      tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:4px 8px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono); transition:0.3s;">${t.orders}單 $${t.amount}</span>`;
+      if (i < sortedTiers.length - 1) {
+        // 下一階的箭頭，如果目前這階達標了，箭頭亮起
+        tiersHtml += `<span style="color:${arrowColor}; font-size:12px; font-weight:900;">➔</span>`;
+      }
+    });
+    tiersHtml += `</div>`;
+
+    // 計算進度條比例 (以最高階為 100%)
+    const maxOrders = sortedTiers.length > 0 ? sortedTiers[sortedTiers.length - 1].orders : 1;
+    const progressPct = Math.min(100, Math.round((r.accum / maxOrders) * 100));
+    
+    let statusText = nextTierOrders !== null 
+      ? `差 <span style="color:var(--red); font-size:16px;">${nextTierOrders - r.accum}</span> 單晉級下一階` 
+      : `<span style="color:var(--green);">🎉 已達成最高階獎勵！</span>`;
+
+    html += `
+      <div class="card" style="border: 2px solid ${plat.color}40;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="background:${plat.color}; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">${plat.name}</span>
+              <span style="font-size:14px; font-weight:800; color:var(--t1);">${r.name}</span>
+            </div>
+            <div style="font-size:11px; color:var(--t3); font-family:var(--mono);">📅 ${r.window.start} ~ ${r.window.end}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px; color:var(--t3); font-weight:700;">目前獎金</div>
+            <div style="font-family:var(--mono); font-size:20px; font-weight:900; color:var(--acc);">$${achievedBonus}</div>
+          </div>
+        </div>
+        
+        <div style="margin:12px 0;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-bottom:6px;">
+            <span style="color:var(--t1);">目前累積：<span style="font-family:var(--mono); font-size:16px; color:var(--blue);">${r.accum}</span> 單</span>
+            <span style="font-weight:800;">${statusText}</span>
+          </div>
+          <div class="progress-track" style="height:12px; background:var(--bg-input); border-radius:12px;">
+            <div class="progress-fill" style="width:${progressPct}%; background:linear-gradient(90deg, ${plat.color}80, ${plat.color}); border-radius:12px;"></div>
+          </div>
+        </div>
+        ${tiersHtml}
+      </div>
+    `;
+  });
+
+  el.innerHTML = html;
 }
 
 window.navRptMonth = function(dir) {
@@ -1347,9 +1458,14 @@ function renderRptTrend() {
   }
 }
 
+/* 在 drawTrendBar 函式內尋找 yOpts，並替換 plugin 與 scale 設定： */
 function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = null) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
+  
+  // 動態抓取深色模式的 CSS 變數顏色
+  const style = getComputedStyle(document.documentElement);
+  const textColor = style.getPropertyValue('--chart-text').trim() || '#1C1917';
   
   const topTotalPlugin = {
     id: 'topTotalPlugin',
@@ -1364,7 +1480,8 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
         if (total > 0 && meta) {
           const finalModel = meta.data[i];
           ctx.save();
-          ctx.fillStyle = '#1C1917'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillStyle = textColor; // 👈 使用自適應顏色
+          ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
           ctx.fillText(fmt(total), finalModel.x, finalModel.y - 4);
           ctx.restore();
         }
@@ -1373,12 +1490,14 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
   };
 
   const yOpts = { 
-    stacked: true, 
-    beginAtZero: true, 
-    suggestedMax: maxScale || 500, 
-    ticks: { callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
+    stacked: true, beginAtZero: true, suggestedMax: maxScale || 500, 
+    ticks: { color: textColor, callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
     grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
   };
+  // x軸也要加上顏色
+  const xOpts = { stacked: true, ticks: { color: textColor, font: { size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } };
+
+  // ... 往下將 options.scales.x 換成 xOpts
   
   if (maxScale) yOpts.max = maxScale;
 
@@ -1393,11 +1512,13 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
         legend: { display: showLegend, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, 
         tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } 
       }, 
-      scales: { x: { stacked: true, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } }, y: yOpts }, 
+      scales: { x: xOpts, grid: { display: false } }, y: yOpts }, 
       animation: { duration: 400 } 
     } 
-  });
+  );
 }
+
+/* ══ 替換：同儕比較功能 ══ */    
 
 function _initCmpPeriods() {
   if(S.cmpType === 'month') {
@@ -1472,11 +1593,12 @@ function renderRptCompare() {
   el.innerHTML = html;
 }
 
-/* ══ 替換：移除舊有圖表的 TOP3 分析 ══ */
+/* 替換：將 TOP 3 升級為 TOP 5 */
 function renderRptTop3() {
   const el = document.getElementById('rv-top3'); const monthRecs = getMonthRecs(S.rptY, S.rptM); const dayMap = {};
   monthRecs.forEach(r => { dayMap[r.date] = (dayMap[r.date]||0) + recTotal(r); });
-  const sorted = Object.entries(dayMap).sort((a,b)=>b[1]-a[1]); const medals = ['🥇','🥈','🥉'];
+  const sorted = Object.entries(dayMap).sort((a,b)=>b[1]-a[1]); 
+  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣']; // 👈 加入四五名圖示
 
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
       <button class="mbtn" onclick="navRptMonth(-1)">◀</button>
@@ -1484,17 +1606,17 @@ function renderRptTop3() {
       <button class="mbtn" onclick="navRptMonth(1)">▶</button>
     </div>`;
 
-  html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 3 日</div>`;
+  html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 5 日</div>`;
   if (!sorted.length) { 
     html += `<div class="empty-tip">本月暫無記錄</div>`; 
   } else {
-    sorted.slice(0,3).forEach(([date,total],i) => {
+    // 👈 改成 slice(0,5)
+    sorted.slice(0,5).forEach(([date,total],i) => {
       const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = recs.reduce((s,r)=>s+pf(r.hours),0);
       html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:28px">${medals[i]||'▶'}</span><div style="flex:1"><div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${orders>0?`${orders}單 `:''}${hours>0?`${fmtHours(hours)} `:''}</div></div><div style="font-family:var(--mono);font-size:18px;font-weight:800;color:var(--green)">$${fmt(total)}</div></div>`;
     });
   }
   html += `</div>`;
-  
   el.innerHTML = html;
 }
 
