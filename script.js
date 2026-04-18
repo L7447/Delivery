@@ -450,7 +450,7 @@ function renderHome() {
           
           // 漸層背景與標籤美化
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}25; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}35; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; margin-bottom: 10px;">
                 <span style="background:${p.color}; color:#fff; font-size:12px; font-weight:800; padding:4px 12px; border-radius:12px; letter-spacing:0.5px; box-shadow:0 2px 6px ${p.color}60;">${p.name}</span>
               </div>
