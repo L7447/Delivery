@@ -2230,7 +2230,7 @@ function openThemeSettings() {
   document.getElementById('sub-title').textContent = '外觀與主題設定';
 
   // 👈 將套用按鈕注入右上角
-  document.getElementById('sub-top-right').innerHTML = `<button onclick="applyThemeSettings()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">套用</button>`;  
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="applyThemeSettings()" style="width:60px; height:25px; background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">套用</button>`;  
   
   const tm = S.settings.themeMode || 'light';
   const as = S.settings.autoDarkStart || '18:00';
