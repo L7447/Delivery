@@ -2346,7 +2346,10 @@ window.applyThemeSettings = function() {
 /* ══ 補齊：進階獎勵項目設定彈窗 ══ */
 function openRewardSettings() {
   document.getElementById('sub-title').textContent = '獎勵項目設定';
-  document.getElementById('sub-top-right').innerHTML = '';
+
+    // 👈 將「新增」按鈕注入至右上角
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="openAddReward()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">＋ 新增</button>`;
+
   let html = `<div class="set-list" style="margin-bottom:16px;">`;
   
   if (!S.settings.rewards || S.settings.rewards.length === 0) {
@@ -2370,7 +2373,6 @@ function openRewardSettings() {
     });
   }
   html += `</div>`;
-  html += `<button onclick="openAddReward()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs);box-shadow:0 4px 12px rgba(255,107,53,0.3);">➕ 新增獎勵項目</button>`;
   
   document.getElementById('sub-body').innerHTML = html;
   openOverlay('sub-page');
@@ -2493,9 +2495,14 @@ function saveGoals() {
 /* ══ 替換：進階獎勵介面與邏輯 ══ */
 let tempTiers =[];
 
+/* ══ 替換：新增進階獎勵項目 ══ */
 function openAddReward() { 
   document.getElementById('sub-title').textContent = '新增進階獎勵項目'; 
-  tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
+  
+  // 👈 進入新增表單時，清空右上角按鈕，避免殘留
+  document.getElementById('sub-top-right').innerHTML = ''; 
+  
+  tempTiers =[{orders:0, amount:0}, {orders:0, amount:0}];
   renderRewardForm();
 }
 
