@@ -448,14 +448,9 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           
-          // 特製左下至右上的漸層色票
-          let bgGrad = `linear-gradient(135deg, ${p.color}15, ${p.color}35)`; // 預設值
-          if (p.id === 'uber') bgGrad = `linear-gradient(to top right, #008000, #1C8E1C, #399C39, #55AA55, #71B871, #8EC78E, #AAD5AA, #C6E3C6, #E3F1E3)`;
-          else if (p.id === 'foodpanda') bgGrad = `linear-gradient(to top right, #D70F64, #DB2A75, #E04486, #E45F98, #E97AA9, #ED94BA, #F2AFCB, #F6CADD, #FBE4EE)`;
-          else if (p.id === 'foodomo') bgGrad = `linear-gradient(to top right, #ff0000, #FF1C1C, #FF3939, #FF5555, #FF7171, #FF8E8E, #FFAAAA, #FFC6C6, #FFE3E3)`;
-
+          // 漸層背景與標籤美化
           bottomHtml += `
-            <div style="background: ${bgGrad}; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
+            <div style="border: 2px solid ${p.color}; background: ${p.color}25; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; margin-bottom: 10px;">
                 <span style="background:${p.color}; color:#fff; font-size:12px; font-weight:800; padding:4px 12px; border-radius:12px; letter-spacing:0.5px; box-shadow:0 2px 6px ${p.color}60;">${p.name}</span>
               </div>
@@ -2076,6 +2071,7 @@ async function verifyAuthCode(email) {
 /* ══ 帳號介面 (判斷是否為管理員) ══ */
 async function openAccountStats() {
   document.getElementById('sub-title').textContent = '帳號資訊';
+  document.getElementById('sub-top-right').innerHTML = '';
   
   // 1. 一般會員看見的基本畫面
   let baseHtml = `
@@ -2350,6 +2346,7 @@ window.applyThemeSettings = function() {
 /* ══ 補齊：進階獎勵項目設定彈窗 ══ */
 function openRewardSettings() {
   document.getElementById('sub-title').textContent = '獎勵項目設定';
+  document.getElementById('sub-top-right').innerHTML = '';
   let html = `<div class="set-list" style="margin-bottom:16px;">`;
   
   if (!S.settings.rewards || S.settings.rewards.length === 0) {
@@ -2391,6 +2388,7 @@ async function deleteReward(i) {
 /* 替換 openPlatformList 函式，並加上 togglePlatform 函式 */
 function openPlatformList() {
   document.getElementById('sub-title').textContent = '平台列表';
+  document.getElementById('sub-top-right').innerHTML = '';
   document.getElementById('sub-body').innerHTML = `
     <div class="set-list">
       ${S.platforms.map(p => `
@@ -2437,6 +2435,7 @@ function openPlatformEdit(id) {
 function savePlatformEdit(id) { const p = S.platforms.find(x=>x.id===id); if (!p) return; p.color = document.getElementById('sp-color').value.trim() || p.color; p.active = document.getElementById('sp-active').checked; savePlatforms(); toast('✅ 平台已更新'); if (S.tab === 'home') renderHome(); renderSettings(); openPlatformList(); }
 function openGoalSettings() { 
   document.getElementById('sub-title').textContent = '目標設定'; 
+  document.getElementById('sub-top-right').innerHTML = '';
   document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); 
   const g = S.settings.goals || {}; 
   
