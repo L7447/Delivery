@@ -995,6 +995,12 @@ function calcAutoReward() {
 
   if(!platId || !dStr) return;
 
+  // 👈 當單數小於等於 0 (或被清除) 時，清空固定獎勵欄位並停止計算
+  if (curOrders <= 0) {
+     bonusEl.value = '';
+     return;
+  }
+
   let totalAutoBonus = 0;
   
   (S.settings.rewards ||[]).forEach(r => {
@@ -1010,6 +1016,7 @@ function calcAutoReward() {
     
     const newTotal = accum + curOrders;
     let achievedBonus = 0;
+    let previousHighest = 0;
 
     (r.tiers ||[]).forEach(t => {
         if(newTotal >= pf(t.orders)) achievedBonus = Math.max(achievedBonus, pf(t.amount));
@@ -1082,7 +1089,7 @@ function renderReport() {
   if (S.rptView === 'top3') renderRptTop3();
 }
 
-/* ══ 全新：獎勵進度追蹤介面 ══ */
+/* ══ 2. 替換：獎勵進度分析 (單階進度條、縮小內距防換行) ══ */
 function renderRptRewards() {
   const el = document.getElementById('rv-rewards');
   const dStr = todayStr(); // 預設查看「今天」所在的區間進度
@@ -1109,32 +1116,42 @@ function renderRptRewards() {
   activeRewards.forEach(r => {
     const plat = getPlatform(r.platformId);
     let nextTierOrders = null;
+    let prevTierOrders = 0; // 👈 紀錄上一階單數，用來算進度條
     let achievedBonus = 0;
     
-    // 計算階距 UI
-    let tiersHtml = `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px;">`;
+    // 壓縮間距 gap: 3px
+    let tiersHtml = `<div style="display:flex; align-items:center; gap:3px; flex-wrap:wrap; margin-top:12px;">`;
     
     const sortedTiers = [...(r.tiers || [])].sort((a,b) => a.orders - b.orders);
     sortedTiers.forEach((t, i) => {
       const isPassed = r.accum >= t.orders;
-      if (isPassed) achievedBonus = Math.max(achievedBonus, t.amount);
+      if (isPassed) {
+        achievedBonus = Math.max(achievedBonus, t.amount);
+        prevTierOrders = t.orders; // 若達標，更新「上一階位」的基準
+      }
       if (!isPassed && nextTierOrders === null) nextTierOrders = t.orders;
       
       const bgColor = isPassed ? plat.color : 'var(--bg-input)';
       const textColor = isPassed ? '#fff' : 'var(--t3)';
       const arrowColor = isPassed ? plat.color : 'var(--t3)';
       
-      tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:4px 8px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono); transition:0.3s;">${t.orders}單 $${t.amount}</span>`;
+      // 壓縮標籤：縮小 padding, font-size, 加上負 letter-spacing
+      tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:2px 4px; border-radius:6px; font-size:10px; font-weight:800; font-family:var(--mono); transition:0.3s; letter-spacing:-0.3px;">${t.orders}單 $${t.amount}</span>`;
+      
       if (i < sortedTiers.length - 1) {
-        // 下一階的箭頭，如果目前這階達標了，箭頭亮起
-        tiersHtml += `<span style="color:${arrowColor}; font-size:12px; font-weight:900;">➔</span>`;
+        // 壓縮箭頭邊距
+        tiersHtml += `<span style="color:${arrowColor}; font-size:10px; font-weight:900; margin: 0 -1px;">➔</span>`;
       }
     });
     tiersHtml += `</div>`;
 
-    // 計算進度條比例 (以最高階為 100%)
-    const maxOrders = sortedTiers.length > 0 ? sortedTiers[sortedTiers.length - 1].orders : 1;
-    const progressPct = Math.min(100, Math.round((r.accum / maxOrders) * 100));
+    // 👈 全新邏輯：計算「當前這一階梯」的獨立進度 %
+    let progressPct = 100;
+    if (nextTierOrders !== null) {
+      const currentTierTarget = nextTierOrders - prevTierOrders;     // 這一階要跑幾單
+      const currentTierProgress = r.accum - prevTierOrders;          // 這一階目前跑了幾單
+      progressPct = Math.max(0, Math.min(100, Math.round((currentTierProgress / currentTierTarget) * 100)));
+    }
     
     let statusText = nextTierOrders !== null 
       ? `差 <span style="color:var(--red); font-size:16px;">${nextTierOrders - r.accum}</span> 單晉級下一階` 
@@ -1162,6 +1179,7 @@ function renderRptRewards() {
             <span style="font-weight:800;">${statusText}</span>
           </div>
           <div class="progress-track" style="height:12px; background:var(--bg-input); border-radius:12px;">
+            <!-- 視覺呈現的是單一階梯的進度 -->
             <div class="progress-fill" style="width:${progressPct}%; background:linear-gradient(90deg, ${plat.color}80, ${plat.color}); border-radius:12px;"></div>
           </div>
         </div>
@@ -1458,7 +1476,7 @@ function renderRptTrend() {
   }
 }
 
-/* 在 drawTrendBar 函式內尋找 yOpts，並替換 plugin 與 scale 設定： */
+/* ══ 1. 替換：修復趨勢圖表繪製語法結構 ══ */
 function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = null) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
@@ -1494,12 +1512,9 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
     ticks: { color: textColor, callback: v => v >= 1000 ? (v / 1000).toFixed(1).replace('.0', '') + 'k' : v, font: { size: 10 } }, 
     grid: { color: 'rgba(0,0,0,.05)', drawBorder: false } 
   };
-  // x軸也要加上顏色
-  const xOpts = { stacked: true, ticks: { color: textColor, font: { size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } };
-
-  // ... 往下將 options.scales.x 換成 xOpts
-  
   if (maxScale) yOpts.max = maxScale;
+  
+  const xOpts = { stacked: true, ticks: { color: textColor, font: { size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } };
 
   S.charts[canvasId] = new Chart(ctx, { 
     type: 'bar', 
@@ -1512,10 +1527,10 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
         legend: { display: showLegend, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, 
         tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } 
       }, 
-      scales: { x: xOpts, grid: { display: false } }, y: yOpts }, 
+      scales: { x: xOpts, y: yOpts }, // ✅ 修正這裡的括號結構
       animation: { duration: 400 } 
     } 
-  );
+  });
 }
 
 /* ══ 替換：同儕比較功能 ══ */    
