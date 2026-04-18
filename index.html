@@ -196,8 +196,13 @@
   </div>
 </div>
 
+<!-- 替換原本的 sub-page 區塊 -->
 <div class="overlay-page" id="sub-page">
-  <div class="top-bar"><button class="bar-btn" onclick="animateClose(this, () => closeOverlay('sub-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2 id="sub-title">設定</h2><div style="width:36px"></div></div>
+  <div class="top-bar">
+    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('sub-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+    <h2 id="sub-title">設定</h2>
+    <div id="sub-top-right" style="min-width:36px; text-align:right;"></div>
+  </div>
   <div class="overlay-body" id="sub-body"></div>
 </div>
 
