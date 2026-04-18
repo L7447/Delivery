@@ -78,30 +78,34 @@ function toast(msg, ms=2200) {
 }
 
 /* ══ 智慧型進度條動畫 (支援儲存與載入) ══ */
-/* ══ 執行多段式漸進進度條動畫 (每 0.15 秒跑 5%) ══ */
+/* ══ 執行多段式漸進進度條動畫 ══ */
 let progressInterval = null;
 let isSimulatingProgress = false;
 
-function showProgress(text) {
+function showProgress(text, isSlow = false) {
   const ov = document.getElementById('progress-overlay');
   const fill = document.getElementById('big-progress-fill');
   const txt = document.getElementById('big-progress-text');
   
   txt.textContent = text;
-  fill.style.transition = 'width 0.2s ease'; // 每一小段平滑過渡
+  fill.style.transition = 'width 0.2s ease'; 
   fill.style.width = '0%';
   ov.classList.add('show');
   
   let currentPct = 0;
   clearInterval(progressInterval);
   
-  // 啟動定時器，每 0.15 秒加 5%，最高卡在 85%
+  // 若設定為 isSlow (如油價載入)，則每 300ms 增加 2%，達成非常緩慢的效果
+  const step = isSlow ? 2 : 5;
+  const intervalMs = isSlow ? 300 : 150;
+  const maxPct = isSlow ? 95 : 85;
+
   progressInterval = setInterval(() => {
-    if (currentPct < 85) {
-      currentPct += 5;
+    if (currentPct < maxPct) {
+      currentPct += step;
       fill.style.width = currentPct + '%';
     }
-  }, 150);
+  }, intervalMs);
   
   isSimulatingProgress = true;
 }
@@ -444,9 +448,14 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           
-          // 漸層背景與標籤美化
+          // 特製左下至右上的漸層色票
+          let bgGrad = `linear-gradient(135deg, ${p.color}15, ${p.color}35)`; // 預設值
+          if (p.id === 'uber') bgGrad = `linear-gradient(to top right, #008000, #1C8E1C, #399C39, #55AA55, #71B871, #8EC78E, #AAD5AA, #C6E3C6, #E3F1E3)`;
+          else if (p.id === 'foodpanda') bgGrad = `linear-gradient(to top right, #D70F64, #DB2A75, #E04486, #E45F98, #E97AA9, #ED94BA, #F2AFCB, #F6CADD, #FBE4EE)`;
+          else if (p.id === 'foodomo') bgGrad = `linear-gradient(to top right, #ff0000, #FF1C1C, #FF3939, #FF5555, #FF7171, #FF8E8E, #FFAAAA, #FFC6C6, #FFE3E3)`;
+
           bottomHtml += `
-            <div style="background: linear-gradient(135deg, ${p.color}15, ${p.color}35); border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
+            <div style="background: ${bgGrad}; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; margin-bottom: 10px;">
                 <span style="background:${p.color}; color:#fff; font-size:12px; font-weight:800; padding:4px 12px; border-radius:12px; letter-spacing:0.5px; box-shadow:0 2px 6px ${p.color}60;">${p.name}</span>
               </div>
@@ -1093,7 +1102,7 @@ function renderReport() {
 function renderRptRewards() {
   const el = document.getElementById('rv-rewards');
   const dStr = todayStr(); // 預設查看「今天」所在的區間進度
-  let html = `<div style="font-size:12px; color:var(--t3); margin-bottom:12px; text-align:center;">目前顯示「本週 / 今日」所在區間之獎勵進度</div>`;
+  let html = `<div style="font-size:12px; color:var(--hint-color); font-weight:700; margin-bottom:12px; text-align:center;">目前顯示「本週 / 今日」所在區間之獎勵進度</div>`;
   
   const activeRewards = (S.settings.rewards ||[]).map(r => {
     const rWindow = getRewardWindow(dStr, r);
@@ -1789,6 +1798,7 @@ function openAddVehRec(recordId = null) {
 }
 
 
+/* 替換 switchVehFormTab 的 CSS 變數切換邏輯 */
 function switchVehFormTab(type, index) {
   S.addVehRecType = type; document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`; 
   document.getElementById('btn-form-fuel').classList.toggle('active', type === 'fuel'); document.getElementById('btn-form-maint').classList.toggle('active', type === 'maintenance'); 
@@ -1796,6 +1806,25 @@ function switchVehFormTab(type, index) {
   
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
   const isEV = v && v.defaultFuel === 'electric';
+  
+  // 動態切換頁籤與輸入框顏色
+  const vehPage = document.getElementById('veh-rec-add-page');
+  const tabBg = document.getElementById('veh-form-tab-bg');
+  if (type === 'fuel') {
+    tabBg.style.backgroundColor = 'var(--red)';
+    tabBg.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.4)';
+    vehPage.style.setProperty('--veh-inp-border', 'var(--red)');
+    vehPage.style.setProperty('--veh-inp-bg', 'rgba(239,68,68,0.05)');
+    vehPage.style.setProperty('--veh-inp-color', 'var(--red)');
+  } else {
+    tabBg.style.backgroundColor = 'var(--green)'; // 保養維修使用綠色
+    tabBg.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.4)';
+    vehPage.style.setProperty('--veh-inp-border', 'var(--green)');
+    vehPage.style.setProperty('--veh-inp-bg', 'rgba(34,197,94,0.05)');
+    vehPage.style.setProperty('--veh-inp-color', 'var(--green)');
+  }
+  
+  // ... 原本底下的 if (type === 'fuel') 等隱藏邏輯保持不變 ...
 
   if (type === 'fuel') {
     document.getElementById('vr-fuel-type').parentElement.style.display = isEV ? 'none' : 'flex';
@@ -1938,7 +1967,7 @@ function openAuthModal() {
   document.getElementById('sub-title').textContent = '登入/註冊帳號';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6; background:var(--bg-input); padding:12px; border-radius:12px;">
+      <p style="font-size:13px;color:var(--hint-color);margin-bottom:16px;line-height:1.6; font-weight:600; background:var(--bg-input); padding:12px; border-radius:12px;">
         💡 <b>一鍵登入/註冊：</b><br>
         若您已有帳號，輸入密碼即可快速登入。<br>
         若是首次使用，系統將自動為您建立帳號，並寄送驗證碼至信箱！
@@ -2203,6 +2232,9 @@ function logoutAccount() {
 /* ══ 升級版：外觀與主題設定 (深色模式與自訂背景) ══ */
 function openThemeSettings() {
   document.getElementById('sub-title').textContent = '外觀與主題設定';
+
+  // 👈 將套用按鈕注入右上角
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="applyThemeSettings()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">套用</button>`;  
   
   const tm = S.settings.themeMode || 'light';
   const as = S.settings.autoDarkStart || '18:00';
@@ -2264,7 +2296,6 @@ function openThemeSettings() {
 
   html += `
     </div>
-    <button onclick="applyThemeSettings()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs);box-shadow:0 4px 12px rgba(255,107,53,0.3);">✅ 套用設定</button>
   </div>`;
   
   document.getElementById('sub-body').innerHTML = html;
@@ -2377,7 +2408,7 @@ function openPlatformList() {
         </div>
       `).join('')}
     </div>
-    <div style="margin-top:12px; font-size:11px; color:var(--t3); text-align:center;">
+    <div style="margin-top:12px; font-size:11px; color:var(--hint-color); font-weight:700; text-align:center;">
       💡 點擊平台名稱可進入自訂顏色與詳細設定
     </div>`;
   
@@ -2417,7 +2448,7 @@ function openGoalSettings() {
   // 美化版面配置
   document.getElementById('sub-body').innerHTML = `
     <div style="background:var(--sf2); padding:16px; border-radius:12px; margin-bottom:20px;">
-      <div style="font-size:12px; color:var(--t2); line-height:1.6; font-weight:600;">
+      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
         💡 設定您的外送收入目標。<br>設定後即可在首頁「目標進度」追蹤您的達標狀況與剩餘天數！
       </div>
     </div>
@@ -2657,7 +2688,7 @@ async function fetchAutoGasPrice() {
   }
 
   // 替換原本的 toast 為全新進度條動畫
-  showProgress('油價載入中...');
+  showProgress('油價載入中...', true); // 👈 加上 true 啟動緩慢載入模式
 
   try {
     const cpcUrl = encodeURIComponent('https://www.cpc.com.tw/historyprice.aspx?n=2890');
