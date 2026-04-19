@@ -2671,14 +2671,72 @@ async function doReset() {
   renderHome(); renderSettings(); 
 }
 
+/* ══ 聯絡我們：信箱與一鍵複製 ══ */
+function openContactUs() {
+  document.getElementById('sub-title').textContent = '聯絡我們';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  const email = 'XXX@gmail.com'; // 👈 這裡可以替換成您真實的 Email
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px; text-align:center;">
+      <div style="font-size:54px; margin-bottom:16px;">✉️</div>
+      <div style="font-size:15px; font-weight:700; color:var(--t1); margin-bottom:12px; line-height:1.6;">
+        如有任何問題、功能建議，<br>或帳號相關協助，歡迎來信：
+      </div>
+      <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--acc); margin-bottom:24px; background:var(--bg-input); padding:16px; border-radius:12px; border:2px dashed var(--acc);">
+        ${email}
+      </div>
+      <button onclick="copyEmailToClipboard('${email}')" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">
+        📋 一鍵複製信箱
+      </button>
+    </div>
+  `;
+  
+  document.getElementById('sub-page').style.zIndex = '1100'; // 確保蓋過關於我們頁面
+  openOverlay('sub-page');
+}
+
+// 支援各種手機瀏覽器的一鍵複製功能 (Fallback 機制)
+function copyEmailToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      toast('✅ 信箱已複製成功！');
+    }).catch(() => {
+      fallbackCopyTextToClipboard(text);
+    });
+  } else {
+    fallbackCopyTextToClipboard(text);
+  }
+}
+
+function fallbackCopyTextToClipboard(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  // 避免手機畫面往下捲動
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    document.execCommand('copy');
+    toast('✅ 信箱已複製成功！');
+  } catch (err) {
+    toast('⚠️ 複製失敗，請長按信箱手動複製');
+  }
+  document.body.removeChild(textArea);
+}
+
 /* ══ 關於我們：彈窗內容渲染函式 ══ */
 function openSpecialThanks() {
   document.getElementById('sub-title').textContent = '特別致謝';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
       <p style="margin-bottom:16px; font-weight:500;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法，讓『 外送記帳APP 』有機會做出來！</p>
-      <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #E04486; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:700;">
-        f 按讚 心酸熊貓人 🐼
+      <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #DB2A75; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:800; font-size:18px;">
+        f  按讚 心酸熊貓人 🐼
       </a>
     </div>
   `;
@@ -2692,23 +2750,20 @@ function openPrivacyPolicy() {
   document.getElementById('sub-body').innerHTML = `
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
       <strong style="color:var(--acc); font-size:15px;">1. 我們收集的資訊</strong><br>
-      • 基本帳號資料（電子郵件）<br>
+      • 基本帳號資料（電子郵件）。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">2. 我們如何使用資訊</strong><br>
-      • 統計使用人數<br>
+      • 統計使用人數。<br><br>
 
-      <strong style="color:var(--acc); font-size:15px;">3. 資訊分享</strong><br>
-      • 我們不會出售您的個人資料<br>
+      <strong style="color:var(--acc); font-size:15px;">3. 資料安全</strong><br>
+      • 使用加密技術保護您的帳號安全。<br>
+      • 記錄的資料，只存在「 您的裝置上 」與「 您的雲端硬碟 」。<br><br>
 
-      <strong style="color:var(--acc); font-size:15px;">4. 資料安全</strong><br>
-      • 使用加密技術保護您的帳號安全<br>
-      • 記錄的資料，只存在「 您的裝置上 」與「 您的雲端硬碟 」<br><br>
+      <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
+      • 您可隨時聯繫我們刪除帳號。<br><br>
 
-      <strong style="color:var(--acc); font-size:15px;">5. 您的權利</strong><br>
-      • 您可隨時聯繫我們刪除帳號<br><br>
-
-      <strong style="color:var(--acc); font-size:15px;">6. 聯絡方式</strong><br>
-      如有任何隱私問題，請透過【 功能 】裡的「 聯絡我們 」，與我們聯繫。
+      <strong style="color:var(--acc); font-size:15px;">5. 聯絡方式</strong><br>
+      如有任何問題或建議，請透過【 功能 】裡的「 聯絡我們 」，與我們聯繫。
       <div style="height:32px;"></div>
     </div>
   `;
