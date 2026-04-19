@@ -329,28 +329,34 @@
   <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
     <img src="images/xwiyxw.png" alt="Logo" style="width:400px; height:400px; margin:1px; object-fit:contain; pointer-events:none; user-select:none; -webkit-user-drag:none;" oncontextmenu="return false;">
 
-    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">宮美1<span style="font-size:1px; color:#ffffff;">.</span>00人團隊製作  2026 © v1.4.14.115</div>
+    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">宮美1<span style="font-size:1px; color:#ffffff;">.</span>00人團隊製作  2026 © v1.4.19.315</div>
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
-      <!-- 官方網站 -->
-      <div style="padding:16px 0; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <span style="font-size:15px; font-weight:500; color:var(--t1);">官方網站</span>
+      <!-- 1. 聯絡我們 (點擊開啟彈窗並一鍵複製) -->
+      <div onclick="openContactUs()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <span style="font-size:15px; font-weight:500; color:var(--t1);">聯絡我們</span>
         <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
       </div>
       
-      <!-- 特別致謝 (點擊開啟彈窗) -->
-      <div onclick="openSpecialThanks()" style="padding:16px 0; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <span style="font-size:15px; font-weight:500; color:var(--t1);">特別致謝</span>
+      <!-- 2. 特別致謝 -->
+      <div onclick="openSpecialThanks()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <span style="font-size:15px; font-weight:500; color:var(--t1);">特別感謝</span>
         <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
       </div>
       
-      <!-- 隱私權政策 (點擊開啟彈窗) -->
-      <div onclick="openPrivacyPolicy()" style="padding:16px 0; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <span style="font-size:15px; font-weight:500; color:var(--t1);">APP 隱私權政策</span>
+      <!-- 3. 隱私權政策 -->
+      <div onclick="openPrivacyPolicy()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <span style="font-size:15px; font-weight:500; color:var(--t1);">隱私權政策</span>
         <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
       </div>
+
+      <!-- 4. 法規網站連結 (新開網頁) -->
+      <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT0201.aspx?id=FL105973" target="_blank" style="display:block; padding:16px 0; border-bottom:1px solid var(--border); text-decoration:none;">
+        <div style="font-size:20px; font-weight:700; color:var(--t1); margin-bottom:6px; line-height:1.4;">外送員權益保障及外送平臺管理法</div>
+        <div style="font-size:18px; font-weight:300; color:var(--t2);">勞動部 官方法規網站</div>
+      </a>
+      <div style="height:40px;"></div>
     </div>
-  </div>
 
 <script src="/script.js"></script>
 </body>
