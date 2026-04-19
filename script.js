@@ -994,15 +994,15 @@ function calcAddTotal() {
   document.getElementById('add-total-val').textContent = fmt(total); 
 }
 
-// 取得獎勵判斷的起迄日期
+// 取得獎勵判斷的起迄日期 (修復星期日檢查漏洞)
 function getRewardWindow(dStr, r) {
   if (!r.recurring) return { start: r.startDate, end: r.endDate };
   const d = new Date(dStr);
   const day = d.getDay();
+  const dWeekDay = day === 0 ? 7 : day;
+  
   // 處理特定星期幾的循環 (如熊貓一到三)
   if (r.recurringDays && r.recurringDays.length > 0) {
-      if (!r.recurringDays.includes(day)) return null; 
-      let dWeekDay = day === 0 ? 7 : day;
       let minDay = 7, maxDay = 1;
       r.recurringDays.forEach(dw => { let w = dw === 0 ? 7 : dw; if(w < minDay) minDay = w; if(w > maxDay) maxDay = w; });
       const startD = new Date(d); startD.setDate(d.getDate() - (dWeekDay - minDay));
@@ -1010,12 +1010,12 @@ function getRewardWindow(dStr, r) {
       return { start: todayStr(startD), end: todayStr(endD) };
   }
   // 傳統整週循環
-  const dWeekDay = day === 0 ? 7 : day;
   const startD = new Date(d); startD.setDate(d.getDate() - dWeekDay + 1);
   const endD = new Date(startD); endD.setDate(startD.getDate() + 6);
   return { start: todayStr(startD), end: todayStr(endD) };
 }
 
+/* ══ 自動計算獎勵 (單數為0清除、精準差額發放) ══ */
 function calcAutoReward() {
   const platId = S.selPlatformId;
   const dStr = document.getElementById('f-date') ? document.getElementById('f-date').value : todayStr();
@@ -1024,7 +1024,7 @@ function calcAutoReward() {
 
   if(!platId || !dStr) return;
 
-  // 👈 當單數小於等於 0 (或被清除) 時，清空固定獎勵欄位並停止計算
+  // 當單數小於等於 0 (或被清除) 時，清空固定獎勵欄位並停止計算
   if (curOrders <= 0) {
      bonusEl.value = '';
      return;
@@ -1036,6 +1036,9 @@ function calcAutoReward() {
     if(r.platformId !== platId) return;
     const rWindow = getRewardWindow(dStr, r);
     if(!rWindow) return;
+    
+    // 👉 確保目前輸入的這筆單，日期真的落在這個獎勵區間內
+    if (dStr < rWindow.start || dStr > rWindow.end) return;
 
     let accum = 0;
     S.records.forEach(rec => {
@@ -1048,14 +1051,20 @@ function calcAutoReward() {
     let previousHighest = 0;
 
     (r.tiers ||[]).forEach(t => {
+        if(accum >= pf(t.orders)) previousHighest = Math.max(previousHighest, pf(t.amount));
         if(newTotal >= pf(t.orders)) achievedBonus = Math.max(achievedBonus, pf(t.amount));
     });
-    totalAutoBonus += achievedBonus;
+
+    if (achievedBonus > previousHighest) {
+        totalAutoBonus += (achievedBonus - previousHighest);
+    }
   });
 
-  // 單數改變時，直接覆寫固定獎勵欄位 (若達標)
-  if (curOrders > 0) {
-    bonusEl.value = totalAutoBonus > 0 ? totalAutoBonus : '';
+  if(totalAutoBonus > 0) {
+      if(!bonusEl.value || pf(bonusEl.value) === 0) {
+          bonusEl.value = totalAutoBonus;
+          toast(`🎁 達標！自動帶入獎金差額 $${totalAutoBonus}`);
+      }
   }
 }
 
@@ -1118,7 +1127,7 @@ function renderReport() {
   if (S.rptView === 'top3') renderRptTop3();
 }
 
-/* ══ 替換：獎勵分析 (支援本週/即將到來 切換) ══ */
+/* ══ 替換：獎勵分析 (精準修復本週/即將到來切換邏輯) ══ */
 function renderRptRewards() {
   const el = document.getElementById('rv-rewards');
   if (!S.rewardSubTab) S.rewardSubTab = 'current';
@@ -1129,17 +1138,23 @@ function renderRptRewards() {
       <button class="slide-btn ${S.rewardSubTab === 'current' ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderRptRewards()">本週進度</button>
       <button class="slide-btn ${S.rewardSubTab === 'upcoming' ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderRptRewards()">即將到來</button>
     </div>
-    <div style="font-size:12px; color:var(--hint-color); margin-bottom:12px; text-align:center;">
-      ${S.rewardSubTab === 'current' ? '顯示本週或今日生效中之獎勵進度' : '顯示明日起至下週日之即將到來獎勵'}
+    <div style="font-size:12px; color:var(--hint-color); margin-bottom:12px; text-align:center; font-weight:700;">
+      ${S.rewardSubTab === 'current' ? '顯示「本週一至日」內之獎勵進度' : '顯示明日起至下週日之即將到來獎勵'}
     </div>`;
 
   const today = new Date(); today.setHours(0,0,0,0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const dayOfWeek = today.getDay() || 7;
+  
+  // 推算本週一、本週日、與下週日
+  const currentMon = new Date(today); currentMon.setDate(today.getDate() - dayOfWeek + 1);
+  const currentSun = new Date(today); currentSun.setDate(today.getDate() - dayOfWeek + 7);
   const nextSunday = new Date(today); nextSunday.setDate(today.getDate() + (7 - dayOfWeek) + 7);
 
   const dStrToday = todayStr(today);
   const dStrTomorrow = todayStr(tomorrow);
+  const dStrCurMon = todayStr(currentMon);
+  const dStrCurSun = todayStr(currentSun);
   const dStrNextSun = todayStr(nextSunday);
 
   let activeRewards = [];
@@ -1162,8 +1177,10 @@ function renderRptRewards() {
     uniqueWindows.forEach(w => {
         let isValid = false;
         if (S.rewardSubTab === 'current') {
-            if (w.start <= dStrToday && w.end >= dStrToday) isValid = true;
+            // 👉 本週邏輯：如果區間的起迄落在本週內 (週一到週日)，皆顯示
+            if (w.start <= dStrCurSun && w.end >= dStrCurMon) isValid = true;
         } else {
+            // 👉 即將到來邏輯：如果區間開始日 >= 明天，且 <= 下週日
             if (w.start >= dStrTomorrow && w.start <= dStrNextSun) isValid = true;
         }
 
@@ -1183,7 +1200,7 @@ function renderRptRewards() {
     return;
   }
 
-  // 渲染獎勵卡片迴圈 (與前版相同，省略重複程式碼，直接放上組裝)
+  // 渲染獎勵卡片迴圈
   activeRewards.forEach(r => {
     const plat = getPlatform(r.platformId);
     let nextTierOrders = null; let prevTierOrders = 0; let achievedBonus = 0;
