@@ -1802,18 +1802,21 @@ function renderVehicleContent() {
 
       if (isFuel) {
           if (isEV) {
-              iconContent = `<img src="images/Battery.png" style="width:20px; height:20px; object-fit:contain;">`;
-              mainText = `電動車`;
+              // 👈 電動車專屬：顯示電池圖片、顯示電池名稱，右側大字改為行駛里程
+              iconContent = `<img src="images/Battery.png" style="width:24px; height:24px; object-fit:contain;">`;
+              mainText = `電池 (電動車)`;
               const diff = pf(r.km) - pf(r.prevKm);
               rightText = `${diff > 0 ? diff : 0} km`;
               rightColor = 'var(--acc)';
+              kmText = `${r.prevKm} → ${r.km} km`;
           } else {
-              iconContent = `<img src="images/Gas_station.png" style="width:20px; height:20px; object-fit:contain;">`;
-              mainText = `${r.fuelType||'95'}無鉛`;
+              // 👈 汽油車專屬：顯示加油站圖片、無鉛名稱，右側大字為花費金額
+              iconContent = `<img src="images/Gas_station.png" style="width:24px; height:24px; object-fit:contain;">`;
+              mainText = `${r.fuelType||'95'} ${r.fuelType==='柴油'?'':'無鉛'}`;
               rightText = `-$${fmt(r.amount)}`;
               rightColor = 'var(--t1)';
+              kmText = `${r.prevKm} → ${r.km} km`;
           }
-          kmText = `${r.prevKm} → ${r.km} km`;
       } else {
           iconContent = `🔧`; 
           mainText = r.items.join(', '); 
@@ -1825,7 +1828,7 @@ function renderVehicleContent() {
       html += `
         <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; padding:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
           <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); color:${isFuel?'var(--text-cyan)':'var(--green)'}; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${iconContent}</div>
+            <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${iconContent}</div>
             <div>
               <div style="font-size:14px; font-weight:800; color:var(--t1); margin-bottom:4px;">${mainText}</div>
               <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
@@ -1848,16 +1851,19 @@ let editingVehRecId = null;
 const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
 const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞車來令片', '後輪', '前輪', '其它'];
 
-/* 替換 openAddVehRec 的開頭 */
+/* ══ 替換：新增車輛記錄 (阻擋電動車抓油價) ══ */
 function openAddVehRec(recordId = null) {
   if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增車輛記錄'); return; }
   
   editingVehRecId = recordId; const isEdit = !!recordId; 
   if (!isEdit && S.vehicles.length === 0) { toast('請先新增車輛'); return; }
-  // ... 下方維持原狀 ...
-  document.getElementById('veh-rec-title').textContent = isEdit ? '編輯車輛記錄' : '新增車輛記錄'; document.getElementById('veh-rec-del-btn').style.display = isEdit ? 'block' : 'none';
+  
+  document.getElementById('veh-rec-title').textContent = isEdit ? '編輯車輛記錄' : '新增車輛記錄'; 
+  document.getElementById('veh-rec-del-btn').style.display = isEdit ? 'block' : 'none';
   
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
+  const isEV = v && v.defaultFuel === 'electric'; // 👈 判斷是否為電動車
+
   if (v) {
     document.getElementById('veh-rec-veh-icons').innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;"><div style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:30px; height:30px;"></div></div><span style="font-size:11px; font-weight:700; color:var(--acc);">${v.name}</span></div>`;
   }
@@ -1866,7 +1872,6 @@ function openAddVehRec(recordId = null) {
   document.getElementById('vr-date').value = r ? r.date : todayStr(); document.getElementById('vr-time').value = r ? (r.time || nowTime()) : nowTime();
   currentSelItems = (r && r.type === 'maintenance') ? [...r.items] :[];
   
-  /* 替換 openAddVehRec 函式的下半部 */
   if (S.addVehRecType === 'fuel') { 
     document.getElementById('vr-fuel-type').value = r?.fuelType || (v ? v.defaultFuel : '95'); 
     document.getElementById('vr-discount').value = r?.discount || '0'; 
@@ -1887,14 +1892,14 @@ function openAddVehRec(recordId = null) {
   switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); 
   openOverlay('veh-rec-add-page');
 
-  // 若為新增燃料記錄且未手動填寫油價，開啟時自動抓取最新油價
-  if (!isEdit && S.addVehRecType === 'fuel' && !document.getElementById('vr-price').value) {
+  // 👈 加入 !isEV 判斷，電動車絕對不會觸發油價抓取
+  if (!isEdit && S.addVehRecType === 'fuel' && !isEV && !document.getElementById('vr-price').value) {
     fetchAutoGasPrice();
   }
 }
 
 
-/* 替換 switchVehFormTab 的 CSS 變數切換邏輯 */
+/* ══ 替換：車輛表單頁籤切換 (電動車專屬顯示) ══ */
 function switchVehFormTab(type, index) {
   S.addVehRecType = type; document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`; 
   document.getElementById('btn-form-fuel').classList.toggle('active', type === 'fuel'); document.getElementById('btn-form-maint').classList.toggle('active', type === 'maintenance'); 
@@ -1903,48 +1908,40 @@ function switchVehFormTab(type, index) {
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
   const isEV = v && v.defaultFuel === 'electric';
   
-  // 動態切換頁籤與輸入框顏色
   const vehPage = document.getElementById('veh-rec-add-page');
   const tabBg = document.getElementById('veh-form-tab-bg');
+  
   if (type === 'fuel') {
     tabBg.style.backgroundColor = 'var(--red)';
     tabBg.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.4)';
     vehPage.style.setProperty('--veh-inp-border', 'var(--red)');
     vehPage.style.setProperty('--veh-inp-bg', 'rgba(239,68,68,0.05)');
     vehPage.style.setProperty('--veh-inp-color', 'var(--red)');
-  } else {
-    tabBg.style.backgroundColor = 'var(--green)'; // 保養維修使用綠色
-    tabBg.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.4)';
-    vehPage.style.setProperty('--veh-inp-border', 'var(--green)');
-    vehPage.style.setProperty('--veh-inp-bg', 'rgba(34,197,94,0.05)');
-    vehPage.style.setProperty('--veh-inp-color', 'var(--green)');
-  }
-  
-  // ... 原本底下的 if (type === 'fuel') 等隱藏邏輯保持不變 ...
 
-  if (type === 'fuel') {
+    // 電動車隱藏油價相關欄位
     document.getElementById('vr-fuel-type').parentElement.style.display = isEV ? 'none' : 'flex';
     document.getElementById('vr-discount').parentElement.style.display = isEV ? 'none' : 'flex';
     document.getElementById('vr-liters').parentElement.style.display = isEV ? 'none' : 'flex';
     document.getElementById('vr-price').parentElement.style.display = isEV ? 'none' : 'flex';
     
-    document.getElementById('vr-prev-km').parentElement.querySelector('label').textContent = isEV ? '上次總量紀錄' : '上次里程 (km)';
-    document.getElementById('vr-curr-km').parentElement.querySelector('label').textContent = isEV ? '現在總量紀錄' : '加油里程 (km)';
+    document.getElementById('vr-prev-km').parentElement.querySelector('label').textContent = isEV ? '上次換電里程 (km)' : '上次里程 (km)';
+    document.getElementById('vr-curr-km').parentElement.querySelector('label').textContent = isEV ? '現在換電里程 (km)' : '加油里程 (km)';
     
+    // 👈 替換下方總計區域，電動車改顯示里程
     const totalPanel = document.getElementById('vr-fuel-total-panel');
     if (totalPanel) {
       if (isEV) {
-        totalPanel.innerHTML = `<div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">使用量： <span style="font-size:24px; color:var(--acc);" id="vr-ev-calc">0</span> <span style="font-size:14px; color:var(--t1);">(km)</span></div>`;
+        totalPanel.innerHTML = `<div style="font-size:12px; color:var(--t3);">本次換電行駛：</div><div style="font-size:24px; font-weight:bold; color:var(--acc); margin-top:4px;"><span id="vr-ev-calc">0</span> <span style="font-size:14px; color:var(--t1);">km</span></div>`;
       } else {
         totalPanel.innerHTML = `<div style="font-size:12px; color:var(--t3);">折扣前總額：NT$ <span id="vr-before-total">0</span></div><div style="font-size:14px; font-weight:bold; color:var(--t1); margin-top:4px;">付款金額：<span style="font-size:24px; color:var(--acc);" id="vr-final-total">0</span></div>`;
       }
     }
-  }
-
-  if (type === 'maintenance') { 
-    const items = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
-    document.getElementById('vm-items-container').innerHTML = items.map(item => `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`).join(''); 
-    renderShopHistory(); 
+  } else {
+    tabBg.style.backgroundColor = 'var(--green)'; 
+    tabBg.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.4)';
+    vehPage.style.setProperty('--veh-inp-border', 'var(--green)');
+    vehPage.style.setProperty('--veh-inp-bg', 'rgba(34,197,94,0.05)');
+    vehPage.style.setProperty('--veh-inp-color', 'var(--green)');
   }
 }
 
@@ -1965,16 +1962,23 @@ function calcVehFuel() {
   if (document.getElementById('vr-final-total')) document.getElementById('vr-final-total').textContent = fmt(final); 
 }
 
+/* ══ 替換：儲存車輛記錄 (強制分流儲存資料) ══ */
 function confirmAddVehRec() {
   const checkImg = document.getElementById('veh-save-img'); const checkBtn = document.getElementById('veh-save-btn'); if (checkBtn.disabled) return; if (!S.selVehicleId) { toast('請先選擇車輛'); return; }
+  
+  const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
   let amount = 0; 
+  
   if (S.addVehRecType === 'fuel') { 
-    const finalTotalEl = document.getElementById('vr-final-total');
-    if (finalTotalEl) {
-      amount = pf(finalTotalEl.textContent.replace(/,/g,'')); 
-      if (amount <= 0) { toast('金額不能為 0'); return; }
-    } else {
+    // 電動車不需檢查金額
+    if (isEV) {
       amount = 0; 
+    } else {
+      const finalTotalEl = document.getElementById('vr-final-total');
+      if (finalTotalEl) {
+        amount = pf(finalTotalEl.textContent.replace(/,/g,'')); 
+        if (amount <= 0) { toast('金額不能為 0'); return; }
+      }
     }
   } else { 
     amount = pf(document.getElementById('vm-amount').value); 
@@ -1982,12 +1986,24 @@ function confirmAddVehRec() {
   }
 
   checkBtn.disabled = true; 
-  // 啟動 2 秒進度條動畫
   runSaveProgress(() => {
     const commonData = { id: editingVehRecId || newId(), vehicleId: S.selVehicleId, type: S.addVehRecType, date: document.getElementById('vr-date').value, time: document.getElementById('vr-time').value, amount: amount }; 
     let specificData = {};
-    if (S.addVehRecType === 'fuel') { specificData = { fuelType: document.getElementById('vr-fuel-type') ? document.getElementById('vr-fuel-type').value : 'electric', discount: pf(document.getElementById('vr-discount')?document.getElementById('vr-discount').value:0), prevKm: pf(document.getElementById('vr-prev-km').value), km: pf(document.getElementById('vr-curr-km').value), liters: pf(document.getElementById('vr-liters')?document.getElementById('vr-liters').value:0), price: pf(document.getElementById('vr-price')?document.getElementById('vr-price').value:0) }; } 
-    else { const shop = document.getElementById('vm-shop').value.trim(); if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } specificData = { km: pf(document.getElementById('vm-km').value), items: currentSelItems, shop: shop, payMethod: document.getElementById('vm-pay-method').value, note: document.getElementById('vm-note').value }; }
+    
+    if (S.addVehRecType === 'fuel') { 
+      specificData = { 
+        fuelType: isEV ? 'electric' : document.getElementById('vr-fuel-type').value, 
+        discount: isEV ? 0 : pf(document.getElementById('vr-discount').value), 
+        prevKm: pf(document.getElementById('vr-prev-km').value), 
+        km: pf(document.getElementById('vr-curr-km').value), 
+        liters: isEV ? 0 : pf(document.getElementById('vr-liters').value), 
+        price: isEV ? 0 : pf(document.getElementById('vr-price').value) 
+      }; 
+    } else { 
+      const shop = document.getElementById('vm-shop').value.trim(); 
+      if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } 
+      specificData = { km: pf(document.getElementById('vm-km').value), items: currentSelItems, shop: shop, payMethod: document.getElementById('vm-pay-method').value, note: document.getElementById('vm-note').value }; 
+    }
     
     const finalRec = { ...commonData, ...specificData }; 
     if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } 
@@ -2075,7 +2091,7 @@ function openAuthModal() {
   document.getElementById('sub-top-right').innerHTML = '';
   
   let avatarsHtml = '';
-  for(let i=1; i<=6; i++) {
+  for(let i=1; i<=8; i++) {
     const isSel = selectedAvatar === `figure/${i}.png`;
     // width/height 放至 80px，加入 image-rendering 確保不失真，並去除圓角
     avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
