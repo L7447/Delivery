@@ -854,6 +854,13 @@ function doSearch() {
   if (!recs.length) { el.innerHTML = `<div class="empty-tip">找不到符合記錄</div>`; return; }
   el.innerHTML = recs.map(r=>buildRecItem(r)).join('');
 }
+
+function resetSearch() {
+  document.getElementById('search-kw').value = '';
+  document.getElementById('search-from').value = '';
+  document.getElementById('search-to').value = '';
+  document.getElementById('search-results').innerHTML = '';
+}
 /* ══ 3. 查看記錄 結束 ════════════════════════════════════ */
 
 /* ══ 4. 新增記錄 開始 ════════════════════════════════════ */
@@ -1093,73 +1100,100 @@ function renderReport() {
   if (S.rptView === 'top3') renderRptTop3();
 }
 
-/* ══ 2. 替換：獎勵進度分析 (單階進度條、縮小內距防換行) ══ */
+/* ══ 替換：獎勵分析 (支援本週/即將到來 切換) ══ */
 function renderRptRewards() {
   const el = document.getElementById('rv-rewards');
-  const dStr = todayStr(); // 預設查看「今天」所在的區間進度
-  let html = `<div style="font-size:12px; color:var(--hint-color); font-weight:700; margin-bottom:12px; text-align:center;">目前顯示「本週 / 今日」所在區間之獎勵進度</div>`;
-  
-  const activeRewards = (S.settings.rewards ||[]).map(r => {
-    const rWindow = getRewardWindow(dStr, r);
-    if(!rWindow) return null;
-    
-    let accum = 0;
-    S.records.forEach(rec => {
-        if(rec.isPunchOnly || rec.platformId !== r.platformId) return;
-        if(rec.date >= rWindow.start && rec.date <= rWindow.end) accum += pf(rec.orders);
+  if (!S.rewardSubTab) S.rewardSubTab = 'current';
+
+  let html = `
+    <div class="slide-tabs tabs-2" style="margin-bottom:12px;">
+      <div class="slide-bg" style="transform: translateX(${S.rewardSubTab === 'current' ? '0%' : '100%'}); background:var(--acc);"></div>
+      <button class="slide-btn ${S.rewardSubTab === 'current' ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderRptRewards()">本週進度</button>
+      <button class="slide-btn ${S.rewardSubTab === 'upcoming' ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderRptRewards()">即將到來</button>
+    </div>
+    <div style="font-size:12px; color:var(--hint-color); margin-bottom:12px; text-align:center;">
+      ${S.rewardSubTab === 'current' ? '顯示本週或今日生效中之獎勵進度' : '顯示明日起至下週日之即將到來獎勵'}
+    </div>`;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayOfWeek = today.getDay() || 7;
+  const nextSunday = new Date(today); nextSunday.setDate(today.getDate() + (7 - dayOfWeek) + 7);
+
+  const dStrToday = todayStr(today);
+  const dStrTomorrow = todayStr(tomorrow);
+  const dStrNextSun = todayStr(nextSunday);
+
+  let activeRewards = [];
+
+  (S.settings.rewards ||[]).forEach(r => {
+    let windowsToCheck =[];
+    if (r.recurring) {
+        windowsToCheck.push(getRewardWindow(dStrToday, r));
+        let nextWeekD = new Date(today); nextWeekD.setDate(today.getDate() + 7);
+        windowsToCheck.push(getRewardWindow(todayStr(nextWeekD), r));
+    } else {
+        windowsToCheck.push({start: r.startDate, end: r.endDate});
+    }
+
+    let uniqueWindows =[];
+    windowsToCheck.filter(Boolean).forEach(w => {
+        if(!uniqueWindows.find(uw => uw.start === w.start && uw.end === w.end)) uniqueWindows.push(w);
     });
-    
-    return { ...r, window: rWindow, accum };
-  }).filter(Boolean);
+
+    uniqueWindows.forEach(w => {
+        let isValid = false;
+        if (S.rewardSubTab === 'current') {
+            if (w.start <= dStrToday && w.end >= dStrToday) isValid = true;
+        } else {
+            if (w.start >= dStrTomorrow && w.start <= dStrNextSun) isValid = true;
+        }
+
+        if (isValid) {
+            let accum = 0;
+            S.records.forEach(rec => {
+                if(rec.isPunchOnly || rec.platformId !== r.platformId) return;
+                if(rec.date >= w.start && rec.date <= w.end) accum += pf(rec.orders);
+            });
+            activeRewards.push({ ...r, window: w, accum });
+        }
+    });
+  });
 
   if (activeRewards.length === 0) {
-    el.innerHTML = html + `<div class="empty-tip">本區間無啟用的獎勵設定</div>`;
+    el.innerHTML = html + `<div class="empty-tip">本區間無相符的獎勵設定</div>`;
     return;
   }
 
+  // 渲染獎勵卡片迴圈 (與前版相同，省略重複程式碼，直接放上組裝)
   activeRewards.forEach(r => {
     const plat = getPlatform(r.platformId);
-    let nextTierOrders = null;
-    let prevTierOrders = 0; // 👈 紀錄上一階單數，用來算進度條
-    let achievedBonus = 0;
+    let nextTierOrders = null; let prevTierOrders = 0; let achievedBonus = 0;
     
-    // 壓縮間距 gap: 3px
     let tiersHtml = `<div style="display:flex; align-items:center; gap:3px; flex-wrap:wrap; margin-top:12px;">`;
-    
     const sortedTiers = [...(r.tiers || [])].sort((a,b) => a.orders - b.orders);
     sortedTiers.forEach((t, i) => {
       const isPassed = r.accum >= t.orders;
-      if (isPassed) {
-        achievedBonus = Math.max(achievedBonus, t.amount);
-        prevTierOrders = t.orders; // 若達標，更新「上一階位」的基準
-      }
+      if (isPassed) { achievedBonus = Math.max(achievedBonus, t.amount); prevTierOrders = t.orders; }
       if (!isPassed && nextTierOrders === null) nextTierOrders = t.orders;
       
       const bgColor = isPassed ? plat.color : 'var(--bg-input)';
       const textColor = isPassed ? '#fff' : 'var(--t3)';
       const arrowColor = isPassed ? plat.color : 'var(--t3)';
       
-      // 壓縮標籤：縮小 padding, font-size, 加上負 letter-spacing
       tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:2px 4px; border-radius:6px; font-size:10px; font-weight:800; font-family:var(--mono); transition:0.3s; letter-spacing:-0.3px;">${t.orders}單 $${t.amount}</span>`;
-      
-      if (i < sortedTiers.length - 1) {
-        // 壓縮箭頭邊距
-        tiersHtml += `<span style="color:${arrowColor}; font-size:10px; font-weight:900; margin: 0 -1px;">➔</span>`;
-      }
+      if (i < sortedTiers.length - 1) tiersHtml += `<span style="color:${arrowColor}; font-size:10px; font-weight:900; margin: 0 -1px;">➔</span>`;
     });
     tiersHtml += `</div>`;
 
-    // 👈 全新邏輯：計算「當前這一階梯」的獨立進度 %
     let progressPct = 100;
     if (nextTierOrders !== null) {
-      const currentTierTarget = nextTierOrders - prevTierOrders;     // 這一階要跑幾單
-      const currentTierProgress = r.accum - prevTierOrders;          // 這一階目前跑了幾單
-      progressPct = Math.max(0, Math.min(100, Math.round((currentTierProgress / currentTierTarget) * 100)));
+      progressPct = Math.max(0, Math.min(100, Math.round(((r.accum - prevTierOrders) / (nextTierOrders - prevTierOrders)) * 100)));
     }
     
     let statusText = nextTierOrders !== null 
-      ? `差 <span style="color:var(--red); font-size:16px;">${nextTierOrders - r.accum}</span> 單晉級下一階` 
-      : `<span style="color:var(--green);">🎉 已達成最高階獎勵！</span>`;
+      ? `差 <span style="color:var(--red); font-size:16px;">${nextTierOrders - r.accum}</span> 單晉級` 
+      : `<span style="color:var(--green);">🎉 已達成最高階！</span>`;
 
     html += `
       <div class="card" style="border: 2px solid ${plat.color}40;">
@@ -1172,18 +1206,17 @@ function renderRptRewards() {
             <div style="font-size:11px; color:var(--t3); font-family:var(--mono);">📅 ${r.window.start} ~ ${r.window.end}</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:11px; color:var(--t3); font-weight:700;">目前獎金</div>
+            <div style="font-size:11px; color:var(--t3); font-weight:700;">目前累積獎金</div>
             <div style="font-family:var(--mono); font-size:20px; font-weight:900; color:var(--acc);">$${achievedBonus}</div>
           </div>
         </div>
         
         <div style="margin:12px 0;">
           <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-bottom:6px;">
-            <span style="color:var(--t1);">目前累積：<span style="font-family:var(--mono); font-size:16px; color:var(--blue);">${r.accum}</span> 單</span>
+            <span style="color:var(--t1);">目前單數：<span style="font-family:var(--mono); font-size:16px; color:var(--blue);">${r.accum}</span> 單</span>
             <span style="font-weight:800;">${statusText}</span>
           </div>
           <div class="progress-track" style="height:12px; background:var(--bg-input); border-radius:12px;">
-            <!-- 視覺呈現的是單一階梯的進度 -->
             <div class="progress-fill" style="width:${progressPct}%; background:linear-gradient(90deg, ${plat.color}80, ${plat.color}); border-radius:12px;"></div>
           </div>
         </div>
@@ -1191,7 +1224,6 @@ function renderRptRewards() {
       </div>
     `;
   });
-
   el.innerHTML = html;
 }
 
@@ -1688,6 +1720,7 @@ function _syncVehSelectorActive(id) {
   });
 }
 
+/* ══ 替換：車輛管理精簡版面與自適應配色 ══ */
 function renderVehicleContent() {
   const container = document.getElementById('vehicle-content'); if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
   const prefix = `${S.vehY}-${pad(S.vehM)}`; const monthRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix));
@@ -1699,9 +1732,29 @@ function renderVehicleContent() {
 
   let html = '';
   if (S.vehicleTab === 'fuel') {
-    html += `<div class="veh-summary-fuel"><div style="font-size:13px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;"><span>⛽ 本月燃料總計</span><span class="veh-sum-val">$${fmt(totalFuelPaid)}</span></div><div style="display:flex; justify-content:space-between; font-size:11px;"><div><span class="veh-sum-lbl">總油量</span><br><span style="font-weight:700;">${totalLiters.toFixed(1)} L</span></div><div><span class="veh-sum-lbl">總里程</span><br><span style="font-weight:700;">${fmt(totalDistance)} km</span></div><div><span class="veh-sum-lbl">平均油耗</span><br><span style="font-weight:700;">${avgKmL} km/L</span></div></div></div>`;
+    html += `
+      <div style="background:var(--sf); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+        <div style="font-size:12px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; color:var(--t2);">
+          <span>⛽ 本月燃料總計</span><span style="font-family:var(--mono); font-size:16px; color:var(--red);">$${fmt(totalFuelPaid)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; text-align:center;">
+          <div style="flex:1;"><span style="color:var(--t3);">總油量</span><br><span style="font-weight:700; color:var(--t1);">${totalLiters.toFixed(1)} L</span></div>
+          <div style="width:1px; background:var(--border);"></div>
+          <div style="flex:1;"><span style="color:var(--t3);">總里程</span><br><span style="font-weight:700; color:var(--t1);">${fmt(totalDistance)} km</span></div>
+          <div style="width:1px; background:var(--border);"></div>
+          <div style="flex:1;"><span style="color:var(--t3);">平均油耗</span><br><span style="font-weight:700; color:var(--t1);">${avgKmL} km/L</span></div>
+        </div>
+      </div>`;
   } else {
-    html += `<div class="veh-summary-maint"><div style="font-size:13px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;"><span>🔧 本月保養總計</span><span class="veh-sum-val">$${fmt(totalMaintPaid)}</span></div><div style="display:flex; justify-content:space-between; font-size:11px;"><div><span class="veh-sum-lbl">本月保養次數</span><br><span style="font-weight:700;">${maintRecs.length} 筆</span></div></div></div>`;
+    html += `
+      <div style="background:var(--sf); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+        <div style="font-size:12px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; color:var(--t2);">
+          <span>🔧 本月保養總計</span><span style="font-family:var(--mono); font-size:16px; color:var(--green);">$${fmt(totalMaintPaid)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; text-align:center;">
+          <div style="flex:1;"><span style="color:var(--t3);">本月保養次數</span><br><span style="font-weight:700; color:var(--t1);">${maintRecs.length} 筆</span></div>
+        </div>
+      </div>`;
   }
 
   const typeRecs = monthRecs.filter(r => r.type === S.vehicleTab);
@@ -1722,9 +1775,9 @@ function renderVehicleContent() {
       }
 
       html += `
-        <div onclick="openAddVehRec('${r.id}')" style="background:#fff; border-bottom:1px solid #f3f4f6; padding:10px 4px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
           <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:36px; height:36px; border-radius:10px; background:${isFuel?'#eff6ff':'#ecfdf5'}; color:${isFuel?'#3b82f6':'#10b981'}; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">${icon}</div>
+            <div style="width:36px; height:36px; border-radius:10px; background:var(--bg-input); color:${isFuel?'var(--text-cyan)':'var(--green)'}; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">${icon}</div>
             <div>
               <div style="font-size:13px; font-weight:700; color:var(--t1); margin-bottom:2px;">${mainText}</div>
               <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
@@ -1957,23 +2010,47 @@ function renderSettings() {
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ══ 帳號驗證與登入系統 (加入密碼機制) ══ */
+/* ══ 替換：登入系統加入頭像選擇 ══ */
+let selectedAvatar = 'figure/1.png'; // 預設頭像
+window.selectAvatar = function(src, el) {
+    selectedAvatar = src;
+    document.querySelectorAll('.avatar-opt').forEach(img => {
+      img.style.borderColor = 'transparent';
+      img.style.transform = 'scale(1)';
+    });
+    el.style.borderColor = 'var(--acc)';
+    el.style.transform = 'scale(1.1)';
+}
+
 function openAuthModal() {
   document.getElementById('sub-title').textContent = '登入/註冊帳號';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  let avatarsHtml = '';
+  for(let i=1; i<=8; i++) {
+    const isSel = selectedAvatar === `figure/${i}.png`;
+    avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:40px;height:40px;border-radius:50%;border:2px solid ${isSel?'var(--acc)':'transparent'};cursor:pointer;transition:transform 0.2s;transform:${isSel?'scale(1.1)':'scale(1)'};">`;
+  }
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
       <p style="font-size:13px;color:var(--hint-color);margin-bottom:16px;line-height:1.6; font-weight:600; background:var(--bg-input); padding:12px; border-radius:12px;">
         💡 <b>一鍵登入/註冊：</b><br>
-        若您已有帳號，輸入密碼即可快速登入。<br>
-        若是首次使用，系統將自動為您建立帳號，並寄送驗證碼至信箱！
+        若是首次使用，系統將自動為您建立帳號，並綁定您選擇的頭像！
       </p>
       <div class="fg" style="margin-bottom:16px;">
+        <label style="font-weight:700; color:var(--t1);">選擇您的專屬頭像</label>
+        <div style="display:flex; justify-content:space-between; background:var(--bg-input); padding:12px; border-radius:12px;">
+          ${avatarsHtml}
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:16px;">
         <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
-        <input type="email" class="finp" id="auth-email" placeholder="輸入您的Gmail信箱地址" style="font-size:16px; padding:12px;">
+        <input type="email" class="finp" id="auth-email" placeholder="輸入您的Gmail信箱地址" style="padding:12px;">
       </div>
       <div class="fg" style="margin-bottom:24px;">
         <label style="font-weight:700; color:var(--t1);">密碼 (至少 6 個字元)</label>
-        <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼 (作為註冊或登入用)" style="font-size:16px; padding:12px;">
+        <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼 (作為註冊或登入用)" style="padding:12px;">
       </div>
       <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入 / 註冊帳號</button>
     </div>
@@ -2006,7 +2083,7 @@ async function requestLogin() {
       if (data.success) {
         if (data.directLogin) {
           // ✅ 舊用戶，密碼正確，直接瞬間登入
-          USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role };
+          USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
           saveUser();
           toast('✅ 登入成功');
           closeOverlay('sub-page');
@@ -2054,7 +2131,7 @@ async function verifyAuthCode(email) {
     finishProgress(() => {
       if (data.success) {
         // 👈 將 data.user.role (權限) 一併存入
-        USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role };
+        USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
         saveUser();
         toast('✅ 登入成功');
         closeOverlay('sub-page');
@@ -2068,41 +2145,54 @@ async function verifyAuthCode(email) {
   }
 }
 
-/* ══ 帳號介面 (判斷是否為管理員) ══ */
+/* ══ 替換：帳號資訊 (開放統計 & 頭像支援) ══ */
 async function openAccountStats() {
   document.getElementById('sub-title').textContent = '帳號資訊';
   document.getElementById('sub-top-right').innerHTML = '';
-  
-  // 1. 一般會員看見的基本畫面
+  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div>`;
+  openOverlay('sub-page');
+
+  let statsHtml = '';
+  try {
+    // 呼叫全新的公開統計 API
+    const statRes = await fetch(`${API_BASE_URL}/stats`);
+    const statData = await statRes.json();
+    if (statData.success) {
+      statsHtml = `
+        <h4 style="font-size:13px; color:var(--hint-color); margin-bottom:8px;">📊 系統註冊統計</h4>
+        <div class="set-list" style="margin-bottom:20px;">
+          <div class="set-row"><span class="sn">總申請人數</span><span style="font-family:var(--mono);color:var(--t1);font-weight:700;">${statData.total} 人</span></div>
+          <div class="set-row"><span class="sn">已完成驗證</span><span style="font-family:var(--mono);color:var(--green);font-weight:700;">${statData.verified} 人</span></div>
+        </div>`;
+    }
+  } catch (e) {}
+
+  const avatarImg = USER.avatar ? `<img src="${USER.avatar}" style="width:64px; height:64px; border-radius:50%; margin-bottom:8px; border:3px solid var(--acc);">` : `<div style="font-size:48px; margin-bottom:8px;">${USER.role === 'admin' ? '👑' : '🧑‍🚀'}</div>`;
+
   let baseHtml = `
     <div style="padding:16px;">
       <div class="card" style="text-align:center; padding:24px 16px; background:var(--collapse-bg); border-color:var(--border);">
-        <div style="font-size:48px; margin-bottom:8px;">${USER.role === 'admin' ? '👑' : '🧑‍🚀'}</div>
+        ${avatarImg}
         <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">${USER.email}</div>
         <div style="font-size:12px; color:#fff; background:var(--green); display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700;">✓ 已驗證帳號</div>
       </div>
       
-      <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">個人資料</h4>
+      <h4 style="font-size:13px; color:var(--hint-color); margin-bottom:8px;">個人資料</h4>
       <div class="set-list" style="margin-bottom:20px;">
         <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${USER.joinDate || '未知'}</span></div>
         <div class="set-row"><span class="sn">個人總記錄數</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${S.records.length} 筆</span></div>
       </div>
+      ${statsHtml}
   `;
 
-  // 2. 如果不是管理員，直接加上登出按鈕並結束
   if (USER.role !== 'admin') {
     baseHtml += `<button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`;
     document.getElementById('sub-body').innerHTML = baseHtml;
-    openOverlay('sub-page');
     return;
   }
 
-  // 3. 如果是管理員，去後端拉取所有人的資料
-  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入後台資料中...</div>`;
-  openOverlay('sub-page');
-
+  // 管理員專區
   try {
-    // 改成 POST 傳送管理員憑證給後端檢查
     const res = await fetch(`${API_BASE_URL}/admin/users`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2111,11 +2201,9 @@ async function openAccountStats() {
     const data = await res.json();
     
     if (!data.success) throw new Error(data.message);
-    const users = data.users;
-    const verifiedUsers = users.filter(u => u.verified).length;
 
     let adminHtml = '';
-    users.forEach(u => {
+    data.users.forEach(u => {
       const vTag = u.verified ? '<span style="color:green;font-weight:700;">已驗證</span>' : '<span style="color:gray;">未驗證</span>';
       const roleTag = u.role === 'admin' ? '👑 ' : '';
       adminHtml += `
@@ -2130,17 +2218,10 @@ async function openAccountStats() {
     });
 
     document.getElementById('sub-body').innerHTML = baseHtml + `
-      <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">📊 系統註冊統計 (管理員專屬)</h4>
-      <div class="set-list" style="margin-bottom:24px;">
-        <div class="set-row"><span class="sn">總申請人數</span><span style="font-family:var(--mono);color:var(--t1);font-weight:700;">${users.length} 人</span></div>
-        <div class="set-row"><span class="sn">已完成驗證</span><span style="font-family:var(--mono);color:var(--green);font-weight:700;">${verifiedUsers} 人</span></div>
-      </div>
-
-      <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">⚙️ 會員權限管理</h4>
+      <h4 style="font-size:13px; color:var(--text-red); margin-bottom:8px;">⚙️ 會員權限管理 (管理員權限)</h4>
       <div class="card" style="max-height:200px; overflow-y:auto; padding:8px 12px; margin-bottom:24px;">
         ${adminHtml}
       </div>
-
       <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
     </div>`;
 
