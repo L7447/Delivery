@@ -351,7 +351,25 @@ document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('cli
 function switchHomeTab(tab, index) { S.homeSubTab = tab; document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); renderHome(); }
 function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
 function switchRptTab(tab, index, btnEl) { S.rptView = tab; document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); btnEl.classList.add('active');['overview','rewards','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; }); renderReport(); }
-function switchVehicleTab(tab, index) { S.vehicleTab = tab; document.getElementById('veh-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel'); document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance'); renderVehicleContent(); }
+/* ══ 替換：車輛頁籤切換 (動態漸層色) ══ */
+function switchVehicleTab(tab, index) { 
+  S.vehicleTab = tab; 
+  const tabBg = document.getElementById('veh-tab-bg');
+  tabBg.style.transform = `translateX(${index * 100}%)`; 
+  
+  // 依據頁籤賦予對應的漸層與陰影色
+  if (tab === 'fuel') {
+    tabBg.style.background = 'linear-gradient(135deg, #1e3a8a, #3b82f6)';
+    tabBg.style.boxShadow = '0 4px 10px rgba(59,130,246,0.4)';
+  } else {
+    tabBg.style.background = 'linear-gradient(135deg, #065f46, #10b981)';
+    tabBg.style.boxShadow = '0 4px 10px rgba(16,185,129,0.4)';
+  }
+
+  document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel'); 
+  document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance'); 
+  renderVehicleContent(); 
+}
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
@@ -1688,6 +1706,7 @@ function drawBar(canvasId, labels, data, color) {
 function changeVehMonth(offset) { S.vehM += offset; if (S.vehM < 1) { S.vehM = 12; S.vehY--; } if (S.vehM > 12) { S.vehM = 1; S.vehY++; } renderVehicles(); }
 function selectVehicle(id) { S.selVehicleId = id; _syncVehSelectorActive(id); renderVehicleContent(); }
 
+/* ══ 替換：車輛清單渲染 (加上預設燃料) ══ */
 function renderVehicles() {
   const container = document.getElementById('vehicle-content'); 
   const selectorContainer = document.getElementById('veh-selector-container');
@@ -1700,11 +1719,23 @@ function renderVehicles() {
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
 
   let selectorHtml = `<div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">選擇車輛</div>`;
-  selectorHtml += `<div style="display:flex; gap:12px; margin-bottom:12px; overflow-x:auto; padding:4px 4px 8px;">`;
+  selectorHtml += `<div style="display:flex; gap:16px; margin-bottom:12px; overflow-x:auto; padding:4px 4px 8px;">`;
   
+  // 建立燃料名稱對照表
+  const fuelMap = { '92':'92 無鉛', '95':'95 無鉛', '98':'98 無鉛', '柴油':'柴油', 'electric':'電動車' };
+
   S.vehicles.forEach(v => {
     const isActive = v.id === S.selVehicleId;
-    selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:56px; cursor:pointer;" onclick="selectVehicle('${v.id}')"><div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div><div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:var(--sf); border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div></div><span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t2)'};">${v.name}</span></div>`;
+    const fName = fuelMap[v.defaultFuel] || v.defaultFuel; // 取得中文燃料名
+    
+    selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
+      <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div>
+      <div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:var(--sf); border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};">
+        <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div>
+      </div>
+      <span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t1)'}; margin-bottom:-2px;">${v.name}</span>
+      <span style="font-size:10px; font-weight:600; color:var(--t3);">${fName}</span>
+    </div>`;
   }); 
   selectorHtml += `</div>`; 
   selectorContainer.innerHTML = selectorHtml;
@@ -1720,7 +1751,7 @@ function _syncVehSelectorActive(id) {
   });
 }
 
-/* ══ 替換：車輛管理精簡版面與自適應配色 ══ */
+/* ══ 替換：車輛管理內容 (漸層卡片、專屬圖示與電動車里程邏輯) ══ */
 function renderVehicleContent() {
   const container = document.getElementById('vehicle-content'); if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
   const prefix = `${S.vehY}-${pad(S.vehM)}`; const monthRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix));
@@ -1733,26 +1764,26 @@ function renderVehicleContent() {
   let html = '';
   if (S.vehicleTab === 'fuel') {
     html += `
-      <div style="background:var(--sf); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-        <div style="font-size:12px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; color:var(--t2);">
-          <span>⛽ 本月燃料總計</span><span style="font-family:var(--mono); font-size:16px; color:var(--red);">$${fmt(totalFuelPaid)}</span>
+      <div style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+        <div style="font-size:13px; font-weight:700; margin-bottom:12px; display:flex; justify-content:space-between;">
+          <span>⛽ 本月燃料總計</span><span style="font-family:var(--mono); font-size:18px; font-weight:900;">$${fmt(totalFuelPaid)}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:11px; text-align:center;">
-          <div style="flex:1;"><span style="color:var(--t3);">總油量</span><br><span style="font-weight:700; color:var(--t1);">${totalLiters.toFixed(1)} L</span></div>
-          <div style="width:1px; background:var(--border);"></div>
-          <div style="flex:1;"><span style="color:var(--t3);">總里程</span><br><span style="font-weight:700; color:var(--t1);">${fmt(totalDistance)} km</span></div>
-          <div style="width:1px; background:var(--border);"></div>
-          <div style="flex:1;"><span style="color:var(--t3);">平均油耗</span><br><span style="font-weight:700; color:var(--t1);">${avgKmL} km/L</span></div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; text-align:center;">
+          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">總油/電量</span><br><span style="font-weight:800; font-size:14px;">${totalLiters.toFixed(1)} L</span></div>
+          <div style="width:1px; background:rgba(255,255,255,0.2);"></div>
+          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">總里程</span><br><span style="font-weight:800; font-size:14px;">${fmt(totalDistance)} km</span></div>
+          <div style="width:1px; background:rgba(255,255,255,0.2);"></div>
+          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">平均油耗</span><br><span style="font-weight:800; font-size:14px;">${avgKmL} km/L</span></div>
         </div>
       </div>`;
   } else {
     html += `
-      <div style="background:var(--sf); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-        <div style="font-size:12px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; color:var(--t2);">
-          <span>🔧 本月保養總計</span><span style="font-family:var(--mono); font-size:16px; color:var(--green);">$${fmt(totalMaintPaid)}</span>
+      <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+        <div style="font-size:13px; font-weight:700; margin-bottom:12px; display:flex; justify-content:space-between;">
+          <span>🔧 本月保養總計</span><span style="font-family:var(--mono); font-size:18px; font-weight:900;">$${fmt(totalMaintPaid)}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:11px; text-align:center;">
-          <div style="flex:1;"><span style="color:var(--t3);">本月保養次數</span><br><span style="font-weight:700; color:var(--t1);">${maintRecs.length} 筆</span></div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; text-align:center;">
+          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">本月保養次數</span><br><span style="font-weight:800; font-size:14px;">${maintRecs.length} 筆</span></div>
         </div>
       </div>`;
   }
@@ -1762,28 +1793,45 @@ function renderVehicleContent() {
     typeRecs.sort((a, b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'')).forEach(r => {
       const isFuel = r.type === 'fuel'; 
       const isEV = r.fuelType === 'electric'; 
-      const icon = isFuel ? (isEV ? '⚡' : '⛽') : '🔧'; 
-      const mainText = isFuel ? (isEV ? '電池交換' : `${r.fuelType||'95 無鉛'} ($${r.price||0}/L)`) : r.items.join(', '); 
-      const kmText = isFuel ? `${r.prevKm} → ${r.km} km` : `${r.km} km`;
       
-      let rightText = `-$${fmt(r.amount)}`;
+      let iconContent = '';
+      let mainText = '';
+      let rightText = '';
       let rightColor = 'var(--t1)';
-      if (isFuel && isEV) {
-          const diff = pf(r.km) - pf(r.prevKm);
-          rightText = `${diff > 0 ? diff : 0} km`;
-          rightColor = 'var(--acc)';
+      let kmText = '';
+
+      if (isFuel) {
+          if (isEV) {
+              iconContent = `<img src="images/Battery.png" style="width:20px; height:20px; object-fit:contain;">`;
+              mainText = `電動車`;
+              const diff = pf(r.km) - pf(r.prevKm);
+              rightText = `${diff > 0 ? diff : 0} km`;
+              rightColor = 'var(--acc)';
+          } else {
+              iconContent = `<img src="images/Gas_station.png" style="width:20px; height:20px; object-fit:contain;">`;
+              mainText = `${r.fuelType||'95'}無鉛`;
+              rightText = `-$${fmt(r.amount)}`;
+              rightColor = 'var(--t1)';
+          }
+          kmText = `${r.prevKm} → ${r.km} km`;
+      } else {
+          iconContent = `🔧`; 
+          mainText = r.items.join(', '); 
+          kmText = `${r.km} km`;
+          rightText = `-$${fmt(r.amount)}`;
+          rightColor = 'var(--t1)';
       }
 
       html += `
-        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; padding:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
           <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:36px; height:36px; border-radius:10px; background:var(--bg-input); color:${isFuel?'var(--text-cyan)':'var(--green)'}; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">${icon}</div>
+            <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); color:${isFuel?'var(--text-cyan)':'var(--green)'}; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${iconContent}</div>
             <div>
-              <div style="font-size:13px; font-weight:700; color:var(--t1); margin-bottom:2px;">${mainText}</div>
+              <div style="font-size:14px; font-weight:800; color:var(--t1); margin-bottom:4px;">${mainText}</div>
               <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
             </div>
           </div>
-          <div style="font-family:var(--mono); font-size:15px; font-weight:800; color:${rightColor};">${rightText}</div>
+          <div style="font-family:var(--mono); font-size:16px; font-weight:800; color:${rightColor};">${rightText}</div>
         </div>`;
     });
   }
@@ -2010,7 +2058,7 @@ function renderSettings() {
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ══ 替換：登入系統加入頭像選擇 ══ */
+/* ══ 替換：登入系統加入頭像選擇 (大尺寸防失真、橫向捲動) ══ */
 let selectedAvatar = 'figure/1.png'; // 預設頭像
 window.selectAvatar = function(src, el) {
     selectedAvatar = src;
@@ -2019,7 +2067,7 @@ window.selectAvatar = function(src, el) {
       img.style.transform = 'scale(1)';
     });
     el.style.borderColor = 'var(--acc)';
-    el.style.transform = 'scale(1.1)';
+    el.style.transform = 'scale(1.05)';
 }
 
 function openAuthModal() {
@@ -2027,9 +2075,10 @@ function openAuthModal() {
   document.getElementById('sub-top-right').innerHTML = '';
   
   let avatarsHtml = '';
-  for(let i=1; i<=8; i++) {
+  for(let i=1; i<=6; i++) {
     const isSel = selectedAvatar === `figure/${i}.png`;
-    avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:40px;height:40px;border-radius:50%;border:2px solid ${isSel?'var(--acc)':'transparent'};cursor:pointer;transition:transform 0.2s;transform:${isSel?'scale(1.1)':'scale(1)'};">`;
+    // width/height 放至 80px，加入 image-rendering 確保不失真，並去除圓角
+    avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
   }
 
   document.getElementById('sub-body').innerHTML = `
@@ -2038,15 +2087,15 @@ function openAuthModal() {
         💡 <b>一鍵登入/註冊：</b><br>
         若是首次使用，系統將自動為您建立帳號，並綁定您選擇的頭像！
       </p>
-      <div class="fg" style="margin-bottom:16px;">
-        <label style="font-weight:700; color:var(--t1);">選擇您的專屬頭像</label>
-        <div style="display:flex; justify-content:space-between; background:var(--bg-input); padding:12px; border-radius:12px;">
+      <div class="fg" style="margin-bottom:20px;">
+        <label style="font-weight:700; color:var(--t1);">滑動選擇專屬頭像</label>
+        <div style="display:flex; overflow-x:auto; gap:16px; background:var(--bg-input); padding:16px; border-radius:16px; align-items:center;">
           ${avatarsHtml}
         </div>
       </div>
       <div class="fg" style="margin-bottom:16px;">
         <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
-        <input type="email" class="finp" id="auth-email" placeholder="輸入您的Gmail信箱地址" style="padding:12px;">
+        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:12px;">
       </div>
       <div class="fg" style="margin-bottom:24px;">
         <label style="font-weight:700; color:var(--t1);">密碼 (至少 6 個字元)</label>
@@ -2167,7 +2216,10 @@ async function openAccountStats() {
     }
   } catch (e) {}
 
-  const avatarImg = USER.avatar ? `<img src="${USER.avatar}" style="width:64px; height:64px; border-radius:50%; margin-bottom:8px; border:3px solid var(--acc);">` : `<div style="font-size:48px; margin-bottom:8px;">${USER.role === 'admin' ? '👑' : '🧑‍🚀'}</div>`;
+  /* 替換 openAccountStats() 裡面的 avatarImg 宣告 */
+  const avatarImg = USER.avatar 
+    ? `<img src="${USER.avatar}" style="width:128px; height:128px; object-fit:contain; margin-bottom:12px; border:none; border-radius:0; image-rendering: pixelated; image-rendering: crisp-edges;">` 
+    : `<div style="font-size:48px; margin-bottom:8px;">${USER.role === 'admin' ? '👑' : '🧑‍🚀'}</div>`;
 
   let baseHtml = `
     <div style="padding:16px;">
@@ -2676,7 +2728,7 @@ function openContactUs() {
   document.getElementById('sub-title').textContent = '聯絡我們';
   document.getElementById('sub-top-right').innerHTML = '';
   
-  const email = 'XXX@gmail.com'; // 👈 這裡可以替換成您真實的 Email
+  const email = 'cws38721@gmail.com'; // 👈 這裡可以替換成您真實的 Email
   
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px; text-align:center;">
