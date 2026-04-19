@@ -2783,7 +2783,7 @@ function fallbackCopyTextToClipboard(text) {
 
 /* ══ 關於我們：彈窗內容渲染函式 ══ */
 function openSpecialThanks() {
-  document.getElementById('sub-title').textContent = '特別致謝';
+  document.getElementById('sub-title').textContent = '特別感謝';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
       <p style="margin-bottom:16px; font-weight:500;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法，讓『 外送記帳APP 』有機會做出來！</p>
@@ -2815,7 +2815,7 @@ function openPrivacyPolicy() {
       • 您可隨時聯繫我們刪除帳號。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">5. 聯絡方式</strong><br>
-      如有任何問題或建議，請透過【 功能 】裡的「 聯絡我們 」，與我們聯繫。
+      • 如有任何問題或建議，請透過【 功能 】裡的「 聯絡我們 」，與我們聯繫。
       <div style="height:32px;"></div>
     </div>
   `;
