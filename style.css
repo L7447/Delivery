@@ -171,7 +171,7 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 .fg { display: flex; flex-direction: column; gap: 4px; }
 .fg label { font-size: 11px; color: var(--t3); letter-spacing: .5px; }
 .form-lbl { font-size: 11px; color: var(--t3); letter-spacing: .5px; margin-bottom: 8px; }
-.finp, .fsel { width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--rs); color: var(--t1); font-size: 14px; font-family: var(--sans); outline: none; appearance: none; transition: border-color .15s; }
+.finp, .fsel { width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--rs); color: var(--t1); font-size: 16px; font-family: var(--sans); outline: none; appearance: none; transition: border-color .15s; }
 .finp:focus, .fsel:focus { border-color: var(--acc); background: var(--sf); }
 .empty-tip { text-align: center; padding: 3px 0; color: var(--hint-color); font-size: 13px; line-height: 2; font-weight: 700; }
 
@@ -329,8 +329,6 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 .fc-cell.today .fc-date { color: #fff; background: var(--t1); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: -2px 0 0 -2px; }
 
 /* ══ 車輛管理 ══ */
-.veh-summary-fuel { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
-.veh-summary-maint { background: linear-gradient(135deg, #065f46, #10b981); color: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
 .veh-sum-val { font-family: var(--mono); font-size: 16px; font-weight: 800; color: #fff; }
 .veh-sum-lbl { font-size: 10px; color: rgba(255,255,255,0.7); }
 .scooter-mask { mask-size: contain; -webkit-mask-size: contain; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; mask-position: center; -webkit-mask-position: center; width: 32px; height: 32px; }
