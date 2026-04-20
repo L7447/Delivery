@@ -1314,19 +1314,19 @@ function renderRptOverview() {
     let wageBg = '';
     
     if (avgHr <= 154) {
-      wageStatus = ' 嚴重低於基本工資 ';
+      wageStatus = ' 😭 嚴重低於基本工資 ';
       wageColor = 'var(--red)';
       wageBg = 'var(--red-d)';
     } else if (avgHr <= 175) {
-      wageStatus = ' 低於基本工資 ';
+      wageStatus = ' ⚠️⚠️ 低於基本工資 ';
       wageColor = 'var(--acc2)';
       wageBg = 'var(--acc-d)';
     } else if (avgHr <= 195) {
-      wageStatus = ' 略低於基本工資 ';
+      wageStatus = ' ⚠️ 略低於基本工資 ';
       wageColor = 'var(--blue)';
       wageBg = 'var(--blue-d)';
     } else {
-      wageStatus = ' 符合基本工資 ';
+      wageStatus = ' 🎉 符合基本工資 ';
       wageColor = 'var(--green)';
       wageBg = 'var(--green-d)';
     }
@@ -1358,7 +1358,7 @@ function renderRptOverview() {
           <div style="background: rgba(59,130,246,0.15); color: var(--blue); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
-      <div style="border-top:2px dashed var(--blue); margin-bottom:2px;"></div>
+      <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
         
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
