@@ -132,7 +132,6 @@
       <div class="logo">🛵</div>
       <div>
         <h1>外送記帳 APP</h1>
-        <p class="sub">正在為您準備專屬工作台...</p>
       </div>
     </div>
 
@@ -195,11 +194,7 @@
         </div>
       </div>
 
-      <!-- 解說字幕 -->
-      <div class="status-bubble" id="sp-status">
-        <div class="sp-icon-wrapper" id="sp-icon-wrap"><span id="sp-icon">🔄</span></div>
-        <span id="sp-text">系統啟動中...</span>
-      </div>
+
     </div>
   </div>
 </div>
@@ -604,7 +599,7 @@
     ], { duration: 1000, easing: 'ease-out' });
 
     // ── 靠路邊停（取餐前先靠邊）──
-    setStatus('🛑', '靠路邊停車取餐...', false, '#f59e0b');
+    setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
     await animate(vehicle, [
       { right: '35%', transform: 'translateY(0)' },
       { right: '35%', transform: 'translateY(-32px)' }  // 往路肩移動
@@ -703,7 +698,7 @@
     // ════════════════════════════════════════════════
     // 【第四幕：抵達客人家附近】
     // ════════════════════════════════════════════════
-    setStatus('📍', '接近目的地，準備停車...');
+    setStatus('📍', '即將抵達客人家...');
 
     // 客人家從右方入鏡，道路提早停止滾動
     animate(homeArea, [
@@ -724,7 +719,7 @@
     ], { duration: 800, easing: 'ease-out' });
 
     // ── 靠路邊停（送餐前先靠邊）──
-    setStatus('🛑', '靠邊停車，準備送餐...', false, '#f59e0b');
+    setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
     await animate(vehicle, [
       { right: '42%', transform: 'translateY(0)' },
       { right: '42%', transform: 'translateY(-32px)' }  // 往路肩移動
@@ -735,7 +730,7 @@
     // ════════════════════════════════════════════════
     // 【第五幕：下車交餐】
     // ════════════════════════════════════════════════
-    setStatus('🤝', '送達！走過去交給顧客...');
+    setStatus('🤝', '送達！交給顧客...');
 
     customer.style.opacity   = '1';
     customer.style.transform = 'translateX(15px)';
@@ -754,7 +749,7 @@
     // 交接餐點
     document.getElementById('sp-rider-bag').style.opacity = '0';
     customerBag.style.opacity  = '1';
-    customerBag.style.transform = 'translate(-10px, -20px)';
+    customerBag.style.transform = 'translate(8px, 12px)';
 
     await wait(500);
     customer.textContent = '🙋‍♂️';
