@@ -1332,7 +1332,7 @@ function renderRptOverview() {
     }
 
     // 縮小字體與內距，讓它完美塞在時薪下方不破版
-    wageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:14px; padding:3px 5px; border-radius:10px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
+    wageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:12px; padding:3px 5px; border-radius:8px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
   }
 
   // 頂部導航
