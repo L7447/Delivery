@@ -1349,7 +1349,7 @@ function renderRptOverview() {
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 12px; cursor:pointer; text-align:center;">
         <div style="font-size:12px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: var(--text-cyan); line-height:1;">$ ${fmt(total)}</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: rgba(34,197,94,0.15); color: var(--green); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">行程 $${fmt(income)}</div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
@@ -1364,13 +1364,13 @@ function renderRptOverview() {
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
         <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px;">
-            一單： <span style="font-family:var(--mono); color: var(--acc2); font-size:20px; font-weight:800;">$${fmt(avgOrd)}</span>
+            一單 $： <span style="font-family:var(--mono); color: var(--acc); font-size:20px; font-weight:800;"> ${fmt(avgOrd)}</span>
           </div>
-          <div class="h-div" style="height:40px; align-self:center;"></div>
+          <div class="h-div" style="height:45px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px;">
             1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr} <small style="color:var(--t2);font-size:11px">單</small></span>
           </div>
-          <div class="h-div" style="height:40px; align-self:center;"></div>
+          <div class="h-div" style="height:45px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px;">
             時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;">$${fmt(avgHr)}</span>
             ${wageHtml} <!-- 👈 將標籤放進時薪的正下方 -->
