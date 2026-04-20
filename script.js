@@ -1355,7 +1355,7 @@ function renderRptOverview() {
           <div class="h-div" style="height:30px; align-self:center;"></div>
           <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">獎勵 $${fmt(bonus)}</div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(59,130,246,0.15); color: var(--blue); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">小費 $${fmt(tips)}</div>
+          <div style="background: rgba(190, 59, 246, 0.15); color: #8A2BE2; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
