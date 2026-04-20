@@ -1351,14 +1351,14 @@ function renderRptOverview() {
         <div style="font-size:12px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: var(--text-cyan); line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background: rgba(34,197,94,0.15); color: var(--green); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
+          <div style="background: rgba(34,197,94,0.15); color: var(--green); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">行程 $${fmt(income)}</div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
+          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">獎勵 $${fmt(bonus)}</div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(59,130,246,0.15); color: var(--blue); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
+          <div style="background: rgba(59,130,246,0.15); color: var(--blue); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
-      <div style="border-top:2px dashed var(--blue);"></div>
+      <div style="border-top:2px dashed var(--blue); margin-bottom:2px;"></div>
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
         
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
