@@ -2126,7 +2126,7 @@ function renderAuthContent() {
   } else {
     // 註冊頁面：加入頭像選擇
     let avatarsHtml = '';
-    for(let i=1; i<=6; i++) {
+    for(let i=1; i<=8; i++) {
       const isSel = selectedAvatar === `figure/${i}.png`;
       avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
