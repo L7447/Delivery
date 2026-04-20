@@ -726,13 +726,13 @@
     // 放下餐點（餐點穩穩放在門口，不會飛到屋頂）
     document.getElementById('sp-rider-bag').style.opacity = '0';
     customerBag.style.opacity = '1';
-    customerBag.style.transform = 'translate(-19px, -1px)';   // 落在門口位置（右移一點 + 往下落在門口）
+    customerBag.style.transform = 'translate(-25px, -5px)';   // 落在門口位置（右移一點 + 往下落在門口）
 
     await wait(650);
 
     // 房子出現愛心
     heart.style.opacity = '1';
-    heart.style.transform = 'translateY(2px) scale(1.45)';
+    heart.style.transform = 'translate(19px, 2px) scale(1.45)';
 
     // 顯示「送達完成！」
     setStatus('✅', '送達完成！', true);
