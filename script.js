@@ -1351,11 +1351,11 @@ function renderRptOverview() {
         <div style="font-size:14px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background: rgba(34, 197, 94, 0.2); color: var(--green); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">行程$：<span style="font-family:var(--mono); color: #1f9c4d; font-size:14px; font-weight:800;">${fmt(income)}</span></div>
+          <div style="background: rgba(34, 197, 94, 0.2); color: var(--green); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">行程$：<span style="font-family:var(--mono); color: #1f9c4d; font-size:16px; font-weight:800;">${fmt(income)}</span></div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">獎勵$：<span style="font-family:var(--mono); color: #ff7715; font-size:14px; font-weight:800;">${fmt(bonus)}</div>
+          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">獎勵$：<span style="font-family:var(--mono); color: #ff7715; font-size:16px; font-weight:800;">${fmt(bonus)}</span></div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">小費$：<span style="font-family:var(--mono); color: #8A2BE2; font-size:14px; font-weight:800;">${fmt(tips)}</div>
+          <div style="background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">小費$：<span style="font-family:var(--mono); color: #8A2BE2; font-size:16px; font-weight:800;">${fmt(tips)}</span></div>
         </div>
       </div> 
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
