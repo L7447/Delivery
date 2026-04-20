@@ -722,10 +722,14 @@
 
     await wait(350);
 
-    // ════════════════════════════════════════════════
-    // 【第五幕：外送員將餐點放在門口 → 送達完成】←←← 完全按照你的新需求修改
+// ════════════════════════════════════════════════
+    // 【第五幕：外送員將餐點放在門口 → 送達完成】
     // ════════════════════════════════════════════════
     setStatus('📦', '外送員將餐點放在門口...');
+
+    // --- 關鍵修改：從箱子拿出餐點 ---
+    deliveryBox.textContent = ''; // 1. 箱子變空了
+    document.getElementById('sp-rider-bag').style.opacity = '1'; // 2. 騎士手上出現餐點
 
     // 外送員走向門口（往左移動）
     await animate(riderWrapper, [
@@ -735,10 +739,10 @@
 
     await wait(400);
 
-    // 放下餐點（餐點穩穩放在門口，不會飛到屋頂）
-    document.getElementById('sp-rider-bag').style.opacity = '0';
-    customerBag.style.opacity = '1';
-    customerBag.style.transform = 'translate(-30px, 9px)';   // 落在門口位置（右移一點 + 往下落在門口）
+    // 放下餐點
+    document.getElementById('sp-rider-bag').style.opacity = '0'; // 3. 騎士手上的消失
+    customerBag.style.opacity = '1'; // 4. 地面上的餐點出現
+    customerBag.style.transform = 'translate(-30px, 9px)'; 
 
     await wait(650);
 
@@ -746,7 +750,6 @@
     heart.style.opacity = '1';
     heart.style.transform = 'translate(-19px, 1px) scale(1.45)';
 
-    // 顯示「送達完成！」
     setStatus('✅', '送達完成！', true);
 
     await wait(2400);
