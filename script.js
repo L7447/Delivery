@@ -1127,7 +1127,7 @@ function renderReport() {
   if (S.rptView === 'top3') renderRptTop3();
 }
 
-/* ══ 替換：獎勵分析 (精準修復本週/即將到來切換邏輯) ══ */
+/* ══ 替換：獎勵分析 (今日/即將到來 精準推算與排序) ══ */
 function renderRptRewards() {
   const el = document.getElementById('rv-rewards');
   if (!S.rewardSubTab) S.rewardSubTab = 'current';
@@ -1135,26 +1135,21 @@ function renderRptRewards() {
   let html = `
     <div class="slide-tabs tabs-2" style="margin-bottom:12px;">
       <div class="slide-bg" style="transform: translateX(${S.rewardSubTab === 'current' ? '0%' : '100%'}); background:var(--acc);"></div>
-      <button class="slide-btn ${S.rewardSubTab === 'current' ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderRptRewards()">本週進度</button>
+      <button class="slide-btn ${S.rewardSubTab === 'current' ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderRptRewards()">今日進度</button>
       <button class="slide-btn ${S.rewardSubTab === 'upcoming' ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderRptRewards()">即將到來</button>
     </div>
     <div style="font-size:12px; color:var(--hint-color); margin-bottom:12px; text-align:center; font-weight:700;">
-      ${S.rewardSubTab === 'current' ? '顯示「本週一至日」內之獎勵進度' : '顯示明日起至下週日之即將到來獎勵'}
+      ${S.rewardSubTab === 'current' ? '顯示「包含今日」生效中之獎勵進度' : '顯示「下一個獎勵起，至下週日」之即將到來獎勵'}
     </div>`;
 
+  // ✅ 每次切換都重新取得當下最新時間，跨日不漏接
   const today = new Date(); today.setHours(0,0,0,0);
-  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const dayOfWeek = today.getDay() || 7;
-  
-  // 推算本週一、本週日、與下週日
-  const currentMon = new Date(today); currentMon.setDate(today.getDate() - dayOfWeek + 1);
-  const currentSun = new Date(today); currentSun.setDate(today.getDate() - dayOfWeek + 7);
-  const nextSunday = new Date(today); nextSunday.setDate(today.getDate() + (7 - dayOfWeek) + 7);
-
   const dStrToday = todayStr(today);
-  const dStrTomorrow = todayStr(tomorrow);
-  const dStrCurMon = todayStr(currentMon);
-  const dStrCurSun = todayStr(currentSun);
+  
+  // 推算本週一與下週日
+  const currentMon = new Date(today); currentMon.setDate(today.getDate() - dayOfWeek + 1);
+  const nextSunday = new Date(today); nextSunday.setDate(today.getDate() + (7 - dayOfWeek) + 7);
   const dStrNextSun = todayStr(nextSunday);
 
   let activeRewards = [];
@@ -1162,8 +1157,9 @@ function renderRptRewards() {
   (S.settings.rewards ||[]).forEach(r => {
     let windowsToCheck =[];
     if (r.recurring) {
-        windowsToCheck.push(getRewardWindow(dStrToday, r));
-        let nextWeekD = new Date(today); nextWeekD.setDate(today.getDate() + 7);
+        // 推算本週與下週的該獎勵區間
+        windowsToCheck.push(getRewardWindow(todayStr(currentMon), r));
+        let nextWeekD = new Date(currentMon); nextWeekD.setDate(currentMon.getDate() + 7);
         windowsToCheck.push(getRewardWindow(todayStr(nextWeekD), r));
     } else {
         windowsToCheck.push({start: r.startDate, end: r.endDate});
@@ -1176,12 +1172,13 @@ function renderRptRewards() {
 
     uniqueWindows.forEach(w => {
         let isValid = false;
+        
         if (S.rewardSubTab === 'current') {
-            // 👉 本週邏輯：如果區間的起迄落在本週內 (週一到週日)，皆顯示
-            if (w.start <= dStrCurSun && w.end >= dStrCurMon) isValid = true;
+            // 👉 今日進度邏輯：區間「包含今天」
+            if (w.start <= dStrToday && w.end >= dStrToday) isValid = true;
         } else {
-            // 👉 即將到來邏輯：如果區間開始日 >= 明天，且 <= 下週日
-            if (w.start >= dStrTomorrow && w.start <= dStrNextSun) isValid = true;
+            // 👉 即將到來邏輯：區間的「開始日」必須「大於今天」，且「<= 下週日」
+            if (w.start > dStrToday && w.start <= dStrNextSun) isValid = true;
         }
 
         if (isValid) {
@@ -1195,6 +1192,9 @@ function renderRptRewards() {
     });
   });
 
+  // 👉 依照區間的開始日 (由早到晚) 排序
+  activeRewards.sort((a,b) => a.window.start.localeCompare(b.window.start));
+
   if (activeRewards.length === 0) {
     el.innerHTML = html + `<div class="empty-tip">本區間無相符的獎勵設定</div>`;
     return;
@@ -1206,7 +1206,7 @@ function renderRptRewards() {
     let nextTierOrders = null; let prevTierOrders = 0; let achievedBonus = 0;
     
     let tiersHtml = `<div style="display:flex; align-items:center; gap:3px; flex-wrap:wrap; margin-top:12px;">`;
-    const sortedTiers = [...(r.tiers || [])].sort((a,b) => a.orders - b.orders);
+    const sortedTiers =[...(r.tiers || [])].sort((a,b) => a.orders - b.orders);
     sortedTiers.forEach((t, i) => {
       const isPassed = r.accum >= t.orders;
       if (isPassed) { achievedBonus = Math.max(achievedBonus, t.amount); prevTierOrders = t.orders; }
@@ -2091,8 +2091,10 @@ function renderSettings() {
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ══ 替換：登入系統加入頭像選擇 (大尺寸防失真、橫向捲動) ══ */
-let selectedAvatar = 'figure/1.png'; // 預設頭像
+/* ══ 替換：登入系統拆分雙頁籤與頭像綁定 ══ */
+let authMode = 'login'; // 'login' 或 'register'
+let selectedAvatar = 'figure/1.png'; 
+
 window.selectAvatar = function(src, el) {
     selectedAvatar = src;
     document.querySelectorAll('.avatar-opt').forEach(img => {
@@ -2103,22 +2105,35 @@ window.selectAvatar = function(src, el) {
     el.style.transform = 'scale(1.05)';
 }
 
-function openAuthModal() {
-  document.getElementById('sub-title').textContent = '登入/註冊帳號';
-  document.getElementById('sub-top-right').innerHTML = '';
+function renderAuthContent() {
+  let contentHtml = '';
   
-  let avatarsHtml = '';
-  for(let i=1; i<=8; i++) {
-    const isSel = selectedAvatar === `figure/${i}.png`;
-    // width/height 放至 80px，加入 image-rendering 確保不失真，並去除圓角
-    avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
-  }
-
-  document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px;">
+  if (authMode === 'login') {
+    contentHtml = `
       <p style="font-size:13px;color:var(--hint-color);margin-bottom:16px;line-height:1.6; font-weight:600; background:var(--bg-input); padding:12px; border-radius:12px;">
-        💡 <b>一鍵登入/註冊：</b><br>
-        若是首次使用，系統將自動為您建立帳號，並綁定您選擇的頭像！
+        💡 <b>歡迎回來！</b> 請輸入信箱與密碼直接登入。
+      </p>
+      <div class="fg" style="margin-bottom:16px;">
+        <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
+        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:12px;">
+      </div>
+      <div class="fg" style="margin-bottom:24px;">
+        <label style="font-weight:700; color:var(--t1);">密碼</label>
+        <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼" style="padding:12px;">
+      </div>
+      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入帳號</button>
+    `;
+  } else {
+    // 註冊頁面：加入頭像選擇
+    let avatarsHtml = '';
+    for(let i=1; i<=6; i++) {
+      const isSel = selectedAvatar === `figure/${i}.png`;
+      avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+    }
+    
+    contentHtml = `
+      <p style="font-size:13px;color:var(--hint-color);margin-bottom:16px;line-height:1.6; font-weight:600; background:var(--bg-input); padding:12px; border-radius:12px;">
+        💡 <b>建立新帳號：</b> 系統將寄送驗證碼至信箱以開通帳號！
       </p>
       <div class="fg" style="margin-bottom:20px;">
         <label style="font-weight:700; color:var(--t1);">滑動選擇專屬頭像</label>
@@ -2131,12 +2146,79 @@ function openAuthModal() {
         <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:12px;">
       </div>
       <div class="fg" style="margin-bottom:24px;">
-        <label style="font-weight:700; color:var(--t1);">密碼 (至少 6 個字元)</label>
-        <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼 (作為註冊或登入用)" style="padding:12px;">
+        <label style="font-weight:700; color:var(--t1);">設定密碼 (至少 6 個字元)</label>
+        <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:12px;">
       </div>
-      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入 / 註冊帳號</button>
+      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">註冊並寄發驗證碼</button>
+    `;
+  }
+  
+  document.getElementById('auth-content-area').innerHTML = contentHtml;
+}
+
+/* ══ 新增：更改頭像獨立設定頁 ══ */
+window.openAvatarSettings = function() {
+  document.getElementById('sub-title').textContent = '更改專屬頭像';
+  
+  // 👈 將「套用」按鈕注入至右上角
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="applyNewAvatar()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">套用</button>`;
+  
+  // 預設選中目前頭像
+  selectedAvatar = USER.avatar || 'figure/1.png';
+
+  let avatarsHtml = '';
+  for(let i=1; i<=6; i++) {
+    const isSel = selectedAvatar === `figure/${i}.png`;
+    avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+  }
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div style="display:flex; flex-wrap:wrap; gap:16px; background:var(--bg-input); padding:16px; border-radius:16px; justify-content:center;">
+        ${avatarsHtml}
+      </div>
     </div>
   `;
+}
+
+window.applyNewAvatar = function() {
+  USER.avatar = selectedAvatar;
+  saveUser();
+  toast('🎨 頭像已更新！');
+  openAccountStats(); // 切回帳號資訊頁面
+}
+
+window.switchAuthTab = function(mode) {
+  authMode = mode;
+  const btns = document.querySelectorAll('#auth-tabs .slide-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  
+  if(mode === 'login') {
+    btns[0].classList.add('active');
+    document.getElementById('auth-tab-bg').style.transform = 'translateX(0%)';
+  } else {
+    btns[1].classList.add('active');
+    document.getElementById('auth-tab-bg').style.transform = 'translateX(100%)';
+  }
+  renderAuthContent();
+}
+
+function openAuthModal() {
+  document.getElementById('sub-title').textContent = '帳號管理';
+  document.getElementById('sub-top-right').innerHTML = '';
+  authMode = 'login'; // 預設開啟登入頁籤
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div class="slide-tabs tabs-2" id="auth-tabs" style="margin-bottom:16px;">
+        <div class="slide-bg" id="auth-tab-bg" style="transform: translateX(0%); background:var(--acc);"></div>
+        <button class="slide-btn active" onclick="switchAuthTab('login')">登入帳號</button>
+        <button class="slide-btn" onclick="switchAuthTab('register')">建立新帳號</button>
+      </div>
+      <div id="auth-content-area"></div>
+    </div>
+  `;
+  renderAuthContent();
   openOverlay('sub-page');
 }
 
@@ -2251,7 +2333,10 @@ async function openAccountStats() {
 
   /* 替換 openAccountStats() 裡面的 avatarImg 宣告 */
   const avatarImg = USER.avatar 
-    ? `<img src="${USER.avatar}" style="width:128px; height:128px; object-fit:contain; margin-bottom:12px; border:none; border-radius:0; image-rendering: pixelated; image-rendering: crisp-edges;">` 
+    ? `<div style="position:relative; display:inline-block;">
+         <img src="${USER.avatar}" style="width:128px; height:128px; object-fit:contain; margin-bottom:12px; border:none; border-radius:0; image-rendering: pixelated; image-rendering: crisp-edges;">
+         <div onclick="openAvatarSettings()" style="position:absolute; bottom:16px; right:-10px; background:var(--sf); border:2px solid var(--acc); color:var(--acc); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">✎</div>
+       </div>` 
     : `<div style="font-size:48px; margin-bottom:8px;">${USER.role === 'admin' ? '👑' : '🧑‍🚀'}</div>`;
 
   let baseHtml = `
