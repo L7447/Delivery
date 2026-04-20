@@ -1314,19 +1314,19 @@ function renderRptOverview() {
     let wageBg = '';
     
     if (avgHr <= 154) {
-      wageStatus = '嚴重低於基本工資';
+      wageStatus = ' 嚴重低於基本工資 ';
       wageColor = 'var(--red)';
       wageBg = 'var(--red-d)';
     } else if (avgHr <= 175) {
-      wageStatus = '低於基本工資';
+      wageStatus = ' 低於基本工資 ';
       wageColor = 'var(--acc2)';
       wageBg = 'var(--acc-d)';
     } else if (avgHr <= 195) {
-      wageStatus = '略低於基本工資';
+      wageStatus = ' 略低於基本工資 ';
       wageColor = 'var(--blue)';
       wageBg = 'var(--blue-d)';
     } else {
-      wageStatus = '符合基本工資';
+      wageStatus = ' 符合基本工資 ';
       wageColor = 'var(--green)';
       wageBg = 'var(--green-d)';
     }
@@ -1344,21 +1344,23 @@ function renderRptOverview() {
 
   // 精簡高對比總收入框
   html += `
-    <div style="background: var(--sf); border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:16px; overflow:hidden;">
+    <div style="background: var(--sf); border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
       <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: var(--sf2); border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
-      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:16px 12px; cursor:pointer; text-align:center;">
+      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 12px; cursor:pointer; text-align:center;">
         <div style="font-size:12px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: var(--text-cyan); line-height:1;">$${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: rgba(34,197,94,0.15); color: var(--green); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">行程 $${fmt(income)}</div>
+          <div class="h-div" style="height:30px; align-self:center;"></div>
           <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">獎勵 $${fmt(bonus)}</div>
+          <div class="h-div" style="height:30px; align-self:center;"></div>
           <div style="background: rgba(59,130,246,0.15); color: var(--blue); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">小費 $${fmt(tips)}</div>
         </div>
       </div> 
-
+      <div style="border-top:2px dashed var(--blue);"></div>
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
-        <div style="border-top:2px dashed var(--border);"></div>
+        
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
         <div style="padding:12px 10px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px;">
