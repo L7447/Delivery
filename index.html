@@ -13,7 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link rel="stylesheet" href="/style.css">
 
-<!-- 啟動畫面 (Splash Screen) 專屬樣式 (精緻故事版) -->
+<!-- 啟動畫面 (Splash Screen) 專屬樣式 (沉浸式轉場微電影版) -->
   <style>
     #splash {
       --sp-bg: #f8fafc;
@@ -35,38 +35,38 @@
     
     #splash .scene { position: absolute; left: 0; right: 0; bottom: 0; top: 100px; background: linear-gradient(180deg, #e0f2fe 0%, #f1f5f9 100%); overflow: hidden; }
     
-    /* 道路移至畫面中間偏下 */
-    #splash .road { position: absolute; left: 0; right: 0; bottom: 130px; height: 50px; background: var(--sp-road); border-top: 3px solid #cbd5e1; border-bottom: 3px solid #cbd5e1; }
-    #splash .road::after { content: ''; position: absolute; top: 50%; left: 0; right: 0; border-top: 4px dashed #e2e8f0; transform: translateY(-50%); }
-    
-    /* 導航線 (由右向左) */
-    #splash .route-line { position: absolute; bottom: 165px; right: 20%; width: 60%; height: 20px; border-bottom: 4px dashed var(--sp-accent); opacity: 0; transform-origin: right; transform: scaleX(0); transition: transform 0.8s ease-in-out, opacity 0.4s; z-index: 1; }
+    /* 馬路與滾動虛線 */
+    #splash .road { position: absolute; left: 0; right: 0; bottom: 130px; height: 50px; background: var(--sp-road); border-top: 3px solid #cbd5e1; border-bottom: 3px solid #cbd5e1; overflow: hidden; }
+    #splash .road-dash { position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: repeating-linear-gradient(90deg, transparent, transparent 20px, #e2e8f0 20px, #e2e8f0 40px); transform: translateY(-50%); width: 200%; }
 
-    /* 建築物共通設定 */
     #splash .actor { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
     
-    /* 店家 (改在右邊) */
-    #splash .shop-area { right: 10%; bottom: 160px; z-index: 5; }
+    /* 轉場風景物件 */
+    #splash .scenery { bottom: 160px; right: 120%; z-index: 3; }
+    
+    /* 店家 (右側) */
+    #splash .shop-area { right: 15%; bottom: 160px; z-index: 5; }
     #splash .building { font-size: 44px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
     #splash .shop-bag { position: absolute; font-size: 18px; bottom: 0; left: -15px; transition: 0.4s; }
     
-    /* 顧客家 (改在左邊) */
-    #splash .home-area { left: 8%; bottom: 160px; z-index: 5; }
-    #splash .customer { position: absolute; font-size: 32px; bottom: 0; right: -25px; opacity: 0; transform: translateX(-15px); transition: 0.5s ease-out; }
-    #splash .customer-bag { position: absolute; font-size: 16px; bottom: 5px; right: -5px; opacity: 0; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 6; }
-    #splash .heart { position: absolute; font-size: 20px; top: -25px; right: -15px; opacity: 0; transform: translateY(10px); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    /* 顧客家 (右側) */
+    #splash .home-area { right: 120%; bottom: 160px; z-index: 5; }
+    #splash .customer { position: absolute; font-size: 32px; bottom: 0; left: -20px; opacity: 0; transform: translateX(-15px); transition: 0.5s ease-out; }
+    #splash .customer-bag { position: absolute; font-size: 16px; bottom: 5px; left: -10px; opacity: 0; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 6; }
+    #splash .heart { position: absolute; font-size: 20px; top: -25px; left: -10px; opacity: 0; transform: translateY(10px); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-    /* 精緻外送車組合 */
+    /* 外送車與騎士分離式結構 (方便走路) */
     #splash .vehicle-group { right: -35%; bottom: 135px; z-index: 10; width: 70px; height: 60px; }
-    /* 安全帽騎士 */
-    #splash .rider { font-size: 34px; position: absolute; bottom: 22px; right: 18px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 12; }
-    /* 後座外送大保溫箱 */
-    #splash .delivery-box { position: absolute; bottom: 26px; right: -2px; width: 26px; height: 30px; background: var(--sp-accent); border-radius: 6px; box-shadow: -2px 2px 6px rgba(0,0,0,0.2); z-index: 13; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; color: white; transition: 0.3s; border: 1.5px solid rgba(255,255,255,0.3); }
-    /* 機車本身 */
-    #splash .bike { font-size: 46px; position: absolute; bottom: 0; right: 0; z-index: 11; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
+    #splash .bike-body { position: absolute; bottom: 0; right: 0; z-index: 11; }
+    #splash .bike { font-size: 46px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
+    #splash .delivery-box { position: absolute; bottom: 26px; right: 2px; width: 26px; height: 30px; background: var(--sp-accent); border-radius: 6px; box-shadow: -2px 2px 6px rgba(0,0,0,0.2); z-index: 12; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; color: white; border: 1.5px solid rgba(255,255,255,0.3); }
+    
+    #splash .rider-wrapper { position: absolute; bottom: 22px; right: 20px; z-index: 13; display: flex; align-items: flex-end; }
+    #splash .rider { font-size: 34px; }
+    #splash .rider-bag { font-size: 16px; position: absolute; bottom: -5px; right: -15px; opacity: 0; }
 
-    /* 狀態解說字幕 (移至道路下方) */
-    #splash .status-bubble { position: absolute; left: 10%; right: 10%; bottom: 40px; font-size: 15px; font-weight: 800; color: #334155; background: #ffffff; padding: 14px 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 20; border-left: 6px solid var(--sp-accent); text-align: left; transition: all 0.3s; display: flex; align-items: center; gap: 10px; }
+    /* 狀態解說字幕 (獨立於下方) */
+    #splash .status-bubble { position: absolute; left: 10%; right: 10%; bottom: 35px; font-size: 15px; font-weight: 800; color: #334155; background: #ffffff; padding: 14px 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 20; border-left: 6px solid var(--sp-accent); text-align: left; display: flex; align-items: center; gap: 10px; }
   </style>
 </head>
 <body data-tab="home">
@@ -83,32 +83,42 @@
     </div>
 
     <div class="scene">
-      <!-- 中間道路與導航線 -->
-      <div class="road"></div>
-      <div class="route-line" id="sp-route"></div>
+      <!-- 轉場風景物件 -->
+      <div class="actor scenery" id="sp-s1" style="font-size:38px;">🌳</div>
+      <div class="actor scenery" id="sp-s2" style="font-size:46px;">🏢</div>
+      <div class="actor scenery" id="sp-s3" style="font-size:32px;">🚦</div>
+      <div class="actor scenery" id="sp-s4" style="font-size:28px; bottom:145px; transform:scaleX(-1);">🚶</div>
 
-      <!-- 右側：取餐店家 -->
-      <div class="actor shop-area">
+      <!-- 馬路 -->
+      <div class="road"><div class="road-dash" id="sp-road-dash"></div></div>
+
+      <!-- 取餐店家 (右側) -->
+      <div class="actor shop-area" id="sp-shop-area">
         <div class="building">🏪</div>
         <div class="shop-bag" id="sp-shop-bag">🥡</div>
       </div>
 
-      <!-- 左側：送達顧客家 -->
-      <div class="actor home-area">
+      <!-- 送達顧客家 (最後出現在右側，機車在左) -->
+      <div class="actor home-area" id="sp-home-area">
         <div class="heart" id="sp-heart">💖</div>
         <div class="customer" id="sp-customer">🧍‍♂️</div>
         <div class="customer-bag" id="sp-customer-bag">🥡</div>
         <div class="building">🏠</div>
       </div>
 
-      <!-- 移動的精緻外送車 (由右向左) -->
+      <!-- 移動的外送車與分離式騎士 -->
       <div class="actor vehicle-group" id="sp-vehicle">
-        <div class="rider" id="sp-rider">🧑‍🚀</div>
-        <div class="delivery-box" id="sp-delivery-box">APP</div>
-        <div class="bike">🛵</div>
+        <div class="bike-body">
+          <div class="delivery-box" id="sp-delivery-box">APP</div>
+          <div class="bike">🛵</div>
+        </div>
+        <div class="rider-wrapper" id="sp-rider-wrapper">
+          <div class="rider">🧑‍🚀</div>
+          <div class="rider-bag" id="sp-rider-bag">🥡</div>
+        </div>
       </div>
 
-      <!-- 下方字幕解說 -->
+      <!-- 字幕解說 -->
       <div class="status-bubble" id="sp-status">
         <span id="sp-icon" style="font-size:20px;">🔄</span>
         <span id="sp-text">系統啟動中...</span>
@@ -466,23 +476,26 @@
 <!-- 載入原本的 APP 邏輯 -->
 <script src="/script.js"></script>
 
-<!-- 🛵 故事型動畫專用 Script (精緻加長版) -->
+<!-- 🛵 故事型動畫專用 Script (微電影長版) -->
 <script>
   async function runStoryAnimation() {
     const text = document.getElementById('sp-text');
     const icon = document.getElementById('sp-icon');
     const bubble = document.getElementById('sp-status');
     const vehicle = document.getElementById('sp-vehicle');
-    const rider = document.getElementById('sp-rider');
+    const riderWrapper = document.getElementById('sp-rider-wrapper');
+    const shopArea = document.getElementById('sp-shop-area');
     const shopBag = document.getElementById('sp-shop-bag');
     const deliveryBox = document.getElementById('sp-delivery-box');
-    const customerBag = document.getElementById('sp-customer-bag');
-    const route = document.getElementById('sp-route');
+    const homeArea = document.getElementById('sp-home-area');
     const customer = document.getElementById('sp-customer');
+    const customerBag = document.getElementById('sp-customer-bag');
     const heart = document.getElementById('sp-heart');
+    const roadDash = document.getElementById('sp-road-dash');
     const splash = document.getElementById('splash');
 
     const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const animate = (el, kf, opt) => el.animate(kf, { ...opt, fill: 'forwards' }).finished;
 
     function setStatus(ic, txt) {
       icon.textContent = ic;
@@ -493,83 +506,118 @@
 
     // 【第一幕：前往店家】
     setStatus('🏪', '收到新訂單，前往店家取餐...');
-    // 車子從右外側騎到店家旁
-    await vehicle.animate([
-      { right: '-35%', transform: 'rotate(0deg)' },
-      { right: '15%', transform: 'rotate(3deg)' },
-      { right: '15%', transform: 'rotate(0deg)' }
-    ], { duration: 1000, fill: 'forwards', easing: 'ease-out' }).finished;
+    // 機車由外側進入，停在店家左邊 (right: 35%)
+    await animate(vehicle, [
+      { right: '-35%' }, { right: '35%' }
+    ], { duration: 1000, easing: 'ease-out' });
     
-    await wait(600); // 延長停留
+    await wait(800);
 
-    // 【第二幕：拿取餐點】
-    setStatus('📦', '抵達店家，核對餐點編號中...');
-    // 騎士稍微起身
-    rider.animate([{ transform: 'translateY(-12px)' }, { transform: 'translateY(0)' }], { duration: 500 });
-    await wait(600);
-    
-    // 餐點放進保溫箱的視覺變化
+    // 【第二幕：下車取餐】
+    setStatus('📦', '抵達店家，騎士取餐中...');
+    // 騎士下車走向店家 (往右走，X 軸正向)
+    await animate(riderWrapper, [
+      { transform: 'translate(0, 0)' },
+      { transform: 'translate(25px, -5px)' }, // 走路的彈跳感
+      { transform: 'translate(50px, 0)' }
+    ], { duration: 600, easing: 'ease-in-out' });
+
     shopBag.style.opacity = '0';
-    shopBag.style.transform = 'translateY(-20px)';
-    deliveryBox.style.transform = 'scale(1.25)';
-    deliveryBox.textContent = '🥡'; // 保溫箱顯示有餐點
-    await wait(300);
-    deliveryBox.style.transform = 'scale(1)';
-    await wait(800); // 延長停留
-
-    // 【第三幕：導航規劃與出發】
-    setStatus('🗺️', '餐點已妥善裝箱，規劃路線出發！');
-    // 從右向左畫出導航虛線
-    route.style.opacity = '1';
-    route.style.transform = 'scaleX(1)';
-    await wait(1000); // 延長停留
-
-    // 【第四幕：騎往顧客家】
-    setStatus('🛵', '火速外送中，安全第一！');
-    // 車子騎向左側客人家，加入上下輕微顛簸感
-    await vehicle.animate([
-      { right: '15%', bottom: '135px' },
-      { right: '35%', bottom: '139px' },
-      { right: '50%', bottom: '135px' },
-      { right: '65%', bottom: '139px' },
-      { right: '70%', bottom: '135px' }
-    ], { duration: 1600, fill: 'forwards', easing: 'linear' }).finished;
-
+    document.getElementById('sp-rider-bag').style.opacity = '1';
     await wait(600);
 
-    // 【第五幕：送達與交付餐點】
-    setStatus('📍', '抵達目的地，聯絡顧客取餐');
-    // 顧客出現向右走近
-    customer.style.opacity = '1';
-    customer.style.transform = 'translateX(15px)';
-    await wait(800);
+    // 騎士走回車上
+    await animate(riderWrapper, [
+      { transform: 'translate(50px, 0)' },
+      { transform: 'translate(25px, -5px)' },
+      { transform: 'translate(0, 0)' }
+    ], { duration: 600, easing: 'ease-in-out' });
 
-    // 騎士給餐
-    rider.animate([{ transform: 'translateY(-12px)' }, { transform: 'translateY(0)' }], { duration: 500 });
-    deliveryBox.textContent = 'APP'; // 保溫箱恢復原狀
+    deliveryBox.textContent = '🥡'; // 放進保溫箱
+    document.getElementById('sp-rider-bag').style.opacity = '0';
+    await wait(1000); // 準備出發的停頓
+
+    // 【第三幕：轉場 - 路上風景】
+    setStatus('🛵', '火速外送中，經過市區路口...');
     
-    // 顧客拿到餐點
-    customerBag.style.opacity = '1';
-    customerBag.style.transform = 'translate(10px, -20px)';
+    // 店家往右退場
+    animate(shopArea, [{ right: '15%' }, { right: '-50%' }], { duration: 1500, easing: 'ease-in' });
+    
+    // 機車稍微往前移到畫面中央，營造前進感
+    animate(vehicle, [{ right: '35%' }, { right: '55%' }], { duration: 1500, easing: 'ease-out' });
+
+    // 馬路虛線開始高速滾動
+    const roadAnim = roadDash.animate([
+      { transform: 'translateY(-50%) translateX(0)' }, 
+      { transform: 'translateY(-50%) translateX(50px)' }
+    ], { duration: 400, iterations: Infinity, easing: 'linear' });
+
+    // 風景輪流飛掠 (由左至右)
+    const runScenery = async (id, delay, dur) => {
+      await wait(delay);
+      const el = document.getElementById(id);
+      return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
+    };
+    
+    runScenery('sp-s1', 0, 1600);    // 樹木
+    runScenery('sp-s2', 800, 1800);  // 建築物
+    runScenery('sp-s3', 1800, 1400); // 紅綠燈
+    runScenery('sp-s4', 2400, 2000); // 行人
+
+    await wait(3500); // 讓風景跑一陣子
+
+    // 【第四幕：抵達客人家】
+    setStatus('📍', '抵達目的地，停車於左側...');
+    roadAnim.pause(); // 煞車，馬路停止
+
+    // 客人家從左側進場，停在右邊 (right: 15%)
+    await animate(homeArea, [
+      { right: '120%' }, { right: '15%' }
+    ], { duration: 1500, easing: 'ease-out' });
+    
+    // 此時機車在 55% (左)，客人家在 15% (右)，完美不遮擋
     await wait(800);
 
-    // 顧客開心，冒出愛心
-    customer.textContent = '🙋‍♂️'; 
+    // 【第五幕：下車交餐】
+    setStatus('🤝', '走過去交給客人...');
+    
+    customer.style.opacity = '1';
+    customer.style.transform = 'translateX(0)'; // 客人出門
+    
+    deliveryBox.textContent = 'APP'; // 拿出餐點
+    document.getElementById('sp-rider-bag').style.opacity = '1';
+    
+    // 騎士下車走向右邊的客人
+    await animate(riderWrapper, [
+      { transform: 'translate(0, 0)' },
+      { transform: 'translate(60px, -8px)' }, // 第一步
+      { transform: 'translate(120px, 0)' }    // 第二步抵達
+    ], { duration: 800, easing: 'linear' });
+
+    await wait(600);
+    
+    // 交接餐點
+    document.getElementById('sp-rider-bag').style.opacity = '0';
+    customerBag.style.opacity = '1';
+    customerBag.style.transform = 'translate(10px, -25px)';
+
+    await wait(600);
+    customer.textContent = '🙋‍♂️';
     heart.style.opacity = '1';
     heart.style.transform = 'translateY(-15px) scale(1.3)';
-    
+
     setStatus('🎉', '任務圓滿完成！辛苦了！');
     bubble.style.borderLeftColor = '#22C55E';
     icon.style.color = '#22C55E';
 
-    // 完美結局停留時間加長，讓使用者欣賞
-    await wait(1800);
+    // 結局停留，讓使用者欣賞成就感
+    await wait(2200);
 
     // 【終幕：平滑淡出】
     await splash.animate([
       { opacity: 1, transform: 'scale(1)' },
       { opacity: 0, transform: 'scale(1.03)' }
-    ], { duration: 500, fill: 'forwards', easing: 'ease-in-out' }).finished;
+    ], { duration: 600, easing: 'ease-in-out' }).finished;
     
     splash.remove(); 
   }
