@@ -1353,7 +1353,7 @@ function renderRptOverview() {
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: rgba(34, 197, 94, 0.2); color: var(--green); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">行程$：<span style="font-family:var(--mono); color: #1f9c4d; font-size:14px; font-weight:800;">${fmt(income)}</span></div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">獎勵$：<span style="font-family:var(--mono); color: #ff6a00; font-size:14px; font-weight:800;">${fmt(bonus)}</div>
+          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">獎勵$：<span style="font-family:var(--mono); color: #ff7715; font-size:14px; font-weight:800;">${fmt(bonus)}</div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
           <div style="background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">小費$：<span style="font-family:var(--mono); color: #8A2BE2; font-size:14px; font-weight:800;">${fmt(tips)}</div>
         </div>
