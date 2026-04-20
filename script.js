@@ -1282,7 +1282,7 @@ window.navTrend = function(dir) {
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
-/* ══ 替換：收入總覽頁面 (加入基本工資分析邏輯) ══ */
+/* ══ 替換：收入總覽頁面 (將基本工資標籤移至時薪下方) ══ */
 function renderRptOverview() {
   if (!S.rptOverviewFilter) S.rptOverviewFilter = 'all';
   const allMonthRecs = getMonthRecs(S.rptY, S.rptM);
@@ -1302,10 +1302,13 @@ function renderRptOverview() {
   const activePlats = S.platforms.filter(p=>p.active);
   let filterName = isAll ? '全部平台' : (activePlats.find(p=>p.id===S.rptOverviewFilter)?.name || '');
 
-  // 👇 新增：基本工資分析邏輯
+  const avgOrd = orders > 0 ? Math.round(total / orders) : 0;
+  const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
+  const avgHr = hours > 0 ? Math.round(total / hours) : 0;
+
+  // 👇 基本工資分析邏輯 (改為精巧徽章版)
   let wageHtml = '';
   if (hours > 0) {
-    const avgHr = Math.round(total / hours);
     let wageStatus = '';
     let wageColor = '';
     let wageBg = '';
@@ -1328,12 +1331,8 @@ function renderRptOverview() {
       wageBg = 'var(--green-d)';
     }
 
-    wageHtml = `
-      <div style="border-top:1px dashed var(--border);"></div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
-        <span style="font-size:12px; font-weight:700; color:var(--t2);">⚖️ 基本工資分析</span>
-        <span style="background:${wageBg}; color:${wageColor}; font-size:11px; padding:4px 8px; border-radius:8px; font-weight:800; letter-spacing:0.5px;">${wageStatus}</span>
-      </div>`;
+    // 縮小字體與內距，讓它完美塞在時薪下方不破版
+    wageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:10px; padding:3px 5px; border-radius:6px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
   }
 
   // 頂部導航
@@ -1360,21 +1359,21 @@ function renderRptOverview() {
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
         <div style="border-top:2px dashed var(--border);"></div>
-        <div style="padding:12px 10px; display:flex; justify-content:center; align-items:center; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">
-            一單 <br><span style="font-family:var(--mono); color: var(--acc2); font-size:19px; font-weight:800;">$${orders>0?fmt(Math.round(total/orders)):'0'}</span>
+        <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
+        <div style="padding:12px 10px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
+          <div style="flex:1; text-align:center; padding-top:2px;">
+            一單 <span style="font-family:var(--mono); color: var(--acc2); font-size:19px; font-weight:800;">$${fmt(avgOrd)}</span>
           </div>
-          <div class="h-div" style="height:30px;"></div>
-          <div style="flex:1; text-align:center;">
-            1 h <br><span style="font-family:var(--mono); color: var(--text-red); font-size:19px; font-weight:800;">${hours>0?(orders/hours).toFixed(1):'0'} <small style="color:var(--t3);font-size:11px">單</small></span>
+          <div class="h-div" style="height:40px; align-self:center;"></div>
+          <div style="flex:1; text-align:center; padding-top:2px;">
+            1 h <span style="font-family:var(--mono); color: var(--text-red); font-size:19px; font-weight:800;">${ordHr} <small style="color:var(--t3);font-size:11px">單</small></span>
           </div>
-          <div class="h-div" style="height:30px;"></div>
-          <div style="flex:1; text-align:center;">
-            時薪 <br><span style="font-family:var(--mono); color: var(--text-blue); font-size:19px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
+          <div class="h-div" style="height:40px; align-self:center;"></div>
+          <div style="flex:1; text-align:center; padding-top:2px;">
+            時薪 <span style="font-family:var(--mono); color: var(--text-blue); font-size:19px; font-weight:800;">$${fmt(avgHr)}</span>
+            ${wageHtml} <!-- 👈 將標籤放進時薪的正下方 -->
           </div>
         </div>
-
-        ${wageHtml}
         
         ${cashTipTotal > 0 ? `
         <div style="border-top:1px dashed var(--border);"></div>
@@ -2213,7 +2212,7 @@ window.openAvatarSettings = function() {
   selectedAvatar = USER.avatar || 'figure/1.png';
 
   let avatarsHtml = '';
-  for(let i=1; i<=6; i++) {
+  for(let i=1; i<=8; i++) {
     const isSel = selectedAvatar === `figure/${i}.png`;
     avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
   }
