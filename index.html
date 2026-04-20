@@ -334,63 +334,111 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div style="width:45px;"></div>
         <div class="pg-title" style="margin:0;">車輛管理</div>
-        <button onclick="openOverlay('vehicle-add-page')" style="width:45px; height:36px; background:var(--acc); color:white; border:none; border-radius:10px; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center;">+</button>
+        <button onclick="openAddVehicle()" title="新增車輛" style="width:45px; height:45px; padding:0; background:transparent; border:none; cursor:pointer;">
+          <img src="images/scooter.png" alt="新增車輛" style="border: 3px solid var(--schedule-bg); border-radius: 50px; width:100%; height:100%; object-fit:contain;">
+        </button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="mbtn" onclick="changeVehMonth(-1)">◀</button>
+          <h2 id="veh-month-label" style="font-size:14px; font-weight:800; color:var(--t1);"></h2>
+          <button class="mbtn" onclick="changeVehMonth(1)">▶</button>
+        </div>
+        <button onclick="openAddVehRec()" style="padding: 8px 12px; background: #eff6ff; border: 3px dashed #3b82f6; border-radius: 12px; color: #3b82f6; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; margin-right: 60px;">+ 新增車輛記錄</button>
+      </div>
+      <div id="veh-selector-container"></div>
+      <div class="slide-tabs tabs-2" style="margin-bottom:0;">
+        <div class="slide-bg" id="veh-tab-bg" style="transform: translateX(0%);"></div>
+        <button class="slide-btn active" id="btn-veh-fuel" onclick="switchVehicleTab('fuel', 0)">車輛燃料</button>
+        <button class="slide-btn" id="btn-veh-maint" onclick="switchVehicleTab('maintenance', 1)">保養維修</button>
       </div>
     </div>
-    <div id="veh-list-area" style="flex:1; overflow-y:auto; padding:0 16px 24px;"></div>
+    <div id="vehicle-content" style="flex:1; overflow-y:auto; padding:12px 16px 24px;"></div>
   </section>
 
-  <section class="page" id="page-settings" style="padding:16px; overflow-y:auto;">
-    <div class="pg-title">設定</div>
-    <div id="settings-content"></div>
+  <section class="page" id="page-settings" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+    <div class="fixed-header">
+      <div class="pg-title" style="margin:0;">功能設定</div>
+    </div>
+    <div id="settings-content" style="flex:1; overflow-y:auto; padding:12px 16px 24px;"></div>
   </section>
 
-  <nav class="bottom-nav" id="bottom-nav">
-    <button class="nav-btn active" onclick="switchTab('home')" id="nav-home">
-      <span class="nav-icon">🏠</span><span class="nav-label">首頁</span>
-    </button>
-    <button class="nav-btn" onclick="switchTab('history')" id="nav-history">
-      <span class="nav-icon">📋</span><span class="nav-label">記錄</span>
-    </button>
-    <button class="nav-btn nav-add" onclick="openAddRecord()" id="nav-add">
-      <span class="nav-icon">＋</span>
-    </button>
-    <button class="nav-btn" onclick="switchTab('report')" id="nav-report">
-      <span class="nav-icon">📊</span><span class="nav-label">分析</span>
-    </button>
-    <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings">
-      <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
-    </button>
+  <nav id="nav">
+    <div class="ni active" data-pg="home" data-img1="images/home1.png" data-img2="images/home2.png"><img class="ni-img" src="images/home1.png"><span class="lb">首頁</span></div>
+    <div class="ni" data-pg="history" data-img1="images/history1.png" data-img2="images/history2.png"><img class="ni-img" src="images/history1.png"><span class="lb">查看記錄</span></div>
+    <div class="ni" data-pg="add" data-img1="images/add-record1.png" data-img2="images/add-record2.png"><img class="ni-img" src="images/add-record1.png"><span class="lb">新增</span></div>
+    <div class="ni" data-pg="report" data-img1="images/report1.png" data-img2="images/report2.png"><img class="ni-img" src="images/report1.png"><span class="lb">收入分析</span></div>
+    <div class="ni" data-pg="vehicles" data-img1="images/scooter1.png" data-img2="images/scooter2.png"><img class="ni-img" src="images/scooter1.png"><span class="lb">車輛管理</span></div>
+    <div class="ni" data-pg="settings" data-img1="images/settings1.png" data-img2="images/settings2.png"><img class="ni-img" src="images/settings1.png"><span class="lb">設定</span></div>
   </nav>
-</div>
 
-<div class="overlay-page" id="vehicle-detail-page">
+<div class="overlay-page" id="search-page">
   <div class="top-bar">
-    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('vehicle-detail-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
-    <h2 id="veh-detail-title">車輛詳情</h2>
-    <button onclick="openAddVehRec()" style="width:36px; height:36px; background:var(--acc); color:white; border:none; border-radius:10px; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">+</button>
-  </div>
-  <div class="overlay-body" id="veh-detail-body"></div>
-</div>
-
-<div class="overlay-page" id="record-detail-page" style="z-index:1100;">
-  <div class="top-bar">
-    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('record-detail-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
-    <h2>記錄詳情</h2>
+    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('search-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+    <h2>🔍 搜尋記錄</h2>
     <div style="width:36px"></div>
   </div>
-  <div class="overlay-body" id="record-detail-body"></div>
+  <div class="overlay-body">
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input type="text" class="finp" id="search-kw" placeholder="關鍵字、平台、金額..." style="flex:1">
+      <button onclick="resetSearch()" style="padding:10px 12px;border-radius:var(--rs);white-space:nowrap; background:var(--bg-input); color:var(--t2); border:1px solid var(--border); font-weight:700;">清除</button>
+      <button onclick="doSearch()" class="btn-acc" style="padding:10px 16px;border-radius:var(--rs);white-space:nowrap">搜尋</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <div class="fg" style="flex:1"><label style="font-weight:700; color:var(--t2);">開始日期</label><input type="date" class="finp" id="search-from"></div>
+      <div class="fg" style="flex:1"><label style="font-weight:700; color:var(--t2);">結束日期</label><input type="date" class="finp" id="search-to"></div>
+    </div>
+    <div id="search-results" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
 </div>
 
-<div class="overlay-page" id="calendar-page" style="z-index:1050; padding:0; display:flex; flex-direction:column;">
-  <div class="top-bar" style="flex-shrink:0;">
-    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('calendar-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
-    <h2>行程日曆</h2>
+<div class="overlay-page" id="sub-page">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('sub-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+    <h2 id="sub-title">設定</h2>
+    <div id="sub-top-right" style="min-width:36px; text-align:right;"></div>
+  </div>
+  <div class="overlay-body" id="sub-body"></div>
+</div>
+
+<div id="detail-overlay">
+  <div id="detail-box">
+    <div class="top-bar" style="border-radius:20px 20px 0 0"><button class="bar-btn" onclick="animateClose(this, () => closeDetailOverlay())"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>記錄詳情</h2><div style="width:36px"></div></div>
+    <div id="detail-body" style="padding:16px 16px 32px;overflow-y:auto;max-height:70vh"></div>
+  </div>
+</div>
+
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <div id="confirm-msg"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button id="confirm-cancel-btn" style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--sf2);color:var(--t2);font-size:14px;font-family:var(--sans);cursor:pointer">取消</button>
+      <button id="confirm-ok-btn" style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--red);color:#fff;font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">確定</button>
+    </div>
+  </div>
+</div>
+
+<div id="progress-overlay">
+  <div id="big-progress-container">
+    <div id="big-progress-fill"></div>
+    <div id="big-progress-text">資料儲存中...</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<input type="file" id="restore-file" accept=".json" style="display:none">
+
+<div class="overlay-page" id="full-calendar-overlay" style="background:var(--bg); z-index:900;">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="animateClose(this, () => closeFullCalendar())"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+    <div style="display:flex;align-items:center;gap:12px;"><button class="mbtn" onclick="changeFullCalMonth(-1)">◀</button><h2 id="fc-title" style="font-size:18px;min-width:100px;text-align:center;"></h2><button class="mbtn" onclick="changeFullCalMonth(1)">▶</button></div>
     <div style="width:36px"></div>
   </div>
-  <div id="fc-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 16px; flex-shrink:0;"></div>
-  <div id="fc-dow" style="display:grid; grid-template-columns:repeat(7,1fr); background:var(--sf); border-bottom:1px solid var(--border);"></div>
-  <div id="fc-grid" style="display:grid; grid-template-columns:repeat(7,1fr); flex:1; overflow-y:auto; background:var(--border); gap:1px;"></div>
+  <div class="overlay-body" id="fc-body" style="padding:0; display:flex; flex-direction:column; height:100%;">
+    <div id="fc-dow" style="display:grid; grid-template-columns:repeat(7,1fr); background:var(--sf); border-bottom:1px solid var(--border);"></div>
+    <div id="fc-grid" style="display:grid; grid-template-columns:repeat(7,1fr); flex:1; overflow-y:auto; background:var(--border); gap:1px;"></div>
+  </div>
 </div>
 
 <div class="overlay-page" id="vehicle-add-page">
@@ -484,7 +532,7 @@
       </div>
       <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT0201.aspx?id=FL105973" target="_blank" style="display:block; padding:16px 0; border-bottom:1px solid var(--border); text-decoration:none;">
         <div style="font-size:18px; font-weight:700; color:var(--t1); margin-bottom:6px; line-height:1.4;">外送員權益保障及外送平臺管理法</div>
-        <div style="font-size:16px; font-weight:300; color:var(--t2);">勞動部 官方網站</div>
+        <div style="font-size:16px; font-weight:300; color:var(--t2);">勞動部 官方法規網站</div>
       </a>
       <div style="height:40px;"></div>
     </div>
