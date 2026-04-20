@@ -612,13 +612,15 @@
       { right: '35%',  transform: 'translateY(0)' }
     ], { duration: 1000, easing: 'ease-out' });
 
+    await wait(700);
+
     setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
     await animate(vehicle, [
       { right: '35%', transform: 'translateY(0)' },
       { right: '35%', transform: 'translateY(-28px)' }
     ], { duration: 450, easing: 'ease-out' });
 
-    await wait(400);
+    await wait(700);
 
     // ════════════════════════════════════════════════
     // 【第二幕：下車取餐】
@@ -653,7 +655,7 @@
     // ════════════════════════════════════════════════
     // 【第三幕：火速外送，市區穿梭】
     // ════════════════════════════════════════════════
-    setStatus('🛵', '火速外送中，穿梭市區...');
+    setStatus('🛵', '外送中，穿梭市區...');
 
     animate(shopArea, [{ right: '15%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
     animate(vehicle, [{ right: '35%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
@@ -670,34 +672,31 @@
       return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
     };
 
-    runScenery('sp-s7',  0,    9500); // ☁️
-    runScenery('sp-s13', 350,  9500); // ⛅
-    runScenery('sp-s1',  0,    1500); // 🌳
-    runScenery('sp-s9',  600,  1500); // 🌴
-    runScenery('sp-s6',  1900, 1500); // 🌲
-    runScenery('sp-s5',  350,  1500); // 🏦
-    runScenery('sp-s8',  800,  1500); // 🏬
-    runScenery('sp-s2',  1200, 1500); // 🏢
-    runScenery('sp-s11', 1550, 1500); // 🏫
-    runScenery('sp-s14', 2050, 1500); // 🏨
-    runScenery('sp-s3',  2250, 1500); // 🚦
-    runScenery('sp-s4',  2550, 1500); // 🚶
-    runScenery('sp-s10', 2950, 1500); // 🚶‍♂️
-    runScenery('sp-s12', 3300, 1500); // 🧑‍🦯
-    runScenery('sp-s15', 3650, 1500); // 🚶‍♀️
-    runScenery('sp-s14', 3000, 1500); // 🏨
-    runScenery('sp-s11', 3350, 1500); // 🏫
-    runScenery('sp-s2',  3700, 1500); // 🏢    
-    runScenery('sp-s8',  4100, 1500); // 🏬
+    runScenery('sp-s7',  0,    11000); // ☁️
+    runScenery('sp-s13', 300,  11000); // ⛅
+    runScenery('sp-s1',  500,  1500); // 🌳
+    runScenery('sp-s5',  700,  1500); // 🏦
+    runScenery('sp-s3',  900,  1500); // 🚦
+    runScenery('sp-s4',  1100, 1500); // 🚶
+    runScenery('sp-s9',  1300, 1500); // 🌴    
+    runScenery('sp-s8',  1500, 1500); // 🏬
+    runScenery('sp-s10', 1700, 1500); // 🚶‍♂️
+    runScenery('sp-s2',  1900, 1500); // 🏢
+    runScenery('sp-s3',  2100, 1500); // 🚦    
+    runScenery('sp-s6',  2300, 1500); // 🌲    
+    runScenery('sp-s12', 2500, 1500); // 🧑‍🦯
+    runScenery('sp-s11', 2700, 1500); // 🏫
+    runScenery('sp-s15', 2900, 1500); // 🚶‍♀️
+    runScenery('sp-s14', 3100, 1500); // 🏨
 
-    await wait(5000);
+    await wait(4000);
 
     // ════════════════════════════════════════════════
     // 【第四幕：抵達客人家附近】
     // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
 
-    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1500, easing: 'ease-out' });
+    animate(homeArea, [{ right: '120%' }, { right: '60%' }], { duration: 500, easing: 'ease-out' });
     await wait(100);
     roadAnim.pause();
     await wait(1200);
@@ -734,6 +733,7 @@
 
     // 放下餐點
     document.getElementById('sp-rider-bag').style.opacity = '0'; // 3. 騎士手上的消失
+    await wait(400);
     customerBag.style.opacity = '1'; // 4. 地面上的餐點出現
     customerBag.style.transform = 'translate(-30px, 9px)'; 
 
