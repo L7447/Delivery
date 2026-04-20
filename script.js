@@ -1344,7 +1344,7 @@ function renderRptOverview() {
 
   // 精簡高對比總收入框
   html += `
-    <div style="background: var(--sf); border:1px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
+    <div style="background: var(--sf); border:2px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
       <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: var(--sf2); border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 12px; cursor:pointer; text-align:center;">
@@ -1362,7 +1362,7 @@ function renderRptOverview() {
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
         
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
-        <div style="padding:12px 10px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
+        <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px;">
             一單： <span style="font-family:var(--mono); color: var(--acc2); font-size:19px; font-weight:800;">$${fmt(avgOrd)}</span>
           </div>
