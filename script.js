@@ -1362,17 +1362,17 @@ function renderRptOverview() {
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
         
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
-        <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
+        <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px;">
-            一單： <span style="font-family:var(--mono); color: var(--acc2); font-size:19px; font-weight:800;">$${fmt(avgOrd)}</span>
+            一單： <span style="font-family:var(--mono); color: var(--acc2); font-size:20px; font-weight:800;">$${fmt(avgOrd)}</span>
           </div>
           <div class="h-div" style="height:40px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px;">
-            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:19px; font-weight:800;">${ordHr} <small style="color:var(--t3);font-size:11px">單</small></span>
+            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr} <small style="color:var(--t2);font-size:11px">單</small></span>
           </div>
           <div class="h-div" style="height:40px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px;">
-            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:19px; font-weight:800;">$${fmt(avgHr)}</span>
+            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;">$${fmt(avgHr)}</span>
             ${wageHtml} <!-- 👈 將標籤放進時薪的正下方 -->
           </div>
         </div>
