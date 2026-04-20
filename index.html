@@ -691,10 +691,10 @@
     runScenery('sp-s14', 3000, 1750);
     runScenery('sp-s11', 3350, 1650);
     runScenery('sp-s2',  3700, 1600);    
-    runScenery('sp-s8',  4000, 1750);
-    runScenery('sp-s16', 4300, 1650);
-    runScenery('sp-s17', 4600, 1600);
-    runScenery('sp-s18', 4900, 1750);
+    runScenery('sp-s8',  4100, 1750);
+    runScenery('sp-s16', 4400, 1650);
+    runScenery('sp-s17', 4700, 1600);
+    runScenery('sp-s18', 5000, 1750);
 
 
     await wait(4500);
@@ -704,7 +704,7 @@
     // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
 
-    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 3300, easing: 'ease-out' });
+    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 2300, easing: 'ease-out' });
     await wait(320);
     roadAnim.pause();
     await wait(1280);
