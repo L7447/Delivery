@@ -13,80 +13,94 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link rel="stylesheet" href="/style.css">
 
-  <!-- 啟動畫面 (Splash Screen) 專屬樣式 -->
+<!-- 啟動畫面 (Splash Screen) 專屬樣式 (故事版) -->
   <style>
     #splash {
       --sp-bg: #f0f4f8;
-      --sp-road: #d9d9dd;
-      --sp-accent: #ff6b35; /* 統一使用外送記帳的橘色 */
-      --sp-truck: #2b2f42;
+      --sp-road: #cbd5e1;
+      --sp-accent: #FF6B35;
       position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column;
       background: linear-gradient(180deg, #ffffff 0%, var(--sp-bg) 100%); z-index: 999999;
+      font-family: 'Syne', 'Noto Sans TC', sans-serif;
     }
     #splash .splash-card {
-      width: 92%; max-width: 400px; height: 420px; border-radius: 20px; box-shadow: 0 12px 40px rgba(20,20,40,0.1);
-      background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%); padding: 20px; box-sizing: border-box; position: relative; overflow: hidden;
-      border: 1px solid rgba(0,0,0,0.05);
+      width: 92%; max-width: 400px; height: 420px; border-radius: 24px; box-shadow: 0 16px 50px rgba(20,20,40,0.08);
+      background: #ffffff; padding: 24px; box-sizing: border-box; position: relative; overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.03);
     }
-    #splash .topbar { display: flex; align-items: center; gap: 12px; }
-    #splash .logo { width: 48px; height: 48px; border-radius: 12px; background: var(--sp-accent); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 10px rgba(255,107,53,0.3); }
-    #splash h1 { font-size: 18px; margin: 0; color: #222; font-family: 'Syne', sans-serif; font-weight: 800; }
-    #splash p.sub { margin: 4px 0 0; color: #666; font-size: 13px; font-weight: 500; }
+    #splash .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    #splash .logo { width: 52px; height: 52px; border-radius: 14px; background: var(--sp-accent); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 6px 14px rgba(255,107,53,0.3); }
+    #splash h1 { font-size: 20px; margin: 0; color: #1e293b; font-weight: 800; letter-spacing: 0.5px; }
+    #splash p.sub { margin: 4px 0 0; color: #64748b; font-size: 13px; font-weight: 600; }
     
-    #splash .scene { position: absolute; left: 0; right: 0; bottom: 0; top: 86px; background: linear-gradient(180deg, #e8f6ff 0%, #f3fbff 40%, var(--sp-bg) 100%); display: flex; align-items: flex-end; justify-content: center; }
-    #splash .map { width: 100%; height: 260px; max-width: 720px; position: relative; padding-bottom: 40px; box-sizing: border-box; }
+    #splash .scene { position: absolute; left: 0; right: 0; bottom: 0; top: 96px; background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%); overflow: hidden; }
     
-    #splash .road { position: absolute; left: 8%; right: 8%; bottom: 24px; height: 90px; background: linear-gradient(180deg, var(--sp-road), #cfcfd4); border-radius: 10px; box-shadow: inset 0 6px 12px rgba(0,0,0,0.03); }
-    
-    #splash .building { position: absolute; bottom: 120px; width: 64px; height: 64px; border-radius: 12px; background: #fff; box-shadow: 0 6px 12px rgba(20,20,40,0.06); display: flex; align-items: center; justify-content: center; font-size: 24px; }
-    #splash .shop { left: 12%; transform: translateX(-10%); }
-    #splash .home { right: 12%; transform: translateX(10%); }
-    #splash .building::after { content: attr(data-label); position: absolute; bottom: -20px; font-size: 12px; font-weight: 700; color: #555; }
+    /* 道路與導航線 */
+    #splash .road { position: absolute; left: 0; right: 0; bottom: 30px; height: 60px; background: var(--sp-road); border-top: 4px solid #94a3b8; }
+    #splash .route-line { position: absolute; bottom: 65px; left: 20%; width: 60%; height: 20px; border-bottom: 4px dashed var(--sp-accent); opacity: 0; transform-origin: left; transform: scaleX(0); transition: transform 0.6s ease-in-out, opacity 0.3s; }
 
-    #splash .bike { position: absolute; bottom: 40px; left: 12%; width: 88px; height: 56px; transform-origin: center center; z-index: 10; }
-    #splash .bike .body { width: 70px; height: 34px; background: var(--sp-truck); border-radius: 8px 12px 6px 8px; position: absolute; left: 8px; top: 10px; }
-    #splash .bike .wheel { position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #111; bottom: 4px; border: 2px solid #ddd; box-sizing: border-box; }
-    #splash .bike .wheel.front { right: 6px; }
-    #splash .bike .wheel.back { left: 6px; }
+    /* 建築物與角色容器 */
+    #splash .actor { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
     
-    #splash .parcel { position: absolute; left: 4px; top: -8px; width: 34px; height: 28px; border-radius: 6px; background: var(--sp-accent); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 12px; box-shadow: 0 4px 8px rgba(255,107,53,0.4); opacity: 0; }
-    #splash .pathpoint { display: none; }
-    #splash .status { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; font-size: 13px; font-weight: 700; color: #444; background: rgba(255,255,255,0.8); padding: 6px 16px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); z-index: 20; white-space: nowrap; }
+    /* 店家 */
+    #splash .shop-area { left: 10%; bottom: 60px; z-index: 5; }
+    #splash .building { font-size: 40px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+    #splash .shop-bag { position: absolute; font-size: 16px; bottom: 0; right: -10px; opacity: 1; transition: 0.3s; }
+    
+    /* 顧客家 */
+    #splash .home-area { right: 10%; bottom: 60px; z-index: 5; }
+    #splash .customer { position: absolute; font-size: 28px; bottom: 0; left: -20px; opacity: 0; transform: translateX(10px); transition: 0.4s ease-out; }
+    #splash .heart { position: absolute; font-size: 16px; top: -20px; left: -10px; opacity: 0; transform: translateY(10px); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+    /* 機車與外送員 */
+    #splash .vehicle-group { left: -30%; bottom: 40px; z-index: 10; width: 60px; height: 60px; }
+    #splash .rider { font-size: 28px; position: absolute; bottom: 20px; left: 10px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 12; }
+    #splash .bike { font-size: 40px; position: absolute; bottom: 0; left: 0; z-index: 11; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
+    #splash .rider-bag { font-size: 16px; position: absolute; bottom: 20px; right: -5px; opacity: 0; z-index: 13; transition: 0.3s; }
+
+    /* 狀態提示浮窗 */
+    #splash .status-bubble { position: absolute; left: 50%; transform: translateX(-50%); top: 20px; font-size: 14px; font-weight: 800; color: var(--sp-accent); background: #fff; padding: 8px 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(255,107,53,0.15); z-index: 20; border: 2px solid rgba(255,107,53,0.2); white-space: nowrap; transition: 0.2s; }
   </style>
 </head>
 <body data-tab="home">
 
-<!-- 🛵 啟動動畫 (Splash Screen) -->
+<!-- 🛵 故事型啟動動畫 (Splash Screen) -->
 <div id="splash">
   <div class="splash-card">
     <div class="topbar">
       <div class="logo">🛵</div>
       <div>
         <h1>外送記帳 APP</h1>
-        <p class="sub">系統啟動中，為您載入資料...</p>
+        <p class="sub">正在載入您的專屬資料...</p>
       </div>
     </div>
 
     <div class="scene">
-      <div class="map" id="sp-map">
-        <div class="building shop" data-label="取餐店家">🏪</div>
-        <div class="building home" data-label="送達顧客">🏠</div>
-        <div class="road"></div>
+      <div class="road"></div>
+      <div class="route-line" id="sp-route"></div>
 
-        <div class="bike" id="sp-bike">
-          <div class="parcel" id="sp-parcel">📦</div>
-          <div class="body"></div>
-          <div class="wheel back"></div>
-          <div class="wheel front"></div>
-        </div>
-
-        <!-- 隱形路徑點 -->
-        <div id="sp-p1" class="pathpoint" style="left:14%;bottom:40px"></div>
-        <div id="sp-p2" class="pathpoint" style="left:40%;bottom:140px"></div>
-        <div id="sp-p3" class="pathpoint" style="left:68%;bottom:60px"></div>
-
-        <div class="status" id="sp-status">準備中…</div>
+      <!-- 店家區 -->
+      <div class="actor shop-area">
+        <div class="building">🏪</div>
+        <div class="shop-bag" id="sp-shop-bag">🥡</div>
       </div>
+
+      <!-- 顧客家區 -->
+      <div class="actor home-area">
+        <div class="heart" id="sp-heart">💖</div>
+        <div class="customer" id="sp-customer">🧍‍♂️</div>
+        <div class="building">🏠</div>
+      </div>
+
+      <!-- 移動的車輛與外送員 -->
+      <div class="actor vehicle-group" id="sp-vehicle">
+        <div class="rider" id="sp-rider">🪖</div>
+        <div class="rider-bag" id="sp-rider-bag">🥡</div>
+        <div class="bike">🛵</div>
+      </div>
+
+      <!-- 狀態文字 -->
+      <div class="status-bubble" id="sp-status">系統啟動中...</div>
     </div>
   </div>
 </div>
@@ -440,108 +454,109 @@
 <!-- 載入原本的 APP 邏輯 -->
 <script src="/script.js"></script>
 
-<!-- 🛵 啟動動畫專用 Script (執行完畢後會自動消失並顯示背後的 APP) -->
+<!-- 🛵 故事型動畫專用 Script -->
 <script>
-  function lerp(a,b,t){ return a+(b-a)*t; }
-  
-  function getPos(el){
-    const rect = el.getBoundingClientRect();
-    const mapRect = document.getElementById('sp-map').getBoundingClientRect();
-    return { x: rect.left - mapRect.left + rect.width/2, y: mapRect.height - (rect.bottom - mapRect.top) - rect.height/2 };
-  }
-
-  function cubicBezier(p0,p1,p2,p3,t){
-    const x = Math.pow(1-t,2)*p0.x + 2*(1-t)*t*p1.x + Math.pow(t,2)*p2.x;
-    const y = Math.pow(1-t,2)*p0.y + 2*(1-t)*t*p1.y + Math.pow(t,2)*p2.y;
-    return {x,y};
-  }
-
-  function animateDelivery(){
-    const bike = document.getElementById('sp-bike');
-    const parcel = document.getElementById('sp-parcel');
+  async function runStoryAnimation() {
     const status = document.getElementById('sp-status');
-    const p1 = document.getElementById('sp-p1');
-    const p2 = document.getElementById('sp-p2');
-    const p3 = document.getElementById('sp-p3');
-
-    // 確保元素存在
-    if(!bike || !p1 || !p2 || !p3) return;
-
-    const start = getPos(p1);
-    const mid = getPos(p2);
-    const end = getPos(p3);
-
-    const duration = 2800; // 稍微調快一點點整體速度，讓進入 APP 感覺更俐落
-    const startTime = performance.now();
-
-    status.textContent = '前往店家取餐…';
-    parcel.style.opacity = 0; 
-
-    const toShopDuration = 600;
-    const now0 = performance.now();
-    
-    function phase1(ts){
-      const t = Math.min((ts - now0)/toShopDuration,1);
-      const x = lerp(start.x, start.x + 40, t); 
-      const y = lerp(start.y, start.y, t);
-      bike.style.transform = `translate(${x}px, ${-y}px) scale(1)`;
-      if(t<1) requestAnimationFrame(phase1);
-      else {
-        status.textContent = '取餐中…';
-        parcel.style.opacity = 0;
-        setTimeout(()=>{
-          parcel.style.transition = 'opacity 220ms';
-          parcel.style.opacity = 1;
-          status.textContent = '出發送餐';
-          requestAnimationFrame(phase2);
-        }, 500);
-      }
-    }
-
-    const t0 = performance.now();
-    function phase2(ts){
-      const t = Math.min((ts - t0)/duration,1);
-      const pos = cubicBezier(start, mid, end, null, t);
-      bike.style.transform = `translate(${pos.x}px, ${-pos.y}px) rotate(${(t*20-10)}deg)`;
-      
-      const wheels = bike.querySelectorAll('.wheel');
-      wheels.forEach((w,i)=> w.style.transform = `rotate(${t*720 + i*20}deg)`);
-      
-      if(t<1) requestAnimationFrame(phase2);
-      else {
-        status.textContent = '已送達！';
-        bike.animate([
-          {transform: bike.style.transform + ' translateY(0)'},
-          {transform: bike.style.transform + ' translateY(-8px)'},
-          {transform: bike.style.transform + ' translateY(0)'}
-        ],{duration:600,iterations:1});
-        parcel.animate([{transform:'translateY(0)'},{transform:'translateY(18px)'}],{duration:420,fill:'forwards'});
-        
-        setTimeout(hideSplash, 600);
-      }
-    }
-
-    requestAnimationFrame(phase1);
-  }
-
-  function hideSplash(){
+    const vehicle = document.getElementById('sp-vehicle');
+    const rider = document.getElementById('sp-rider');
+    const shopBag = document.getElementById('sp-shop-bag');
+    const riderBag = document.getElementById('sp-rider-bag');
+    const route = document.getElementById('sp-route');
+    const customer = document.getElementById('sp-customer');
+    const heart = document.getElementById('sp-heart');
     const splash = document.getElementById('splash');
-    if(!splash) return;
+
+    // 工具函式：等待特定時間 (非同步)
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // 為了確保流暢，先稍微等待讓畫面渲染完成
+    await wait(300);
+
+    // 【第一幕：前往店家】
+    status.textContent = '前往店家取餐...';
+    // 車子從畫面左外側騎到店家旁 (left: 15%)
+    await vehicle.animate([
+      { left: '-30%', transform: 'rotate(0deg)' },
+      { left: '15%', transform: 'rotate(-5deg)' },
+      { left: '15%', transform: 'rotate(0deg)' }
+    ], { duration: 800, fill: 'forwards', easing: 'ease-out' }).finished;
     
-    // 讓啟動畫面淡出
-    splash.animate([{opacity:1},{opacity:0}], {duration:400, fill:'forwards'});
+    await wait(200);
+
+    // 【第二幕：拿取餐點】
+    status.textContent = '抵達店家，確認餐點';
+    // 外送員跳下車/站起來
+    rider.style.transform = 'translateY(-15px)';
+    await wait(300);
     
-    // 淡出完成後徹底移除元素，釋放記憶體且不阻擋點擊
-    setTimeout(()=>{
-      splash.remove();
-    }, 420);
+    // 餐點從店家消失，出現在外送員手上 (視覺戲法)
+    shopBag.style.opacity = '0';
+    shopBag.style.transform = 'translateY(-20px)';
+    riderBag.style.opacity = '1';
+    await wait(300);
+    
+    // 外送員坐回車上
+    rider.style.transform = 'translateY(0)';
+    await wait(300);
+
+    // 【第三幕：導航規劃與出發】
+    status.textContent = '規劃路線中...出發！';
+    // 畫出導航虛線
+    route.style.opacity = '1';
+    route.style.transform = 'scaleX(1)';
+    await wait(600);
+
+    // 【第四幕：騎往顧客家】
+    status.textContent = '火速送餐中 💨';
+    // 車子從店家騎到顧客家旁 (left: 65%)
+    // 加入輕微上下彈跳模擬騎車顛簸
+    await vehicle.animate([
+      { left: '15%', bottom: '40px' },
+      { left: '35%', bottom: '44px' },
+      { left: '50%', bottom: '40px' },
+      { left: '65%', bottom: '44px' },
+      { left: '65%', bottom: '40px' }
+    ], { duration: 1200, fill: 'forwards', easing: 'linear' }).finished;
+
+    await wait(200);
+
+    // 【第五幕：送達與交付餐點】
+    status.textContent = '抵達目的地！';
+    
+    // 顧客從房子走出來
+    customer.style.opacity = '1';
+    customer.style.transform = 'translateX(-15px)';
+    await wait(300);
+
+    // 外送員站起來交餐
+    rider.style.transform = 'translateY(-15px)';
+    riderBag.style.transform = 'translate(20px, -10px) scale(1.2)'; // 餐點飛向顧客
+    await wait(300);
+    riderBag.style.opacity = '0'; // 餐點交給顧客後消失
+
+    // 顧客拿到餐點很開心，冒出愛心
+    customer.textContent = '🙋‍♂️'; // 換個開心的姿勢
+    heart.style.opacity = '1';
+    heart.style.transform = 'translateY(-10px) scale(1.2)';
+    status.textContent = '任務圓滿完成！🎉';
+    status.style.color = '#22C55E';
+    status.style.borderColor = 'rgba(34,197,94,0.3)';
+
+    // 讓使用者看一眼完美的結局
+    await wait(800);
+
+    // 【終幕：淡出啟動畫面】
+    await splash.animate([
+      { opacity: 1, transform: 'scale(1)' },
+      { opacity: 0, transform: 'scale(1.05)' }
+    ], { duration: 400, fill: 'forwards', easing: 'ease-in' }).finished;
+    
+    splash.remove(); // 從 DOM 徹底移除，釋放資源
   }
 
-  // 當視窗載入完成後啟動動畫
-  window.addEventListener('load', ()=>{
-    // 稍微延遲讓瀏覽器先渲染出畫面
-    setTimeout(animateDelivery, 200);
-  });
+  // 視窗載入完成後啟動故事動畫
+  window.addEventListener('load', runStoryAnimation);
 </script>
 
 </body>
