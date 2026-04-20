@@ -151,16 +151,17 @@
       <div class="actor scenery" id="sp-s8"  style="font-size:44px;">🏬</div>
       <div class="actor scenery" id="sp-s2"  style="font-size:46px;">🏢</div>
       <div class="actor scenery" id="sp-s11" style="font-size:44px;">🏫</div>
-      <div class="actor scenery" id="sp-s14" style="font-size:40px;">🏨</div>
+      <div class="actor scenery" id="sp-s14" style="font-size:40px;">🏨</div>🗽
+      <div class="actor scenery" id="sp-s16" style="font-size:40px;">🗽</div>
 
       <!-- 🚦 交通號誌 (路邊，稍矮) -->
       <div class="actor scenery" id="sp-s3"  style="font-size:30px; bottom:150px;">🚦</div>
 
       <!-- 🚶 人行道行人 -->
       <div class="actor pedestrian" id="sp-s4"  style="transform:scaleX(-1);">🚶</div>
-      <div class="actor pedestrian" id="sp-s10" style="font-size:20px;">👩</div>
+      <div class="actor pedestrian" id="sp-s10" style="font-size:20px;">🚶‍♂️</div>
       <div class="actor pedestrian" id="sp-s12" style="font-size:20px; transform:scaleX(-1);">🧑‍🦯</div>
-      <div class="actor pedestrian" id="sp-s15" style="font-size:18px;">🧒</div>
+      <div class="actor pedestrian" id="sp-s15" style="font-size:18px;">🚶‍♀️</div>
 
       <!-- 人行道 -->
       <div class="sidewalk"></div>
@@ -687,6 +688,7 @@
     runScenery('sp-s2',  1200, 1500);  // 🏢
     runScenery('sp-s11', 1550, 1450);  // 🏫
     runScenery('sp-s14', 2050, 1400);  // 🏨
+    runScenery('sp-s16', 2450, 1300);  // 🗽
 
     // 交通號誌
     runScenery('sp-s3',  2250, 1100);  // 🚦
@@ -714,7 +716,7 @@
     roadAnim.pause();
 
     // 等待房子滑到定位
-    await wait(1280);  // 320 + 1280 = 1600ms total
+    await wait(1180);  // 320 + 1280 = 1600ms total
 
     // ── 機車前進到客人家旁 ──
     await animate(vehicle, [
@@ -753,7 +755,7 @@
     // 交接餐點
     document.getElementById('sp-rider-bag').style.opacity = '0';
     customerBag.style.opacity  = '1';
-    customerBag.style.transform = 'translate(8px, 12px)';
+    customerBag.style.transform = 'translate(8px, 2px)';
 
     await wait(500);
     customer.textContent = '🙋‍♂️';
