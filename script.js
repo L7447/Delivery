@@ -1282,7 +1282,7 @@ window.navTrend = function(dir) {
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
-/* ══ 替換：收入總覽頁面 ══ */
+/* ══ 替換：收入總覽頁面 (加入基本工資分析邏輯) ══ */
 function renderRptOverview() {
   if (!S.rptOverviewFilter) S.rptOverviewFilter = 'all';
   const allMonthRecs = getMonthRecs(S.rptY, S.rptM);
@@ -1301,6 +1301,40 @@ function renderRptOverview() {
 
   const activePlats = S.platforms.filter(p=>p.active);
   let filterName = isAll ? '全部平台' : (activePlats.find(p=>p.id===S.rptOverviewFilter)?.name || '');
+
+  // 👇 新增：基本工資分析邏輯
+  let wageHtml = '';
+  if (hours > 0) {
+    const avgHr = Math.round(total / hours);
+    let wageStatus = '';
+    let wageColor = '';
+    let wageBg = '';
+    
+    if (avgHr <= 154) {
+      wageStatus = '嚴重低於基本工資';
+      wageColor = 'var(--red)';
+      wageBg = 'var(--red-d)';
+    } else if (avgHr <= 175) {
+      wageStatus = '低於基本工資';
+      wageColor = 'var(--acc2)';
+      wageBg = 'var(--acc-d)';
+    } else if (avgHr <= 195) {
+      wageStatus = '略低於基本工資';
+      wageColor = 'var(--blue)';
+      wageBg = 'var(--blue-d)';
+    } else {
+      wageStatus = '符合基本工資';
+      wageColor = 'var(--green)';
+      wageBg = 'var(--green-d)';
+    }
+
+    wageHtml = `
+      <div style="border-top:1px dashed var(--border);"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
+        <span style="font-size:12px; font-weight:700; color:var(--t2);">⚖️ 基本工資分析</span>
+        <span style="background:${wageBg}; color:${wageColor}; font-size:11px; padding:4px 8px; border-radius:8px; font-weight:800; letter-spacing:0.5px;">${wageStatus}</span>
+      </div>`;
+  }
 
   // 頂部導航
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
@@ -1339,6 +1373,8 @@ function renderRptOverview() {
             時薪 <br><span style="font-family:var(--mono); color: var(--text-blue); font-size:19px; font-weight:800;">$${hours>0?fmt(Math.round(total/hours)):'0'}</span>
           </div>
         </div>
+
+        ${wageHtml}
         
         ${cashTipTotal > 0 ? `
         <div style="border-top:1px dashed var(--border);"></div>
