@@ -2094,6 +2094,7 @@ function renderSettings() {
 /* ══ 替換：登入系統拆分雙頁籤與頭像綁定 ══ */
 let authMode = 'login'; // 'login' 或 'register'
 let selectedAvatar = 'figure/1.png'; 
+let privacyAgreed = false; // 👈 新增：隱私權同意狀態
 
 window.selectAvatar = function(src, el) {
     selectedAvatar = src;
@@ -2124,7 +2125,7 @@ function renderAuthContent() {
       <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入帳號</button>
     `;
   } else {
-    // 註冊頁面：加入頭像選擇
+    // 註冊頁面：加入頭像選擇與隱私權勾選
     let avatarsHtml = '';
     for(let i=1; i<=8; i++) {
       const isSel = selectedAvatar === `figure/${i}.png`;
@@ -2145,10 +2146,19 @@ function renderAuthContent() {
         <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
         <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:12px;">
       </div>
-      <div class="fg" style="margin-bottom:24px;">
+      <div class="fg" style="margin-bottom:20px;">
         <label style="font-weight:700; color:var(--t1);">設定密碼 (至少 6 個字元)</label>
         <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:12px;">
       </div>
+
+      <!-- 👈 新增：隱私權政策勾選框 -->
+      <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:10px; margin-bottom:24px; padding:12px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer;">
+        <div id="privacy-chk-box" style="width:22px; height:22px; border-radius:6px; border:2px solid ${privacyAgreed ? 'var(--acc)' : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? 'var(--acc)' : 'transparent'}; transition:0.2s; flex-shrink:0;">
+          ${privacyAgreed ? '<span style="color:#fff; font-size:14px; font-weight:900;">✓</span>' : ''}
+        </div>
+        <span id="privacy-chk-text" style="font-size:13px; font-weight:700; color:${privacyAgreed ? 'var(--t1)' : 'var(--t3)'};">我已閱讀並同意 <span style="color:var(--text-blue); text-decoration:underline;">隱私權政策</span></span>
+      </div>
+
       <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">註冊並寄發驗證碼</button>
     `;
   }
@@ -2206,7 +2216,8 @@ window.switchAuthTab = function(mode) {
 function openAuthModal() {
   document.getElementById('sub-title').textContent = '帳號管理';
   document.getElementById('sub-top-right').innerHTML = '';
-  authMode = 'login'; // 預設開啟登入頁籤
+  authMode = 'login'; 
+  privacyAgreed = false; // 👈 每次開啟都重置隱私權同意狀態
   
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
@@ -2232,6 +2243,12 @@ async function requestLogin() {
   if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式（您的帳號@gmail.com）'); return; }
   if(pwd.length < 6) { toast('密碼請至少輸入 6 個字元'); return; }
   
+  // 👈 註冊模式下，強制檢查隱私權同意狀態
+  if (authMode === 'register' && !privacyAgreed) {
+    toast('⚠️ 請點擊上方並閱讀同意隱私權政策');
+    return;
+  }
+
   showProgress('登入連線中...');
   
   try {
