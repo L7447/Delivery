@@ -196,8 +196,8 @@
 
       <!-- 解說字幕 -->
       <div class="status-bubble" id="sp-status">
-        <div class="sp-icon-wrapper" id="sp-icon-wrap"><span id="sp-icon">🔄</span></div>
-        <span id="sp-text">   </span>
+        <div class="sp-icon-wrapper" id="sp-icon-wrap"><span id="sp-icon">🍽️</span></div>
+        <span id="sp-text">3公里 45元</span>
       </div>
     </div>
   </div>
@@ -605,6 +605,7 @@
     // ════════════════════════════════════════════════
     // 【第一幕：出發前往店家】
     // ════════════════════════════════════════════════
+    await wait(500);
     setStatus('🏪', '收到新訂單，前往店家...');
     await animate(vehicle, [
       { right: '-35%', transform: 'translateY(0)' },
@@ -671,15 +672,15 @@
 
     runScenery('sp-s7',  0,    8500);
     runScenery('sp-s13', 350,  8500);
-    runScenery('sp-s1',  0,    1300);
-    runScenery('sp-s9',  600,  1350);
-    runScenery('sp-s6',  1900, 1350);
-    runScenery('sp-s5',  350,  1300);
-    runScenery('sp-s8',  800,  1350);
+    runScenery('sp-s1',  0,    1500);
+    runScenery('sp-s9',  600,  1500);
+    runScenery('sp-s6',  1900, 1500);
+    runScenery('sp-s5',  350,  1500);
+    runScenery('sp-s8',  800,  1500);
     runScenery('sp-s2',  1200, 1500);
-    runScenery('sp-s11', 1550, 1450);
-    runScenery('sp-s14', 2050, 1400);
-    runScenery('sp-s3',  2250, 1300);
+    runScenery('sp-s11', 1550, 1500);
+    runScenery('sp-s14', 2050, 1500);
+    runScenery('sp-s3',  2250, 1500);
     runScenery('sp-s4',  2550, 1900);
     runScenery('sp-s10', 2950, 1750);
     runScenery('sp-s12', 3300, 1650);
@@ -689,17 +690,17 @@
     runScenery('sp-s2',  3700, 1600);    
     runScenery('sp-s8',  4100, 1750);
 
-    await wait(4500);
+    await wait(4100);
 
     // ════════════════════════════════════════════════
     // 【第四幕：抵達客人家附近】
     // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
 
-    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 2000, easing: 'ease-out' });
+    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1500, easing: 'ease-out' });
     await wait(100);
     roadAnim.pause();
-    await wait(1280);
+    await wait(1200);
 
     await animate(vehicle, [
       { right: '15%', transform: 'translateY(0)' },
