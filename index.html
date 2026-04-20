@@ -545,7 +545,7 @@
 <div class="overlay-page" id="privacy-page" style="z-index:1200;">
   <div class="top-bar">
     <button class="bar-btn" onclick="closeOverlay('privacy-page')" style="font-size:32px; font-weight:300; color:var(--t1);">‹</button>
-    <h2 style="font-size:16px; font-weight:700;">APP 隱私權政策</h2>
+    <h2 style="font-size:16px; font-weight:700;">隱私權政策</h2>
     <div style="width:36px"></div>
   </div>
   <div class="overlay-body" id="privacy-body"></div>
@@ -691,10 +691,10 @@
     runScenery('sp-s14', 3000, 1750);
     runScenery('sp-s11', 3350, 1650);
     runScenery('sp-s2',  3700, 1600);    
-    runScenery('sp-s8',  3800, 1750);
-    runScenery('sp-s16', 4000, 1900);
-    runScenery('sp-s17', 4200, 2350);
-    runScenery('sp-s18', 4400, 2600);
+    runScenery('sp-s8',  4000, 1750);
+    runScenery('sp-s16', 4300, 1650);
+    runScenery('sp-s17', 4600, 1600);
+    runScenery('sp-s18', 4900, 1750);
 
 
     await wait(4500);
@@ -704,7 +704,7 @@
     // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
 
-    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 3700, easing: 'ease-out' });
+    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 3300, easing: 'ease-out' });
     await wait(320);
     roadAnim.pause();
     await wait(1280);
