@@ -556,43 +556,52 @@
 <!-- 🛵 故事型動畫專用 Script -->
 <script>
   async function runStoryAnimation() {
-    const text       = document.getElementById('sp-text');
-    const icon       = document.getElementById('sp-icon');
-    const iconWrap   = document.getElementById('sp-icon-wrap');
-    const vehicle    = document.getElementById('sp-vehicle');
-    const riderWrapper = document.getElementById('sp-rider-wrapper');
-    const shopArea   = document.getElementById('sp-shop-area');
-    const shopBag    = document.getElementById('sp-shop-bag');
-    const deliveryBox = document.getElementById('sp-delivery-box');
-    const homeArea   = document.getElementById('sp-home-area');
-    const customer   = document.getElementById('sp-customer');
-    const customerBag = document.getElementById('sp-customer-bag');
-    const heart      = document.getElementById('sp-heart');
-    const roadDash   = document.getElementById('sp-road-dash');
-    const splash     = document.getElementById('splash');
-    const statusBubble = document.getElementById('sp-status');
+    const vehicle       = document.getElementById('sp-vehicle');
+    const riderWrapper  = document.getElementById('sp-rider-wrapper');
+    const shopArea      = document.getElementById('sp-shop-area');
+    const shopBag       = document.getElementById('sp-shop-bag');
+    const deliveryBox   = document.getElementById('sp-delivery-box');
+    const homeArea      = document.getElementById('sp-home-area');
+    const customer      = document.getElementById('sp-customer');
+    const customerBag   = document.getElementById('sp-customer-bag');
+    const heart         = document.getElementById('sp-heart');
+    const roadDash      = document.getElementById('sp-road-dash');
+    const splash        = document.getElementById('splash');
+    const trafficLight  = document.getElementById('sp-s3');
 
     const wait    = (ms) => new Promise(r => setTimeout(r, ms));
     const animate = (el, kf, opt) => el.animate(kf, { ...opt, fill: 'forwards' }).finished;
 
-    // 狀態更新（含解說框邊框顏色變化）
+    // 狀態更新函式（保持原樣）
     function setStatus(ic, txt, success = false, color = null) {
-      icon.textContent = ic;
-      text.textContent = txt;
-      const borderColor = success ? '#22C55E' : (color || '#FF6B35');
-      statusBubble.style.borderColor = borderColor;
-      statusBubble.style.boxShadow   = success
-        ? '0 8px 28px rgba(34,197,94,0.25), 0 0 0 4px rgba(34,197,94,0.10)'
-        : `0 8px 28px rgba(255,107,53,0.22), 0 0 0 4px rgba(255,107,53,0.08)`;
-      if (success) {
-        iconWrap.style.background  = 'linear-gradient(135deg, #22C55E, #16a34a)';
-        iconWrap.style.color       = '#fff';
-        iconWrap.style.boxShadow   = '0 4px 12px rgba(34,197,94,0.4), inset 0 2px 4px rgba(255,255,255,0.3)';
-        iconWrap.style.transform   = 'scale(1.1) rotate(10deg)';
+      // 注意：如果你的 HTML 裡還沒有 status-bubble，這裡只會在 console 看到，但不影響動畫主流程
+      const icon = document.getElementById('sp-icon');
+      const text = document.getElementById('sp-text');
+      const statusBubble = document.getElementById('sp-status');
+      if (icon) icon.textContent = ic;
+      if (text) text.textContent = txt;
+      if (statusBubble) {
+        const borderColor = success ? '#22C55E' : (color || '#FF6B35');
+        statusBubble.style.borderColor = borderColor;
+        statusBubble.style.boxShadow = success
+          ? '0 8px 28px rgba(34,197,94,0.25), 0 0 0 4px rgba(34,197,94,0.10)'
+          : `0 8px 28px rgba(255,107,53,0.22), 0 0 0 4px rgba(255,107,53,0.08)`;
       }
     }
 
     await wait(400);
+
+    // ════════════════════════════════════════════════
+    // 【前置調整：符合你的新需求】
+    // ════════════════════════════════════════════════
+    // 1. 機車改成行駛在「上面那個車道」（上移到道路上半部）
+    vehicle.style.bottom = '105px';   // 原 83px → 現在更高、更靠近人行道
+
+    // 2. 紅綠燈靠近車道（下移貼近馬路）
+    if (trafficLight) trafficLight.style.bottom = '118px';
+
+    // 3. 客人永遠不出來（隱藏顧客）
+    customer.style.opacity = '0';
 
     // ════════════════════════════════════════════════
     // 【第一幕：出發前往店家】
@@ -603,11 +612,10 @@
       { right: '35%',  transform: 'translateY(0)' }
     ], { duration: 1000, easing: 'ease-out' });
 
-    // ── 靠路邊停（取餐前先靠邊）──
     setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
     await animate(vehicle, [
       { right: '35%', transform: 'translateY(0)' },
-      { right: '35%', transform: 'translateY(-32px)' }  // 往路肩移動
+      { right: '35%', transform: 'translateY(-28px)' }
     ], { duration: 450, easing: 'ease-out' });
 
     await wait(400);
@@ -626,7 +634,6 @@
     document.getElementById('sp-rider-bag').style.opacity = '1';
     await wait(500);
 
-    // 騎士走回車上
     await animate(riderWrapper, [
       { transform: 'translate(52px, 0)' },
       { transform: 'translate(25px, -6px)' },
@@ -636,9 +643,8 @@
     deliveryBox.textContent = '🥡';
     document.getElementById('sp-rider-bag').style.opacity = '0';
 
-    // ── 回到路面上出發 ──
     await animate(vehicle, [
-      { right: '35%', transform: 'translateY(-32px)' },
+      { right: '35%', transform: 'translateY(-28px)' },
       { right: '35%', transform: 'translateY(0)' }
     ], { duration: 320, easing: 'ease-in' });
 
@@ -649,23 +655,14 @@
     // ════════════════════════════════════════════════
     setStatus('🛵', '火速外送中，穿梭市區...');
 
-    // 店家飛離，機車跟鏡頭推前
-    animate(shopArea, [
-      { right: '15%' }, { right: '-55%' }
-    ], { duration: 1500, easing: 'ease-in' });
+    animate(shopArea, [{ right: '15%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
+    animate(vehicle, [{ right: '35%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
 
-    animate(vehicle, [
-      { right: '35%', transform: 'translateY(0)' },
-      { right: '15%', transform: 'translateY(0)' }
-    ], { duration: 1500, easing: 'ease-in-out' });
-
-    // 馬路虛線滾動
     const roadAnim = roadDash.animate([
       { transform: 'translateY(-50%) translateX(0)' },
       { transform: 'translateY(-50%) translateX(50px)' }
     ], { duration: 380, iterations: Infinity, easing: 'linear' });
 
-    // 風景飛掠函式
     const runScenery = async (id, delay, dur) => {
       await wait(delay);
       const el = document.getElementById(id);
@@ -673,31 +670,21 @@
       return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
     };
 
-    // 雲朵（慢飄，貫穿全程）
-    runScenery('sp-s7',  0,    5200);  // ☁️
-    runScenery('sp-s13', 350,  5800);  // ⛅
-
-    // 樹木
-    runScenery('sp-s1',  0,    1300);  // 🌳
-    runScenery('sp-s9',  600,  1350);  // 🌴
-    runScenery('sp-s6',  1900, 1250);  // 🌲
-
-    // 建築物（由近而遠依序）
-    runScenery('sp-s5',  350,  1200);  // 🏦
-    runScenery('sp-s8',  800,  1350);  // 🏬
-    runScenery('sp-s2',  1200, 1500);  // 🏢
-    runScenery('sp-s11', 1550, 1450);  // 🏫
-    runScenery('sp-s14', 2050, 1400);  // 🏨
-    runScenery('sp-s16', 2450, 1300);  // 🗽
-
-    // 交通號誌
-    runScenery('sp-s3',  2250, 1100);  // 🚦
-
-    // 行人（走在人行道上）
-    runScenery('sp-s4',  2550, 1900);  // 🚶
-    runScenery('sp-s10', 2950, 1750);  // 👩
-    runScenery('sp-s12', 3300, 1650);  // 🧑‍🦯
-    runScenery('sp-s15', 3650, 1600);  // 🧒
+    runScenery('sp-s7',  0,    5200);
+    runScenery('sp-s13', 350,  5800);
+    runScenery('sp-s1',  0,    1300);
+    runScenery('sp-s9',  600,  1350);
+    runScenery('sp-s6',  1900, 1250);
+    runScenery('sp-s5',  350,  1200);
+    runScenery('sp-s8',  800,  1350);
+    runScenery('sp-s2',  1200, 1500);
+    runScenery('sp-s11', 1550, 1450);
+    runScenery('sp-s14', 2050, 1400);
+    runScenery('sp-s3',  2250, 1100);
+    runScenery('sp-s4',  2550, 1900);
+    runScenery('sp-s10', 2950, 1750);
+    runScenery('sp-s12', 3300, 1650);
+    runScenery('sp-s15', 3650, 1600);
 
     await wait(4100);
 
@@ -706,63 +693,50 @@
     // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
 
-    // 客人家從右方入鏡，道路提早停止滾動
-    animate(homeArea, [
-      { right: '120%' }, { right: '65%' }
-    ], { duration: 1600, easing: 'ease-out' });
-
-    // 房子一出現就立刻停止道路滾動（約出現 0.3 秒後）
+    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1600, easing: 'ease-out' });
     await wait(320);
     roadAnim.pause();
+    await wait(1280);
 
-    // 等待房子滑到定位
-    await wait(1180);  // 320 + 1280 = 1600ms total
-
-    // ── 機車前進到客人家旁 ──
     await animate(vehicle, [
       { right: '15%', transform: 'translateY(0)' },
       { right: '42%', transform: 'translateY(0)' }
     ], { duration: 800, easing: 'ease-out' });
 
-    // ── 靠路邊停（送餐前先靠邊）──
     setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
     await animate(vehicle, [
       { right: '42%', transform: 'translateY(0)' },
-      { right: '42%', transform: 'translateY(-32px)' }  // 往路肩移動
+      { right: '42%', transform: 'translateY(-28px)' }
     ], { duration: 420, easing: 'ease-out' });
 
     await wait(350);
 
     // ════════════════════════════════════════════════
-    // 【第五幕：下車交餐】
+    // 【第五幕：外送員將餐點放在門口 → 送達完成】←←← 完全按照你的新需求修改
     // ════════════════════════════════════════════════
-    setStatus('🤝', '送達！交給顧客...');
+    setStatus('📦', '外送員將餐點放在門口...');
 
-    customer.style.opacity   = '1';
-    customer.style.transform = 'translateX(15px)';
-
-    deliveryBox.textContent = 'APP';
-    document.getElementById('sp-rider-bag').style.opacity = '1';
-
+    // 外送員走向門口（往左移動）
     await animate(riderWrapper, [
       { transform: 'translate(0, 0)' },
-      { transform: 'translate(-25px, -8px)' },
-      { transform: 'translate(-52px, 0)' }
-    ], { duration: 700, easing: 'linear' });
+      { transform: 'translate(-68px, -12px)' }
+    ], { duration: 850, easing: 'ease-in-out' });
 
-    await wait(500);
+    await wait(400);
 
-    // 交接餐點
+    // 放下餐點（餐點穩穩放在門口，不會飛到屋頂）
     document.getElementById('sp-rider-bag').style.opacity = '0';
-    customerBag.style.opacity  = '1';
-    customerBag.style.transform = 'translate(8px, 2px)';
+    customerBag.style.opacity = '1';
+    customerBag.style.transform = 'translate(12px, 28px)';   // 落在門口位置（右移一點 + 往下落在門口）
 
-    await wait(500);
-    customer.textContent = '🙋‍♂️';
-    heart.style.opacity   = '1';
-    heart.style.transform = 'translateY(-15px) scale(1.3)';
+    await wait(650);
 
-    setStatus('🎉', '任務圓滿完成！', true);
+    // 房子出現愛心
+    heart.style.opacity = '1';
+    heart.style.transform = 'translateY(-22px) scale(1.45)';
+
+    // 顯示「送達完成！」
+    setStatus('✅', '送達完成！', true);
 
     await wait(2400);
 
