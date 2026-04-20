@@ -1349,7 +1349,7 @@ function renderRptOverview() {
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 12px; cursor:pointer; text-align:center;">
         <div style="font-size:12px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: var(--text-cyan); line-height:1;">$${fmt(total)}</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color: var(--text-cyan); line-height:1;">$ ${fmt(total)}</div>
         <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
           <div style="background: rgba(34,197,94,0.15); color: var(--green); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; align-content: center;">行程 $${fmt(income)}</div>
           <div class="h-div" style="height:30px; align-self:center;"></div>
@@ -1359,7 +1359,7 @@ function renderRptOverview() {
         </div>
       </div> 
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
-      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: var(--collapse-bg);">
+      <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
         
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
         <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color:var(--t2); width:100%;">
