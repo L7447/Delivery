@@ -673,17 +673,17 @@
       return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
     };
 
-    runScenery('sp-s7',  0,    5200);
-    runScenery('sp-s13', 350,  5800);
+    runScenery('sp-s7',  0,    6800);
+    runScenery('sp-s13', 350,  7200);
     runScenery('sp-s1',  0,    1300);
     runScenery('sp-s9',  600,  1350);
-    runScenery('sp-s6',  1900, 1250);
-    runScenery('sp-s5',  350,  1200);
+    runScenery('sp-s6',  1900, 1350);
+    runScenery('sp-s5',  350,  1300);
     runScenery('sp-s8',  800,  1350);
     runScenery('sp-s2',  1200, 1500);
     runScenery('sp-s11', 1550, 1450);
     runScenery('sp-s14', 2050, 1400);
-    runScenery('sp-s3',  2250, 1100);
+    runScenery('sp-s3',  2250, 1300);
     runScenery('sp-s4',  2550, 1900);
     runScenery('sp-s10', 2950, 1750);
     runScenery('sp-s12', 3300, 1650);
@@ -704,7 +704,7 @@
     // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
 
-    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 2300, easing: 'ease-out' });
+    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 2100, easing: 'ease-out' });
     await wait(320);
     roadAnim.pause();
     await wait(1280);
