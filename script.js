@@ -2207,7 +2207,7 @@ function saveReminderSettings() {
   closeOverlay('sub-page');
 }
 
-/* ✨ 新增：初始化背景時間檢查機制 */
+/* ✨ 新增：初始化背景時間檢查機制 (包含聲音提醒) */
 function initReminderCheck() {
   setInterval(() => {
     const r = S.settings.reminder;
@@ -2221,34 +2221,46 @@ function initReminderCheck() {
       r.lastSent = todayStrDate;
       saveSettings();
       
-      // 發送系統通知
       const title = "🛵 記帳提醒";
       const body = "今天跑單辛苦了！別忘了記錄今天的收入與工時喔！";
+
+      // 🔊 1. 播放提示音效 (使用瀏覽器內建震盪器發出兩聲清脆的「嗶嗶」聲)
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const playBeep = (time, freq) => {
+          const osc = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + time);
+          gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + time);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + time + 0.5);
+          osc.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime + time);
+          osc.stop(audioCtx.currentTime + time + 0.5);
+        };
+        playBeep(0, 800);   // 第一聲
+        playBeep(0.15, 1200); // 第二聲高音
+      } catch(e) { console.log('音效播放被瀏覽器阻擋'); }
       
+      // 📱 2. 發送橫幅通知
       if ("Notification" in window && Notification.permission === "granted") {
-        // 優先使用 Service Worker 發送系統橫幅通知 (支援手機 PWA 橫幅)
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistration().then(function(reg) {
             if (reg && reg.active) {
-              reg.showNotification(title, {
-                body: body,
-                icon: 'images/scooter1.png',
-                vibrate: [200, 100, 200]
-              });
+              reg.showNotification(title, { body: body, icon: 'images/scooter1.png', vibrate: [200, 100, 200] });
             } else {
               new Notification(title, { body: body, icon: 'images/scooter1.png' });
             }
-          }).catch(function() {
-            new Notification(title, { body: body, icon: 'images/scooter1.png' });
-          });
+          }).catch(() => { new Notification(title, { body: body, icon: 'images/scooter1.png' }); });
         } else {
           new Notification(title, { body: body, icon: 'images/scooter1.png' });
         }
       } else {
-        toast(`🔔 ${title}：${body}`, 5000); // 若無權限則用 Toast 替代
+        toast(`🔔 ${title}：${body}`, 5000);
       }
     }
-  }, 60000); // 每 1 分鐘檢查一次
+  }, 60000);
 }
 
 /* ══ 替換：登入系統拆分雙頁籤與頭像綁定 ══ */
@@ -2540,17 +2552,36 @@ async function openAccountStats() {
 
   // 管理員專區
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adminEmail: USER.email, token: USER.token })
-    });
-    const data = await res.json();
+    let usersData = [];
     
-    if (!data.success) throw new Error(data.message);
+    // 先嘗試呼叫後端 API
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminEmail: USER.email, token: USER.token })
+      });
+      const data = await res.json();
+      if (data.success) {
+        usersData = data.users;
+      } else {
+        throw new Error("後端回傳失敗");
+      }
+    } catch (apiErr) {
+      // ⚠️ 如果 API 連線失敗 (無後端伺服器)，降級使用純前端 localStorage 模擬資料
+      console.log('API 連線失敗，切換為本地模擬模式');
+      const dbUsers = JSON.parse(localStorage.getItem('delivery_db_users') || '[]');
+      
+      // 確保至少有你自己的帳號顯示在列表
+      if (dbUsers.length === 0) {
+        usersData = [{ email: USER.email, role: 'admin', verified: true, createdAt: new Date().toISOString() }];
+      } else {
+        usersData = dbUsers;
+      }
+    }
 
     let adminHtml = '';
-    data.users.forEach(u => {
+    usersData.forEach(u => {
       const vTag = u.verified ? '<span style="color:green;font-weight:700;">已驗證</span>' : '<span style="color:gray;">未驗證</span>';
       const roleTag = u.role === 'admin' ? '👑 ' : '';
       adminHtml += `
@@ -2564,14 +2595,12 @@ async function openAccountStats() {
       `;
     });
 
-    // 找到這個區塊 (大約在 admin/users fetch 成功之後)：
     document.getElementById('sub-body').innerHTML = baseHtml + `
       <h4 style="font-size:13px; color:var(--text-red); margin-bottom:8px;">⚙️ 會員權限管理 (管理員權限)</h4>
       <div class="card" style="max-height:200px; overflow-y:auto; padding:8px 12px; margin-bottom:16px;">
         ${adminHtml}
       </div>
 
-      <!-- ✨ 加入公告管理按鈕 ✨ -->
       <button onclick="openAnnouncementEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--gold); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:24px; box-shadow:0 4px 12px rgba(245,158,11,0.3); cursor:pointer;">
         📢 編輯首頁系統公告
       </button>
@@ -2580,23 +2609,10 @@ async function openAccountStats() {
     </div>`;
 
   } catch (err) {
-    let errMsg = err.message;
-    
-    // 攔截 Safari/手機版環境下 API_BASE_URL 網址不正確造成的特有字串錯誤
-    if (errMsg.includes('expected pattern') || errMsg.includes('fetch')) {
-      errMsg = "未連接後端伺服器 (API 尚未設定或伺服器未啟動)";
-    }
-    
+    // 只有在非常嚴重的渲染錯誤時才會顯示這段
     document.getElementById('sub-body').innerHTML = baseHtml + `
-      <div style="background:var(--red-d); padding:16px; border-radius:12px; border: 1px solid rgba(239,68,68,0.2); margin-bottom:20px;">
-        <div style="font-size:14px; font-weight:800; color:var(--red); margin-bottom:6px; text-align:center;">
-          ⚠️ 無法載入後台管理資料
-        </div>
-        <div style="font-size:12px; font-weight:600; color:var(--t2); text-align:center;">
-          ${errMsg}
-        </div>
-      </div>
-      <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
+      <div style="text-align:center; color:var(--red); margin-bottom:16px;">介面載入發生錯誤</div>
+      <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
     </div>`;
   }
 }
