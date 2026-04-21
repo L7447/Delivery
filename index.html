@@ -606,7 +606,12 @@
       }
     }
 
-    await wait(400);
+    // 偵測是否為 PWA (加入主畫面) 模式啟動
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    
+    // 如果是 PWA，延遲 1.2 秒等手機系統的白屏退去；如果是普通網頁，只需等 0.2 秒
+    await wait(isPWA ? 1200 : 200); 
+    
     if (isSkipped) return;
 
     // 前置調整
