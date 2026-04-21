@@ -602,6 +602,10 @@
     // 3. 客人永遠不出來（隱藏顧客）
     customer.style.opacity = '0';
 
+    // 4. 機車的外送箱 + 騎士上車位置往後移（往右）←←← 你這次要求
+    deliveryBox.style.right = '38px';      // 原 2px → 明顯往後（右）
+    riderWrapper.style.right = '48px';     // 原 20px → 明顯往後（右）
+
     // ════════════════════════════════════════════════
     // 【第一幕：出發前往店家】
     // ════════════════════════════════════════════════
@@ -689,14 +693,14 @@
     runScenery('sp-s15', 2900, 1500); // 🚶‍♀️
     runScenery('sp-s14', 3100, 1500); // 🏨
 
-    await wait(3400);
+    await wait(3700);
 
     // ════════════════════════════════════════════════
     // 【第四幕：抵達客人家附近】
     // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
     await wait(700);
-    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 300, easing: 'ease-out' });
+    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1500, easing: 'ease-out' });
     await wait(100);
     roadAnim.pause();
     await wait(1200);
@@ -709,7 +713,7 @@
     setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
     await animate(vehicle, [
       { right: '42%', transform: 'translateY(0)' },
-      { right: '42%', transform: 'translateY(-28px)' }
+      { right: '42%', transform: 'translateY(-40px)' }
     ], { duration: 420, easing: 'ease-out' });
 
     await wait(350);
