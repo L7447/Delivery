@@ -128,7 +128,11 @@
 <!-- 🛵 故事型啟動動畫 (Splash Screen) -->
 <div id="splash">
   <div class="splash-card">
-    <div class="topbar">
+  
+  <!-- ✨ 加入這行：一鍵跳過按鈕 -->
+  <button id="skip-splash" style="position:absolute; top:16px; right:16px; background:var(--bg-input); border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:700; color:#64748b; cursor:pointer; z-index:999; box-shadow:0 2px 6px rgba(0,0,0,0.05);">跳過動畫 ⏭</button>
+
+  <div class="topbar">
       <div class="logo">🛵</div>
       <div>
         <h1>外送記帳 APP</h1>
@@ -568,12 +572,26 @@
     const splash        = document.getElementById('splash');
     const trafficLight  = document.getElementById('sp-s3');
 
-    const wait    = (ms) => new Promise(r => setTimeout(r, ms));
-    const animate = (el, kf, opt) => el.animate(kf, { ...opt, fill: 'forwards' }).finished;
+    // ✨ 跳過按鈕狀態與點擊事件
+    let isSkipped = false;
+    const skipBtn = document.getElementById('skip-splash');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', () => {
+        isSkipped = true;
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 300);
+      });
+    }
 
-    // 狀態更新函式（保持原樣）
+    // 重新定義具備跳過機制的 wait 與 animate
+    const wait = (ms) => new Promise(r => setTimeout(() => { if (!isSkipped) r(); }, ms));
+    const animate = (el, kf, opt) => {
+      if (isSkipped || !el) return Promise.resolve();
+      return el.animate(kf, { ...opt, fill: 'forwards' }).finished;
+    };
+
     function setStatus(ic, txt, success = false, color = null) {
-      // 注意：如果你的 HTML 裡還沒有 status-bubble，這裡只會在 console 看到，但不影響動畫主流程
+      if (isSkipped) return;
       const icon = document.getElementById('sp-icon');
       const text = document.getElementById('sp-text');
       const statusBubble = document.getElementById('sp-status');
@@ -589,27 +607,18 @@
     }
 
     await wait(400);
+    if (isSkipped) return;
 
-    // ════════════════════════════════════════════════
-    // 【前置調整：符合你的新需求】
-    // ════════════════════════════════════════════════
-    // 1. 機車改成行駛在「上面那個車道」（上移到道路上半部）
-    vehicle.style.bottom = '105px';   // 原 83px → 現在更高、更靠近人行道
-
-    // 2. 紅綠燈靠近車道（下移貼近馬路）
+    // 前置調整
+    vehicle.style.bottom = '105px';
     if (trafficLight) trafficLight.style.bottom = '120px';
-
-    // 3. 客人永遠不出來（隱藏顧客）
     customer.style.opacity = '0';
+    deliveryBox.style.right = '-22px';
+    riderWrapper.style.right = '-1px';
 
-    // 4. 機車的外送箱 + 騎士上車位置往後移（往右）←←← 你這次要求
-    deliveryBox.style.right = '-22px';      // 原 2px → 明顯往後（右）
-    riderWrapper.style.right = '-1px';     // 原 20px → 明顯往後（右）
-
-    // ════════════════════════════════════════════════
-    // 【第一幕：出發前往店家】
-    // ════════════════════════════════════════════════
     await wait(1000);
+    if (isSkipped) return;
+
     setStatus('🏪', '接到新訂單，前往店家...');
     await animate(vehicle, [
       { right: '-35%', transform: 'translateY(0)' },
@@ -617,6 +626,7 @@
     ], { duration: 1000, easing: 'ease-out' });
 
     await wait(700);
+    if (isSkipped) return;
 
     setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
     await animate(vehicle, [
@@ -625,10 +635,8 @@
     ], { duration: 450, easing: 'ease-out' });
 
     await wait(700);
+    if (isSkipped) return;
 
-    // ════════════════════════════════════════════════
-    // 【第二幕：下車取餐】
-    // ════════════════════════════════════════════════
     setStatus('📦', '抵達店家，等餐／取餐中...');
     await animate(riderWrapper, [
       { transform: 'translate(0, 0)' },
@@ -639,6 +647,7 @@
     shopBag.style.opacity = '0';
     document.getElementById('sp-rider-bag').style.opacity = '1';
     await wait(500);
+    if (isSkipped) return;
 
     await animate(riderWrapper, [
       { transform: 'translate(52px, 0)' },
@@ -655,55 +664,57 @@
     ], { duration: 320, easing: 'ease-in' });
 
     await wait(400);
+    if (isSkipped) return;
 
-    // ════════════════════════════════════════════════
-    // 【第三幕：火速外送，市區穿梭】
-    // ════════════════════════════════════════════════
     setStatus('🛵', '外送中，穿梭市區...');
 
     animate(shopArea, [{ right: '15%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
     animate(vehicle, [{ right: '35%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
 
-    const roadAnim = roadDash.animate([
-      { transform: 'translateY(-50%) translateX(0)' },
-      { transform: 'translateY(-50%) translateX(50px)' }
-    ], { duration: 380, iterations: Infinity, easing: 'linear' });
+    let roadAnim = null;
+    if (!isSkipped) {
+      roadAnim = roadDash.animate([
+        { transform: 'translateY(-50%) translateX(0)' },
+        { transform: 'translateY(-50%) translateX(50px)' }
+      ], { duration: 380, iterations: Infinity, easing: 'linear' });
+    }
 
     const runScenery = async (id, delay, dur) => {
       await wait(delay);
+      if (isSkipped) return;
       const el = document.getElementById(id);
       if (!el) return;
       return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
     };
 
-    runScenery('sp-s7',  0,    22000); // ☁️
-    runScenery('sp-s13', 300,  22000); // ⛅
-    runScenery('sp-s1',  500,  1500); // 🌳
-    runScenery('sp-s5',  700,  1500); // 🏦
-    runScenery('sp-s3',  900,  1500); // 🚦
-    runScenery('sp-s4',  1100, 1500); // 🚶
-    runScenery('sp-s9',  1300, 1500); // 🌴    
-    runScenery('sp-s8',  1500, 1500); // 🏬
-    runScenery('sp-s10', 1700, 1500); // 🚶‍♂️
-    runScenery('sp-s2',  1900, 1500); // 🏢
-    runScenery('sp-s3',  2100, 1500); // 🚦    
-    runScenery('sp-s6',  2300, 1500); // 🌲    
-    runScenery('sp-s12', 2500, 1500); // 🧑‍🦯
-    runScenery('sp-s11', 2700, 1500); // 🏫
-    runScenery('sp-s15', 2900, 1500); // 🚶‍♀️
-    runScenery('sp-s14', 3100, 1500); // 🏨
+    runScenery('sp-s7',  0,    22000); 
+    runScenery('sp-s13', 300,  22000); 
+    runScenery('sp-s1',  500,  1500); 
+    runScenery('sp-s5',  700,  1500); 
+    runScenery('sp-s3',  900,  1500); 
+    runScenery('sp-s4',  1100, 1500); 
+    runScenery('sp-s9',  1300, 1500); 
+    runScenery('sp-s8',  1500, 1500); 
+    runScenery('sp-s10', 1700, 1500); 
+    runScenery('sp-s2',  1900, 1500); 
+    runScenery('sp-s3',  2100, 1500); 
+    runScenery('sp-s6',  2300, 1500); 
+    runScenery('sp-s12', 2500, 1500); 
+    runScenery('sp-s11', 2700, 1500); 
+    runScenery('sp-s15', 2900, 1500); 
+    runScenery('sp-s14', 3100, 1500); 
 
     await wait(3700);
+    if (isSkipped) return;
 
-    // ════════════════════════════════════════════════
-    // 【第四幕：抵達客人家附近】
-    // ════════════════════════════════════════════════
     setStatus('📍', '即將抵達客人家...');
     await wait(700);
+    if (isSkipped) return;
     animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1500, easing: 'ease-out' });
     await wait(100);
-    roadAnim.pause();
+    if (roadAnim) roadAnim.pause();
     await wait(1200);
+    if (isSkipped) return;
 
     await animate(vehicle, [
       { right: '15%', transform: 'translateY(0)' },
@@ -717,47 +728,44 @@
     ], { duration: 420, easing: 'ease-out' });
 
     await wait(350);
+    if (isSkipped) return;
 
-// ════════════════════════════════════════════════
-    // 【第五幕：外送員將餐點放在門口 → 送達完成】
-    // ════════════════════════════════════════════════
     setStatus('📦', '外送員將餐點放在門口...');
 
-    // --- 關鍵修改：從箱子拿出餐點 ---
-    deliveryBox.textContent = ''; // 1. 箱子變空了
-    document.getElementById('sp-rider-bag').style.opacity = '1'; // 2. 騎士手上出現餐點
+    deliveryBox.textContent = ''; 
+    document.getElementById('sp-rider-bag').style.opacity = '1'; 
 
-    // 外送員走向門口（往左移動）
     await animate(riderWrapper, [
       { transform: 'translate(0, 0)' },
       { transform: 'translate(-47px, 20px)' }
     ], { duration: 850, easing: 'ease-in-out' });
 
     await wait(400);
+    if (isSkipped) return;
 
-    // 放下餐點
-    document.getElementById('sp-rider-bag').style.opacity = '0'; // 3. 騎士手上的消失
+    document.getElementById('sp-rider-bag').style.opacity = '0'; 
     await wait(400);
-    customerBag.style.opacity = '1'; // 4. 地面上的餐點出現
+    if (isSkipped) return;
+    customerBag.style.opacity = '1'; 
     customerBag.style.transform = 'translate(-30px, 9px)'; 
 
     await wait(650);
+    if (isSkipped) return;
 
-    // 房子出現愛心
     heart.style.opacity = '1';
     heart.style.transform = 'translate(-19px, 1px) scale(1.45)';
 
     setStatus('✅', '送達完成！', true);
 
     await wait(2400);
+    if (isSkipped) return;
 
-    // ── 淡出 ──
     await splash.animate([
       { opacity: 1, transform: 'scale(1)' },
       { opacity: 0, transform: 'scale(1.03)' }
     ], { duration: 600, easing: 'ease-in-out' }).finished;
 
-    splash.remove();
+    if (!isSkipped) splash.remove();
   }
 
   window.addEventListener('load', runStoryAnimation);
