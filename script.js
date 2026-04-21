@@ -3377,42 +3377,41 @@ function enforceTimeRules() {
 }
 
 /* ══ 智慧油價系統 (帶入管理員全域預設，且允許自行修改) ══ */
-function applyGlobalGasPrice() {
+window.applyGlobalGasPrice = function() {
   const fuelTypeEl = document.getElementById('vr-fuel-type');
   const priceEl = document.getElementById('vr-price');
-  
+
   if (!fuelTypeEl || !priceEl) return;
 
   const type = fuelTypeEl.value;
-  
-  // 讀取管理員設定的全域油價
+
+  // 預設油價
   let gp = { '92': 29.5, '95': 31.0, '98': 33.0 };
+  
   try { 
     const saved = JSON.parse(localStorage.getItem('delivery_global_gas_prices'));
-    if (saved) gp = saved;
-  } catch(e) {}
+    // 🛡️ 防呆機制：將預設值與本地存檔「合併」，避免缺少單一油品導致無法更新
+    if (saved && typeof saved === 'object') {
+      gp = { ...gp, ...saved }; 
+    }
+  } catch(e) {
+    console.error("油價讀取失敗，使用預設值", e);
+  }
 
-  if (gp[type]) {
-    // 自動帶入管理員設定的價格
+  // 確保價格存在（即便是 0 也能寫入）
+  if (gp[type] !== undefined) {
+    // 自動帶入對應的油價
     priceEl.value = gp[type];
     
-    // 確保輸入框為可編輯狀態（移除之前的唯讀與半透明限制）
+    // 確保輸入框為可編輯狀態
     priceEl.readOnly = false;
     priceEl.style.opacity = '1';
     priceEl.style.pointerEvents = 'auto';
     
+    // 觸發總計計算
     calcVehFuel(); 
   }
-}
-
-function applyGasPrice(typeStr) {
-  if (!cachedGasPrices) return;
-  const price = cachedGasPrices[typeStr];
-  if (price > 0 && !isNaN(price)) {
-    document.getElementById('vr-price').value = price;
-    calcVehFuel(); 
-  }
-}
+};
 
 /* ══ 全部功能都開發完畢，準備正式上線時，再把這段程式碼改回原本的「註冊」代碼，並把 sw.js 的版本號加 1 ═══════════════════════════════════ */
 /* if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); } */
