@@ -1790,7 +1790,7 @@ function renderVehicles() {
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
 
   let selectorHtml = `<div style="display:flex; gap:16px; overflow-x:auto; padding:4px 4px 8px;" class="hide-scroll">`;
-  const fuelMap = { '92':'92 無鉛', '95':'95 無鉛', '98':'98 無鉛', '柴油':'柴油', 'electric':'電動車' };
+  const fuelMap = { '92':'92 無鉛', '95':'95 無鉛', '98':'98 無鉛', 'electric':'電動車' };
 
   S.vehicles.forEach(v => {
     const isActive = v.id === S.selVehicleId;
@@ -3322,82 +3322,119 @@ function enforceTimeRules() {
   }
 }
 
-/* ══ 自動抓取中油歷史油價網頁資料 (支援快取記憶防阻擋) ══ */
-let cachedGasPrices = null; // 用來記憶本次開啟 APP 時抓到的油價
+/* ══ 智慧油價抓取系統 (中油 -> 台塑 -> 本地記憶) ══ */
+let cachedGasPrices = null; // 暫存本次開啟 APP 的油價，避免重複抓取
 
 async function fetchAutoGasPrice() {
-  const fuelType = document.getElementById('vr-fuel-type');
-  if (!fuelType || fuelType.value === 'electric') return;
+  const fuelTypeEl = document.getElementById('vr-fuel-type');
+  const priceEl = document.getElementById('vr-price');
   
+  if (!fuelTypeEl || fuelTypeEl.value === 'electric') return;
+
+  // 1. 若已經成功抓過，直接使用暫存
   if (cachedGasPrices) {
-    applyGasPrice(fuelType.value);
+    applyGasPrice(fuelTypeEl.value);
     return;
   }
 
-  // 替換原本的 toast 為全新進度條動畫
-  showProgress('油價載入中...', true); // 👈 加上 true 啟動緩慢載入模式
+  showProgress('連線抓取油價中...', true);
+
+  // 封裝共用的 Proxy 請求函式 (雙通道防護)
+  const fetchWithProxy = async (targetUrl) => {
+    const url1 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    const url2 = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
+    try { const r1 = await fetch(url1); if(r1.ok) return await r1.text(); } catch(e){}
+    try { const r2 = await fetch(url2); if(r2.ok) return await r2.text(); } catch(e){}
+    throw new Error('Proxy 伺服器無回應');
+  };
 
   try {
-    const cpcUrl = encodeURIComponent('https://www.cpc.com.tw/historyprice.aspx?n=2890');
-    let htmlText = '';
-    
-    try {
-      const res1 = await fetch(`https://api.allorigins.win/raw?url=${cpcUrl}`);
-      if (!res1.ok) throw new Error('Proxy 1 failed');
-      htmlText = await res1.text();
-    } catch (e1) {
-      const res2 = await fetch(`https://api.codetabs.com/v1/proxy?quest=${cpcUrl}`);
-      if (!res2.ok) throw new Error('Proxy 2 failed');
-      htmlText = await res2.text();
-    }
-    
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, "text/html");
-    const tables = doc.querySelectorAll('table');
-    let dataRow = null;
+    // 🟢 [第一道防線] 嘗試抓取：台灣中油
+    const cpcHtml = await fetchWithProxy('https://www.cpc.com.tw/historyprice.aspx?n=2890');
+    const cpcDoc = new DOMParser().parseFromString(cpcHtml, "text/html");
+    const tables = cpcDoc.querySelectorAll('table');
+    let parsed = false;
     
     for (let t of tables) {
       const rows = t.querySelectorAll('tr');
       for (let r of rows) {
         const tds = r.querySelectorAll('td');
-        if (tds.length >= 5) {
-          const firstTd = tds[0].textContent.trim();
-          if (firstTd.includes('/')) { dataRow = r; break; }
+        if (tds.length >= 5 && tds[0].textContent.includes('/')) {
+          cachedGasPrices = {
+            '92': parseFloat(tds[1].textContent.trim()),
+            '95': parseFloat(tds[2].textContent.trim()),
+            '98': parseFloat(tds[3].textContent.trim()),
+          };
+          parsed = true;
+          break;
         }
       }
-      if (dataRow) break;
+      if (parsed) break;
     }
+    if (!parsed) throw new Error('中油網頁解析失敗');
     
-    if (!dataRow) throw new Error('找不到中油油價資料表');
-    
-    const tds = dataRow.querySelectorAll('td');
-    cachedGasPrices = {
-      '92': parseFloat(tds[1].textContent.trim()),
-      '95': parseFloat(tds[2].textContent.trim()),
-      '98': parseFloat(tds[3].textContent.trim()),
-      '柴油': parseFloat(tds[4].textContent.trim())
-    };
-    
-    // 取代原本的 applyGasPrice()，包在進度完成事件中
-    finishProgress(() => { applyGasPrice(fuelType.value); });
+    finishProgress(() => { 
+      applyGasPrice(fuelTypeEl.value); 
+      toast('✅ 已自動載入中油最新牌價'); 
+    });
 
-  } catch(e) {
-    console.error('取得油價失敗:', e);
-    // 失敗時也要確實關閉進度條
-    finishProgress(() => { toast('⚠️ 抓取油價失敗，請手動輸入'); });
+  } catch (cpcErr) {
+    console.log('中油抓取失敗，嘗試台塑...', cpcErr);
+    
+    try {
+      // 🟡 [第二道防線] 中油失敗，改抓取：台塑石化
+      const fpccHtml = await fetchWithProxy('https://www.fpcc.com.tw/tw/price');
+      const fpccDoc = new DOMParser().parseFromString(fpccHtml, "text/html");
+      
+      // 將網頁去除所有空白和 HTML 標籤，轉換成純文字進行暴力正則提取，完全無視網頁排版改變
+      const plainText = fpccDoc.body.textContent.replace(/\s+/g, '');
+      
+      const p92 = plainText.match(/92[^0-9]*(\d{2}\.\d)/);
+      const p95 = plainText.match(/95[^0-9]*(\d{2}\.\d)/);
+      const p98 = plainText.match(/98[^0-9]*(\d{2}\.\d)/);
+
+      if (p92 && p95 && p98) {
+        cachedGasPrices = {
+          '92': parseFloat(p92[1]),
+          '95': parseFloat(p95[1]),
+          '98': parseFloat(p98[1]),
+        };
+        finishProgress(() => { 
+          applyGasPrice(fuelTypeEl.value); 
+          toast('✅ 已自動載入台塑最新牌價'); 
+        });
+      } else {
+        throw new Error('台塑網頁解析失敗');
+      }
+
+    } catch (fpccErr) {
+      console.log('台塑抓取也失敗，啟用本地記憶油價', fpccErr);
+      
+      // 🔴 [第三道防線] 網路不通或 Proxy 阻擋，降級使用本地記憶油價
+      finishProgress(() => {
+        const type = fuelTypeEl.value;
+        if (S.settings.savedGasPrices && S.settings.savedGasPrices[type]) {
+          priceEl.value = S.settings.savedGasPrices[type];
+          toast('⚠️ 網路連線異常，已載入您上次輸入的油價');
+        } else {
+          // 如果是第一次使用連紀錄都沒有，給予預設值
+          const defaultPrices = { '92': 29.5, '95': 31.0, '98': 33.0 };
+          priceEl.value = defaultPrices[type] || '';
+          toast('⚠️ 無法取得最新油價，請手動輸入');
+        }
+        calcVehFuel(); 
+      });
+    }
   }
 }
 
-// 獨立拉出的填入油價函式
+// 將抓取到的價格填入欄位
 function applyGasPrice(typeStr) {
   if (!cachedGasPrices) return;
   const price = cachedGasPrices[typeStr];
   if (price > 0 && !isNaN(price)) {
     document.getElementById('vr-price').value = price;
-    calcVehFuel(); // 觸發總額重算
-    toast(`✅ 已載入最新牌價：$${price}`);
-  } else {
-    toast('⚠️ 抓取油價失敗，請手動輸入');
+    calcVehFuel(); 
   }
 }
 
