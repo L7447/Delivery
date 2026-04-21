@@ -2006,8 +2006,8 @@ function openAddVehRec(recordId = null) {
   openOverlay('veh-rec-add-page');
 
   // 👈 加入 !isEV 判斷，電動車絕對不會觸發油價抓取
-  if (!isEdit && S.addVehRecType === 'fuel' && !isEV && !document.getElementById('vr-price').value) {
-    fetchAutoGasPrice();
+  if (!isEdit && S.addVehRecType === 'fuel' && !document.getElementById('vr-price').value) {
+    applyGlobalGasPrice();
   }
 }
 
@@ -2640,6 +2640,10 @@ async function openAccountStats() {
         ${adminHtml}
       </div>
 
+      <button onclick="openAdminGasPriceEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--blue); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(59,130,246,0.3); cursor:pointer;">
+        ⛽ 編輯全域油價設定
+      </button>      
+
       <button onclick="openAnnouncementEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--gold); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:24px; box-shadow:0 4px 12px rgba(245,158,11,0.3); cursor:pointer;">
         📢 編輯首頁系統公告
       </button>
@@ -2654,6 +2658,56 @@ async function openAccountStats() {
       <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
     </div>`;
   }
+}
+
+/* ✨ 新增：管理員編輯全域油價設定 */
+function openAdminGasPriceEdit() {
+  document.getElementById('sub-title').textContent = '全域油價設定';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  // 預設油價
+  let gp = { '92': 29.5, '95': 31.0, '98': 33.0 };
+  try { 
+    const saved = JSON.parse(localStorage.getItem('delivery_global_gas_prices'));
+    if (saved) gp = saved;
+  } catch(e) {}
+
+  document.getElementById('sub-body').innerHTML = `
+    <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
+      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
+        💡 在此設定的油價將會同步給所有外送員，他們新增車輛紀錄時將自動帶入此價格，且一般使用者無法手動修改。
+      </div>
+      <div style="border-top:1px dashed var(--border);"></div>
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">92 無鉛汽油 (NT$)</label>
+        <input type="number" id="gp-92" class="finp" value="${gp['92']}" step="0.1" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+      </div>
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">95 無鉛汽油 (NT$)</label>
+        <input type="number" id="gp-95" class="finp" value="${gp['95']}" step="0.1" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+      </div>
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">98 無鉛汽油 (NT$)</label>
+        <input type="number" id="gp-98" class="finp" value="${gp['98']}" step="0.1" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+      </div>
+    </div>
+    
+    <button onclick="saveAdminGasPrice()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 發布全域油價</button>
+  `;
+  document.getElementById('sub-page').style.zIndex = '1100'; 
+}
+
+function saveAdminGasPrice() {
+  const gp = {
+    '92': pf(document.getElementById('gp-92').value) || 29.5,
+    '95': pf(document.getElementById('gp-95').value) || 31.0,
+    '98': pf(document.getElementById('gp-98').value) || 33.0
+  };
+  // 儲存至全域變數 (之後你串接 MongoDB 時可將這裡改為 API POST)
+  localStorage.setItem('delivery_global_gas_prices', JSON.stringify(gp));
+  toast('✅ 全域油價已更新並同步');
+  document.getElementById('sub-page').style.zIndex = '200';
+  openAccountStats(); 
 }
 
 /* ✨ 新增：管理員編輯公告介面 */
@@ -3322,121 +3376,36 @@ function enforceTimeRules() {
   }
 }
 
-/* ══ 智慧油價抓取系統 (純汽油版：中油 -> 台塑 -> 本地記憶) ══ */
-let cachedGasPrices = null; 
-
-async function fetchAutoGasPrice() {
+/* ══ 智慧油價系統 (帶入管理員全域預設，且允許自行修改) ══ */
+function applyGlobalGasPrice() {
   const fuelTypeEl = document.getElementById('vr-fuel-type');
   const priceEl = document.getElementById('vr-price');
   
-  if (!fuelTypeEl) return;
+  if (!fuelTypeEl || !priceEl) return;
 
-  if (cachedGasPrices) {
-    applyGasPrice(fuelTypeEl.value);
-    return;
-  }
+  const type = fuelTypeEl.value;
+  
+  // 讀取管理員設定的全域油價
+  let gp = { '92': 29.5, '95': 31.0, '98': 33.0 };
+  try { 
+    const saved = JSON.parse(localStorage.getItem('delivery_global_gas_prices'));
+    if (saved) gp = saved;
+  } catch(e) {}
 
-  showProgress('連線抓取油價中...', true);
-
-  const fetchWithProxy = async (targetUrl) => {
-    const url1 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-    const url2 = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
-    try { const r1 = await fetch(url1); if(r1.ok) return await r1.text(); } catch(e){}
-    try { const r2 = await fetch(url2); if(r2.ok) return await r2.text(); } catch(e){}
-    throw new Error('Proxy 伺服器無回應');
-  };
-
-  try {
-    // 🟢 [第一道防線] 嘗試抓取：台灣中油 (高穩定度解析)
-    const cpcHtml = await fetchWithProxy('https://www.fpcc.com.tw/tw/price');
-    const cpcDoc = new DOMParser().parseFromString(cpcHtml, "text/html");
-    const rows = cpcDoc.querySelectorAll('table tr');
-    let parsed = false;
+  if (gp[type]) {
+    // 自動帶入管理員設定的價格
+    priceEl.value = gp[type];
     
-    for (let r of rows) {
-      const tds = r.querySelectorAll('td');
-      // 中油歷史油價表：日期, 92, 95, 98, 柴油
-      if (tds.length >= 4 && tds[0].textContent.includes('/')) {
-        cachedGasPrices = {
-          '92': parseFloat(tds[1].textContent.trim()),
-          '95': parseFloat(tds[2].textContent.trim()),
-          '98': parseFloat(tds[3].textContent.trim())
-        };
-        parsed = true;
-        break;
-      }
-    }
-    if (!parsed) throw new Error('中油網頁解析失敗');
+    // 確保輸入框為可編輯狀態（移除之前的唯讀與半透明限制）
+    priceEl.readOnly = false;
+    priceEl.style.opacity = '1';
+    priceEl.style.pointerEvents = 'auto';
     
-    finishProgress(() => { 
-      applyGasPrice(fuelTypeEl.value); 
-      toast('✅ 已自動載入中油最新牌價'); 
-    });
-
-  } catch (cpcErr) {
-    console.log('中油抓取失敗，嘗試台塑...', cpcErr);
-    
-    try {
-      // 🟡 [第二道防線] 中油失敗，改抓取：台塑石化 (嚴謹防錯解析)
-      const fpccHtml = await fetchWithProxy('https://www.fpcc.com.tw/tw/price');
-      const fpccDoc = new DOMParser().parseFromString(fpccHtml, "text/html");
-      
-      // 提取所有包含 92, 95, 98 的表格列
-      let p92 = 0, p95 = 0, p98 = 0;
-      const trs = fpccDoc.querySelectorAll('tr, .row');
-      
-      trs.forEach(row => {
-        const text = row.textContent;
-        // 抓取該列所有的浮點數 (過濾出介於20~40之間的合理油價)
-        const floats = (text.match(/\d{2}\.\d/g) ||[]).map(parseFloat).filter(n => n > 20 && n < 40);
-        
-        if (floats.length > 0) {
-          // 台塑通常同一列會有批發價與零售價，零售價必定是較高的那個 (Max)
-          const retailPrice = Math.max(...floats);
-          if (text.includes('92')) p92 = retailPrice;
-          if (text.includes('95')) p95 = retailPrice;
-          if (text.includes('98')) p98 = retailPrice;
-        }
-      });
-
-      if (p92 > 0 && p95 > 0 && p98 > 0) {
-        cachedGasPrices = { '92': p92, '95': p95, '98': p98 };
-        finishProgress(() => { 
-          applyGasPrice(fuelTypeEl.value); 
-          toast('✅ 已自動載入台塑最新牌價'); 
-        });
-      } else {
-        throw new Error('台塑網頁解析失敗');
-      }
-
-    } catch (fpccErr) {
-      console.log('台塑抓取也失敗，啟用本地記憶油價', fpccErr);
-      
-      // 🔴 [第三道防線] 網路不通或雙雙失敗，降級使用本地記憶油價
-      finishProgress(() => {
-        const type = fuelTypeEl.value;
-        if (S.settings.savedGasPrices && S.settings.savedGasPrices[type]) {
-          priceEl.value = S.settings.savedGasPrices[type];
-          toast('⚠️ 網路連線異常，已載入您上次輸入的油價');
-        } else {
-          const defaultPrices = { '92': 29.5, '95': 31.0, '98': 33.0 };
-          priceEl.value = defaultPrices[type] || '';
-          toast('⚠️ 無法取得最新油價，請手動輸入');
-        }
-        calcVehFuel(); 
-      });
-    }
-  }
-}
-
-function applyGasPrice(typeStr) {
-  if (!cachedGasPrices) return;
-  const price = cachedGasPrices[typeStr];
-  if (price > 0 && !isNaN(price)) {
-    document.getElementById('vr-price').value = price;
     calcVehFuel(); 
   }
 }
+
+
 
 /* ══ 全部功能都開發完畢，準備正式上線時，再把這段程式碼改回原本的「註冊」代碼，並把 sw.js 的版本號加 1 ═══════════════════════════════════ */
 /* if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); } */
