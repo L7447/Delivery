@@ -3322,16 +3322,15 @@ function enforceTimeRules() {
   }
 }
 
-/* ══ 智慧油價抓取系統 (中油 -> 台塑 -> 本地記憶) ══ */
-let cachedGasPrices = null; // 暫存本次開啟 APP 的油價，避免重複抓取
+/* ══ 智慧油價抓取系統 (純汽油版：中油 -> 台塑 -> 本地記憶) ══ */
+let cachedGasPrices = null; 
 
 async function fetchAutoGasPrice() {
   const fuelTypeEl = document.getElementById('vr-fuel-type');
   const priceEl = document.getElementById('vr-price');
   
-  if (!fuelTypeEl || fuelTypeEl.value === 'electric') return;
+  if (!fuelTypeEl) return;
 
-  // 1. 若已經成功抓過，直接使用暫存
   if (cachedGasPrices) {
     applyGasPrice(fuelTypeEl.value);
     return;
@@ -3339,7 +3338,6 @@ async function fetchAutoGasPrice() {
 
   showProgress('連線抓取油價中...', true);
 
-  // 封裝共用的 Proxy 請求函式 (雙通道防護)
   const fetchWithProxy = async (targetUrl) => {
     const url1 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
     const url2 = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
@@ -3349,27 +3347,24 @@ async function fetchAutoGasPrice() {
   };
 
   try {
-    // 🟢 [第一道防線] 嘗試抓取：台灣中油
+    // 🟢 [第一道防線] 嘗試抓取：台灣中油 (高穩定度解析)
     const cpcHtml = await fetchWithProxy('https://www.fpcc.com.tw/tw/price');
     const cpcDoc = new DOMParser().parseFromString(cpcHtml, "text/html");
-    const tables = cpcDoc.querySelectorAll('table');
+    const rows = cpcDoc.querySelectorAll('table tr');
     let parsed = false;
     
-    for (let t of tables) {
-      const rows = t.querySelectorAll('tr');
-      for (let r of rows) {
-        const tds = r.querySelectorAll('td');
-        if (tds.length >= 5 && tds[0].textContent.includes('/')) {
-          cachedGasPrices = {
-            '92': parseFloat(tds[1].textContent.trim()),
-            '95': parseFloat(tds[2].textContent.trim()),
-            '98': parseFloat(tds[3].textContent.trim()),
-          };
-          parsed = true;
-          break;
-        }
+    for (let r of rows) {
+      const tds = r.querySelectorAll('td');
+      // 中油歷史油價表：日期, 92, 95, 98, 柴油
+      if (tds.length >= 4 && tds[0].textContent.includes('/')) {
+        cachedGasPrices = {
+          '92': parseFloat(tds[1].textContent.trim()),
+          '95': parseFloat(tds[2].textContent.trim()),
+          '98': parseFloat(tds[3].textContent.trim())
+        };
+        parsed = true;
+        break;
       }
-      if (parsed) break;
     }
     if (!parsed) throw new Error('中油網頁解析失敗');
     
@@ -3382,23 +3377,30 @@ async function fetchAutoGasPrice() {
     console.log('中油抓取失敗，嘗試台塑...', cpcErr);
     
     try {
-      // 🟡 [第二道防線] 中油失敗，改抓取：台塑石化
+      // 🟡 [第二道防線] 中油失敗，改抓取：台塑石化 (嚴謹防錯解析)
       const fpccHtml = await fetchWithProxy('https://www.fpcc.com.tw/tw/price');
       const fpccDoc = new DOMParser().parseFromString(fpccHtml, "text/html");
       
-      // 將網頁去除所有空白和 HTML 標籤，轉換成純文字進行暴力正則提取，完全無視網頁排版改變
-      const plainText = fpccDoc.body.textContent.replace(/\s+/g, '');
+      // 提取所有包含 92, 95, 98 的表格列
+      let p92 = 0, p95 = 0, p98 = 0;
+      const trs = fpccDoc.querySelectorAll('tr, .row');
       
-      const p92 = plainText.match(/92[^0-9]*(\d{2}\.\d)/);
-      const p95 = plainText.match(/95[^0-9]*(\d{2}\.\d)/);
-      const p98 = plainText.match(/98[^0-9]*(\d{2}\.\d)/);
+      trs.forEach(row => {
+        const text = row.textContent;
+        // 抓取該列所有的浮點數 (過濾出介於20~40之間的合理油價)
+        const floats = (text.match(/\d{2}\.\d/g) ||[]).map(parseFloat).filter(n => n > 20 && n < 40);
+        
+        if (floats.length > 0) {
+          // 台塑通常同一列會有批發價與零售價，零售價必定是較高的那個 (Max)
+          const retailPrice = Math.max(...floats);
+          if (text.includes('92')) p92 = retailPrice;
+          if (text.includes('95')) p95 = retailPrice;
+          if (text.includes('98')) p98 = retailPrice;
+        }
+      });
 
-      if (p92 && p95 && p98) {
-        cachedGasPrices = {
-          '92': parseFloat(p92[1]),
-          '95': parseFloat(p95[1]),
-          '98': parseFloat(p98[1]),
-        };
+      if (p92 > 0 && p95 > 0 && p98 > 0) {
+        cachedGasPrices = { '92': p92, '95': p95, '98': p98 };
         finishProgress(() => { 
           applyGasPrice(fuelTypeEl.value); 
           toast('✅ 已自動載入台塑最新牌價'); 
@@ -3410,14 +3412,13 @@ async function fetchAutoGasPrice() {
     } catch (fpccErr) {
       console.log('台塑抓取也失敗，啟用本地記憶油價', fpccErr);
       
-      // 🔴 [第三道防線] 網路不通或 Proxy 阻擋，降級使用本地記憶油價
+      // 🔴 [第三道防線] 網路不通或雙雙失敗，降級使用本地記憶油價
       finishProgress(() => {
         const type = fuelTypeEl.value;
         if (S.settings.savedGasPrices && S.settings.savedGasPrices[type]) {
           priceEl.value = S.settings.savedGasPrices[type];
           toast('⚠️ 網路連線異常，已載入您上次輸入的油價');
         } else {
-          // 如果是第一次使用連紀錄都沒有，給予預設值
           const defaultPrices = { '92': 29.5, '95': 31.0, '98': 33.0 };
           priceEl.value = defaultPrices[type] || '';
           toast('⚠️ 無法取得最新油價，請手動輸入');
@@ -3428,7 +3429,6 @@ async function fetchAutoGasPrice() {
   }
 }
 
-// 將抓取到的價格填入欄位
 function applyGasPrice(typeStr) {
   if (!cachedGasPrices) return;
   const price = cachedGasPrices[typeStr];
