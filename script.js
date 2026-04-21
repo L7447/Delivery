@@ -353,20 +353,17 @@ document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('cli
 function switchHomeTab(tab, index) { S.homeSubTab = tab; document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); renderHome(); }
 function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
 function switchRptTab(tab, index, btnEl) { S.rptView = tab; document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); btnEl.classList.add('active');['overview','rewards','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; }); renderReport(); }
-/* ══ 替換：車輛頁籤切換 (動態漸層色) ══ */
+/* ══ 替換：車輛頁籤切換 (維持紫色風格) ══ */
 function switchVehicleTab(tab, index) { 
   S.vehicleTab = tab; 
   const tabBg = document.getElementById('veh-tab-bg');
   tabBg.style.transform = `translateX(${index * 100}%)`; 
   
-  // 依據頁籤賦予對應的漸層與陰影色
-  if (tab === 'fuel') {
-    tabBg.style.background = 'linear-gradient(135deg, #1e3a8a, #3b82f6)';
-    tabBg.style.boxShadow = '0 4px 10px rgba(59,130,246,0.4)';
-  } else {
-    tabBg.style.background = 'linear-gradient(135deg, #065f46, #10b981)';
-    tabBg.style.boxShadow = '0 4px 10px rgba(16,185,129,0.4)';
-  }
+  tabBg.style.background = '#8B5CF6'; 
+  tabBg.style.boxShadow = '0 4px 10px rgba(139,92,246,0.4)';
+
+  document.getElementById('btn-veh-fuel').style.color = tab === 'fuel' ? '#fff' : 'var(--t2)';
+  document.getElementById('btn-veh-maint').style.color = tab === 'maintenance' ? '#fff' : 'var(--t2)';
 
   document.getElementById('btn-veh-fuel').classList.toggle('active', tab === 'fuel'); 
   document.getElementById('btn-veh-maint').classList.toggle('active', tab === 'maintenance'); 
@@ -1780,7 +1777,7 @@ function drawBar(canvasId, labels, data, color) {
 function changeVehMonth(offset) { S.vehM += offset; if (S.vehM < 1) { S.vehM = 12; S.vehY--; } if (S.vehM > 12) { S.vehM = 1; S.vehY++; } renderVehicles(); }
 function selectVehicle(id) { S.selVehicleId = id; _syncVehSelectorActive(id); renderVehicleContent(); }
 
-/* ══ 替換：車輛清單渲染 (加上預設燃料) ══ */
+/* ══ 替換：車輛清單渲染 (排版對齊 11.jpg) ══ */
 function renderVehicles() {
   const container = document.getElementById('vehicle-content'); 
   const selectorContainer = document.getElementById('veh-selector-container');
@@ -1792,23 +1789,25 @@ function renderVehicles() {
   if (S.vehicles.length === 0) { selectorContainer.innerHTML = ''; container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return; }
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
 
-  let selectorHtml = `<div style="font-size:12px; font-weight:700; color:var(--t3); margin-bottom:8px;">選擇車輛</div>`;
-  selectorHtml += `<div style="display:flex; gap:16px; margin-bottom:12px; overflow-x:auto; padding:4px 4px 8px;">`;
-  
-  // 建立燃料名稱對照表
+  let selectorHtml = `<div style="display:flex; gap:16px; overflow-x:auto; padding:4px 4px 8px;" class="hide-scroll">`;
   const fuelMap = { '92':'92 無鉛', '95':'95 無鉛', '98':'98 無鉛', '柴油':'柴油', 'electric':'電動車' };
 
   S.vehicles.forEach(v => {
     const isActive = v.id === S.selVehicleId;
-    const fName = fuelMap[v.defaultFuel] || v.defaultFuel; // 取得中文燃料名
+    const fName = fuelMap[v.defaultFuel] || v.defaultFuel; 
+    const isEV = v.defaultFuel === 'electric';
+    const borderColor = isActive ? (isEV ? '#3b82f6' : 'var(--acc)') : 'transparent';
+    const nameColor = isActive ? (isEV ? '#3b82f6' : 'var(--acc)') : 'var(--t2)';
     
     selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
-      <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">✕</div>
-      <div class="veh-sel-icon" style="width:50px; height:50px; border-radius:14px; background:var(--sf); border:2px solid ${isActive ? 'var(--acc)' : 'transparent'}; display:flex; align-items:center; justify-content:center; transition:border-color 0.2s, box-shadow 0.2s; box-shadow:${isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'};">
-        <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div>
+      <span class="veh-sel-name" style="font-size:12px; font-weight:700; color:${nameColor}; transition:0.2s;">${v.name}</span>
+      <div style="position:relative;">
+        <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.4);">✕</div>
+        <div class="veh-sel-icon" style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid ${borderColor}; display:flex; align-items:center; justify-content:center; box-shadow:${isActive ? '0 4px 10px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.05)'}; transition:0.2s;">
+          <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div>
+        </div>
       </div>
-      <span class="veh-sel-name" style="font-size:11px; font-weight:${isActive?'700':'600'}; color:${isActive?'var(--acc)':'var(--t1)'}; margin-bottom:-2px;">${v.name}</span>
-      <span style="font-size:10px; font-weight:600; color:var(--t3);">${fName}</span>
+      <span style="font-size:11px; font-weight:600; color:var(--t3);">${fName}</span>
     </div>`;
   }); 
   selectorHtml += `</div>`; 
@@ -1818,46 +1817,88 @@ function renderVehicles() {
 }
 
 function _syncVehSelectorActive(id) {
-  document.querySelectorAll('#veh-selector-container [data-vid]').forEach(el => {
-    const isActive = el.dataset.vid === id; const iconBox  = el.querySelector('.veh-sel-icon'); const nameSpan = el.querySelector('.veh-sel-name');
-    if (iconBox) { iconBox.style.borderColor = isActive ? 'var(--acc)' : 'transparent'; iconBox.style.boxShadow = isActive ? '0 4px 10px rgba(255,107,53,0.2)' : '0 2px 6px rgba(0,0,0,0.06)'; }
-    if (nameSpan) { nameSpan.style.color = isActive ? 'var(--acc)' : 'var(--t2)'; nameSpan.style.fontWeight = isActive ? '700' : '600'; }
-  });
+  renderVehicles(); // 強制重繪讓邊框顏色即時切換
 }
 
-/* ══ 替換：車輛管理內容 (漸層卡片、專屬圖示與電動車里程邏輯) ══ */
+/* ══ 替換：車輛管理內容 (燃料藍色底與紀錄列表) ══ */
 function renderVehicleContent() {
-  const container = document.getElementById('vehicle-content'); if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
-  const prefix = `${S.vehY}-${pad(S.vehM)}`; const monthRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix));
-  const fuelRecs = monthRecs.filter(r => r.type === 'fuel'); const maintRecs = monthRecs.filter(r => r.type === 'maintenance');
+  const container = document.getElementById('vehicle-content'); 
+  if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
+  
+  const prefix = `${S.vehY}-${pad(S.vehM)}`; 
+  const monthRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix));
+  const fuelRecs = monthRecs.filter(r => r.type === 'fuel'); 
+  const maintRecs = monthRecs.filter(r => r.type === 'maintenance');
 
   let totalDistance = 0, totalLiters = 0, totalFuelPaid = 0, totalMaintPaid = 0;
   fuelRecs.forEach(r => { const diff = pf(r.km) - pf(r.prevKm); if (diff > 0) totalDistance += diff; totalLiters += pf(r.liters); totalFuelPaid += pf(r.amount); });
-  maintRecs.forEach(r => totalMaintPaid += pf(r.amount)); const avgKmL = totalLiters > 0 ? (totalDistance / totalLiters).toFixed(1) : 0;
+  maintRecs.forEach(r => totalMaintPaid += pf(r.amount)); 
+  const avgKmL = totalLiters > 0 ? (totalDistance / totalLiters).toFixed(1) : 0;
 
   let html = '';
   if (S.vehicleTab === 'fuel') {
+    const v = S.vehicles.find(x => x.id === S.selVehicleId);
+    const isEV = v && v.defaultFuel === 'electric';
+    
+    let fuelStatsHtml = '';
+    if (isEV) {
+      fuelStatsHtml = `
+        <div style="display:flex; justify-content:center; text-align:center; margin-top: 16px;">
+          <div style="flex:1;">
+            <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">總里程</div>
+            <div style="font-weight:800; font-size:16px;">${fmt(totalDistance)} km</div>
+          </div>
+        </div>`;
+    } else {
+      fuelStatsHtml = `
+        <div style="display:flex; justify-content:space-between; text-align:center; margin-top: 16px;">
+          <div style="flex:1;">
+            <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">總加油量</div>
+            <div style="font-weight:800; font-size:15px;">${totalLiters.toFixed(1)} L</div>
+          </div>
+          <div style="width:1px; background:rgba(255,255,255,0.3); margin:0 8px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">總里程</div>
+            <div style="font-weight:800; font-size:15px;">${fmt(totalDistance)} km</div>
+          </div>
+          <div style="width:1px; background:rgba(255,255,255,0.3); margin:0 8px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">平均油耗</div>
+            <div style="font-weight:800; font-size:15px;">${avgKmL} km/L</div>
+          </div>
+        </div>`;
+    }
+
     html += `
-      <div style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
-        <div style="font-size:13px; font-weight:700; margin-bottom:12px; display:flex; justify-content:space-between;">
-          <span>⛽ 本月燃料總計</span><span style="font-family:var(--mono); font-size:18px; font-weight:900;">$${fmt(totalFuelPaid)}</span>
+      <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+        <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div id="veh-fuel-col-btn" style="background:rgba(255,255,255,0.2); width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; transition:transform 0.3s;">▼</div>
+            <span style="font-size:14px; font-weight:700;">⛽ 本月燃料總計</span>
+          </div>
+          <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalFuelPaid)}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; text-align:center;">
-          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">總油/電量</span><br><span style="font-weight:800; font-size:14px;">${totalLiters.toFixed(1)} L</span></div>
-          <div style="width:1px; background:rgba(255,255,255,0.2);"></div>
-          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">總里程</span><br><span style="font-weight:800; font-size:14px;">${fmt(totalDistance)} km</span></div>
-          <div style="width:1px; background:rgba(255,255,255,0.2);"></div>
-          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">平均油耗</span><br><span style="font-weight:800; font-size:14px;">${avgKmL} km/L</span></div>
+        <div id="veh-fuel-col" style="max-height:100px; overflow:hidden; transition:max-height 0.3s ease;">
+          ${fuelStatsHtml}
         </div>
       </div>`;
   } else {
     html += `
       <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
-        <div style="font-size:13px; font-weight:700; margin-bottom:12px; display:flex; justify-content:space-between;">
-          <span>🔧 本月保養總計</span><span style="font-family:var(--mono); font-size:18px; font-weight:900;">$${fmt(totalMaintPaid)}</span>
+        <div onclick="toggleSummaryCard('veh-maint-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div id="veh-maint-col-btn" style="background:rgba(255,255,255,0.2); width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; transition:transform 0.3s;">▼</div>
+            <span style="font-size:14px; font-weight:700;">🔧 本月保養總計</span>
+          </div>
+          <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalMaintPaid)}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; text-align:center;">
-          <div style="flex:1;"><span style="color:rgba(255,255,255,0.7);">本月保養次數</span><br><span style="font-weight:800; font-size:14px;">${maintRecs.length} 筆</span></div>
+        <div id="veh-maint-col" style="max-height:100px; overflow:hidden; transition:max-height 0.3s ease;">
+          <div style="display:flex; justify-content:center; text-align:center; margin-top: 16px;">
+            <div style="flex:1;">
+              <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">本月保養次數</div>
+              <div style="font-weight:800; font-size:15px;">${maintRecs.length} 筆</div>
+            </div>
+          </div>
         </div>
       </div>`;
   }
@@ -1876,23 +1917,21 @@ function renderVehicleContent() {
 
       if (isFuel) {
           if (isEV) {
-              // 👈 電動車專屬：顯示電池圖片、顯示電池名稱，右側大字改為行駛里程
-              iconContent = `<img src="images/Battery.png" style="width:24px; height:24px; object-fit:contain;">`;
+              iconContent = `<div style="background:#dbeafe; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔋</div>`;
               mainText = `電池 (電動車)`;
               const diff = pf(r.km) - pf(r.prevKm);
               rightText = `${diff > 0 ? diff : 0} km`;
               rightColor = 'var(--acc)';
               kmText = `${r.prevKm} → ${r.km} km`;
           } else {
-              // 👈 汽油車專屬：顯示加油站圖片、無鉛名稱，右側大字為花費金額
-              iconContent = `<img src="images/Gas_station.png" style="width:24px; height:24px; object-fit:contain;">`;
+              iconContent = `<div style="background:#fee2e2; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">⛽</div>`;
               mainText = `${r.fuelType||'95'} ${r.fuelType==='柴油'?'':'無鉛'}`;
               rightText = `-$${fmt(r.amount)}`;
               rightColor = 'var(--t1)';
               kmText = `${r.prevKm} → ${r.km} km`;
           }
       } else {
-          iconContent = `🔧`; 
+          iconContent = `<div style="background:#d1fae5; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔧</div>`;
           mainText = r.items.join(', '); 
           kmText = `${r.km} km`;
           rightText = `-$${fmt(r.amount)}`;
@@ -1900,15 +1939,15 @@ function renderVehicleContent() {
       }
 
       html += `
-        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; padding:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
           <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:40px; height:40px; border-radius:12px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${iconContent}</div>
+            ${iconContent}
             <div>
-              <div style="font-size:14px; font-weight:800; color:var(--t1); margin-bottom:4px;">${mainText}</div>
+              <div style="font-size:15px; font-weight:800; color:var(--t1); margin-bottom:4px;">${mainText}</div>
               <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
             </div>
           </div>
-          <div style="font-family:var(--mono); font-size:16px; font-weight:800; color:${rightColor};">${rightText}</div>
+          <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:${rightColor};">${rightText}</div>
         </div>`;
     });
   }
