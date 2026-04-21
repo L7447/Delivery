@@ -491,7 +491,7 @@
     <div id="form-area-fuel">
       <div style="display:flex; gap:10px; margin-bottom:12px;">
         <div class="fg" style="flex:1"><label>汽油類型</label>
-          <select class="fsel" id="vr-fuel-type" onchange="fetchAutoGasPrice()">
+          <select class="fsel" id="vr-fuel-type" oninput="applyGlobalGasPrice()">
             <option value="92">92 無鉛</option>
             <option value="95" selected>95 無鉛</option>
             <option value="98">98 無鉛</option>
