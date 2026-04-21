@@ -617,7 +617,7 @@
     setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
     await animate(vehicle, [
       { right: '35%', transform: 'translateY(0)' },
-      { right: '35%', transform: 'translateY(-32px)' }
+      { right: '35%', transform: 'translateY(-35px)' }
     ], { duration: 450, easing: 'ease-out' });
 
     await wait(700);
@@ -672,8 +672,8 @@
       return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
     };
 
-    runScenery('sp-s7',  0,    20000); // ☁️
-    runScenery('sp-s13', 300,  20000); // ⛅
+    runScenery('sp-s7',  0,    22000); // ☁️
+    runScenery('sp-s13', 300,  22000); // ⛅
     runScenery('sp-s1',  500,  1500); // 🌳
     runScenery('sp-s5',  700,  1500); // 🏦
     runScenery('sp-s3',  900,  1500); // 🚦
@@ -689,7 +689,7 @@
     runScenery('sp-s15', 2900, 1500); // 🚶‍♀️
     runScenery('sp-s14', 3100, 1500); // 🏨
 
-    await wait(4000);
+    await wait(3500);
 
     // ════════════════════════════════════════════════
     // 【第四幕：抵達客人家附近】
