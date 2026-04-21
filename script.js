@@ -20,7 +20,9 @@ const DEFAULT_SETTINGS = {
     { id: 'fp_sun', name: '週日獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [0], tiers:[{orders:15, amount:75}, {orders:24, amount:150}, {orders:35, amount:350}, {orders:45, amount:500}] }
   ], 
   shopHistory:[],
-  themeMode: 'light', autoDarkStart: '18:00', autoDarkEnd: '06:00', autoBackup: false
+  themeMode: 'light', autoDarkStart: '18:00', autoDarkEnd: '06:00', autoBackup: false,
+  // ✨ 新增提醒設定
+  reminder: { enabled: false, time: '22:00', lastSent: '' } 
 };
 
 // 帳號登入系統狀態
@@ -397,7 +399,25 @@ function renderHome() {
     }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
     let topHtml = `
-      <div style="padding:16px 16px 0; flex-shrink:0;">
+      <div style="padding:16px 16px 0; flex-shrink:0;">`;
+
+    // ✨ 新增：讀取並顯示公告
+    try {
+      const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
+      if (ann.active && ann.text.trim() !== '') {
+        topHtml += `
+          <div style="background:linear-gradient(135deg, var(--acc), var(--acc2)); color:#fff; padding:12px 16px; border-radius:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(255,107,53,0.3); display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-size:20px;">📢</span>
+            <div style="font-size:13px; font-weight:600; line-height:1.5;">
+              ${ann.text.replace(/\n/g, '<br>')}
+            </div>
+          </div>
+        `;
+      }
+    } catch(e) {}
+
+    // ... 原本的 home-header 繼續拼接 ...
+    topHtml += `
         <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
           <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:800; color:var(--t1); line-height:1.2;">今日概況</div>
           <div class="home-pg-date" style="font-size:13px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
@@ -2112,6 +2132,7 @@ function renderSettings() {
     <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 外觀與主題設定${themeStatus}</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openReminderSettings()"><span class="sn">⏰ 每日記帳通知提醒</span><span class="arr">›</span></div>
   </div></div>
 
   <div class="set-sec"><h3>資料管理與備份</h3><div class="set-list">
@@ -2126,6 +2147,91 @@ function renderSettings() {
       <span onclick="openOverlay('about-page')" style="font-size:13px; color:var(--text-blue); font-weight:600; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
   </div>`;
   document.getElementById('settings-content').innerHTML = html;
+}
+
+/* ✨ 新增：提醒設定彈窗 */
+function openReminderSettings() {
+  document.getElementById('sub-title').textContent = '每日記帳提醒';
+  document.getElementById('sub-top-right').innerHTML = '';
+  const r = S.settings.reminder || { enabled: false, time: '22:00' };
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="background:var(--sf2); padding:16px; border-radius:12px; margin-bottom:20px;">
+      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
+        💡 設定提醒時間，系統將在指定時間發送通知，提醒您記錄今天的收入與工時。
+      </div>
+    </div>
+    
+    <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:14px; font-weight:700; color:var(--t1);">🔔 開啟每日提醒</span>
+        <label class="switch">
+          <input type="checkbox" id="rem-enabled" ${r.enabled ? 'checked' : ''} onchange="requestNotificationPermission(this)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div style="border-top:1px dashed var(--border);"></div>
+      
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">⏰ 提醒時間</label>
+        <input type="time" class="finp" id="rem-time" value="${r.time}" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+      </div>
+    </div>
+    
+    <button onclick="saveReminderSettings()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 儲存提醒設定</button>
+  `;
+  openOverlay('sub-page');
+}
+
+// 請求瀏覽器通知權限
+function requestNotificationPermission(checkbox) {
+  if (checkbox.checked && "Notification" in window) {
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission().then(permission => {
+        if (permission !== "granted") {
+          checkbox.checked = false;
+          toast('⚠️ 請允許系統通知才能使用提醒功能');
+        }
+      });
+    }
+  }
+}
+
+function saveReminderSettings() {
+  if (!S.settings.reminder) S.settings.reminder = {};
+  S.settings.reminder.enabled = document.getElementById('rem-enabled').checked;
+  S.settings.reminder.time = document.getElementById('rem-time').value || '22:00';
+  saveSettings();
+  toast('✅ 提醒設定已儲存');
+  closeOverlay('sub-page');
+}
+
+/* ✨ 新增：初始化背景時間檢查機制 */
+function initReminderCheck() {
+  setInterval(() => {
+    const r = S.settings.reminder;
+    if (!r || !r.enabled) return;
+    
+    const now = new Date();
+    const curTime = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    const todayStrDate = todayStr(now);
+    
+    if (curTime === r.time && r.lastSent !== todayStrDate) {
+      r.lastSent = todayStrDate;
+      saveSettings();
+      
+      // 發送系統通知
+      const title = "🛵 記帳提醒";
+      const body = "今天跑單辛苦了！別忘了記錄今天的收入與工時喔！";
+      
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body: body, icon: 'images/scooter1.png' });
+      } else {
+        toast(`🔔 ${title}：${body}`, 5000); // 若無權限則用 Toast 替代
+      }
+    }
+  }, 60000); // 每 1 分鐘檢查一次
 }
 
 /* ══ 替換：登入系統拆分雙頁籤與頭像綁定 ══ */
@@ -2271,7 +2377,7 @@ function openAuthModal() {
 }
 
 // 您的後端 API 網址 (本地測試為 localhost:3000，上線請改為實際網域)
-const API_BASE_URL = 'https://delivery-api-0494.onrender.com/api';
+const API_BASE_URL = '/api';
 
 /* ══ 寄送真實 Email 驗證碼 ══ */
 async function requestLogin() {
@@ -2441,17 +2547,74 @@ async function openAccountStats() {
       `;
     });
 
+    // 找到這個區塊 (大約在 admin/users fetch 成功之後)：
     document.getElementById('sub-body').innerHTML = baseHtml + `
       <h4 style="font-size:13px; color:var(--text-red); margin-bottom:8px;">⚙️ 會員權限管理 (管理員權限)</h4>
-      <div class="card" style="max-height:200px; overflow-y:auto; padding:8px 12px; margin-bottom:24px;">
+      <div class="card" style="max-height:200px; overflow-y:auto; padding:8px 12px; margin-bottom:16px;">
         ${adminHtml}
       </div>
+
+      <!-- ✨ 加入公告管理按鈕 ✨ -->
+      <button onclick="openAnnouncementEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--gold); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:24px; box-shadow:0 4px 12px rgba(245,158,11,0.3); cursor:pointer;">
+        📢 編輯首頁系統公告
+      </button>
+
       <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
     </div>`;
 
   } catch (err) {
     document.getElementById('sub-body').innerHTML = baseHtml + `<div style="text-align:center; color:var(--red); margin-bottom:16px;">無法載入後台資料：${err.message}</div><button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`;
   }
+}
+
+/* ✨ 新增：管理員編輯公告介面 */
+function openAnnouncementEdit() {
+  document.getElementById('sub-title').textContent = '系統公告設定';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  let ann = { active: false, text: '' };
+  try { ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}'); } catch(e){}
+
+  document.getElementById('sub-body').innerHTML = `
+    <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:14px; font-weight:700; color:var(--t1);">📢 啟用首頁公告</span>
+        <label class="switch">
+          <input type="checkbox" id="ann-active" ${ann.active ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div style="border-top:1px dashed var(--border);"></div>
+      
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">📝 公告內容支援換行</label>
+        <textarea id="ann-text" class="finp" rows="5" placeholder="輸入要顯示給所有外送員的公告內容..." style="resize:none; font-size:14px; line-height:1.5;">${ann.text}</textarea>
+      </div>
+    </div>
+    
+    <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 發布公告</button>
+  `;
+  // 透過提高 z-index 疊加在帳號頁面之上
+  document.getElementById('sub-page').style.zIndex = '1100'; 
+}
+
+function saveAnnouncement() {
+  const active = document.getElementById('ann-active').checked;
+  const text = document.getElementById('ann-text').value.trim();
+  
+  if (active && text === '') {
+    toast('⚠️ 啟用公告時內容不能為空');
+    return;
+  }
+  
+  localStorage.setItem('delivery_global_announcement', JSON.stringify({ active, text }));
+  toast('✅ 公告設定已發布');
+  
+  // 關閉回到原本的管理員頁面並重新渲染首頁
+  document.getElementById('sub-page').style.zIndex = '200';
+  openAccountStats(); 
+  if (S.tab === 'home') renderHome();
 }
 
 /* ══ 管理員刪除 API 呼叫 (帶上憑證) ══ */
@@ -3272,11 +3435,12 @@ function backupToGoogleDrive() {
 
 function init() {
   loadAll();
-  applyTheme();      // 啟動時偵測深色模式
-  applyBackground(); // 套用背景圖片
+  applyTheme();     
+  applyBackground(); 
   
-  // 每 60 秒檢查一次是否達到自動切換深色的時間
-  setInterval(applyTheme, 60000); 
+  initReminderCheck(); // ✨ 加入這行啟動背景提醒檢查
+
+  setInterval(applyTheme, 60000);
 
   if (!S.platforms || !S.platforms.length) {
     S.platforms = DEFAULT_PLATFORMS.map(p=>({...p}));
