@@ -2445,7 +2445,7 @@ function openAuthModal() {
 }
 
 // 您的後端 API 網址 (本地測試為 localhost:3000，上線請改為實際網域)
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'https://delivery-api-0494.onrender.com';
 
 /* ══ 寄送真實 Email 驗證碼 ══ */
 async function requestLogin() {
