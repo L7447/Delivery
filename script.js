@@ -3405,7 +3405,14 @@ function applyGlobalGasPrice() {
   }
 }
 
-
+function applyGasPrice(typeStr) {
+  if (!cachedGasPrices) return;
+  const price = cachedGasPrices[typeStr];
+  if (price > 0 && !isNaN(price)) {
+    document.getElementById('vr-price').value = price;
+    calcVehFuel(); 
+  }
+}
 
 /* ══ 全部功能都開發完畢，準備正式上線時，再把這段程式碼改回原本的「註冊」代碼，並把 sw.js 的版本號加 1 ═══════════════════════════════════ */
 /* if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); } */
