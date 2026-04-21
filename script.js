@@ -3350,7 +3350,7 @@ async function fetchAutoGasPrice() {
 
   try {
     // 🟢 [第一道防線] 嘗試抓取：台灣中油
-    const cpcHtml = await fetchWithProxy('https://www.cpc.com.tw/historyprice.aspx?n=2890');
+    const cpcHtml = await fetchWithProxy('https://www.fpcc.com.tw/tw/price');
     const cpcDoc = new DOMParser().parseFromString(cpcHtml, "text/html");
     const tables = cpcDoc.querySelectorAll('table');
     let parsed = false;
