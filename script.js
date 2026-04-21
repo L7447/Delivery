@@ -2226,7 +2226,24 @@ function initReminderCheck() {
       const body = "今天跑單辛苦了！別忘了記錄今天的收入與工時喔！";
       
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body: body, icon: 'images/scooter1.png' });
+        // 優先使用 Service Worker 發送系統橫幅通知 (支援手機 PWA 橫幅)
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration().then(function(reg) {
+            if (reg && reg.active) {
+              reg.showNotification(title, {
+                body: body,
+                icon: 'images/scooter1.png',
+                vibrate: [200, 100, 200]
+              });
+            } else {
+              new Notification(title, { body: body, icon: 'images/scooter1.png' });
+            }
+          }).catch(function() {
+            new Notification(title, { body: body, icon: 'images/scooter1.png' });
+          });
+        } else {
+          new Notification(title, { body: body, icon: 'images/scooter1.png' });
+        }
       } else {
         toast(`🔔 ${title}：${body}`, 5000); // 若無權限則用 Toast 替代
       }
@@ -2563,7 +2580,24 @@ async function openAccountStats() {
     </div>`;
 
   } catch (err) {
-    document.getElementById('sub-body').innerHTML = baseHtml + `<div style="text-align:center; color:var(--red); margin-bottom:16px;">無法載入後台資料：${err.message}</div><button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`;
+    let errMsg = err.message;
+    
+    // 攔截 Safari/手機版環境下 API_BASE_URL 網址不正確造成的特有字串錯誤
+    if (errMsg.includes('expected pattern') || errMsg.includes('fetch')) {
+      errMsg = "未連接後端伺服器 (API 尚未設定或伺服器未啟動)";
+    }
+    
+    document.getElementById('sub-body').innerHTML = baseHtml + `
+      <div style="background:var(--red-d); padding:16px; border-radius:12px; border: 1px solid rgba(239,68,68,0.2); margin-bottom:20px;">
+        <div style="font-size:14px; font-weight:800; color:var(--red); margin-bottom:6px; text-align:center;">
+          ⚠️ 無法載入後台管理資料
+        </div>
+        <div style="font-size:12px; font-weight:600; color:var(--t2); text-align:center;">
+          ${errMsg}
+        </div>
+      </div>
+      <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
+    </div>`;
   }
 }
 
