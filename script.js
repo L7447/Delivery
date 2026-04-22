@@ -180,7 +180,7 @@ function toggleSummaryCard(id) {
   }
 }
 
-/* ══ 替換：產生總結卡片 (統一版面、加入淨行程/獎勵/小費佔比，同排顯示) ══ */
+/* ══ 替換：產生總結卡片 (統一版面、加入淨行程佔比、以及基本工資判斷) ══ */
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
   const totalBonus = bonus + tempBonus; 
@@ -198,6 +198,18 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
   const avgOrd = orders > 0 ? Math.round(total / orders) : 0;
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
+
+  // 👇 基本工資判斷邏輯 (給總結卡片使用)
+  let wageHtml = '';
+  if (hours > 0) {
+    let wageStatus = ''; let wageColor = ''; let wageBg = '';
+    if (avgHr <= 154) { wageStatus = ' 😭 嚴重低於基本工資 '; wageColor = 'var(--red)'; wageBg = 'var(--red-d)'; } 
+    else if (avgHr <= 175) { wageStatus = ' ⚠️⚠️ 低於基本工資 '; wageColor = 'var(--acc2)'; wageBg = 'var(--acc-d)'; } 
+    else if (avgHr <= 195) { wageStatus = ' ⚠️ 略低於基本工資 '; wageColor = 'var(--blue)'; wageBg = 'var(--blue-d)'; } 
+    else { wageStatus = ' 🎉 符合基本工資 '; wageColor = 'var(--green)'; wageBg = 'var(--green-d)'; }
+    
+    wageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:11px; padding:4px 6px; border-radius:5px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
+  }
 
   return `
     <div class="hist-rec-card" style="border: 1.5px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
@@ -233,12 +245,20 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
       </div>
       <div id="${cardId}" class="hrc-collapse" style="background: var(--collapse-bg); overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
-        <div style="padding:8px 12px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
-          <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span></div>
-          <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
+        <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，容納下方的基本工資標籤 -->
+        <div style="padding:12px 3px 8px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
+          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
+            一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span>
+          </div>
+          <div class="h-div" style="height:35px; align-self:center;"></div>
+          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
+            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
+          </div>
+          <div class="h-div" style="height:35px; align-self:center;"></div>
+          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
+            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span>
+            ${wageHtml} <!-- 👈 將標籤放進時薪的正下方 -->
+          </div>
         </div>
       </div>
     </div>`;
@@ -672,9 +692,11 @@ function toggleCalendarGrid() {
   }
 }
 
-/* ══ 替換：產生單筆記錄卡片 (修正點擊事件、備註紅字、摺疊內容置中) ══ */
+/* ══ 替換：產生單筆記錄卡片 (加入淨行程、佔比、基本工資判斷) ══ */
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
+  
+  // 處理現金小費專屬卡片
   if (r.isCashTip) {
     const plat = getPlatform(r.platformId);
     return `
@@ -692,6 +714,8 @@ function buildRecItem(r) {
         </div>
       </div>`;
   }
+  
+  // 處理純打卡紀錄
   if (r.isPunchOnly) {
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${r.id}" onclick="openDetailOverlay('${r.id}')">
@@ -703,25 +727,43 @@ function buildRecItem(r) {
       </div>`;
   }
   
-  const plat = getPlatform(r.platformId); const total = recTotal(r);
+  // 一般行程紀錄計算
+  const plat = getPlatform(r.platformId); 
+  const total = recTotal(r);
   const totalBonus = pf(r.bonus) + pf(r.tempBonus);
-  const _orders = pf(r.orders); const _hours = pf(r.hours);
+  const income = total - totalBonus - pf(r.tips); // 算出淨行程
+  
+  const _orders = pf(r.orders); 
+  const _hours = pf(r.hours);
   const avgOrd = _orders > 0 ? Math.round(total / _orders) : 0;
   const ordHr = _hours > 0 ? (_orders / _hours).toFixed(1) : 0;
   const avgHr = _hours > 0 ? Math.round(total / _hours) : 0;
+
+  // 計算佔比
+  const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
+  const bonPct = total > 0 ? Math.round((totalBonus / total) * 100) : 0;
+  const tipPct = total > 0 ? Math.round((pf(r.tips) / total) * 100) : 0;
   
   let tagsHtml = '';
   if (_orders > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${_orders} 單</span>`;
   if (r.mileage > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.mileage} km</span>`; 
   if (_hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(_hours)}</span>`;
-  if (totalBonus > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
-  if (r.tips > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-tips">小費 $${fmt(r.tips)}</span>`;
+
+  // 👇 基本工資判斷邏輯 (單筆記錄使用)
+  let recWageHtml = '';
+  if (_hours > 0) {
+    let wageStatus = ''; let wageColor = ''; let wageBg = '';
+    if (avgHr <= 154) { wageStatus = '😭嚴重低於基本工資'; wageColor = 'var(--red)'; wageBg = 'var(--red-d)'; } 
+    else if (avgHr <= 175) { wageStatus = '⚠️⚠️低於基本工資'; wageColor = 'var(--acc2)'; wageBg = 'var(--acc-d)'; } 
+    else if (avgHr <= 195) { wageStatus = '⚠️略低於基本工資'; wageColor = 'var(--blue)'; wageBg = 'var(--blue-d)'; } 
+    else { wageStatus = '🎉符合基本工資'; wageColor = 'var(--green)'; wageBg = 'var(--green-d)'; }
+    
+    recWageHtml = `<div style="margin-top:4px;"><span style="background:${wageBg}; color:${wageColor}; font-size:10px; padding:2px 4px; border-radius:4px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
+  }
 
   return `
     <div class="hist-rec-card" data-id="${r.id}">
-      <!-- 外層加上 onclick 開啟詳情 -->
       <div class="hrc-top" onclick="openDetailOverlay('${r.id}')">
-        <!-- ▼ 折疊按鈕：獨立事件折疊卡片 -->
         <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${cid}', event)">▼</div>
         <div class="hrc-row1">
           <span class="hrc-plat-tag" style="background:${plat.color};">${plat.name}</span>
@@ -732,16 +774,38 @@ function buildRecItem(r) {
           <span class="hrc-amt">$${fmt(total)}</span>
           ${tagsHtml}
         </div>
+        
+        <!-- 新增：單筆記錄的淨行程、獎勵、小費佔比結構 -->
+        <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+            淨行程<br>
+            <span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
+          </div>
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+            獎勵<br>
+            <span style="color: #ff7715; font-size:14px;">$${fmt(totalBonus)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</span>
+          </div>
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+            小費<br>
+            <span style="color: #8A2BE2; font-size:14px;">$${fmt(pf(r.tips))}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
+          </div>
+        </div>
+
       </div>
 
       <div id="${cid}" class="hrc-collapse" style="background: var(--collapse-bg); overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #708090; margin-bottom:3px;"></div>
-        <div style="padding:8px; display:flex; justify-content:center; align-items:center; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
+        <div style="padding:10px 3px 6px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
-          <div class="h-div" style="height:20px;"></div>
+          <div class="h-div" style="height:30px;"></div>
           <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span></div>
-          <div class="h-div" style="height:20px;"></div>
-          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span></div>
+          <div class="h-div" style="height:30px;"></div>
+          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span>
+            ${recWageHtml} <!-- 單筆記錄的基本工資徽章 -->
+          </div>
         </div>
       </div>
     </div>`;
