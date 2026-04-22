@@ -1807,13 +1807,13 @@ function renderVehicles() {
     const isEV = v.defaultFuel === 'electric';
     const borderColor = isActive ? (isEV ? '#3b82f6' : 'var(--acc)') : 'transparent';
     const nameColor = isActive ? (isEV ? '#3b82f6' : 'var(--acc)') : 'var(--t2)';
-    
+    // 機車圖片數量
     selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
       <span class="veh-sel-name" style="font-size:12px; font-weight:700; color:${nameColor}; transition:0.2s;">${v.name}</span>
       <div style="position:relative;">
         <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.4);">✕</div>
         <div class="veh-sel-icon" style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid ${borderColor}; display:flex; align-items:center; justify-content:center; box-shadow:${isActive ? '0 4px 10px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.05)'}; transition:0.2s;">
-          <img src="scooter/s${(v.icon && v.icon <= 11) ? v.icon : 1}.png" style="width:36px; height:36px; object-fit:contain;">
+          <img src="scooter/s${(v.icon && v.icon <= 9) ? v.icon : 1}.png" style="width:36px; height:36px; object-fit:contain;">
         </div>
       </div>
       <span style="font-size:11px; font-weight:600; color:var(--t3);">${fName}</span>
@@ -2018,9 +2018,9 @@ function openAddVehRec(recordId = null) {
   
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
   const isEV = v && v.defaultFuel === 'electric'; // 👈 判斷是否為電動車
-
+  //機車圖片數量
   if (v) {
-    const iconNum = (v.icon && v.icon <= 11) ? v.icon : 1;
+    const iconNum = (v.icon && v.icon <= 9) ? v.icon : 1;
     document.getElementById('veh-rec-veh-icons').innerHTML = `
       <div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;">
         <div style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);">
@@ -2187,9 +2187,9 @@ async function deleteVehRecFromEdit() { const ok = await customConfirm('確定�
 function openAddVehicle() {
   S.newVehIcon = 1; // 預設選擇 s1.png
   const container = document.getElementById('vehicle-add-body');
-  
+  // 機車圖片數量
   let iconsHtml = '';
-  for (let i = 1; i <= 11; i++) {
+  for (let i = 1; i <= 9; i++) {
     const isSel = S.newVehIcon === i;
     // 產生 1 到 11 的圖片選項
     iconsHtml += `<img src="scooter/s${i}.png" id="veh-opt-${i}" onclick="selectNewVehIcon(${i})" style="width:70px; height:70px; object-fit:contain; border:2px solid ${isSel ? 'var(--acc)' : 'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel ? 'scale(1.05)' : 'scale(1)'}; flex-shrink:0; background:var(--sf); padding:4px;">`;
@@ -2225,10 +2225,10 @@ function openAddVehicle() {
     
   openOverlay('vehicle-add-page');
 }
-
+// 機車圖片數量
 function selectNewVehIcon(id) { 
   S.newVehIcon = id; 
-  for (let i = 1; i <= 11; i++) { 
+  for (let i = 1; i <= 9; i++) { 
     const img = document.getElementById(`veh-opt-${i}`); 
     if (!img) continue; 
     if (i === S.newVehIcon) { 
