@@ -338,31 +338,36 @@
     <div class="fixed-header" style="padding-bottom: 12px; background:var(--sf);">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
         
-        <!-- 左側：新增車輛圓形按鈕 (文字改為 新增車輛 並移至上方) -->
-        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; width:60px;">
-          <span style="font-size:10px; font-weight:700; color:var(--t2);">新增車輛</span>
-          <button onclick="openAddVehicle()" title="新增車輛" style="width:46px; height:46px; border-radius:50%; background:#e0e7ff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-            <img src="scooter/s2.png" style="width:28px; height:28px; object-fit:contain;">
-            <div style="position:absolute; top:-4px; left:-4px; background:var(--green); color:#fff; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:bold; border:2px solid var(--sf);">+</div>
-          </button>
-        </div>
-
-        <!-- 中間：車輛管理標題與月份 -->
-        <div style="display:flex; flex-direction:column; align-items:center; gap:8px; flex:1;">
-          <div class="pg-title" style="padding: 0px 0px 3px 23px; margin:0; font-size:20px;">車輛管理</div>
-          <div style="display:flex; align-items:center; gap:12px; background:var(--sf2); padding: 1px 0px 2px 20px; border-radius:20px;">
-            <button class="mbtn" onclick="changeVehMonth(-1)" style="width:28px; height:28px; font-size:16px; box-shadow:none; color:var(--acc);">◀</button>
-            <h2 id="veh-month-label" style="font-size:14px; font-weight:800; color:var(--t1); margin:0; padding: 2px 2px 2px 30px; min-width:155px; text-align:center;"></h2>
-            <button class="mbtn" onclick="changeVehMonth(1)" style="width:28px; height:28px; font-size:16px; box-shadow:none; color:var(--acc);">▶</button>
+        <!-- 左側：給予 flex:1 佔滿左半邊等比例空間 -->
+        <div style="flex: 1; display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+          <div style="display:flex; flex-direction:column; align-items:center; width:60px;">
+            <span style="font-size:10px; font-weight:700; color:var(--t2);">新增車輛</span>
+            <button onclick="openAddVehicle()" title="新增車輛" style="width:46px; height:46px; border-radius:50%; background:#e0e7ff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+              <img src="scooter/s1.png" style="width:28px; height:28px; object-fit:contain;">
+              <div style="position:absolute; top:-4px; left:-4px; background:var(--green); color:#fff; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold; border:2px solid var(--sf);">+</div>
+            </button>
           </div>
         </div>
 
-        <!-- 右側：新增車輛記錄 -->
-        <div style="width:90px; display:flex; justify-content:flex-end;">
-          <button onclick="openAddVehRec()" style="padding: 8px 6px; background: #eff6ff; border: 2px dashed #3b82f6; border-radius: 12px; color: #3b82f6; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content:center; line-height:1.2; text-align:center; width:100%;">
-            + 新增記錄
-          </button>
+        <!-- 中間：不設定寬度，由內容自然撐開，被左右兩側夾在絕對正中間 -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="pg-title" style="margin:0; font-size:20px;">車輛管理</div>
+          <div style="display:flex; align-items:center; gap:12px; background:var(--sf2); padding:4px 12px; border-radius:20px;">
+            <button class="mbtn" onclick="changeVehMonth(-1)" style="width:24px; height:24px; font-size:11px; box-shadow:none; color:var(--acc);">◀</button>
+            <h2 id="veh-month-label" style="font-size:14px; font-weight:800; color:var(--t1); margin:0; min-width:85px; text-align:center;"></h2>
+            <button class="mbtn" onclick="changeVehMonth(1)" style="width:24px; height:24px; font-size:11px; box-shadow:none; color:var(--acc);">▶</button>
+          </div>
         </div>
+
+        <!-- 右側：給予 flex:1 佔滿右半邊等比例空間，確保與左側對稱 -->
+        <div style="flex: 1; display:flex; justify-content:flex-end;">
+          <div style="width:90px;">
+            <button onclick="openAddVehRec()" style="padding: 8px 6px; background: #eff6ff; border: 2px dashed #3b82f6; border-radius: 12px; color: #3b82f6; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content:center; line-height:1.2; text-align:center; width:100%;">
+              + 新增記錄
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <!-- 選擇車輛標題往下拉近清單 -->
