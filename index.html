@@ -24,11 +24,16 @@
       position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column;
       background: linear-gradient(180deg, #ffffff 0%, var(--sp-bg) 100%); z-index: 999999;
       font-family: 'Syne', 'Noto Sans TC', sans-serif;
+      /* 👇 強制 iOS 啟動 GPU 硬體加速渲染，防止白屏 */
+      -webkit-transform: translateZ(0); 
+      transform: translateZ(0);
     }
     #splash .splash-card {
       width: 92%; max-width: 400px; height: 480px; border-radius: 32px; box-shadow: 0 24px 80px rgba(20,20,40,0.12);
       background: #ffffff; padding: 24px; box-sizing: border-box; position: relative; overflow: hidden;
       border: 1px solid rgba(0,0,0,0.04);
+      -webkit-transform: translateZ(0); 
+      transform: translateZ(0);
     }
     #splash .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
     #splash .logo { width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(135deg, #FF8C42, #FF6B35); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 6px 14px rgba(255,107,53,0.3); }
@@ -584,18 +589,8 @@
 <!-- 🛵 故事型動畫專用 Script -->
 <script>
   async function runStoryAnimation() {
-    const vehicle       = document.getElementById('sp-vehicle');
-    const riderWrapper  = document.getElementById('sp-rider-wrapper');
-    const shopArea      = document.getElementById('sp-shop-area');
-    const shopBag       = document.getElementById('sp-shop-bag');
-    const deliveryBox   = document.getElementById('sp-delivery-box');
-    const homeArea      = document.getElementById('sp-home-area');
-    const customer      = document.getElementById('sp-customer');
-    const customerBag   = document.getElementById('sp-customer-bag');
-    const heart         = document.getElementById('sp-heart');
-    const roadDash      = document.getElementById('sp-road-dash');
-    const splash        = document.getElementById('splash');
-    const trafficLight  = document.getElementById('sp-s3');
+    const splash = document.getElementById('splash');
+    if (!splash) return; // 防呆
 
     // ✨ 跳過按鈕狀態與點擊事件
     let isSkipped = false;
@@ -608,197 +603,240 @@
       });
     }
 
-    // 重新定義具備跳過機制的 wait 與 animate
-    const wait = (ms) => new Promise(r => setTimeout(() => { if (!isSkipped) r(); }, ms));
-    const animate = (el, kf, opt) => {
-      if (isSkipped || !el) return Promise.resolve();
-      return el.animate(kf, { ...opt, fill: 'forwards' }).finished;
-    };
+    try {
+      const vehicle       = document.getElementById('sp-vehicle');
+      const riderWrapper  = document.getElementById('sp-rider-wrapper');
+      const shopArea      = document.getElementById('sp-shop-area');
+      const shopBag       = document.getElementById('sp-shop-bag');
+      const deliveryBox   = document.getElementById('sp-delivery-box');
+      const homeArea      = document.getElementById('sp-home-area');
+      const customer      = document.getElementById('sp-customer');
+      const customerBag   = document.getElementById('sp-customer-bag');
+      const heart         = document.getElementById('sp-heart');
+      const roadDash      = document.getElementById('sp-road-dash');
+      const trafficLight  = document.getElementById('sp-s3');
 
-    function setStatus(ic, txt, success = false, color = null) {
+      const wait = (ms) => new Promise(r => setTimeout(() => { if (!isSkipped) r(); }, ms));
+      
+      // 👇 加入相容 iOS 舊版 Safari 的動畫 Promise 寫法
+      const animate = (el, kf, opt) => {
+        if (isSkipped || !el) return Promise.resolve();
+        try {
+          const animation = el.animate(kf, { ...opt, fill: 'forwards' });
+          // Safari 13 以前不支援 .finished，使用 onfinish 替代
+          return animation.finished || new Promise(resolve => { animation.onfinish = resolve; });
+        } catch(e) {
+          console.warn("動畫執行跳過", e);
+          return Promise.resolve();
+        }
+      };
+
+      function setStatus(ic, txt, success = false, color = null) {
+        if (isSkipped) return;
+        const icon = document.getElementById('sp-icon');
+        const text = document.getElementById('sp-text');
+        const statusBubble = document.getElementById('sp-status');
+        if (icon) icon.textContent = ic;
+        if (text) text.textContent = txt;
+        if (statusBubble) {
+          const borderColor = success ? '#22C55E' : (color || '#FF6B35');
+          statusBubble.style.borderColor = borderColor;
+          statusBubble.style.boxShadow = success
+            ? '0 8px 28px rgba(34,197,94,0.25), 0 0 0 4px rgba(34,197,94,0.10)'
+            : `0 8px 28px rgba(255,107,53,0.22), 0 0 0 4px rgba(255,107,53,0.08)`;
+        }
+      }
+
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      
+      // 👇 將 PWA 等待時間從 1200 縮短為 300，避免使用者以為當機
+      await wait(isPWA ? 300 : 100); 
+      
       if (isSkipped) return;
-      const icon = document.getElementById('sp-icon');
-      const text = document.getElementById('sp-text');
-      const statusBubble = document.getElementById('sp-status');
-      if (icon) icon.textContent = ic;
-      if (text) text.textContent = txt;
-      if (statusBubble) {
-        const borderColor = success ? '#22C55E' : (color || '#FF6B35');
-        statusBubble.style.borderColor = borderColor;
-        statusBubble.style.boxShadow = success
-          ? '0 8px 28px rgba(34,197,94,0.25), 0 0 0 4px rgba(34,197,94,0.10)'
-          : `0 8px 28px rgba(255,107,53,0.22), 0 0 0 4px rgba(255,107,53,0.08)`;
+
+      // 前置調整
+      if (vehicle) vehicle.style.bottom = '105px';
+      if (trafficLight) trafficLight.style.bottom = '120px';
+      if (customer) customer.style.opacity = '0';
+      if (deliveryBox) deliveryBox.style.right = '-22px';
+      if (riderWrapper) riderWrapper.style.right = '-1px';
+
+      await wait(800);
+      if (isSkipped) return;
+
+      setStatus('🏪', '接到新訂單，前往店家...');
+      await animate(vehicle, [
+        { right: '-35%', transform: 'translateY(0)' },
+        { right: '35%',  transform: 'translateY(0)' }
+      ], { duration: 1000, easing: 'ease-out' });
+
+      await wait(700);
+      if (isSkipped) return;
+
+      setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
+      await animate(vehicle, [
+        { right: '35%', transform: 'translateY(0)' },
+        { right: '35%', transform: 'translateY(-40px)' }
+      ], { duration: 450, easing: 'ease-out' });
+
+      await wait(700);
+      if (isSkipped) return;
+
+      setStatus('📦', '抵達店家，等餐／取餐中...');
+      await animate(riderWrapper, [
+        { transform: 'translate(0, 0)' },
+        { transform: 'translate(25px, -6px)' },
+        { transform: 'translate(52px, 0)' }
+      ], { duration: 600, easing: 'ease-in-out' });
+
+      if (shopBag) shopBag.style.opacity = '0';
+      const riderBag = document.getElementById('sp-rider-bag');
+      if (riderBag) riderBag.style.opacity = '1';
+      
+      await wait(500);
+      if (isSkipped) return;
+
+      await animate(riderWrapper, [
+        { transform: 'translate(52px, 0)' },
+        { transform: 'translate(25px, -6px)' },
+        { transform: 'translate(0, 0)' }
+      ], { duration: 600, easing: 'ease-in-out' });
+
+      if (deliveryBox) deliveryBox.textContent = '🥡';
+      if (riderBag) riderBag.style.opacity = '0';
+
+      await animate(vehicle, [
+        { right: '35%', transform: 'translateY(-28px)' },
+        { right: '35%', transform: 'translateY(0)' }
+      ], { duration: 320, easing: 'ease-in' });
+
+      await wait(400);
+      if (isSkipped) return;
+
+      setStatus('🛵', '外送中，穿梭市區...');
+
+      animate(shopArea, [{ right: '15%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
+      animate(vehicle, [{ right: '35%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
+
+      let roadAnim = null;
+      if (!isSkipped && roadDash) {
+        try {
+          roadAnim = roadDash.animate([
+            { transform: 'translateY(-50%) translateX(0)' },
+            { transform: 'translateY(-50%) translateX(50px)' }
+          ], { duration: 380, iterations: Infinity, easing: 'linear' });
+        } catch(e) {}
+      }
+
+      const runScenery = async (id, delay, dur) => {
+        await wait(delay);
+        if (isSkipped) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
+      };
+
+      runScenery('sp-s7',  0,    22000); 
+      runScenery('sp-s13', 300,  22000); 
+      runScenery('sp-s1',  500,  1500); 
+      runScenery('sp-s5',  700,  1500); 
+      runScenery('sp-s3',  900,  1500); 
+      runScenery('sp-s4',  1100, 1500); 
+      runScenery('sp-s9',  1300, 1500); 
+      runScenery('sp-s8',  1500, 1500); 
+      runScenery('sp-s10', 1700, 1500); 
+      runScenery('sp-s2',  1900, 1500); 
+      runScenery('sp-s3',  2100, 1500); 
+      runScenery('sp-s6',  2300, 1500); 
+      runScenery('sp-s12', 2500, 1500); 
+      runScenery('sp-s11', 2700, 1500); 
+      runScenery('sp-s15', 2900, 1500); 
+      runScenery('sp-s14', 3100, 1500); 
+
+      await wait(3700);
+      if (isSkipped) return;
+
+      setStatus('📍', '即將抵達客人家...');
+      await wait(700);
+      if (isSkipped) return;
+      animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1500, easing: 'ease-out' });
+      await wait(100);
+      if (roadAnim) roadAnim.pause();
+      await wait(1200);
+      if (isSkipped) return;
+
+      await animate(vehicle, [
+        { right: '15%', transform: 'translateY(0)' },
+        { right: '42%', transform: 'translateY(0)' }
+      ], { duration: 800, easing: 'ease-out' });
+
+      setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
+      await animate(vehicle, [
+        { right: '42%', transform: 'translateY(0)' },
+        { right: '42%', transform: 'translateY(-40px)' }
+      ], { duration: 420, easing: 'ease-out' });
+
+      await wait(350);
+      if (isSkipped) return;
+
+      setStatus('📦', '外送員將餐點放在門口...');
+
+      if (deliveryBox) deliveryBox.textContent = ''; 
+      if (riderBag) riderBag.style.opacity = '1'; 
+
+      await animate(riderWrapper, [
+        { transform: 'translate(0, 0)' },
+        { transform: 'translate(-47px, 20px)' }
+      ], { duration: 850, easing: 'ease-in-out' });
+
+      await wait(400);
+      if (isSkipped) return;
+
+      if (riderBag) riderBag.style.opacity = '0'; 
+      await wait(400);
+      if (isSkipped) return;
+      
+      if (customerBag) {
+        customerBag.style.opacity = '1'; 
+        customerBag.style.transform = 'translate(-30px, 9px)'; 
+      }
+
+      await wait(650);
+      if (isSkipped) return;
+
+      if (heart) {
+        heart.style.opacity = '1';
+        heart.style.transform = 'translate(-19px, 1px) scale(1.45)';
+      }
+
+      setStatus('✅', '送達完成！', true);
+
+      await wait(2400);
+      if (isSkipped) return;
+
+      await splash.animate([
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: 0, transform: 'scale(1.03)' }
+      ], { duration: 600, easing: 'ease-in-out' }).finished;
+
+      if (!isSkipped) splash.remove();
+
+    } catch (error) {
+      // 👇 防呆機制：如果 iOS 舊版 Safari 在動畫中途發生任何錯誤，直接強制關閉畫面，避免卡死
+      console.warn("Splash Animation Error: ", error);
+      if (!isSkipped && splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 300);
       }
     }
-
-    // 偵測是否為 PWA (加入主畫面) 模式啟動
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    
-    // 如果是 PWA，延遲 1.2 秒等手機系統的白屏退去；如果是普通網頁，只需等 0.2 秒
-    await wait(isPWA ? 1200 : 200); 
-    
-    if (isSkipped) return;
-
-    // 前置調整
-    vehicle.style.bottom = '105px';
-    if (trafficLight) trafficLight.style.bottom = '120px';
-    customer.style.opacity = '0';
-    deliveryBox.style.right = '-22px';
-    riderWrapper.style.right = '-1px';
-
-    await wait(1000);
-    if (isSkipped) return;
-
-    setStatus('🏪', '接到新訂單，前往店家...');
-    await animate(vehicle, [
-      { right: '-35%', transform: 'translateY(0)' },
-      { right: '35%',  transform: 'translateY(0)' }
-    ], { duration: 1000, easing: 'ease-out' });
-
-    await wait(700);
-    if (isSkipped) return;
-
-    setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
-    await animate(vehicle, [
-      { right: '35%', transform: 'translateY(0)' },
-      { right: '35%', transform: 'translateY(-40px)' }
-    ], { duration: 450, easing: 'ease-out' });
-
-    await wait(700);
-    if (isSkipped) return;
-
-    setStatus('📦', '抵達店家，等餐／取餐中...');
-    await animate(riderWrapper, [
-      { transform: 'translate(0, 0)' },
-      { transform: 'translate(25px, -6px)' },
-      { transform: 'translate(52px, 0)' }
-    ], { duration: 600, easing: 'ease-in-out' });
-
-    shopBag.style.opacity = '0';
-    document.getElementById('sp-rider-bag').style.opacity = '1';
-    await wait(500);
-    if (isSkipped) return;
-
-    await animate(riderWrapper, [
-      { transform: 'translate(52px, 0)' },
-      { transform: 'translate(25px, -6px)' },
-      { transform: 'translate(0, 0)' }
-    ], { duration: 600, easing: 'ease-in-out' });
-
-    deliveryBox.textContent = '🥡';
-    document.getElementById('sp-rider-bag').style.opacity = '0';
-
-    await animate(vehicle, [
-      { right: '35%', transform: 'translateY(-28px)' },
-      { right: '35%', transform: 'translateY(0)' }
-    ], { duration: 320, easing: 'ease-in' });
-
-    await wait(400);
-    if (isSkipped) return;
-
-    setStatus('🛵', '外送中，穿梭市區...');
-
-    animate(shopArea, [{ right: '15%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
-    animate(vehicle, [{ right: '35%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
-
-    let roadAnim = null;
-    if (!isSkipped) {
-      roadAnim = roadDash.animate([
-        { transform: 'translateY(-50%) translateX(0)' },
-        { transform: 'translateY(-50%) translateX(50px)' }
-      ], { duration: 380, iterations: Infinity, easing: 'linear' });
-    }
-
-    const runScenery = async (id, delay, dur) => {
-      await wait(delay);
-      if (isSkipped) return;
-      const el = document.getElementById(id);
-      if (!el) return;
-      return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
-    };
-
-    runScenery('sp-s7',  0,    22000); 
-    runScenery('sp-s13', 300,  22000); 
-    runScenery('sp-s1',  500,  1500); 
-    runScenery('sp-s5',  700,  1500); 
-    runScenery('sp-s3',  900,  1500); 
-    runScenery('sp-s4',  1100, 1500); 
-    runScenery('sp-s9',  1300, 1500); 
-    runScenery('sp-s8',  1500, 1500); 
-    runScenery('sp-s10', 1700, 1500); 
-    runScenery('sp-s2',  1900, 1500); 
-    runScenery('sp-s3',  2100, 1500); 
-    runScenery('sp-s6',  2300, 1500); 
-    runScenery('sp-s12', 2500, 1500); 
-    runScenery('sp-s11', 2700, 1500); 
-    runScenery('sp-s15', 2900, 1500); 
-    runScenery('sp-s14', 3100, 1500); 
-
-    await wait(3700);
-    if (isSkipped) return;
-
-    setStatus('📍', '即將抵達客人家...');
-    await wait(700);
-    if (isSkipped) return;
-    animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1500, easing: 'ease-out' });
-    await wait(100);
-    if (roadAnim) roadAnim.pause();
-    await wait(1200);
-    if (isSkipped) return;
-
-    await animate(vehicle, [
-      { right: '15%', transform: 'translateY(0)' },
-      { right: '42%', transform: 'translateY(0)' }
-    ], { duration: 800, easing: 'ease-out' });
-
-    setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
-    await animate(vehicle, [
-      { right: '42%', transform: 'translateY(0)' },
-      { right: '42%', transform: 'translateY(-40px)' }
-    ], { duration: 420, easing: 'ease-out' });
-
-    await wait(350);
-    if (isSkipped) return;
-
-    setStatus('📦', '外送員將餐點放在門口...');
-
-    deliveryBox.textContent = ''; 
-    document.getElementById('sp-rider-bag').style.opacity = '1'; 
-
-    await animate(riderWrapper, [
-      { transform: 'translate(0, 0)' },
-      { transform: 'translate(-47px, 20px)' }
-    ], { duration: 850, easing: 'ease-in-out' });
-
-    await wait(400);
-    if (isSkipped) return;
-
-    document.getElementById('sp-rider-bag').style.opacity = '0'; 
-    await wait(400);
-    if (isSkipped) return;
-    customerBag.style.opacity = '1'; 
-    customerBag.style.transform = 'translate(-30px, 9px)'; 
-
-    await wait(650);
-    if (isSkipped) return;
-
-    heart.style.opacity = '1';
-    heart.style.transform = 'translate(-19px, 1px) scale(1.45)';
-
-    setStatus('✅', '送達完成！', true);
-
-    await wait(2400);
-    if (isSkipped) return;
-
-    await splash.animate([
-      { opacity: 1, transform: 'scale(1)' },
-      { opacity: 0, transform: 'scale(1.03)' }
-    ], { duration: 600, easing: 'ease-in-out' }).finished;
-
-    if (!isSkipped) splash.remove();
   }
 
-  window.addEventListener('load', runStoryAnimation);
+  // 確保 DOM 載入後執行
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(runStoryAnimation, 1);
+  } else {
+    window.addEventListener('DOMContentLoaded', runStoryAnimation);
+  }
 </script>
 
 </body>
