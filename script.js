@@ -1813,7 +1813,7 @@ function renderVehicles() {
       <div style="position:relative;">
         <div onclick="event.stopPropagation(); deleteVehicle('${v.id}')" style="position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.4);">✕</div>
         <div class="veh-sel-icon" style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid ${borderColor}; display:flex; align-items:center; justify-content:center; box-shadow:${isActive ? '0 4px 10px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.05)'}; transition:0.2s;">
-          <div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png');"></div>
+          <img src="scooter/s${(v.icon && v.icon <= 11) ? v.icon : 1}.png" style="width:36px; height:36px; object-fit:contain;">
         </div>
       </div>
       <span style="font-size:11px; font-weight:600; color:var(--t3);">${fName}</span>
@@ -2020,7 +2020,14 @@ function openAddVehRec(recordId = null) {
   const isEV = v && v.defaultFuel === 'electric'; // 👈 判斷是否為電動車
 
   if (v) {
-    document.getElementById('veh-rec-veh-icons').innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;"><div style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);"><div class="scooter-mask" style="background-color:${v.color}; -webkit-mask-image:url('images/scooter${v.icon}.png'); width:30px; height:30px;"></div></div><span style="font-size:11px; font-weight:700; color:var(--acc);">${v.name}</span></div>`;
+    const iconNum = (v.icon && v.icon <= 11) ? v.icon : 1;
+    document.getElementById('veh-rec-veh-icons').innerHTML = `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;">
+        <div style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);">
+          <img src="scooter/s${iconNum}.png" style="width:34px; height:34px; object-fit:contain;">
+        </div>
+        <span style="font-size:11px; font-weight:700; color:var(--acc);">${v.name}</span>
+      </div>`;
   }
 
   let r = null; if (isEdit) { r = S.vehicleRecs.find(x => x.id === recordId); S.addVehRecType = r.type; } else { S.addVehRecType = S.vehicleTab; }
@@ -2176,16 +2183,76 @@ function confirmAddVehRec() {
 
 async function deleteVehRecFromEdit() { const ok = await customConfirm('確定刪除此記錄嗎？<br><strong>此動作無法復原。</strong>'); if(!ok) return; S.vehicleRecs = S.vehicleRecs.filter(r => r.id !== editingVehRecId); saveVehicleRecs(); closeOverlay('veh-rec-add-page'); toast('✅ 記錄已刪除'); renderVehicles(); }
 
+/* ══ 替換：新增車輛彈窗與左右滑動圖示選擇 ══ */
 function openAddVehicle() {
-  S.newVehIcon = 4; S.newVehColor = '#555555'; const container = document.getElementById('vehicle-add-body');
-  let iconsHtml = '<div class="veh-icon-grid">'; for (let i = 4; i <= 14; i++) { iconsHtml += `<div id="veh-icon-box-${i}" onclick="selectNewVehIcon(${i})" class="veh-icon-box"><div id="veh-icon-mask-${i}" class="scooter-mask" style="background-color:#ccc; -webkit-mask-image: url('images/scooter${i}.png');"></div></div>`; } iconsHtml += '</div>';
-  container.innerHTML = `<div class="fg" style="margin-bottom:14px"><label>車輛名稱</label><input type="text" class="finp" id="v-name" placeholder="例如：我的愛車 Gogoro"></div><div class="fg" style="margin-bottom:14px"><label>自訂圖示顏色</label><div style="display:flex;gap:8px"><input type="color" id="v-color" value="${S.newVehColor}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px"><input type="text" class="finp" value="${S.newVehColor}" readonly style="flex:1"></div></div><div class="fg" style="margin-bottom:14px"><label>選擇機車圖示</label>${iconsHtml}</div><div class="fg" style="margin-bottom:20px"><label>預設燃料</label><select class="fsel" id="v-fuel"><option value="92" selected>92 無鉛汽油</option><option value="95">95 無鉛汽油</option><option value="98">98 無鉛汽油</option><option value="electric">電動車 (電池)</option></select></div><div style="display:flex;gap:10px;"><button onclick="closeOverlay('vehicle-add-page')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-weight:600;cursor:pointer;">取消</button><button onclick="saveNewVehicle()" class="btn-acc" style="flex:2;padding:12px;font-weight:700;border-radius:var(--rs)">確認新增</button></div>`;
-  document.getElementById('v-color').addEventListener('input', (e) => { S.newVehColor = e.target.value; updateVehIconUI(); }); updateVehIconUI(); openOverlay('vehicle-add-page');
+  S.newVehIcon = 1; // 預設選擇 s1.png
+  const container = document.getElementById('vehicle-add-body');
+  
+  let iconsHtml = '';
+  for (let i = 1; i <= 11; i++) {
+    const isSel = S.newVehIcon === i;
+    // 產生 1 到 11 的圖片選項
+    iconsHtml += `<img src="scooter/s${i}.png" id="veh-opt-${i}" onclick="selectNewVehIcon(${i})" style="width:70px; height:70px; object-fit:contain; border:2px solid ${isSel ? 'var(--acc)' : 'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel ? 'scale(1.05)' : 'scale(1)'}; flex-shrink:0; background:var(--sf); padding:4px;">`;
+  }
+  
+  container.innerHTML = `
+    <div class="fg" style="margin-bottom:16px">
+      <label style="font-weight:700; color:var(--t1);">車輛名稱</label>
+      <input type="text" class="finp" id="v-name" placeholder="例如：我的愛車 Gogoro">
+    </div>
+    
+    <div class="fg" style="margin-bottom:20px;">
+      <label style="font-weight:700; color:var(--t1);">左右滑動選擇機車圖示</label>
+      <div style="display:flex; overflow-x:auto; gap:12px; background:var(--bg-input); padding:16px; border-radius:16px; align-items:center;">
+        ${iconsHtml}
+      </div>
+    </div>
+
+    <div class="fg" style="margin-bottom:24px">
+      <label style="font-weight:700; color:var(--t1);">預設燃料</label>
+      <select class="fsel" id="v-fuel">
+        <option value="92" selected>92 無鉛汽油</option>
+        <option value="95">95 無鉛汽油</option>
+        <option value="98">98 無鉛汽油</option>
+        <option value="electric">電動車 (電池)</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeOverlay('vehicle-add-page')" style="flex:1;padding:14px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-weight:700;cursor:pointer;">取消</button>
+      <button onclick="saveNewVehicle()" class="btn-acc" style="flex:2;padding:14px;font-weight:800;border-radius:var(--rs);box-shadow:0 4px 12px rgba(255,107,53,0.3);">確認新增</button>
+    </div>`;
+    
+  openOverlay('vehicle-add-page');
 }
 
-function selectNewVehIcon(id) { S.newVehIcon = id; updateVehIconUI(); }
+function selectNewVehIcon(id) { 
+  S.newVehIcon = id; 
+  for (let i = 1; i <= 11; i++) { 
+    const img = document.getElementById(`veh-opt-${i}`); 
+    if (!img) continue; 
+    if (i === S.newVehIcon) { 
+      img.style.borderColor = 'var(--acc)'; 
+      img.style.transform = 'scale(1.05)'; 
+    } else { 
+      img.style.borderColor = 'transparent'; 
+      img.style.transform = 'scale(1)'; 
+    } 
+  } 
+}
 function updateVehIconUI() { for (let i = 4; i <= 14; i++) { const box = document.getElementById(`veh-icon-box-${i}`); const mask = document.getElementById(`veh-icon-mask-${i}`); if (!box || !mask) continue; if (i === S.newVehIcon) { box.style.borderColor = 'var(--acc)'; mask.style.backgroundColor = S.newVehColor; } else { box.style.borderColor = 'transparent'; mask.style.backgroundColor = '#ccc'; } } }
-function saveNewVehicle() { const name = document.getElementById('v-name').value.trim(); if (!name) { toast('請輸入車輛名稱'); return; } const fuel = document.getElementById('v-fuel').value; S.vehicles.push({ id: newId(), name: name, icon: S.newVehIcon, color: S.newVehColor, defaultFuel: fuel }); saveVehicles(); closeOverlay('vehicle-add-page'); toast('✅ 成功新增車輛！'); renderVehicles(); }
+function saveNewVehicle() { 
+  const name = document.getElementById('v-name').value.trim(); 
+  if (!name) { toast('請輸入車輛名稱'); return; } 
+  const fuel = document.getElementById('v-fuel').value; 
+  
+  // 儲存新車輛資料 (移除舊的 color，改為儲存 icon 編號 1~11)
+  S.vehicles.push({ id: newId(), name: name, icon: S.newVehIcon, defaultFuel: fuel }); 
+  saveVehicles(); 
+  closeOverlay('vehicle-add-page'); 
+  toast('✅ 成功新增車輛！'); 
+  renderVehicles(); 
+}
 
 let currentSelItems = []; function toggleMaintItem(el, item) { el.classList.toggle('on'); if (currentSelItems.includes(item)) { currentSelItems = currentSelItems.filter(i => i !== item); } else { currentSelItems.push(item); } }
 function renderShopHistory() { if (!S.settings.shopHistory) S.settings.shopHistory = []; document.getElementById('shop-history-container').innerHTML = S.settings.shopHistory.map((shop, i) => `<div class="shop-chip"><span onclick="document.getElementById('vm-shop').value='${shop}'">${shop}</span><span class="shop-chip-del" onclick="deleteShopHistory(${i})">✕</span></div>`).join(''); }
