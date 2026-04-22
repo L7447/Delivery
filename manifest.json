@@ -1,7 +1,7 @@
 {
   "name": "外送記帳",
-  "short_name": "外送記帳",
-  "description": "外送員專用收入記帳 App，支援多平台、打卡、獎勵與報表",
+  "short_name": "外送記錄與分析",
+  "description": "外送員收入記錄 App，支援多平台、打卡、獎勵與報表分析",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFF8F4",
