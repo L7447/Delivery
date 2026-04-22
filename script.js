@@ -180,7 +180,7 @@ function toggleSummaryCard(id) {
   }
 }
 
-/* ══ 替換：產生總結卡片 (統一版面、加入淨行程/獎勵/小費佔比) ══ */
+/* ══ 替換：產生總結卡片 (統一版面、加入淨行程/獎勵/小費佔比，同排顯示) ══ */
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
   const totalBonus = bonus + tempBonus; 
@@ -211,16 +211,22 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           ${tagsHtml}
         </div>
         
-        <!-- 新增：淨行程、獎勵、小費佔比結構 -->
+        <!-- 新增：淨行程、獎勵、小費佔比結構 (百分比與金額同排) -->
         <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
-            淨行程<br><span style="color: #1f9c4d; font-size:15px;">$${fmt(income)}</span><br><span style="font-size:10px; opacity:0.8;">${incPct}%</span>
+            淨行程<br>
+            <span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
           <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
-            獎勵<br><span style="color: #ff7715; font-size:15px;">$${fmt(totalBonus)}</span><br><span style="font-size:10px; opacity:0.8;">${bonPct}%</span>
+            獎勵<br>
+            <span style="color: #ff7715; font-size:14px;">$${fmt(totalBonus)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</span>
           </div>
           <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
-            小費<br><span style="color: #8A2BE2; font-size:15px;">$${fmt(tips)}</span><br><span style="font-size:10px; opacity:0.8;">${tipPct}%</span>
+            小費<br>
+            <span style="color: #8A2BE2; font-size:14px;">$${fmt(tips)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
           </div>
         </div>
 
@@ -1323,7 +1329,7 @@ window.navTrend = function(dir) {
 document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
 document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
 
-/* ══ 替換：收入總覽頁面 (將基本工資標籤移至時薪下方) ══ */
+/* ══ 替換：收入總覽頁面 (修復空白問題、套用淨行程與同排佔比) ══ */
 function renderRptOverview() {
   if (!S.rptOverviewFilter) S.rptOverviewFilter = 'all';
   const allMonthRecs = getMonthRecs(S.rptY, S.rptM);
@@ -1333,7 +1339,7 @@ function renderRptOverview() {
   const recs = isAll ? allMonthRecs : allMonthRecs.filter(r => r.platformId === S.rptOverviewFilter);
   
   const total = recs.reduce((s,r) => s+recTotal(r), 0); 
-  const income = recs.reduce((s,r) => s+pf(r.income), 0);
+  const income = recs.reduce((s,r) => s+pf(r.income), 0); // 這是淨行程
   const bonus = recs.reduce((s,r) => s+pf(r.bonus)+pf(r.tempBonus), 0); 
   const tips = recs.reduce((s,r) => s+pf(r.tips), 0);
   const orders = recs.reduce((s,r) => s+pf(r.orders), 0); 
@@ -1347,32 +1353,14 @@ function renderRptOverview() {
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
-  // 👇 基本工資分析邏輯 (改為精巧徽章版)
+  // 👇 基本工資分析邏輯
   let wageHtml = '';
   if (hours > 0) {
-    let wageStatus = '';
-    let wageColor = '';
-    let wageBg = '';
-    
-    if (avgHr <= 154) {
-      wageStatus = ' 😭 嚴重低於基本工資 ';
-      wageColor = 'var(--red)';
-      wageBg = 'var(--red-d)';
-    } else if (avgHr <= 175) {
-      wageStatus = ' ⚠️⚠️ 低於基本工資 ';
-      wageColor = 'var(--acc2)';
-      wageBg = 'var(--acc-d)';
-    } else if (avgHr <= 195) {
-      wageStatus = ' ⚠️ 略低於基本工資 ';
-      wageColor = 'var(--blue)';
-      wageBg = 'var(--blue-d)';
-    } else {
-      wageStatus = ' 🎉 符合基本工資 ';
-      wageColor = 'var(--green)';
-      wageBg = 'var(--green-d)';
-    }
-
-    // 縮小字體與內距，讓它完美塞在時薪下方不破版
+    let wageStatus = ''; let wageColor = ''; let wageBg = '';
+    if (avgHr <= 154) { wageStatus = ' 😭 嚴重低於基本工資 '; wageColor = 'var(--red)'; wageBg = 'var(--red-d)'; } 
+    else if (avgHr <= 175) { wageStatus = ' ⚠️⚠️ 低於基本工資 '; wageColor = 'var(--acc2)'; wageBg = 'var(--acc-d)'; } 
+    else if (avgHr <= 195) { wageStatus = ' ⚠️ 略低於基本工資 '; wageColor = 'var(--blue)'; wageBg = 'var(--blue-d)'; } 
+    else { wageStatus = ' 🎉 符合基本工資 '; wageColor = 'var(--green)'; wageBg = 'var(--green-d)'; }
     wageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:12px; padding:6px 5px; border-radius:5px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
   }
 
@@ -1383,6 +1371,11 @@ function renderRptOverview() {
       <button class="mbtn" onclick="navRptMonth(1)">▶</button>
     </div>`;
 
+  // 計算佔比 (將邏輯移到字串外面，修復錯誤)
+  const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
+  const bonPct = total > 0 ? Math.round((bonus / total) * 100) : 0;
+  const tipPct = total > 0 ? Math.round((tips / total) * 100) : 0;
+
   // 精簡高對比總收入框
   html += `
     <div style="background: var(--sf); border:2px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
@@ -1391,28 +1384,27 @@ function renderRptOverview() {
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="font-size:14px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
-        // 計算佔比
-        const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
-        const bonPct = total > 0 ? Math.round((bonus / total) * 100) : 0;
-        const tipPct = total > 0 ? Math.round((tips / total) * 100) : 0;
-
-        // 將替換的 HTML 放在 ${fmt(total)} 的下方
+        
         <div style="display:flex; justify-content:center; gap:6px; margin-top:14px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
-            淨行程<br><span style="color: #1f9c4d; font-size:16px;">$${fmt(income)}</span><br><span style="font-size:11px; opacity:0.8;">${incPct}%</span>
+            淨行程<br>
+            <span style="color: #1f9c4d; font-size:15px;">$${fmt(income)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
           <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
-            獎勵<br><span style="color: #ff7715; font-size:16px;">$${fmt(bonus)}</span><br><span style="font-size:11px; opacity:0.8;">${bonPct}%</span>
+            獎勵<br>
+            <span style="color: #ff7715; font-size:15px;">$${fmt(bonus)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</span>
           </div>
           <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
-            小費<br><span style="color: #8A2BE2; font-size:16px;">$${fmt(tips)}</span><br><span style="font-size:11px; opacity:0.8;">${tipPct}%</span>
+            小費<br>
+            <span style="color: #8A2BE2; font-size:15px;">$${fmt(tips)}</span>
+            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
           </div>
         </div>
       </div> 
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
-        
-        <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，並微調分隔線高度 -->
         <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
             一單 $： <span style="font-family:var(--mono); color: var(--acc); font-size:20px; font-weight:800;"> ${fmt(avgOrd)}</span>
@@ -1424,10 +1416,9 @@ function renderRptOverview() {
           <div class="h-div" style="height:45px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
             時薪 $： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;">${fmt(avgHr)}</span>
-            ${wageHtml} <!-- 👈 將標籤放進時薪的正下方 -->
+            ${wageHtml}
           </div>
         </div>
-        
         ${cashTipTotal > 0 ? `
         <div style="border-top:1px dashed var(--border);"></div>
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
@@ -1436,6 +1427,8 @@ function renderRptOverview() {
         </div>` : ''}
       </div>
     </div>`;
+
+  // --- 後面的「結構佔比分析卡片 (包含平台切換與圓餅圖)」保持不變 ---
 
   // 結構佔比分析卡片 (包含平台切換與圓餅圖)
   html += `<div class="card" style="border:1px solid var(--border);">
