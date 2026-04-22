@@ -359,8 +359,13 @@ function switchVehicleTab(tab, index) {
   const tabBg = document.getElementById('veh-tab-bg');
   tabBg.style.transform = `translateX(${index * 100}%)`; 
   
-  tabBg.style.background = '#8B5CF6'; 
-  tabBg.style.boxShadow = '0 4px 10px rgba(139,92,246,0.4)';
+  if (tab === 'fuel') {
+    tabBg.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)'; 
+    tabBg.style.boxShadow = '0 4px 10px rgba(59,130,246,0.4)';
+  } else {
+    tabBg.style.background = 'linear-gradient(135deg, #065f46, #10b981)'; 
+    tabBg.style.boxShadow = '0 4px 10px rgba(16,185,129,0.4)';
+  }
 
   document.getElementById('btn-veh-fuel').style.color = tab === 'fuel' ? '#fff' : 'var(--t2)';
   document.getElementById('btn-veh-maint').style.color = tab === 'maintenance' ? '#fff' : 'var(--t2)';
@@ -1775,7 +1780,11 @@ function drawBar(canvasId, labels, data, color) {
 
 /* ══ 6. 車輛管理 開始 ══════════════════════════════════════════ */
 function changeVehMonth(offset) { S.vehM += offset; if (S.vehM < 1) { S.vehM = 12; S.vehY--; } if (S.vehM > 12) { S.vehM = 1; S.vehY++; } renderVehicles(); }
-function selectVehicle(id) { S.selVehicleId = id; _syncVehSelectorActive(id); renderVehicleContent(); }
+function selectVehicle(id) { 
+  S.selVehicleId = id; 
+  _syncVehSelectorActive(id); // 呼叫更新樣式而不重繪
+  renderVehicleContent();     // 只重繪下方的詳細紀錄與數據框
+}
 
 /* ══ 替換：車輛清單渲染 (排版對齊 11.jpg) ══ */
 function renderVehicles() {
@@ -1817,7 +1826,32 @@ function renderVehicles() {
 }
 
 function _syncVehSelectorActive(id) {
-  renderVehicles(); // 強制重繪讓邊框顏色即時切換
+  // 不重新渲染整個列表 (避免圖片閃爍)，只改變 DOM 元素的樣式
+  const container = document.getElementById('veh-selector-container');
+  if (!container) return;
+  
+  const items = container.querySelectorAll('[data-vid]');
+  items.forEach(el => {
+    const vid = el.getAttribute('data-vid');
+    const isActive = vid === id;
+    
+    const v = S.vehicles.find(x => x.id === vid);
+    const isEV = v && v.defaultFuel === 'electric';
+    const activeColor = isEV ? '#3b82f6' : 'var(--acc)';
+    
+    const nameEl = el.querySelector('.veh-sel-name');
+    const iconWrap = el.querySelector('.veh-sel-icon');
+    
+    if (isActive) {
+      nameEl.style.color = activeColor;
+      iconWrap.style.borderColor = activeColor;
+      iconWrap.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+    } else {
+      nameEl.style.color = 'var(--t2)';
+      iconWrap.style.borderColor = 'transparent';
+      iconWrap.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+    }
+  });
 }
 
 /* ══ 替換：車輛管理內容 (燃料藍色底與紀錄列表) ══ */
@@ -1840,17 +1874,18 @@ function renderVehicleContent() {
     const v = S.vehicles.find(x => x.id === S.selVehicleId);
     const isEV = v && v.defaultFuel === 'electric';
     
-    let fuelStatsHtml = '';
     if (isEV) {
-      fuelStatsHtml = `
-        <div style="display:flex; justify-content:center; text-align:center; margin-top: 16px;">
-          <div style="flex:1;">
-            <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">總里程</div>
-            <div style="font-weight:800; font-size:16px;">${fmt(totalDistance)} km</div>
+      // 電動車專屬：無折疊按鈕，直接顯示里程
+      html += `
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:14px; font-weight:700;">本月【 電池 】總里程</span>
+            <span style="font-family:var(--mono); font-size:22px; font-weight:800;">${fmt(totalDistance)} <span style="font-size:15px;">km</span></span>
           </div>
         </div>`;
     } else {
-      fuelStatsHtml = `
+      // 汽油車專屬：預設收合(0px)，按鈕移至右側並顯示詳細資訊字眼
+      const fuelStatsHtml = `
         <div style="display:flex; justify-content:space-between; text-align:center; margin-top: 16px;">
           <div style="flex:1;">
             <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">總加油量</div>
@@ -1867,32 +1902,39 @@ function renderVehicleContent() {
             <div style="font-weight:800; font-size:15px;">${avgKmL} km/L</div>
           </div>
         </div>`;
-    }
 
-    html += `
-      <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
-        <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div id="veh-fuel-col-btn" style="background:rgba(255,255,255,0.2); width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; transition:transform 0.3s;">▼</div>
-            <span style="font-size:14px; font-weight:700;">⛽ 本月燃料總計</span>
+      html += `
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+          <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:14px; font-weight:700;">本月【 汽油 】總金額</span>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalFuelPaid)}</span>
+              <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:8px;">
+                <span style="font-size:11px; font-weight:700;">詳細資訊</span>
+                <div id="veh-fuel-col-btn" style="font-size:10px; transition:transform 0.3s;">▼</div>
+              </div>
+            </div>
           </div>
-          <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalFuelPaid)}</span>
-        </div>
-        <div id="veh-fuel-col" style="max-height:100px; overflow:hidden; transition:max-height 0.3s ease;">
-          ${fuelStatsHtml}
-        </div>
-      </div>`;
+          <div id="veh-fuel-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
+            ${fuelStatsHtml}
+          </div>
+        </div>`;
+    }
   } else {
+    // 保養維修專屬：預設收合(0px)，按鈕移至右側並顯示詳細資訊字眼
     html += `
       <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
         <div onclick="toggleSummaryCard('veh-maint-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div id="veh-maint-col-btn" style="background:rgba(255,255,255,0.2); width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; transition:transform 0.3s;">▼</div>
-            <span style="font-size:14px; font-weight:700;">🔧 本月保養總計</span>
+          <span style="font-size:14px; font-weight:700;">本月【 保養、維修 】總金額</span>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalMaintPaid)}</span>
+            <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:8px;">
+              <span style="font-size:11px; font-weight:700;">詳細資訊</span>
+              <div id="veh-maint-col-btn" style="font-size:10px; transition:transform 0.3s;">▼</div>
+            </div>
           </div>
-          <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalMaintPaid)}</span>
         </div>
-        <div id="veh-maint-col" style="max-height:100px; overflow:hidden; transition:max-height 0.3s ease;">
+        <div id="veh-maint-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
           <div style="display:flex; justify-content:center; text-align:center; margin-top: 16px;">
             <div style="flex:1;">
               <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">本月保養次數</div>
