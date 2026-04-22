@@ -1981,7 +1981,7 @@ function renderVehicleContent() {
       }
 
       html += `
-        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:3px; padding:3px 3px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:2px; padding:3px 6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
           <div style="display:flex; align-items:center; gap:12px;">
             ${iconContent}
             <div>
@@ -2006,7 +2006,7 @@ let editingVehRecId = null;
 const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
 const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞車來令片', '後輪', '前輪', '其它'];
 
-/* ══ 替換：新增車輛記錄 (阻擋電動車抓油價) ══ */
+/* ══ 替換：新增車輛記錄 (阻擋電動車抓油價，並修正保養項目空白問題) ══ */
 function openAddVehRec(recordId = null) {
   if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增車輛記錄'); return; }
   
@@ -2018,9 +2018,9 @@ function openAddVehRec(recordId = null) {
   
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
   const isEV = v && v.defaultFuel === 'electric'; // 👈 判斷是否為電動車
-  //機車圖片數量
+
   if (v) {
-    const iconNum = (v.icon && v.icon <= 9) ? v.icon : 1;
+    const iconNum = (v.icon && v.icon <= 11) ? v.icon : 1;
     document.getElementById('veh-rec-veh-icons').innerHTML = `
       <div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 auto;">
         <div style="width:50px; height:50px; border-radius:12px; background:var(--sf); border:2px solid var(--acc); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(255,107,53,0.2);">
@@ -2032,8 +2032,16 @@ function openAddVehRec(recordId = null) {
 
   let r = null; if (isEdit) { r = S.vehicleRecs.find(x => x.id === recordId); S.addVehRecType = r.type; } else { S.addVehRecType = S.vehicleTab; }
   document.getElementById('vr-date').value = r ? r.date : todayStr(); document.getElementById('vr-time').value = r ? (r.time || nowTime()) : nowTime();
+  
+  // 記錄已選取的保養項目
   currentSelItems = (r && r.type === 'maintenance') ? [...r.items] :[];
   
+  // 👇 補回遺失的這段：根據車型(油車/電車)動態產生保養項目的按鈕
+  const maintList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
+  document.getElementById('vm-items-container').innerHTML = maintList.map(item => 
+    `<div class="item-chip ${currentSelItems.includes(item) ? 'on' : ''}" onclick="toggleMaintItem(this, '${item}')">${item}</div>`
+  ).join('');
+
   if (S.addVehRecType === 'fuel') { 
     document.getElementById('vr-fuel-type').value = r?.fuelType || (v ? v.defaultFuel : '95'); 
     document.getElementById('vr-discount').value = r?.discount || '0'; 
@@ -2054,7 +2062,6 @@ function openAddVehRec(recordId = null) {
   switchVehFormTab(S.addVehRecType, S.addVehRecType === 'fuel' ? 0 : 1); 
   openOverlay('veh-rec-add-page');
 
-  // 👈 加入 !isEV 判斷，電動車絕對不會觸發油價抓取
   if (!isEdit && S.addVehRecType === 'fuel' && !document.getElementById('vr-price').value) {
     applyGlobalGasPrice();
   }
