@@ -1877,7 +1877,7 @@ function renderVehicleContent() {
     if (isEV) {
       // 電動車專屬：無折疊按鈕，直接顯示里程
       html += `
-        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:5px; margin-bottom:5px;">
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:5px 5px 5px 10px; margin-bottom:5px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:14px; font-weight:700;">本月【 電池 】總里程：</span>
             <span style="font-family:var(--mono); font-size:22px; font-weight:800;">${fmt(totalDistance)} <span style="font-size:15px;">（ km ）</span></span>
@@ -1904,7 +1904,7 @@ function renderVehicleContent() {
         </div>`;
 
       html += `
-        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:5px; margin-bottom:5px;">
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:5px 5px 5px 10px; margin-bottom:5px;">
           <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:14px; font-weight:700;">本月【 汽油 】總金額：</span>
             <div style="display:flex; align-items:center; gap:12px;">
@@ -1923,7 +1923,7 @@ function renderVehicleContent() {
   } else {
     // 保養維修專屬：預設收合(0px)，按鈕移至右側並顯示詳細資訊字眼
     html += `
-      <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:5px; margin-bottom:5px;">
+      <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:5px 5px 5px 10px; margin-bottom:5px;">
         <div onclick="toggleSummaryCard('veh-maint-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:14px; font-weight:400;">本月【 保養、維修 】總金額：</span>
           <div style="display:flex; align-items:center; gap:12px;">
@@ -1981,7 +1981,7 @@ function renderVehicleContent() {
       }
 
       html += `
-        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+        <div onclick="openAddVehRec('${r.id}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:3px; padding:3px 3px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
           <div style="display:flex; align-items:center; gap:12px;">
             ${iconContent}
             <div>
@@ -3394,20 +3394,20 @@ function openPrivacyPolicy(fromRegister = false) {
   document.getElementById('privacy-body').innerHTML = `
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
       <strong style="color:var(--acc); font-size:15px;">1. 我們收集的資訊</strong><br>
-      • 基本帳號資料（ 如電子郵件 ）<br><br>
+      • 基本帳號資料（ 如電子郵件 ）。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">2. 我們如何使用資訊</strong><br>
-      • 統計使用人數<br><br>
+      • 統計使用人數。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">3. 資料安全</strong><br>
       • 使用加密技術保護您的資訊<br>
-      • 記錄只存在您的裝置（手機）裡，或您存的雲端硬碟裡<br><br>
+      • 記錄只存在您的裝置（手機）裡，或您存的雲端硬碟裡。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
-      • 您可隨時聯繫我們幫您刪除帳號<br><br>
+      • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">5. 聯絡方式</strong><br>
-      • 如有任何隱私問題，請透過【 功能 】→「 關於我們 」→『 聯絡我們 』，與我們聯繫。
+      • 如有任何問題或建議，請透過【 設定 】→「 關於我們 」→『 聯絡我們 』，與我們聯繫。
       ${btnHtml}
       <div style="height:32px;"></div>
     </div>
