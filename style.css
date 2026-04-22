@@ -3,6 +3,7 @@
    ══════════════════════════════════════════════════════ */
 
 :root {
+  --nav-shadow: 0 8px 24px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
   /* 基礎背景與自適應表面 (Adaptive Surfaces) */
   --bg: #f0f4f8; 
   --sf: rgba(255, 255, 255, 1); 
@@ -61,6 +62,7 @@
 
 /* ══ 深色模式 (Dark Mode) 變數定義 ══ */
 :root[data-theme="dark"] {
+  --nav-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
   --bg: #0b1220;
   --sf: rgba(255, 255, 255, 0.06);
   --sf2: rgba(255, 255, 255, 0.1);
@@ -97,6 +99,7 @@
 /* 讓作業系統的深色模式生效 (當沒有手動強制切換為淺色時) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --nav-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
     --bg: #0b1220;
     --sf: rgba(255, 255, 255, 0.06);
     --sf2: rgba(255, 255, 255, 0.1);
@@ -137,16 +140,75 @@ html, body { height: 100%; background: var(--bg); transition: background 0.3s ea
 #app { width: 100%; height: 100dvh; position: relative; overflow: hidden; }
 
 /* ══ 頁面與導航 ══ */
-.page { position: absolute; inset: 0; bottom: var(--nav); overflow-y: auto; overflow-x: hidden; padding: 16px 16px 24px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .2s, transform .2s; -webkit-overflow-scrolling: touch; }
+.page { position: absolute; inset: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding: 16px 16px 24px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .2s, transform .2s; -webkit-overflow-scrolling: touch; }
 .page.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .page::-webkit-scrollbar { display: none; }
 
-#nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav); display: flex; align-items: center; justify-content: space-around; background: var(--sf); border-top: 1px solid var(--border); z-index: 90; padding: 0 4px env(safe-area-inset-bottom); }
-.ni { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 6px 10px; border-radius: var(--rs); transition: .15s; -webkit-tap-highlight-color: transparent; min-width: 48px; }
-.ni-img { width: 26px; height: 26px; object-fit: contain; transition: transform .15s; }
-.ni .lb { font-size: 10px; color: var(--nav-text); font-weight: 500; transition: color .15s; }
-.ni.active .lb { color: var(--acc); font-weight: 700; }
-.ni.active .ni-img { transform: scale(1.15); }
+/* 針對所有會滾動的內容區域增加 padding-bottom，避免內容被懸浮導覽列遮擋 */
+#home-bottom-content, #hist-content, #page-add > div:nth-child(2), #page-report > div:nth-child(2), #vehicle-content, #settings-content { padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
+
+/* 膠囊式懸浮導覽列 */
+#nav { 
+  position: fixed; 
+  bottom: calc(16px + env(safe-area-inset-bottom)); 
+  left: 16px; 
+  right: 16px; 
+  height: 68px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-around; 
+  background: var(--bg-header); 
+  backdrop-filter: blur(20px); 
+  -webkit-backdrop-filter: blur(20px); 
+  border: 1px solid var(--border); 
+  border-radius: 34px; 
+  z-index: 90; 
+  padding: 0 8px; 
+  box-shadow: var(--nav-shadow, 0 8px 24px rgba(0,0,0,0.1)); 
+}
+
+/* 單個導覽列項目 (加上寬高以確保點擊背景呈完美橢圓/圓角矩形) */
+.ni { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 4px; 
+  cursor: pointer; 
+  height: 54px; 
+  width: 54px; 
+  border-radius: 20px; 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+  -webkit-tap-highlight-color: transparent; 
+}
+
+/* Active 狀態：加上淡灰色背景 */
+.ni.active { 
+  background: var(--bg-input); 
+}
+
+.ni-img { 
+  width: 24px; 
+  height: 24px; 
+  object-fit: contain; 
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+
+.ni .lb { 
+  font-size: 10px; 
+  color: var(--nav-text); 
+  font-weight: 600; 
+  transition: color 0.3s; 
+}
+
+/* Active 狀態：文字變色加粗，圖片上浮放大 */
+.ni.active .lb { 
+  color: var(--acc); 
+  font-weight: 800; 
+}
+.ni.active .ni-img { 
+  transform: translateY(-2px) scale(1.08); 
+}
 
 /* ══ 彈出視窗 ══ */
 .overlay-page { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow: hidden; pointer-events: none; }
