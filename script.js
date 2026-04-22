@@ -1877,7 +1877,7 @@ function renderVehicleContent() {
     if (isEV) {
       // 電動車專屬：無折疊按鈕，直接顯示里程
       html += `
-        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:5px;">
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:5px; margin-bottom:5px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:14px; font-weight:700;">本月【 電池 】總里程：</span>
             <span style="font-family:var(--mono); font-size:22px; font-weight:800;">${fmt(totalDistance)} <span style="font-size:15px;">（ km ）</span></span>
@@ -1925,7 +1925,7 @@ function renderVehicleContent() {
     html += `
       <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:5px; margin-bottom:5px;">
         <div onclick="toggleSummaryCard('veh-maint-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:14px; font-weight:700;">本月【 保養、維修 】總金額：</span>
+          <span style="font-size:14px; font-weight:400;">本月【 保養、維修 】總金額：</span>
           <div style="display:flex; align-items:center; gap:12px;">
             <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$ ${fmt(totalMaintPaid)}</span>
             <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:8px;">
@@ -1937,7 +1937,7 @@ function renderVehicleContent() {
         <div id="veh-maint-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
           <div style="display:flex; justify-content:center; text-align:center; margin-top: 5px;">
             <div style="flex:1;">
-              <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">本月保養次數：</div>
+              <div style="font-size:12px; color:rgba(255, 255, 255, 0.9); margin-bottom:4px;">本月保養次數：</div>
               <div style="font-weight:800; font-size:15px;">${maintRecs.length} 筆</div>
             </div>
           </div>
@@ -3394,29 +3394,20 @@ function openPrivacyPolicy(fromRegister = false) {
   document.getElementById('privacy-body').innerHTML = `
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
       <strong style="color:var(--acc); font-size:15px;">1. 我們收集的資訊</strong><br>
-      • 基本帳號資料（如電子郵件、使用者名稱）<br>
-      • 使用過程產生的操作紀錄與偏好設定<br>
-      • 必要的裝置資訊（如系統版本、錯誤紀錄），用於改善服務<br><br>
+      • 基本帳號資料（ 如電子郵件 ）<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">2. 我們如何使用資訊</strong><br>
-      • 提供並維護 APP 功能<br>
-      • 改善使用體驗與修正錯誤<br>
-      • 推送通知或必要的服務訊息<br><br>
+      • 統計使用人數<br><br>
 
-      <strong style="color:var(--acc); font-size:15px;">3. 資訊分享</strong><br>
-      • 我們不會出售您的個人資料<br>
-      • 僅在法律要求或必要合作（如雲端服務供應商）時才會分享<br><br>
-
-      <strong style="color:var(--acc); font-size:15px;">4. 資料安全</strong><br>
+      <strong style="color:var(--acc); font-size:15px;">3. 資料安全</strong><br>
       • 使用加密技術保護您的資訊<br>
-      • 僅授權人員可存取相關資料<br><br>
+      • 記錄只存在您的裝置（手機）裡，或您存的雲端硬碟裡<br><br>
 
-      <strong style="color:var(--acc); font-size:15px;">5. 您的權利</strong><br>
-      • 您可隨時查詢、更正或刪除個人資料<br>
-      • 您可聯繫我們停止使用或刪除帳號<br><br>
+      <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
+      • 您可隨時聯繫我們幫您刪除帳號<br><br>
 
-      <strong style="color:var(--acc); font-size:15px;">6. 聯絡方式</strong><br>
-      如有任何隱私問題，請透過 APP 內「聯絡我們」功能與我們聯繫。
+      <strong style="color:var(--acc); font-size:15px;">5. 聯絡方式</strong><br>
+      • 如有任何隱私問題，請透過【 功能 】→「 關於我們 」→『 聯絡我們 』，與我們聯繫。
       ${btnHtml}
       <div style="height:32px;"></div>
     </div>
