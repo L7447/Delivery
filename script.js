@@ -1877,7 +1877,7 @@ function renderVehicleContent() {
     if (isEV) {
       // 電動車專屬：無折疊按鈕，直接顯示里程
       html += `
-        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:10px;">
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:5px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:14px; font-weight:700;">本月【 電池 】總里程：</span>
             <span style="font-family:var(--mono); font-size:22px; font-weight:800;">${fmt(totalDistance)} <span style="font-size:15px;">（ km ）</span></span>
@@ -1886,7 +1886,7 @@ function renderVehicleContent() {
     } else {
       // 汽油車專屬：預設收合(0px)，按鈕移至右側並顯示詳細資訊字眼
       const fuelStatsHtml = `
-        <div style="display:flex; justify-content:space-between; text-align:center; margin-top: 16px;">
+        <div style="display:flex; justify-content:space-between; text-align:center; margin-top: 5px;">
           <div style="flex:1;">
             <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">總加油量</div>
             <div style="font-weight:800; font-size:15px;">${totalLiters.toFixed(1)} L</div>
@@ -1904,11 +1904,11 @@ function renderVehicleContent() {
         </div>`;
 
       html += `
-        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:10px;">
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:5px; margin-bottom:5px;">
           <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:14px; font-weight:700;">本月【 汽油 】總金額：</span>
             <div style="display:flex; align-items:center; gap:12px;">
-              <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalFuelPaid)}</span>
+              <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$ ${fmt(totalFuelPaid)}</span>
               <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:8px;">
                 <span style="font-size:11px; font-weight:700;">詳細資訊</span>
                 <div id="veh-fuel-col-btn" style="font-size:10px; transition:transform 0.3s;">▼</div>
@@ -1923,11 +1923,11 @@ function renderVehicleContent() {
   } else {
     // 保養維修專屬：預設收合(0px)，按鈕移至右側並顯示詳細資訊字眼
     html += `
-      <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+      <div style="background:linear-gradient(135deg, #065f46, #10b981); color:#fff; border-radius:16px; padding:5px; margin-bottom:5px;">
         <div onclick="toggleSummaryCard('veh-maint-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:14px; font-weight:700;">本月【 保養、維修 】總金額</span>
+          <span style="font-size:14px; font-weight:700;">本月【 保養、維修 】總金額：</span>
           <div style="display:flex; align-items:center; gap:12px;">
-            <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalMaintPaid)}</span>
+            <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$ ${fmt(totalMaintPaid)}</span>
             <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:8px;">
               <span style="font-size:11px; font-weight:700;">詳細資訊</span>
               <div id="veh-maint-col-btn" style="font-size:10px; transition:transform 0.3s;">▼</div>
@@ -1935,9 +1935,9 @@ function renderVehicleContent() {
           </div>
         </div>
         <div id="veh-maint-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
-          <div style="display:flex; justify-content:center; text-align:center; margin-top: 16px;">
+          <div style="display:flex; justify-content:center; text-align:center; margin-top: 5px;">
             <div style="flex:1;">
-              <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">本月保養次數</div>
+              <div style="font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:4px;">本月保養次數：</div>
               <div style="font-weight:800; font-size:15px;">${maintRecs.length} 筆</div>
             </div>
           </div>
