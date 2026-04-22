@@ -180,15 +180,20 @@ function toggleSummaryCard(id) {
   }
 }
 
-/* ══ 替換：產生總結卡片 (統一版面、背景 #FFF0F5、深色數據) ══ */
+/* ══ 替換：產生總結卡片 (統一版面、加入淨行程/獎勵/小費佔比) ══ */
 function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId) {
   if (total <= 0) return '';
   const totalBonus = bonus + tempBonus; 
+  const income = total - totalBonus - tips; // 算出淨行程
+  
+  // 計算佔比
+  const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
+  const bonPct = total > 0 ? Math.round((totalBonus / total) * 100) : 0;
+  const tipPct = total > 0 ? Math.round((tips / total) * 100) : 0;
+
   let tagsHtml = '';
   if (orders > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmt(orders)} 單</span>`;
   if (hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(hours)}</span>`;
-  if (totalBonus > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-bonus">獎勵 $${fmt(totalBonus)}</span>`;
-  if (tips > 0) tagsHtml += `<span class="h-div"></span><span class="lbl-tips">小費 $${fmt(tips)}</span>`;
 
   const avgOrd = orders > 0 ? Math.round(total / orders) : 0;
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
@@ -205,6 +210,20 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           <span class="hrc-amt" style="color:var(--acc);">$${fmt(total)}</span>
           ${tagsHtml}
         </div>
+        
+        <!-- 新增：淨行程、獎勵、小費佔比結構 -->
+        <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+            淨行程<br><span style="color: #1f9c4d; font-size:15px;">$${fmt(income)}</span><br><span style="font-size:10px; opacity:0.8;">${incPct}%</span>
+          </div>
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+            獎勵<br><span style="color: #ff7715; font-size:15px;">$${fmt(totalBonus)}</span><br><span style="font-size:10px; opacity:0.8;">${bonPct}%</span>
+          </div>
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+            小費<br><span style="color: #8A2BE2; font-size:15px;">$${fmt(tips)}</span><br><span style="font-size:10px; opacity:0.8;">${tipPct}%</span>
+          </div>
+        </div>
+
       </div>
       <div id="${cardId}" class="hrc-collapse" style="background: var(--collapse-bg); overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
@@ -1372,12 +1391,22 @@ function renderRptOverview() {
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="font-size:14px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
-        <div style="display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <div style="background: rgba(34, 197, 94, 0.2); color: var(--green); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">行程$：<span style="font-family:var(--mono); color: #1f9c4d; font-size:16px; font-weight:800;">${fmt(income)}</span></div>
-          <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(245,158,11,0.15); color: var(--gold); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">獎勵$：<span style="font-family:var(--mono); color: #ff7715; font-size:16px; font-weight:800;">${fmt(bonus)}</span></div>
-          <div class="h-div" style="height:30px; align-self:center;"></div>
-          <div style="background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:800; align-content: center; font-family:var(--mono)">小費$：<span style="font-family:var(--mono); color: #8A2BE2; font-size:16px; font-weight:800;">${fmt(tips)}</span></div>
+        // 計算佔比
+        const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
+        const bonPct = total > 0 ? Math.round((bonus / total) * 100) : 0;
+        const tipPct = total > 0 ? Math.round((tips / total) * 100) : 0;
+
+        // 將替換的 HTML 放在 ${fmt(total)} 的下方
+        <div style="display:flex; justify-content:center; gap:6px; margin-top:14px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+            淨行程<br><span style="color: #1f9c4d; font-size:16px;">$${fmt(income)}</span><br><span style="font-size:11px; opacity:0.8;">${incPct}%</span>
+          </div>
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+            獎勵<br><span style="color: #ff7715; font-size:16px;">$${fmt(bonus)}</span><br><span style="font-size:11px; opacity:0.8;">${bonPct}%</span>
+          </div>
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+            小費<br><span style="color: #8A2BE2; font-size:16px;">$${fmt(tips)}</span><br><span style="font-size:11px; opacity:0.8;">${tipPct}%</span>
+          </div>
         </div>
       </div> 
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
@@ -1606,15 +1635,41 @@ function renderRptTrend() {
   }
 }
 
-/* ══ 1. 替換：修復趨勢圖表繪製語法結構 ══ */
+/* ══ 替換：修復趨勢圖表繪製 (加入平滑總收入趨勢線) ══ */
 function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = null) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
   
-  // 動態抓取深色模式的 CSS 變數顏色
   const style = getComputedStyle(document.documentElement);
   const textColor = style.getPropertyValue('--chart-text').trim() || '#1C1917';
   
+  // 將柱狀圖順序往後移，讓折線畫在最上面
+  datasets.forEach(ds => ds.order = 1);
+
+  // 1. 計算每天的總合，用來畫趨勢線
+  const totalData = labels.map((_, i) => {
+    return datasets.reduce((sum, ds) => sum + (ds.data[i] || 0), 0);
+  });
+
+  // 2. 建立趨勢線資料集 (使用紫色凸顯)
+  const lineDataset = {
+    type: 'line',
+    label: '總收入趨勢',
+    data: totalData,
+    borderColor: '#8B5CF6', 
+    backgroundColor: '#8B5CF6',
+    borderWidth: 2,
+    tension: 0.4, // 設定曲線平滑度
+    pointRadius: 2.5,
+    pointBackgroundColor: '#fff',
+    fill: false,
+    order: 0 // 畫在最上方
+  };
+
+  // 將趨勢線加進資料中
+  const combinedDatasets = [...datasets];
+  if (datasets.length > 0) combinedDatasets.push(lineDataset);
+
   const topTotalPlugin = {
     id: 'topTotalPlugin',
     afterDatasetsDraw: (chart) => {
@@ -1622,15 +1677,18 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
       chart.data.labels.forEach((_, i) => {
         let total = 0; let meta;
         chart.data.datasets.forEach((dataset, j) => {
+          // 略過趨勢線，只計算柱狀體數值
+          if (dataset.type === 'line') return;
           meta = chart.getDatasetMeta(j);
           if (!meta.hidden) total += dataset.data[i];
         });
         if (total > 0 && meta) {
           const finalModel = meta.data[i];
           ctx.save();
-          ctx.fillStyle = textColor; // 👈 使用自適應顏色
+          ctx.fillStyle = textColor; 
           ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-          ctx.fillText(fmt(total), finalModel.x, finalModel.y - 4);
+          // 把數字往上推一點，避免跟趨勢線的點擠在一起
+          ctx.fillText(fmt(total), finalModel.x, finalModel.y - 8);
           ctx.restore();
         }
       });
@@ -1647,17 +1705,17 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
   const xOpts = { stacked: true, ticks: { color: textColor, font: { size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } };
 
   S.charts[canvasId] = new Chart(ctx, { 
-    type: 'bar', 
-    data: { labels, datasets }, 
+    type: 'bar', // 主體依然是柱狀圖
+    data: { labels, datasets: combinedDatasets }, 
     plugins: [topTotalPlugin],
     options: { 
       responsive: true, maintainAspectRatio: false, 
-      layout: { padding: { top: 15 } },
+      layout: { padding: { top: 20 } }, // 上方多留白一點給數字
       plugins: { 
         legend: { display: showLegend, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } }, 
         tooltip: { mode: 'index', intersect: false, callbacks: { label: c => `${c.dataset.label}: NT$ ${fmt(c.parsed.y)}` } } 
       }, 
-      scales: { x: xOpts, y: yOpts }, // ✅ 修正這裡的括號結構
+      scales: { x: xOpts, y: yOpts }, 
       animation: { duration: 400 } 
     } 
   });
