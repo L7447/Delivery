@@ -1877,10 +1877,10 @@ function renderVehicleContent() {
     if (isEV) {
       // 電動車專屬：無折疊按鈕，直接顯示里程
       html += `
-        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:14px; font-weight:700;">本月【 電池 】總里程</span>
-            <span style="font-family:var(--mono); font-size:22px; font-weight:800;">${fmt(totalDistance)} <span style="font-size:15px;">km</span></span>
+            <span style="font-size:14px; font-weight:700;">本月【 電池 】總里程：</span>
+            <span style="font-family:var(--mono); font-size:22px; font-weight:800;">${fmt(totalDistance)} <span style="font-size:15px;">（ km ）</span></span>
           </div>
         </div>`;
     } else {
@@ -1904,9 +1904,9 @@ function renderVehicleContent() {
         </div>`;
 
       html += `
-        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+        <div style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border-radius:16px; padding:16px; margin-bottom:10px;">
           <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:14px; font-weight:700;">本月【 汽油 】總金額</span>
+            <span style="font-size:14px; font-weight:700;">本月【 汽油 】總金額：</span>
             <div style="display:flex; align-items:center; gap:12px;">
               <span style="font-family:var(--mono); font-size:22px; font-weight:800;">$${fmt(totalFuelPaid)}</span>
               <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.2); padding:4px 8px; border-radius:8px;">
