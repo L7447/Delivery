@@ -36,7 +36,7 @@ function saveDbUsers() { localStorage.setItem('delivery_db_users', JSON.stringif
 
 // 暫存驗證碼
 let tempAuthCode = '';
-function saveUser() { localStorage.setItem('delivery_user', JSON.stringify(USER)); }
+
 
 const S = {
   tab: 'home', rptY: new Date().getFullYear(), rptM: new Date().getMonth()+1, rptView: 'overview',
@@ -3635,17 +3635,7 @@ window.applyGlobalGasPrice = function() {
   }
 };
 
-/* ══ 全部功能都開發完畢，準備正式上線時，再把這段程式碼改回原本的「註冊」代碼，並把 sw.js 的版本號加 1 ═══════════════════════════════════ */
-/* if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); } */
-/* 開發測試用：強制註銷所有 Service Worker，避免快取舊檔案 */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister();
-    }
-  });
-  console.log('SW 已強制註銷，目前不會快取檔案。');
-}
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r=>console.log('SW 已註冊')).catch(e=>console.log('SW 註冊失敗')); }); }
 
 /* ══ 背景主題與深色模式套用函式 ══ */
 function applyTheme() {
