@@ -179,7 +179,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   border: 1px solid var(--border); 
   border-radius: 38px; 
   z-index: 90; 
-  padding: 0 12px; 
+  padding: 0 8px; 
   box-shadow: var(--nav-shadow, 0 8px 24px rgba(0,0,0,0.1)); 
 }
 
@@ -189,9 +189,9 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 #nav-indicator {
   position: absolute;
   top: 50%;
-  left: 12px;
-  width: 58px;
-  height: 56px;
+  left: 8px;
+  width: 66px;
+  height: 66px;
   background: rgba(120, 130, 150, 0.15);
   border-radius: 22px;
   transform: translateY(-50%) translateX(0px);
