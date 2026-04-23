@@ -3,7 +3,7 @@
    若測試後白屏消失，表示問題出在 iOS fetch intercept bug
    ══════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v90';
+const CACHE_NAME = 'delivery-app-v91';
 
 /* 安裝：僅快取核心檔案，不快取圖片（減少失敗機率） */
 self.addEventListener('install', event => {
