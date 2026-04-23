@@ -1464,7 +1464,7 @@ function renderRptOverview() {
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:5px 0px; cursor:pointer; text-align:center;">
         <div style="font-size:14px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
-        <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>       
+        <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
 
         <div style="display:flex; justify-content:center; gap:6px; margin-top:3px; flex-wrap:wrap; text-align:center;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:500; font-family:var(--mono); align-content:center;">
@@ -1482,8 +1482,8 @@ function renderRptOverview() {
           <div style="flex:1; color: #ff7715; font-size:11px; opacity:0.75; font-weight:800;">(${bonPct}%)</div>
           <div style="flex:1; color: #8A2BE2; font-size:11px; opacity:0.75; font-weight:800;">(${tipPct}%)</div>
         </div>
-      </div> 
-      
+      </div>
+
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
         <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
