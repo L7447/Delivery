@@ -187,6 +187,8 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
    position:absolute 相對於 #nav（需要 #nav 有 position:relative/fixed）
    left 起點對齊 #nav 的 padding 左邊 */
 #nav-indicator {
+  align-items: center; 
+  justify-content: center; 
   position: absolute;
   top: 50%;
   left: 10px;
@@ -194,7 +196,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   width: 66px;
   height: 66px;
   background: rgba(120, 130, 150, 0.15);
-  border-radius: 25px;
+  border-radius: 50%;
   transform: translateY(-50%) translateX(0px);
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
@@ -340,7 +342,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
 .hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--t2); font-weight: 600; margin-bottom: 3px; }
 .hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.hrc-amt { font-family: var(--mono); font-size: 16px; font-weight: 800; color: var(--t1); }
+.hrc-amt { font-family: var(--mono); font-size: 18px; font-weight: 800; color: var(--t1); }
 .hrc-stat { font-size: 12px; font-weight: 600; color: var(--t2); }
 .h-div { width: 2px; height: 15px; background: #cbd5e1; }
 .lbl-bonus { background: var(--gold-d); color: var(--gold); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
