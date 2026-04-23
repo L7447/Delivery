@@ -166,7 +166,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 /* 膠囊式懸浮導覽列 */
 #nav { 
   position: fixed; 
-  bottom: calc(10px + env(safe-area-inset-bottom)); 
+  bottom: calc(13px + env(safe-area-inset-bottom)); 
   left: 10px; 
   right: 10px; 
   height: 76px; 
@@ -179,7 +179,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   border: 1px solid var(--border); 
   border-radius: 38px; 
   z-index: 90; 
-  padding: 0 10px; 
+  padding: 0 10px 0 8px; 
   box-shadow: var(--nav-shadow, 0 8px 24px rgba(0,0,0,0.1)); 
 }
 
@@ -193,10 +193,10 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   top: 50%;
   left: 10px;
   right: 10px;
-  width: 66px;
+  width: 80px;
   height: 66px;
   background: rgba(120, 130, 150, 0.15);
-  border-radius: 50%;
+  border-radius: 25px;
   transform: translateY(-50%) translateX(0px);
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
