@@ -776,7 +776,7 @@ function buildRecItem(r) {
     else if (avgHr <= 195) { wageStatus = '⚠️略低於基本工資'; wageColor = 'var(--blue)'; wageBg = 'var(--blue-d)'; } 
     else { wageStatus = '🎉符合基本工資'; wageColor = 'var(--green)'; wageBg = 'var(--green-d)'; }
     
-    recWageHtml = `<div style="margin-top:4px;"><span style="background:${wageBg}; color:${wageColor}; font-size:10px; padding:2px 4px; border-radius:4px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
+    recWageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:12px; padding:6px 5px; border-radius:5px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
   }
 
   return `
@@ -1462,7 +1462,7 @@ function renderRptOverview() {
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:35px; height:35px; background: hsla(320, 75%, 34%, 0.75); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:35px; height:35px; background: hsla(320, 75%, 34%, 0.60); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="font-size:16px; font-weight:900; color: #ff0000; margin-bottom:6px;">${filterName} <span style="font-size:14px; font-weight:800; color: var(--t2);">本月總收入</span></div>
