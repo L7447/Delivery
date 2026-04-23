@@ -691,7 +691,7 @@ async function punchOut() {
 function foldCard(id, e) {
   e.stopPropagation();
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '60px'; btn.style.transform = 'rotate(180deg)'; } 
+  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '70px'; btn.style.transform = 'rotate(180deg)'; } 
   else { el.style.maxHeight = '0px'; btn.style.transform = 'rotate(0deg)'; }
 }
 
