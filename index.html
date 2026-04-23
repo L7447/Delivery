@@ -11,8 +11,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="外送記帳">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- ✅ FIX 1: 最優先設定背景色，避免 CSS 尚未載入時露出白底 -->
+  <style>html,body{background:#f8fafc;margin:0;padding:0;min-height:100%;}</style>
+
+  <!-- ✅ FIX 2: 字體改為非阻塞式載入 (preconnect + media trick) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap"></noscript>
+
+  <!-- ✅ FIX 3: Chart.js 加上 defer，不阻塞 HTML 解析 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="/style.css">
 
 <!-- 啟動畫面 (Splash Screen) 專屬樣式 -->
@@ -109,7 +118,8 @@
     #splash .status-bubble {
       position: absolute; left: 50%; transform: translateX(-50%); bottom: 26px;
       font-size: 14.5px; font-weight: 800; color: #0f172a;
-      background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      /* ✅ FIX 4: 移除 backdrop-filter，改用純色背景，避免 iOS WKWebView 合成層白閃 */
+      background: rgba(255, 255, 255, 0.96);
       padding: 6px 20px 6px 6px; border-radius: 50px;
       border: 2.5px solid var(--sp-accent);
       box-shadow: 0 8px 28px rgba(255,107,53,0.22), 0 0 0 4px rgba(255,107,53,0.08);
@@ -136,8 +146,8 @@
 <div id="splash">
   <div class="splash-card">
   
-  <!-- ✨ 加入這行：一鍵跳過按鈕 -->
-  <button id="skip-splash" style="position:absolute; top:16px; right:16px; background:var(--bg-input); border:2px solid var(--text-red); padding:6px 12px; border-radius:20px; font-size:14px; font-weight:700; color:#64748b; cursor:pointer; z-index:999; box-shadow:0 2px 6px rgba(0,0,0,0.05);">跳過動畫 ⏭</button>
+  <!-- ✅ FIX 5: 跳過按鈕改用固定顏色，不依賴 style.css 的 CSS 變數 -->
+  <button id="skip-splash" style="position:absolute; top:16px; right:16px; background:rgba(11,18,32,0.05); border:2px solid #ff0000; padding:6px 12px; border-radius:20px; font-size:14px; font-weight:700; color:#64748b; cursor:pointer; z-index:999; box-shadow:0 2px 6px rgba(0,0,0,0.05);">跳過動畫 ⏭</button>
 
   <div class="topbar">
       <div class="logo">🛵</div>
@@ -837,6 +847,18 @@
   } else {
     window.addEventListener('DOMContentLoaded', runStoryAnimation);
   }
+
+  // ✅ FIX 6: iOS PWA bfcache 還原時（persisted=true），DOMContentLoaded 不會再觸發
+  // pageshow 事件補救：若頁面從快取還原且 splash 仍存在，重新觸發動畫
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) {
+      const splash = document.getElementById('splash');
+      if (splash) {
+        splash.style.opacity = '1';
+        setTimeout(runStoryAnimation, 50);
+      }
+    }
+  });
 </script>
 
 </body>
