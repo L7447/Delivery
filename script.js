@@ -391,10 +391,13 @@ function updateNavIndicator(activePg) {
   const activeEl = document.querySelector(`.ni[data-pg="${activePg}"]`);
   if (!indicator || !activeEl) return;
   const nav = document.getElementById('nav');
+  
   const navRect = nav.getBoundingClientRect();
   const itemRect = activeEl.getBoundingClientRect();
-  // 膠囊左邊對齊 .ni 左邊，再扣掉 nav 的 padding-left(12px) 作為 translateX 起點
-  const offsetX = itemRect.left - navRect.left - 12;
+  
+  // 動態幾何計算：計算圖示中心點，確保背景膠囊完美置中，不再受螢幕寬度影響
+  const offsetX = itemRect.left - navRect.left + (activeEl.offsetWidth - indicator.offsetWidth) / 2;
+  
   indicator.style.transform = `translateY(-50%) translateX(${offsetX}px)`;
 }
 /* 替換導覽列切換邏輯，未登入禁止進入新增頁面 */
