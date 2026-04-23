@@ -574,7 +574,7 @@ function renderHome() {
                 // 👇 這裡的 background 改用 var(--schedule-bg)，dateColor 加上 var(--schedule-text) 確保字體對比度
                 return `
                   <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 2.5px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <span style="font-size:13px; color:${nameColor}; font-weight:900; margin-bottom:4px; letter-spacing:0.5px;">${ev.name}</span>
+                    <span style="font-size:13px; color:${nameColor}; font-weight:500; margin-bottom:4px; letter-spacing:0.5px;">${ev.name}</span>
                     <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--schedule-text);">${ev.dateStr} <span style="font-size:11px; font-weight:700; color:${diffColor};">(${ev.diffStr})</span></span>
                   </div>`;
               }).join('')}</div>
@@ -1462,7 +1462,7 @@ function renderRptOverview() {
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:35px; height:35px; background: hsla(320, 100%, 34%, 0.75); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:35px; height:35px; background: hsla(320, 75%, 34%, 0.75); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="font-size:16px; font-weight:900; color: #ff0000; margin-bottom:6px;">${filterName} <span style="font-size:14px; font-weight:800; color: var(--t2);">本月總收入</span></div>
