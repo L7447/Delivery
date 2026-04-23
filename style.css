@@ -179,21 +179,18 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   border: 1px solid var(--border); 
   border-radius: 38px; 
   z-index: 90; 
-  padding: 0 10px 0 8px; 
+  padding: 0 10px; /* 修改為對稱的 padding */
   box-shadow: var(--nav-shadow, 0 8px 24px rgba(0,0,0,0.1)); 
 }
 
-/* 滑動背景膠囊：灰色背景整個跟著 active 項目移動
-   position:absolute 相對於 #nav（需要 #nav 有 position:relative/fixed）
-   left 起點對齊 #nav 的 padding 左邊 */
+/* 滑動背景膠囊 */
 #nav-indicator {
   align-items: center; 
   justify-content: center; 
   position: absolute;
   top: 50%;
-  left: 10px;
-  right: 10px;
-  width: 80px;
+  left: 0; /* 修改這裡：歸零，交由 JS 精準計算位移 */
+  width: 72px; /* 稍微縮小寬度，讓膠囊看起來更精緻 */
   height: 66px;
   background: rgba(120, 130, 150, 0.15);
   border-radius: 25px;
@@ -221,6 +218,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   position: relative;
   z-index: 1;
 }
+
 /* 點擊時輕微縮小，給予實體回饋感 */
 .ni:active {
   transform: scale(0.88);
@@ -245,10 +243,10 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   transition: color 0.3s; 
 }
 
-/* Active 狀態：文字變色加粗，圖片上浮放大 */
+/* Active 狀態：文字變藍色、維持原本粗細，圖片上浮放大 */
 .ni.active .lb { 
-  color: var(--acc); 
-  font-weight: 800; 
+  color: var(--blue); /* 改為藍色 */
+  font-weight: 600; /* 不變粗體，維持 600 */
 }
 .ni.active .ni-img { 
   transform: translateY(-2px) scale(1.08); 
