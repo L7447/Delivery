@@ -1462,24 +1462,24 @@ function renderRptOverview() {
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:30px; height:30px; background: var(--sf2); border-radius:50%; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:35px; height:35px; background: hsla(320, 100%, 34%, 0.75); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="font-size:16px; font-weight:900; color: #ff0000; margin-bottom:6px;">${filterName} <span style="font-size:14px; font-weight:800; color: var(--t2);">本月總收入</span></div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:6px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 3px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
+        <div style="display:flex; justify-content:center; gap:5px; margin-top:8px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             淨行程<br>
             <span style="color: #1f9c4d; font-size:15px; font-weight:800;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: hsl(25, 100%, 59%); padding:2px 3px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: hsl(25, 100%, 59%); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             獎勵<br>
             <span style="color: #ff7715; font-size:15px; font-weight:800;">$ ${fmt(bonus)}</span>
             <span style="font-size:11px; font-weight:600;">(${bonPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 3px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             小費<br>
             <span style="color: #8A2BE2; font-size:15px; font-weight:800;">$ ${fmt(tips)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
