@@ -185,7 +185,7 @@
       background: linear-gradient(135deg, #ffffff, #f1f5f9);
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 10px rgba(0,0,0,0.08), inset 0 2px 4px rgba(255,255,255,1);
-      font-size: 18px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      font-size: 22px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     @keyframes spFloat {
       0%, 100% { transform: translate(-50%, 0); }
@@ -199,12 +199,12 @@
 <div id="splash">
   <div class="splash-card">
   
-  <button id="skip-splash" style="position:absolute; top:16px; right:16px; background:rgba(11,18,32,0.05); border:2px solid #ff3333; padding:6px 12px; border-radius:20px; font-size:14px; font-weight:700; color:#64748b; cursor:pointer; z-index:999; box-shadow:0 2px 6px rgba(0,0,0,0.05);">跳過動畫 ⏭</button>
+  <button id="skip-splash" style="position:absolute; top:16px; right:16px; background:rgba(11,18,32,0.05); border:2.5px solid #ff3333; padding:6px 12px; border-radius:20px; font-size:24px; font-weight:700; color:#006aff; cursor:pointer; z-index:999; box-shadow:0 2px 6px rgba(0,0,0,0.05);">跳過動畫 ⏭</button>
 
   <div class="topbar">
       <div class="logo">🛵</div>
       <div>
-        <h1>外送記帳 APP</h1>
+        <h1>外送記錄與分析</h1>
       </div>
     </div>
 
@@ -269,7 +269,7 @@
 
       <!-- 解說字幕 -->
       <div class="status-bubble" id="sp-status">
-        <div class="sp-icon-wrapper" id="sp-icon-wrap"><span id="sp-icon">🍽️</span></div>
+        <div class="sp-icon-wrapper" id="sp-icon-wrap"><span id="sp-icon">🔔</span></div>
         <span id="sp-text" style="font-family:var(--mono);">3公里 45元</span>
       </div>
     </div>
@@ -725,7 +725,7 @@
       if (deliveryBox) deliveryBox.style.right = '-22px';
       if (riderWrapper) riderWrapper.style.right = '-1px';
 
-      await wait(800);
+      await wait(500);
       if (isSkipped) return;
 
       setStatus('🏪', '接到新訂單，前往店家...');
