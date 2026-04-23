@@ -225,13 +225,13 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
         <!-- 新增：淨行程、獎勵、小費佔比結構 (百分比與金額同排) -->
         <div style="display:flex; justify-content:center; gap:6px; margin-top:1px; flex-wrap:wrap; text-align:center;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono); align-content:center;">
-            淨行程：<span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
+            淨行程：<span style="color: #1f9c4d; font-size:14px;">$ ${fmt(income)}</span>
           </div>
           <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono); align-content:center;">
-            獎勵：<span style="color: #ff7715; font-size:14px;">$${fmt(totalBonus)}</span>
+            獎勵：<span style="color: #ff7715; font-size:14px;">$ ${fmt(totalBonus)}</span>
           </div>
           <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono); align-content:center;">
-            小費：<span style="color: #8A2BE2; font-size:14px;">$${fmt(tips)}</span>
+            小費：<span style="color: #8A2BE2; font-size:14px;">$ ${fmt(tips)}</span>
           </div>
         </div>
 
@@ -1448,7 +1448,7 @@ function renderRptOverview() {
   }
 
   // 頂部導航
-  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin:5px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
       <button class="mbtn" onclick="navRptMonth(-1)">◀</button>
       <span style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--acc);">${S.rptY} 年 ${S.rptM} 月</span>
       <button class="mbtn" onclick="navRptMonth(1)">▶</button>
@@ -1461,29 +1461,32 @@ function renderRptOverview() {
 
   // 精簡高對比總收入框
   html += `
-    <div style="background: var(--sf); border:2px solid var(--border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
+    <div style="background: var(--sf); border:1.5px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
+      //摺疊按鈕
       <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:36px; height:36px; background: var(--sf2); border-radius:12px; color:var(--acc); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
-      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
+      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:5px 0px; cursor:pointer; text-align:center;">
         <div style="font-size:14px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         
         <div style="display:flex; justify-content:center; gap:6px; margin-top:14px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             淨行程<br>
-            <span style="color: #1f9c4d; font-size:15px;">$${fmt(income)}</span>
+            <span style="color: #1f9c4d; font-size:15px;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             獎勵<br>
-            <span style="color: #ff7715; font-size:15px;">$${fmt(bonus)}</span>
+            <span style="color: #ff7715; font-size:15px;">$ ${fmt(bonus)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             小費<br>
-            <span style="color: #8A2BE2; font-size:15px;">$${fmt(tips)}</span>
+            <span style="color: #8A2BE2; font-size:15px;">$ ${fmt(tips)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
           </div>
+
+
         </div>
       </div> 
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
@@ -1506,7 +1509,7 @@ function renderRptOverview() {
         <div style="border-top:1px dashed var(--border);"></div>
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
           <span style="background: rgba(22,163,74,0.2); color: var(--green); font-size:11px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);">$${fmt(cashTipTotal)}</span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);">$ ${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
@@ -1514,7 +1517,7 @@ function renderRptOverview() {
   // --- 後面的「結構佔比分析卡片 (包含平台切換與圓餅圖)」保持不變 ---
 
   // 結構佔比分析卡片 (包含平台切換與圓餅圖)
-  html += `<div class="card" style="border:1px solid var(--border);">
+  html += `<div class="card" style="border:1.5px solid var(--card-border);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <div style="font-size:13px; font-weight:800; color:var(--t2);">📊 結構佔比分析</div>
     </div>`;
@@ -1541,7 +1544,7 @@ function renderRptOverview() {
         <div style="width:12px; height:12px; border-radius:4px; background:${p.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${p.name}</span>
         <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct}%</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$${fmt(p.val)}</span>
+        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$ ${fmt(p.val)}</span>
       </div>`;
     }).join('');
     
@@ -1555,7 +1558,7 @@ function renderRptOverview() {
         <div style="width:12px; height:12px; border-radius:4px; background:${d.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${d.name}</span>
         <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct}%</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$${fmt(d.val)}</span>
+        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$ ${fmt(d.val)}</span>
       </div>`;
     }).join('');
   }
@@ -1575,7 +1578,7 @@ function renderRptOverview() {
         <div style="display:flex; align-items:center; padding:12px 0 4px;">
           <span style="flex:1; font-size:14px; font-weight:900; color:var(--acc);">總計</span>
           <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t3); width:50px; text-align:right;">100%</span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--acc); width:80px; text-align:right;">$${fmt(total)}</span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--acc); width:80px; text-align:right;">$ ${fmt(total)}</span>
         </div>
       </div>`;
   } else {
