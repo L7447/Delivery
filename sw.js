@@ -5,7 +5,7 @@
    3. 靜態資源用 cache-first（圖片/CSS/JS 快速載入）
    ══════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v86';
+const CACHE_NAME = 'delivery-app-v87';
 
 /* ── 只快取本地靜態資源 ──────────────────────────────
    ⚠️ 跨域 CDN URL（Google Fonts、Chart.js）絕對不能放這裡：
