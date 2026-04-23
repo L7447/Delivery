@@ -224,11 +224,10 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
         
         <!-- 新增：淨行程、獎勵、小費佔比結構 (百分比與金額同排) -->
         <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
-            淨行程<br>
-            <span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
-            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:10px; font-size:11px; font-weight:800; font-family:var(--mono);">
+            淨行程：<span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
           </div>
+          <div style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</div>
           <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             獎勵<br>
             <span style="color: #ff7715; font-size:14px;">$${fmt(totalBonus)}</span>
