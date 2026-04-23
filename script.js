@@ -218,14 +218,14 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
           <span class="hrc-plat-tag" style="background:var(--t2);">${title}</span>
         </div>
         <div class="hrc-row2">
-          <span class="hrc-amt" style="color:var(--acc);">$${fmt(total)}</span>
+          <span class="hrc-amt" style="color:var(--acc);">$ ${fmt(total)}</span>
           ${tagsHtml}
         </div>
         
         <!-- 新增：淨行程、獎勵、小費佔比結構 (百分比與金額同排) -->
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
+        <div style="display:flex; justify-content:center; gap:6px; margin-top:3px; flex-wrap:wrap; text-align:center;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
-            淨行程<br>
+            淨行程1<br>
             <span style="color: #1f9c4d; font-size:14px;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
@@ -691,7 +691,7 @@ async function punchOut() {
 function foldCard(id, e) {
   e.stopPropagation();
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '45px'; btn.style.transform = 'rotate(180deg)'; } 
+  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '60px'; btn.style.transform = 'rotate(180deg)'; } 
   else { el.style.maxHeight = '0px'; btn.style.transform = 'rotate(0deg)'; }
 }
 
@@ -791,9 +791,9 @@ function buildRecItem(r) {
         </div>
         
         <!-- 新增：單筆記錄的淨行程、獎勵、小費佔比結構 -->
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
+        <div style="display:flex; justify-content:center; gap:6px; margin-top:3px; flex-wrap:wrap; text-align:center;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
-            淨行程<br>
+            淨行程2<br>
             <span style="color: #1f9c4d; font-size:14px;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
@@ -1464,9 +1464,9 @@ function renderRptOverview() {
         <div style="font-size:14px; font-weight:800; color: var(--t2); margin-bottom:6px;">${filterName} 本月總收入</div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:14px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
+        <div style="display:flex; justify-content:center; gap:6px; margin-top:3px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
-            淨行程<br>
+            淨行程3<br>
             <span style="color: #1f9c4d; font-size:15px;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
