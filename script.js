@@ -237,11 +237,8 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
 
         <div style="display:flex; justify-content:center; gap:6px; margin-top:1px; flex-wrap:wrap; text-align:center;">
           <div style="color: #1f9c4d; font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</div>
-          </div>
           <div style="color: #ff7715; font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</div>
-          </div>
           <div style="color: #8A2BE2; font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</div>
-          </div>
         </div>
 
       </div>
