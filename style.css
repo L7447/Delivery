@@ -190,6 +190,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   position: absolute;
   top: 50%;
   left: 10px;
+  right: 10px;
   width: 66px;
   height: 66px;
   background: rgba(120, 130, 150, 0.15);
