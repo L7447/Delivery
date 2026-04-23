@@ -226,20 +226,26 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
         <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:10px; font-size:11px; font-weight:800; font-family:var(--mono);">
             淨行程：<span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
-          </div></div>
-          <div style="color: #1f9c4d; font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</div>
+          </div>
           <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             獎勵：<br>
             <span style="color: #ff7715; font-size:14px;">$${fmt(totalBonus)}</span>
-          </div></div>
-          <div style="color: #ff7715; font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</div>
+          </div>
           <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             小費：<br>
             <span style="color: #8A2BE2; font-size:14px;">$${fmt(tips)}</span>
-          </div></div>
-          <div style="color: #8A2BE2; font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</div>
+          </div>
         </div>
 
+        <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
+          <div style="color: #1f9c4d; font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</div>
+          </div>
+          <div style="color: #ff7715; font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</div>
+          </div>
+          <div style="color: #8A2BE2; font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</div>
+          </div>
+        </div>
+        
       </div>
       <div id="${cardId}" class="hrc-collapse" style="background: var(--collapse-bg); overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
