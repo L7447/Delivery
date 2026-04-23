@@ -224,19 +224,19 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
         
         <!-- 新增：淨行程、獎勵、小費佔比結構 (百分比與金額同排) -->
         <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             淨行程<br>
-            <span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
+            <span style="color: #1f9c4d; font-size:14px;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             獎勵<br>
-            <span style="color: #ff7715; font-size:14px;">$${fmt(totalBonus)}</span>
+            <span style="color: #ff7715; font-size:14px;">$ ${fmt(totalBonus)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             小費<br>
-            <span style="color: #8A2BE2; font-size:14px;">$${fmt(tips)}</span>
+            <span style="color: #8A2BE2; font-size:14px;">$ ${fmt(tips)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
           </div>
         </div>
@@ -792,19 +792,19 @@ function buildRecItem(r) {
         
         <!-- 新增：單筆記錄的淨行程、獎勵、小費佔比結構 -->
         <div style="display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; text-align:center;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             淨行程<br>
-            <span style="color: #1f9c4d; font-size:14px;">$${fmt(income)}</span>
+            <span style="color: #1f9c4d; font-size:14px;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             獎勵<br>
-            <span style="color: #ff7715; font-size:14px;">$${fmt(totalBonus)}</span>
+            <span style="color: #ff7715; font-size:14px;">$ ${fmt(totalBonus)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:11px; font-weight:800; font-family:var(--mono);">
             小費<br>
-            <span style="color: #8A2BE2; font-size:14px;">$${fmt(pf(r.tips))}</span>
+            <span style="color: #8A2BE2; font-size:14px;">$ ${fmt(pf(r.tips))}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
           </div>
         </div>
@@ -1465,19 +1465,19 @@ function renderRptOverview() {
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         
         <div style="display:flex; justify-content:center; gap:6px; margin-top:14px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
             淨行程<br>
-            <span style="color: #1f9c4d; font-size:15px;">$${fmt(income)}</span>
+            <span style="color: #1f9c4d; font-size:15px;">$ ${fmt(income)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(245,158,11,0.15); color: var(--gold); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
             獎勵<br>
-            <span style="color: #ff7715; font-size:15px;">$${fmt(bonus)}</span>
+            <span style="color: #ff7715; font-size:15px;">$ ${fmt(bonus)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${bonPct}%)</span>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:6px 4px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
+          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">
             小費<br>
-            <span style="color: #8A2BE2; font-size:15px;">$${fmt(tips)}</span>
+            <span style="color: #8A2BE2; font-size:15px;">$ ${fmt(tips)}</span>
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
           </div>
         </div>
