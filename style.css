@@ -340,7 +340,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .h-div { width: 2px; height: 15px; background: #cbd5e1; }
 .lbl-bonus { background: var(--gold-d); color: var(--gold); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .lbl-tips { background: var(--blue-d); color: var(--blue); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-.hrc-toggle { position: absolute; right: 10px; top: 10px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--hint-color); color: var(--text-blue); font-size: 15px; cursor: pointer; transition: transform 0.3s; }
+.hrc-toggle { position: absolute; right: 10px; top: 10px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 65%); color: var(--text-blue); font-size: 25px; cursor: pointer; transition: transform 0.3s; }
 .hrc-collapse { background: var(--sf); border-top: 1.5px dashed var(--border); display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
 .hrc-col-item { flex: 1; padding: 8px 4px; display: flex; flex-direction: column; gap: 2px; color: var(--t2); font-weight: 600; }
 .hrc-col-val { font-family: var(--mono); font-size: 13px; font-weight: 800; color: var(--blue); }
