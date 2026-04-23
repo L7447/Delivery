@@ -136,7 +136,8 @@
 
 /* ══ 全域基本設定 ══ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); transition: background 0.3s ease, color 0.3s ease; color: var(--t1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+/* ✅ FIX: backface-visibility + will-change 強制 iOS GPU 合成層，避免 PWA 啟動白屏 */
+html, body { height: 100%; background: var(--bg); transition: background 0.3s ease, color 0.3s ease; color: var(--t1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; -webkit-transform: translateZ(0); transform: translateZ(0); }
 #app { width: 100%; height: 100dvh; position: relative; overflow: hidden; }
 
 /* ══ 頁面與導航 ══ */
