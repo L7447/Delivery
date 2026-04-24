@@ -136,7 +136,7 @@ function finishProgress(callback) {
 // 保留給舊的儲存流程呼叫
 function runSaveProgress(callback) {
   showProgress('資料儲存中...');
-  setTimeout(() => { finishProgress(callback); }, 1200); 
+  setTimeout(() => { finishProgress(callback); }, 800); 
 }
 
 function customConfirm(msg) {
@@ -3383,7 +3383,7 @@ function openThemeSettings() {
   const bg = S.settings.bg || '';
   
   const bgs =[
-    { id: '', name: '預設無背景 (建議)', type: 'color', val: 'var(--bg)' },
+    { id: '', name: '無背景 (預設)', type: 'color', val: 'var(--bg)' },
     { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
     { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
     { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' },
@@ -3779,7 +3779,7 @@ function openSpecialThanks() {
   document.getElementById('sub-title').textContent = '特別感謝';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
-      <p style="margin-bottom:16px; font-weight:500;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法。<br>之前有看過多元計程車的帳本APP，那時有在想：外送要是也有這種東西就好了，只是當時我在開發其它東西，就沒放在心上；這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，所以因此也有想寮露ㄎㄧˉ，一做發現不得了，真的不好做，改了數不清幾次，做了好幾十天，最後終於把『 外送記錄APP 』做出來了！</p>
+      <p style="margin-bottom:16px; font-weight:500;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法。<br>之前有看過多元計程車的帳本APP，那時有在想：外送要是也有這種東西就好了，只是當時我在開發其它東西，就沒放在心上；這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，所以因此也有想做看看的想法，一做發現真的不好做，改了數不清幾次，做了好幾十天，最後終於把『 外送記錄APP 』做出來了！</p>
       <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #DB2A75; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:800; font-size:18px;">
         f  按讚 心酸熊貓人 🐼
       </a>
@@ -3799,14 +3799,14 @@ function openPrivacyPolicy(fromRegister = false) {
 
   document.getElementById('privacy-body').innerHTML = `
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
-      <strong style="color:var(--acc); font-size:15px;">1. 我們收集的資訊</strong><br>
-      • 基本帳號資料（ 如電子郵件 ）。<br><br>
+      <strong style="color:var(--acc); font-size:15px;">1. 我們使用到的資料</strong><br>
+      • 帳號資料（ 電子郵件 ）。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">2. 我們如何使用資訊</strong><br>
       • 統計使用人數。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">3. 資料安全</strong><br>
-      • 使用加密技術保護您的資訊<br>
+      • 使用Cloudflare安全防護技術，保護使用安全<br>
       • 記錄只存在您的裝置（手機）裡，或您存的雲端硬碟裡。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
