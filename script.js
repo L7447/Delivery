@@ -247,11 +247,11 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
         <!-- 👉 修改點：將 align-items 設為 flex-start 讓上方文字對齊，容納下方的基本工資標籤 -->
         <div style="padding:12px 3px 8px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span>
+            一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span>
           </div>
           <div class="h-div" style="height:35px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span>
+            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span>
           </div>
           <div class="h-div" style="height:35px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
@@ -843,9 +843,9 @@ function buildRecItem(r) {
       <div id="${cid}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
         <div style="border-top:3px dashed #708090; margin-bottom:3px;"></div>
         <div style="padding:10px 3px 6px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$${fmt(avgOrd)}</span></div>
+          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:30px;"></div>
-          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px">單</small></span></div>
+          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span></div>
           <div class="h-div" style="height:30px;"></div>
           <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span>
             ${recWageHtml} <!-- 單筆記錄的基本工資徽章 -->
@@ -1517,11 +1517,11 @@ function renderRptOverview() {
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
         <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            一單 $： <span style="font-family:var(--mono); color: var(--acc); font-size:20px; font-weight:800;"> ${fmt(avgOrd)}</span>
+            一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:20px; font-weight:800;">$ ${fmt(avgOrd)}</span>
           </div>
           <div class="h-div" style="height:45px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr} <small style="color:var(--t2);font-size:11px">單</small></span>
+            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span>
           </div>
           <div class="h-div" style="height:45px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
