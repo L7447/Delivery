@@ -3780,10 +3780,10 @@ function openSpecialThanks() {
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
       <p style="margin-bottom:16px; font-weight:700;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法。</p>
-      <hr style="border-color:2px; border-color: #000000;"></hr>
-      <p style="margin-bottom:16px; font-weight:500;">之前有看過多元計程車的帳本APP，那時有在想：外送要是也有這種東西就好了，只是當時我在開發其它東西，就沒放在心上；</p>
+      <hr style="border-color:2px; border-color: #000000;"></hr></br>
+      <p style="margin-bottom:16px; font-weight:500;">之前有看過多元計程車司機用的帳本APP，那時有在想：外送員要是也有這種東西就好了，只是當時我在開發其它東西，就沒放在心上；</p>
       <p style="margin-bottom:16px; font-weight:500;">這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，因此也有想做看看的想法，一做發現真的停不下來，加了有的沒的東西一大堆，改了數不清幾次，做了好十幾天，勉強地把『 外送記錄APP 』做出來了！</p>
-      <hr style="border-color:2px; border-color: #000000;"></hr>
+      <hr style="border-color:2px; border-color: #000000;"></hr></br>
       <p style="margin-bottom:16px; font-weight:800;">所以真的非常感謝【 心酸熊貓人 】的這個想法，沒有這個想法，就沒有這個APP了！🙏</p>
       <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #DB2A75; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:800; font-size:18px;">
         f  按讚 心酸熊貓人 🐼
