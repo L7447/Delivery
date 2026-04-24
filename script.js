@@ -471,14 +471,19 @@ function renderHome() {
     let topHtml = `
       <div style="padding:16px 16px 0; flex-shrink:0;">`;
 
-    // ✨ 新增：讀取並顯示公告
+    // ✨ 新增：讀取並顯示公告 (支援關閉記憶)
     try {
       const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
-      if (ann.active && ann.text.trim() !== '') {
+      const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); // 讀取已關閉的公告內容
+      
+      // 只有當公告啟用、有內容，且「與上次關閉的內容不同」時才顯示
+      if (ann.active && ann.text.trim() !== '' && ann.text !== dismissedAnn) {
+        const safeText = encodeURIComponent(ann.text); // 將內容編碼，避免引號破壞 HTML
         topHtml += `
-          <div style="background:linear-gradient(135deg, var(--acc), var(--acc2)); color:#fff; padding:12px 16px; border-radius:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(255,107,53,0.3); display:flex; gap:10px; align-items:flex-start;">
+          <div id="home-announcement-card" style="position:relative; background:linear-gradient(135deg, var(--acc), var(--acc2)); color:#fff; padding:12px 16px; border-radius:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(255,107,53,0.3); display:flex; gap:10px; align-items:flex-start; transition:0.3s;">
+            <button onclick="dismissAnnouncement('${safeText}')" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.15); border:none; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; transition:0.2s;">✕</button>
             <span style="font-size:20px;">📢</span>
-            <div style="font-size:13px; font-weight:600; line-height:1.5;">
+            <div style="font-size:13px; font-weight:600; line-height:1.5; padding-right:18px;">
               ${ann.text.replace(/\n/g, '<br>')}
             </div>
           </div>
@@ -640,6 +645,22 @@ function renderHome() {
   } catch (error) {
     console.error("首頁渲染錯誤：", error);
     document.getElementById('home-bottom-content').innerHTML = `<div class="empty-tip">渲染發生錯誤，請重新整理頁面。</div>`;
+  }
+}
+
+// 關閉並記憶公告
+window.dismissAnnouncement = function(encodedText) {
+  // 將編碼過的文字還原並存入 LocalStorage
+  const text = decodeURIComponent(encodedText);
+  localStorage.setItem('delivery_dismissed_ann', text);
+  
+  // 執行動畫並移除元素
+  const el = document.getElementById('home-announcement-card');
+  if (el) {
+    el.style.opacity = '0';
+    el.style.transform = 'scale(0.95)';
+    el.style.marginBottom = '-'+el.offsetHeight+'px'; // 讓下方元素順滑上移
+    setTimeout(() => { el.remove(); }, 300);
   }
 }
 
@@ -3962,21 +3983,32 @@ function applyTheme() {
 function applyBackground() {
   const bg = S.settings.bg;
   const root = document.documentElement;
+  const isDark = root.getAttribute('data-theme') === 'dark';
   
   if (bg && bg !== '#fafafa' && bg !== '#424242') {
-    // 有選擇自訂背景時
+    // 1. 設定身體背景圖片
     document.body.style.background = `url('${bg}') center/cover fixed no-repeat`;
-    root.style.setProperty('--bg-header', 'rgba(255, 255, 255, 0.3)');
     
-    // 💡 關鍵修復：把 App 內頁原本的實體底色改為透明，讓身體 (body) 的背景圖片透出來
+    // 2. 針對圖片加入半透明遮罩，確保文字清晰可見
+    // 深色模式加深色遮罩(0.7)；淺色模式加白色遮罩(0.3)
+    document.body.style.boxShadow = isDark 
+      ? 'inset 0 0 0 9999px rgba(11, 18, 32, 0.75)' 
+      : 'inset 0 0 0 9999px rgba(255, 255, 255, 0.3)';
+    
+    // 3. 讓主頁面透明化以透出背景圖
     root.style.setProperty('--bg', 'transparent');
-  } else {
-    // 沒選背景，恢復深色或淺色的純色背景
-    document.body.style.background = ''; 
-    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.style.setProperty('--bg-header', isDark ? 'rgba(11, 18, 32, 0.6)' : 'rgba(255, 255, 255, 0.6)');
     
-    root.style.setProperty('--bg-header', isDark ? 'rgba(11, 18, 32, 0.85)' : 'rgba(240, 244, 248, 0.85)');
+    // 4. 設定彈出視窗為不透明毛玻璃，解決視窗變透明的問題
+    root.style.setProperty('--overlay-bg', isDark ? 'rgba(11, 18, 32, 0.95)' : 'rgba(240, 244, 248, 0.95)');
+  } else {
+    // 沒選背景圖時，恢復純色
+    document.body.style.background = ''; 
+    document.body.style.boxShadow = 'none';
+    
     root.style.setProperty('--bg', isDark ? '#0b1220' : '#f0f4f8');
+    root.style.setProperty('--bg-header', isDark ? 'rgba(11, 18, 32, 0.85)' : 'rgba(240, 244, 248, 0.85)');
+    root.style.setProperty('--overlay-bg', isDark ? '#0b1220' : '#f0f4f8');
   }
 }
 
