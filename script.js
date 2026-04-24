@@ -1944,7 +1944,12 @@ function renderVehicles() {
   container.style.minHeight = '0';
   container.style.WebkitOverflowScrolling = 'touch';
 
-  document.getElementById('veh-month-label').textContent = `${S.vehY} 年 ${S.vehM} 月`;
+  const labelEl = document.getElementById('veh-month-label');
+  if (S.vehicleTab === 'yearly' || S.vehicleTab === 'search') {
+    labelEl.textContent = `${S.vehY} 年 全年`;
+  } else {
+    labelEl.textContent = `${S.vehY} 年 ${S.vehM} 月`;
+  }
   if (S.vehicles.length === 0) { selectorContainer.innerHTML = ''; container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return; }
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
 
@@ -2544,7 +2549,7 @@ let currentSelItems = []; function toggleMaintItem(el, item) { el.classList.togg
 function renderShopHistory() { if (!S.settings.shopHistory) S.settings.shopHistory = []; document.getElementById('shop-history-container').innerHTML = S.settings.shopHistory.map((shop, i) => `<div class="shop-chip"><span onclick="document.getElementById('vm-shop').value='${shop}'">${shop}</span><span class="shop-chip-del" onclick="deleteShopHistory(${i})">✕</span></div>`).join(''); }
 function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); saveSettings(); renderShopHistory(); }
 
-// 執行車輛保養記錄搜尋與渲染時間軸
+// 執行車輛保養記錄搜尋與渲染精美時間軸
 window.doVehSearch = function() {
   const kw = document.getElementById('veh-search-kw').value.trim().toLowerCase();
   const resEl = document.getElementById('veh-search-results');
@@ -2566,29 +2571,63 @@ window.doVehSearch = function() {
     return;
   }
 
-  // 產生時間軸 HTML
-  let html = `<div style="position:relative; padding-left:16px;">
-    <div style="position:absolute; left:21px; top:10px; bottom:10px; width:2px; background:var(--border);"></div>`;
+  // 產生白底卡片與標題
+  let html = `
+  <div style="background:var(--sf); border-radius:16px; padding:16px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:15px; font-weight:800; color:var(--t1);">
+      <span style="color:#0f766e;">💧</span> ${kw} 時間軸 <span style="font-size:13px; color:var(--t3); font-weight:600;">${recs.length}</span>
+    </div>
+    <div style="position:relative; padding-left:12px;">
+      <!-- 貫穿時間軸的垂直線 -->
+      <div style="position:absolute; left:16.5px; top:12px; bottom:20px; width:2px; background:#e2e8f0;"></div>`;
+      
+  recs.forEach((r, idx) => {
+    const isLatest = idx === 0;
+    const dotColor = isLatest ? '#0f766e' : '#cbd5e1'; // 最新一筆深綠，其餘淺灰綠
     
-  recs.forEach(r => {
+    // 計算與前一次(上一筆較舊的紀錄)的差異
+    let diffHtml = '';
+    if (idx < recs.length - 1) {
+      const olderRec = recs[idx + 1];
+      const kmDiff = pf(r.km) - pf(olderRec.km);
+      const daysDiff = Math.round((new Date(r.date) - new Date(olderRec.date)) / 86400000);
+      diffHtml = `
+        <div style="display:flex; align-items:center; gap:12px; margin-top:6px; font-size:12px; color:var(--t3); font-weight:600;">
+          <span>🛣️ ${fmt(kmDiff)} km</span>
+          <span>🗓️ ${daysDiff} 天</span>
+        </div>`;
+    }
+
+    // 優先顯示備註，若無備註才顯示保養項目
+    const formatTitle = r.note ? r.note : r.items.join(', ');
+    const shopText = r.shop ? ` @ ${r.shop}` : '';
+
     html += `
-      <div onclick="openAddVehRec('${r.id}')" style="position:relative; background:var(--sf); padding:12px; border-radius:12px; border:1px solid var(--border); margin-bottom:12px; margin-left:16px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-        <div style="position:absolute; left:-18px; top:16px; width:10px; height:10px; border-radius:50%; background:var(--green); border:2px solid var(--sf); box-shadow:0 0 0 1px var(--border);"></div>
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-          <div>
-            <div style="font-family:var(--mono); font-size:12px; font-weight:800; color:var(--blue);">${r.date}</div>
-            <div style="font-size:14px; font-weight:800; color:var(--t1); margin-top:2px;">${r.items.join(', ')}</div>
+      <div onclick="openAddVehRec('${r.id}')" style="position:relative; padding-left:24px; padding-bottom:24px; cursor:pointer;">
+        <!-- 時間軸圓點 -->
+        <div style="position:absolute; left:-1px; top:4px; width:11px; height:11px; border-radius:50%; background:${dotColor}; box-shadow:0 0 0 4px var(--sf);"></div>
+        
+        <!-- 頂部資訊：日期、里程藥丸、最近標籤 -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--t1); letter-spacing:0.5px;">${r.date.replace(/-/g, '/')}</span>
+            <span style="background:#f1f5f9; color:#0369a1; padding:2px 8px; border-radius:12px; font-size:12px; font-family:var(--mono); font-weight:700;">${fmt(r.km)} km</span>
           </div>
-          <div style="text-align:right;">
-            <div style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--acc);">$${fmt(r.amount)}</div>
-            <div style="font-family:var(--mono); font-size:11px; color:var(--t3);">${fmt(r.km)} km</div>
-          </div>
+          ${isLatest ? `<span style="background:#ecfdf5; color:#047857; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:800;">最近</span>` : ''}
         </div>
-        ${r.note ? `<div style="font-size:12px; color:var(--t2); background:var(--sf2); padding:6px 8px; border-radius:6px; margin-top:4px;">📝 ${r.note}</div>` : ''}
+        
+        <!-- 內容：項目名稱與店家 -->
+        <div style="font-size:14px; font-weight:600; color:var(--t2);">
+          ${formatTitle} <span style="color:var(--t3); font-size:12px;">${shopText}</span>
+        </div>
+        
+        <!-- 里程與天數差異 (如果有上一筆) -->
+        ${diffHtml}
       </div>
     `;
   });
-  html += `</div>`;
+
+  html += `</div></div>`;
   resEl.innerHTML = html;
 }
 
@@ -3919,16 +3958,25 @@ function applyTheme() {
   if(checkImg2 && (checkImg2.src.includes('Check1.png') || checkImg2.src.includes('Check3.png'))) checkImg2.src = checkSrc;
 }
 
+/* ══ 背景主題與深色模式套用函式 ══ */
 function applyBackground() {
   const bg = S.settings.bg;
   const root = document.documentElement;
-  // 背景圖片不影響深色模式獨立運作
+  
   if (bg && bg !== '#fafafa' && bg !== '#424242') {
+    // 有選擇自訂背景時
     document.body.style.background = `url('${bg}') center/cover fixed no-repeat`;
     root.style.setProperty('--bg-header', 'rgba(255, 255, 255, 0.3)');
+    
+    // 💡 關鍵修復：把 App 內頁原本的實體底色改為透明，讓身體 (body) 的背景圖片透出來
+    root.style.setProperty('--bg', 'transparent');
   } else {
-    document.body.style.background = ''; // 使用深淺模式的預設背景
-    root.style.setProperty('--bg-header', 'var(--bg)');
+    // 沒選背景，恢復深色或淺色的純色背景
+    document.body.style.background = ''; 
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    
+    root.style.setProperty('--bg-header', isDark ? 'rgba(11, 18, 32, 0.85)' : 'rgba(240, 244, 248, 0.85)');
+    root.style.setProperty('--bg', isDark ? '#0b1220' : '#f0f4f8');
   }
 }
 
