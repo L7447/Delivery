@@ -820,27 +820,36 @@
       runScenery('sp-s15', 2900, 1500); 
       runScenery('sp-s14', 3100, 1500); 
 
-      await wait(3700);
+      // 1. 提早顯示「即將抵達」對話
+      await wait(2200); 
       if (isSkipped) return;
-
       setStatus('📍', '即將抵達客人家...');
-      await wait(700);
-      if (isSkipped) return;
-      animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 1500, easing: 'ease-out' });
-      await wait(100);
-      if (roadAnim) roadAnim.pause();
-      await wait(1200);
+
+      // 2. 繼續騎行一段時間，讓背景繼續飛過
+      await wait(1500);
       if (isSkipped) return;
 
+      // 3. 客人家出現：改用 linear (等速) 移動，配合馬路的速度，模擬建築物固定在地面
+      // 從左側 120% 移動到 65% 的位置，花費 800 毫秒
+      animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 800, easing: 'linear' });
+
+      await wait(800); // 等待房子到達定點
+      if (isSkipped) return;
+
+      // 4. 房子到達定點後，馬路立刻停止捲動（代表視角鏡頭停住了）
+      if (roadAnim) roadAnim.pause();
+
+      // 5. 機車繼續往前騎，直接停到客人家門口 (房子在 65%，機車從 15% 騎到 50%)
       await animate(vehicle, [
         { right: '15%', transform: 'translateY(0)' },
-        { right: '42%', transform: 'translateY(0)' }
-      ], { duration: 800, easing: 'ease-out' });
+        { right: '50%', transform: 'translateY(0)' } // <-- 騎得更靠近房子
+      ], { duration: 900, easing: 'ease-out' });
 
+      // 6. 停車動作
       setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
       await animate(vehicle, [
-        { right: '42%', transform: 'translateY(0)' },
-        { right: '42%', transform: 'translateY(-40px)' }
+        { right: '50%', transform: 'translateY(0)' },
+        { right: '50%', transform: 'translateY(-40px)' }
       ], { duration: 420, easing: 'ease-out' });
 
       await wait(350);
