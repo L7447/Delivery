@@ -2704,8 +2704,8 @@ function renderSettings() {
     <div class="set-row" onclick="openPlatformList()"><span class="sn">🏪 平台列表與設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
-    <div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 外觀與主題設定${themeStatus}</span><span class="arr">›</span></div>
-    <div class="set-row" onclick="openReminderSettings()"><span class="sn">⏰ 每日記帳通知提醒</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 背景圖設定${themeStatus}</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openReminderSettings()"><span class="sn">⏰ 每日記錄通知提醒</span><span class="arr">›</span></div>
   </div></div>
 
   <div class="set-sec"><h3>資料管理與備份</h3><div class="set-list">
@@ -2724,7 +2724,7 @@ function renderSettings() {
 
 /* ✨ 新增：提醒設定彈窗 */
 function openReminderSettings() {
-  document.getElementById('sub-title').textContent = '每日記帳提醒';
+  document.getElementById('sub-title').textContent = '每日記錄提醒';
   document.getElementById('sub-top-right').innerHTML = '';
   const r = S.settings.reminder || { enabled: false, time: '22:00' };
 
@@ -2794,7 +2794,7 @@ function initReminderCheck() {
       r.lastSent = todayStrDate;
       saveSettings();
       
-      const title = "🛵 記帳提醒";
+      const title = "🛵 記錄提醒";
       const body = "今天跑單辛苦了！別忘了記錄今天的收入與工時喔！";
 
       // 🔊 1. 播放提示音效 (使用瀏覽器內建震盪器發出兩聲清脆的「嗶嗶」聲)
@@ -3372,7 +3372,7 @@ function logoutAccount() {
 
 /* ══ 升級版：外觀與主題設定 (深色模式與自訂背景) ══ */
 function openThemeSettings() {
-  document.getElementById('sub-title').textContent = '外觀與主題設定';
+  document.getElementById('sub-title').textContent = '背景圖設定';
 
   // 👈 將套用按鈕注入右上角
   document.getElementById('sub-top-right').innerHTML = `<button onclick="applyThemeSettings()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">套用</button>`;  
@@ -3399,25 +3399,6 @@ function openThemeSettings() {
 
   let html = `
   <div style="padding:4px 12px 16px;">
-    <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">🌗 外觀模式</h4>
-    <div class="slide-tabs tabs-3" style="margin-bottom:12px;">
-      <div class="slide-bg" id="theme-tab-bg" style="transform: translateX(${tm==='light'?0:(tm==='dark'?100:200)}%);"></div>
-      <button class="slide-btn ${tm==='light'?'active':''}" onclick="selThemeMode('light')">淺色</button>
-      <button class="slide-btn ${tm==='dark'?'active':''}" onclick="selThemeMode('dark')">深色</button>
-      <button class="slide-btn ${tm==='auto'?'active':''}" onclick="selThemeMode('auto')">定時自動</button>
-    </div>
-    
-    <div id="auto-theme-times" style="display:${tm==='auto'?'block':'none'}; background:var(--sf2); padding:12px 16px; border-radius:12px; margin-bottom:20px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <span style="font-size:13px; font-weight:700; color:var(--t1);">🌙 開啟深色時間</span>
-        <input type="time" class="finp" id="tmp-auto-start" value="${as}" style="width:130px; padding:8px;">
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:13px; font-weight:700; color:var(--t1);">☀️ 關閉深色時間</span>
-        <input type="time" class="finp" id="tmp-auto-end" value="${ae}" style="width:130px; padding:8px;">
-      </div>
-    </div>
-
     <h4 style="font-size:13px; color:var(--t3); margin-bottom:8px;">🎨 自訂背景圖片</h4>
     <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px;">
   `;
@@ -3709,9 +3690,9 @@ function saveNewReward() {
   toast('✅ 獎勵已新增'); 
 }
 
-function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記帳_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
+function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
 function doRestore() { const fi = document.getElementById('restore-file'); fi.onchange = async () => { const file = fi.files[0]; if(!file) return; try { const text = await file.text(); const data = JSON.parse(text); const ok = await customConfirm('確定用此備份<strong>覆蓋</strong>現有資料？'); if (!ok) return; if (data.records) { S.records=data.records; saveRecords(); } if (data.platforms) { S.platforms=data.platforms; savePlatforms(); } if (data.settings) { S.settings=data.settings; saveSettings(); } if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } toast('✅ 還原成功'); renderSettings(); renderHome(); } catch { toast('❌ 檔案格式錯誤'); } fi.value=''; }; fi.click(); }
-function doExportCSV() { const headers =['日期','平台','接單數','里程','行程收入','固定獎勵','臨時獎勵','小費','總收入','工時','上線','下線','備註']; const rows = S.records.map(r=>{ const p = getPlatform(r.platformId); return[r.date, p.name, r.orders||0, r.mileage||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0, recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(','); }); const csv =[headers.join(','), ...rows].join('\n'); const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`外送記帳_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url); toast('✅ CSV 匯出完成'); }
+function doExportCSV() { const headers =['日期','平台','接單數','里程','行程收入','固定獎勵','臨時獎勵','小費','總收入','工時','上線','下線','備註']; const rows = S.records.map(r=>{ const p = getPlatform(r.platformId); return[r.date, p.name, r.orders||0, r.mileage||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0, recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(','); }); const csv =[headers.join(','), ...rows].join('\n'); const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`外送記錄_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url); toast('✅ CSV 匯出完成'); }
 
 async function doClearData() { 
   const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄與車輛資料</strong>嗎？<br>（這將保留您的平台設定與目標）此動作無法復原！'); 
@@ -3798,7 +3779,7 @@ function openSpecialThanks() {
   document.getElementById('sub-title').textContent = '特別感謝';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
-      <p style="margin-bottom:16px; font-weight:500;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法，讓『 外送記帳APP 』有機會做出來！</p>
+      <p style="margin-bottom:16px; font-weight:500;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法。<br>之前有看過多元計程車的帳本APP，那時有在想：外送要是也有這種東西就好了，只是當時我在開發其它東西，就沒放在心上；這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，所以因此也有想寮露ㄎㄧˉ，一做發現不得了，真的不好做，改了數不清幾次，做了好幾十天，最後終於把『 外送記錄APP 』做出來了！</p>
       <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #DB2A75; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:800; font-size:18px;">
         f  按讚 心酸熊貓人 🐼
       </a>
