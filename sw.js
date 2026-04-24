@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v134';
+const CACHE_NAME = 'delivery-app-v135';
 
 // 需要快取的靜態資源清單
 const ASSETS = [
@@ -32,6 +32,7 @@ const ASSETS = [
   '/images/close3.png',  
   '/images/Battery.png',  
   '/images/Gas_station.png',
+  '/images/arrow_back.png',
   '/scooter/s1.png',
   '/scooter/s2.png',
   '/scooter/s3.png',
