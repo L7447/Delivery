@@ -253,7 +253,21 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 }
 
 /* ══ 彈出視窗 ══ */
-.overlay-page { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow: hidden; pointer-events: none; }
+.overlay-page { 
+  position: fixed; 
+  inset: 0; 
+  /* 改用獨立的 overlay-bg 變數，解決透明問題 */
+  background: var(--overlay-bg, var(--bg)); 
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  z-index: 200; 
+  display: flex; 
+  flex-direction: column; 
+  transform: translateY(100%); 
+  transition: transform .3s cubic-bezier(.4,0,.2,1); 
+  overflow: hidden; 
+  pointer-events: none; 
+}
 .overlay-page.show { transform: translateY(0); pointer-events: auto; }
 .top-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--sf); }
 .top-bar h2 { font-size: 16px; font-weight: 600; font-family: var(--title); }
