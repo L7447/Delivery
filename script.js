@@ -2917,13 +2917,28 @@ function renderAuthContent() {
   
   document.getElementById('auth-content-area').innerHTML = contentHtml;
 
-  // 👇 HTML 渲染後，立刻呼叫 Turnstile 生成驗證框
-  // ⚠️ 請把 '您的SITE_KEY' 換成您在 Cloudflare 取得的 Site Key！
+  // 👇 改為動態載入 Turnstile 腳本，避免卡死 PWA 啟動畫面
+  const renderTurnstileWidget = () => {
+    // 確保容器存在才渲染
+    if (document.getElementById('turnstile-widget')) {
+      turnstile.render('#turnstile-widget', {
+        sitekey: '0x4AAAAAADC958xr-t5UGd36', // 您的 Site Key
+        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+      });
+    }
+  };
+
   if (typeof turnstile !== 'undefined') {
-    turnstile.render('#turnstile-widget', {
-      sitekey: '0x4AAAAAADC958xr-t5UGd36', // <-- 換成您的 Site Key (例如：0x4AAAAAA...)
-      theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-    });
+    // 如果腳本已經載入過，直接渲染
+    renderTurnstileWidget();
+  } else {
+    // 如果是第一次打開登入視窗，動態載入腳本
+    window.onTurnstileLoad = renderTurnstileWidget;
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
   }
 }
 
