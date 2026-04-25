@@ -11,9 +11,24 @@ export default {
     }
 
     // === 以下為 API 專屬處理邏輯 ===
-    // 設定 CORS 讓您的網頁可以連線
+    // === 安全設定：CORS 白名單過濾 ===
+    // 取得呼叫 API 的來源網址
+    const origin = request.headers.get('Origin');
+    
+    // 定義允許通行的網域白名單 (包含 HTTPS 專屬網域與 Pages 預設網域)
+    const allowedOrigins = [
+      'https://delivery-2ws.pages.dev',
+      'https://deliveryman-records.xyz',
+      'https://www.deliveryman-records.xyz', // 包含 www 的版本
+      'http://localhost:8788'                // 預留給您未來在電腦本地端測試用
+    ];
+
+    // 檢查來源是否在白名單內
+    const isAllowed = allowedOrigins.includes(origin);
+
+    // 如果不在白名單內，就回傳您的主網域(讓瀏覽器判定來源不符而阻擋)
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': isAllowed ? origin : 'https://deliveryman-records.xyz',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
@@ -35,8 +50,27 @@ export default {
 
       // === API 1: 登入與註冊 ===
       if (path === '/api/auth/login' && request.method === 'POST') {
-        const { email, password } = await request.json();
+        // 👇 接收前端傳來的 turnstileToken
+        const { email, password, turnstileToken } = await request.json();
         if (!email || !password) return jsonRes({ success: false, message: '請填寫信箱與密碼' }, 400);
+
+        // 👇 呼叫 Cloudflare 驗證這串 Token 是不是合法的真人
+        if (!turnstileToken) return jsonRes({ success: false, message: '缺少人機驗證憑證' }, 403);
+        
+        const formData = new FormData();
+        formData.append('secret', env.TURNSTILE_SECRET_KEY); // 從環境變數讀取您的 Secret Key
+        formData.append('response', turnstileToken);
+
+        const turnstileCheck = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          body: formData
+        });
+        const turnstileResult = await turnstileCheck.json();
+
+        if (!turnstileResult.success) {
+          return jsonRes({ success: false, message: '人機驗證失敗，請重試' }, 403);
+        }
+        // 👆 驗證完成，接下來才是原本的資料庫檢查邏輯
 
         let userStr = await env.DB.get(`user:${email}`);
         let user = userStr ? JSON.parse(userStr) : null;
