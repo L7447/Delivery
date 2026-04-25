@@ -2867,6 +2867,10 @@ function renderAuthContent() {
         <label style="font-weight:700; color:var(--t1);">密碼</label>
         <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼" style="padding:12px;">
       </div>
+
+      <!-- 👇 新增 Turnstile 容器 -->
+      <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
+
       <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入帳號</button>
     `;
   } else {
@@ -2904,11 +2908,23 @@ function renderAuthContent() {
         <span id="privacy-chk-text" style="font-size:13px; font-weight:700; color:${privacyAgreed ? 'var(--t1)' : 'var(--t3)'};">我已閱讀並同意 <span style="color:var(--text-blue); text-decoration:underline;">隱私權政策</span></span>
       </div>
 
+      <!-- 👇 新增 Turnstile 容器 -->
+      <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
+
       <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">註冊並寄發驗證碼</button>
     `;
   }
   
   document.getElementById('auth-content-area').innerHTML = contentHtml;
+
+  // 👇 HTML 渲染後，立刻呼叫 Turnstile 生成驗證框
+  // ⚠️ 請把 '您的SITE_KEY' 換成您在 Cloudflare 取得的 Site Key！
+  if (typeof turnstile !== 'undefined') {
+    turnstile.render('#turnstile-widget', {
+      sitekey: '0x4AAAAAADC958xr-t5UGd36', // <-- 換成您的 Site Key (例如：0x4AAAAAA...)
+      theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+    });
+  }
 }
 
 /* ══ 新增：更改頭像獨立設定頁 ══ */
@@ -2985,6 +3001,17 @@ const API_BASE_URL = '/api';
 async function requestLogin() {
   const email = document.getElementById('auth-email').value.trim();
   const pwd = document.getElementById('auth-pwd').value.trim();
+
+  // 👇 取得 Turnstile 驗證結果
+  let turnstileToken = '';
+  if (typeof turnstile !== 'undefined') {
+    turnstileToken = turnstile.getResponse();
+    if (!turnstileToken) {
+      toast('⚠️ 請等待或點擊完成人機驗證');
+      return;
+    }
+  }
+
   if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式（您的帳號@gmail.com）'); return; }
   if(pwd.length < 6) { toast('密碼請至少輸入 6 個字元'); return; }
   
@@ -3001,7 +3028,9 @@ async function requestLogin() {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pwd })
+
+      // 👇 將 turnstileToken 一併送給後端
+      body: JSON.stringify({ email, password: pwd, turnstileToken }) 
     });
     const data = await res.json();
     
