@@ -3849,13 +3849,15 @@ function openPrivacyPolicy(fromRegister = false) {
   document.getElementById('privacy-body').innerHTML = `
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
       <strong style="color:var(--acc); font-size:15px;">1. 我們使用到的資料</strong><br>
-      • 帳號資料（ 電子郵件 ）。<br><br>
+      • 帳號（ 電子郵件 ）註冊驗證使用。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">2. 我們如何使用資訊</strong><br>
-      • 統計使用人數。<br><br>
+      • 統計「 使用人數 」。<br><br>
 
-      <strong style="color:var(--acc); font-size:15px;">3. 資料安全</strong><br>
-      • 使用Cloudflare安全防護技術，保護使用安全<br>
+      <strong style="color:var(--acc); font-size:15px;">3. 資料及使用安全</strong><br>
+      • 使用Cloudflare部屬，啟用所有安全防護設定，保護APP使用安全<br>
+      • 🛡️傳輸加密：Cloudflare 預設強制啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。
+      • 🔐儲存加密：程式碼端透過 WebCrypto API 或 bcrypt 等標準演算法，對密碼執行「加鹽與單向雜湊 (Salt & Cryptographic Hash)」處理，即使資料庫外洩，駭客也無法反推回真實密碼。
       • 記錄只存在您的裝置（手機）裡，或您存的雲端硬碟裡。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
