@@ -804,6 +804,17 @@
         { transform: 'translate(15px, 22px)' }
       ], { duration: 600, easing: 'linear' });
 
+      await wait(200);
+      if (isSkipped) return;
+
+      // 🌟 新增：將餐點放進保溫箱
+      setStatus('🎒', '將餐點放入保溫箱...');
+      if (riderBag) riderBag.style.opacity = '0'; // 外送員手上的餐隱藏
+      if (deliveryBox) deliveryBox.textContent = '🥡'; // 保溫包出現餐點圖示
+      
+      await wait(500);
+      if (isSkipped) return;
+
       // 5. 跨步上車 (Y軸歸零)
       await animate(riderWrapper, [
         { transform: 'translate(15px, 22px)' },
@@ -872,9 +883,8 @@
       await wait(1500);
       if (isSkipped) return;
 
-      // 3. 客人家出現：改用 linear (等速) 移動，配合馬路的速度，模擬建築物固定在地面
-      // 從左側 120% 移動到 65% 的位置，花費 800 毫秒
-      animate(homeArea, [{ right: '120%' }, { right: '65%' }], { duration: 800, easing: 'linear' });
+      // 3. 客人家出現：改用 linear (等速) 移動，從右側 120% 移動到 75% 的位置
+      animate(homeArea, [{ right: '120%' }, { right: '75%' }], { duration: 800, easing: 'linear' });
 
       await wait(800); // 等待房子到達定點
       if (isSkipped) return;
@@ -882,39 +892,57 @@
       // 4. 房子到達定點後，馬路立刻停止捲動（代表視角鏡頭停住了）
       if (roadAnim) roadAnim.pause();
 
-      // 5. 機車繼續往前騎，直接停到客人家門口 (房子在 65%，機車從 15% 騎到 50%)
+      // 5. 機車繼續往前騎，停到客人家前方 (房子在 75%，機車在 45%)
       await animate(vehicle, [
         { right: '15%', transform: 'translateY(0)' },
-        { right: '50%', transform: 'translateY(0)' } // <-- 騎得更靠近房子
+        { right: '45%', transform: 'translateY(0)' } 
       ], { duration: 900, easing: 'ease-out' });
 
       // 6. 停車動作
       setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
       await animate(vehicle, [
-        { right: '50%', transform: 'translateY(0)' },
-        { right: '50%', transform: 'translateY(-40px)' }
+        { right: '45%', transform: 'translateY(0)' },
+        { right: '45%', transform: 'translateY(-40px)' }
       ], { duration: 420, easing: 'ease-out' });
 
       await wait(350);
       if (isSkipped) return;
 
-      setStatus('📦', '外送員將餐點放在門口...');
-
-      if (deliveryBox) deliveryBox.textContent = ''; 
-      if (riderBag) riderBag.style.opacity = '1'; 
-
+      // 🌟 新增：抵達後先下車
+      setStatus('🚶', '外送員下車...');
       await animate(riderWrapper, [
         { transform: 'translate(0, 0)' },
-        { transform: 'translate(-47px, 20px)' }
-      ], { duration: 850, easing: 'ease-in-out' });
+        { transform: 'translate(-15px, 22px)' } // 往車尾(向左)下車著地
+      ], { duration: 300, easing: 'ease-in' });
+
+      await wait(300);
+      if (isSkipped) return;
+
+      // 🌟 新增：從保溫包取出餐點
+      setStatus('🎒', '從保溫包取出餐點...');
+      if (deliveryBox) deliveryBox.textContent = ''; // 保溫包淨空
+      if (riderBag) riderBag.style.opacity = '1';    // 外送員手上拿餐
 
       await wait(400);
       if (isSkipped) return;
 
-      if (riderBag) riderBag.style.opacity = '0'; 
+      // 9. 走向客人家門口
+      setStatus('📦', '將餐點放置在門口...');
+      await animate(riderWrapper, [
+        { transform: 'translate(-15px, 22px)' },
+        { transform: 'translate(-35px, 18px)' }, // 走路微跳躍感
+        { transform: 'translate(-55px, 22px)' }
+      ], { duration: 600, easing: 'linear' });
+
       await wait(400);
+      if (isSkipped) return;
+
+      // 手上餐點放下
+      if (riderBag) riderBag.style.opacity = '0'; 
+      await wait(300);
       if (isSkipped) return;
       
+      // 出現在客人腳邊
       if (customerBag) {
         customerBag.style.opacity = '1'; 
         customerBag.style.transform = 'translate(-30px, 9px)'; 
