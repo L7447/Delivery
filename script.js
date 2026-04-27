@@ -136,7 +136,7 @@ function finishProgress(callback) {
 // 保留給舊的儲存流程呼叫
 function runSaveProgress(callback) {
   showProgress('資料儲存中...');
-  setTimeout(() => { finishProgress(callback); }, 800); 
+  setTimeout(() => { finishProgress(callback); }, 500); 
 }
 
 function customConfirm(msg) {
@@ -2712,7 +2712,7 @@ function renderSettings() {
       <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 另存新檔至本機 (JSON)</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
-      <div class="set-row" onclick="doExportCSV()"><span class="sn">📊 匯出試算表（CSV）</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
   </div></div>
@@ -2868,71 +2868,69 @@ function renderAuthContent() {
         <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼" style="padding:12px;">
       </div>
 
-      <!-- 👇 新增 Turnstile 容器 -->
       <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
 
       <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入帳號</button>
     `;
   } else {
-    // 註冊頁面：加入頭像選擇與隱私權勾選
+    // 註冊頁面：改為 4x2 網格 (不滑動)，且間距縮緊
     let avatarsHtml = '';
     for(let i=1; i<=8; i++) {
       const isSel = selectedAvatar === `figure/${i}.png`;
-      avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      // 把 width 和 height 從 80px 稍微縮小為 60px 以適應網格
+      avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
-      <p style="font-size:13px;color:var(--hint-color);margin-bottom:16px;line-height:1.6; font-weight:600; background:var(--bg-input); padding:12px; border-radius:12px;">
+      <p style="font-size:12px;color:var(--hint-color);margin-bottom:12px;line-height:1.4; font-weight:600; background:var(--bg-input); padding:10px; border-radius:10px;">
         💡 <b>建立新帳號：</b> 系統將寄送驗證碼至信箱以開通帳號！
       </p>
-      <div class="fg" style="margin-bottom:20px;">
-        <label style="font-weight:700; color:var(--t1);">滑動選擇專屬頭像</label>
-        <div style="display:flex; overflow-x:auto; gap:16px; background:var(--bg-input); padding:16px; border-radius:16px; align-items:center;">
+      
+      <!-- 頭像區塊：改為 4等分網格 -->
+      <div class="fg" style="margin-bottom:12px;">
+        <label style="font-weight:700; color:var(--t1);">選擇專屬頭像</label>
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; background:var(--bg-input); padding:10px; border-radius:12px; justify-items:center;">
           ${avatarsHtml}
         </div>
       </div>
-      <div class="fg" style="margin-bottom:16px;">
+      
+      <div class="fg" style="margin-bottom:12px;">
         <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
-        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:12px;">
+        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:10px;">
       </div>
-      <div class="fg" style="margin-bottom:20px;">
+      
+      <div class="fg" style="margin-bottom:16px;">
         <label style="font-weight:700; color:var(--t1);">設定密碼 (至少 6 個字元)</label>
-        <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:12px;">
+        <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:10px;">
       </div>
 
-      <!-- 👈 新增：隱私權政策勾選框 -->
-      <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:10px; margin-bottom:24px; padding:12px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer;">
-        <div id="privacy-chk-box" style="width:22px; height:22px; border-radius:6px; border:2px solid ${privacyAgreed ? 'var(--acc)' : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? 'var(--acc)' : 'transparent'}; transition:0.2s; flex-shrink:0;">
-          ${privacyAgreed ? '<span style="color:#fff; font-size:14px; font-weight:900;">✓</span>' : ''}
+      <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding:10px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer;">
+        <div id="privacy-chk-box" style="width:20px; height:20px; border-radius:6px; border:2px solid ${privacyAgreed ? 'var(--acc)' : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? 'var(--acc)' : 'transparent'}; transition:0.2s; flex-shrink:0;">
+          ${privacyAgreed ? '<span style="color:#fff; font-size:12px; font-weight:900;">✓</span>' : ''}
         </div>
-        <span id="privacy-chk-text" style="font-size:13px; font-weight:700; color:${privacyAgreed ? 'var(--t1)' : 'var(--t3)'};">我已閱讀並同意 <span style="color:var(--text-blue); text-decoration:underline;">隱私權政策</span></span>
+        <span id="privacy-chk-text" style="font-size:12px; font-weight:700; color:${privacyAgreed ? 'var(--t1)' : 'var(--t3)'};">我已閱讀並同意 <span style="color:var(--text-blue); text-decoration:underline;">隱私權政策</span></span>
       </div>
 
-      <!-- 👇 新增 Turnstile 容器 -->
-      <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
+      <div id="turnstile-widget" style="margin-bottom:12px; text-align:center; min-height:65px;"></div>
 
-      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">註冊並寄發驗證碼</button>
+      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:12px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">註冊並寄發驗證碼</button>
     `;
   }
   
   document.getElementById('auth-content-area').innerHTML = contentHtml;
 
-  // 👇 改為動態載入 Turnstile 腳本，避免卡死 PWA 啟動畫面
   const renderTurnstileWidget = () => {
-    // 確保容器存在才渲染
     if (document.getElementById('turnstile-widget')) {
       turnstile.render('#turnstile-widget', {
-        sitekey: '0x4AAAAAADC958xr-t5UGd36', // 您的 Site Key
+        sitekey: '0x4AAAAAADC958xr-t5UGd36',
         theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
       });
     }
   };
 
   if (typeof turnstile !== 'undefined') {
-    // 如果腳本已經載入過，直接渲染
     renderTurnstileWidget();
   } else {
-    // 如果是第一次打開登入視窗，動態載入腳本
     window.onTurnstileLoad = renderTurnstileWidget;
     const script = document.createElement('script');
     script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
@@ -3736,7 +3734,114 @@ function saveNewReward() {
 
 function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
 function doRestore() { const fi = document.getElementById('restore-file'); fi.onchange = async () => { const file = fi.files[0]; if(!file) return; try { const text = await file.text(); const data = JSON.parse(text); const ok = await customConfirm('確定用此備份<strong>覆蓋</strong>現有資料？'); if (!ok) return; if (data.records) { S.records=data.records; saveRecords(); } if (data.platforms) { S.platforms=data.platforms; savePlatforms(); } if (data.settings) { S.settings=data.settings; saveSettings(); } if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } toast('✅ 還原成功'); renderSettings(); renderHome(); } catch { toast('❌ 檔案格式錯誤'); } fi.value=''; }; fi.click(); }
-function doExportCSV() { const headers =['日期','平台','接單數','里程','行程收入','固定獎勵','臨時獎勵','小費','總收入','工時','上線','下線','備註']; const rows = S.records.map(r=>{ const p = getPlatform(r.platformId); return[r.date, p.name, r.orders||0, r.mileage||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0, recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(','); }); const csv =[headers.join(','), ...rows].join('\n'); const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`外送記錄_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url); toast('✅ CSV 匯出完成'); }
+/* ══ 匯出 Excel：彈出年份選擇 ══ */
+function openExportModal() {
+  document.getElementById('sub-title').textContent = '匯出 Excel';
+  document.getElementById('sub-top-right').innerHTML = '';
+
+  // 自動抓取資料中包含的所有年份
+  let years = new Set();
+  S.records.forEach(r => { if(r.date) years.add(r.date.substring(0,4)); });
+  S.vehicleRecs.forEach(r => { if(r.date) years.add(r.date.substring(0,4)); });
+  
+  // 轉為陣列並由大到小排序 (最新年份在最上)
+  let yearArr = Array.from(years).sort((a,b) => b.localeCompare(a)); 
+  if(yearArr.length === 0) yearArr = [new Date().getFullYear().toString()];
+
+  let optionsHtml = `<option value="all">全部年份</option>`;
+  yearArr.forEach(y => {
+    // 預設選中當前年份
+    const isCurrent = y === new Date().getFullYear().toString();
+    optionsHtml += `<option value="${y}" ${isCurrent ? 'selected' : ''}>${y} 年</option>`;
+  });
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div class="card" style="display:flex; flex-direction:column; gap:16px;">
+        <div style="font-size:13px; color:var(--t2); font-weight:700; line-height:1.5;">
+          💡 請選擇要匯出的資料年份，系統將會為您產生多活頁簿的 Excel 檔案。
+        </div>
+        <select id="export-year-select" class="fsel" style="font-size:16px; font-weight:800; text-align:center; color:var(--acc);">
+          ${optionsHtml}
+        </select>
+        <button onclick="executeExcelExport()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">📊 確定匯出</button>
+      </div>
+    </div>
+  `;
+  openOverlay('sub-page');
+}
+
+/* 執行匯出前置作業 */
+window.executeExcelExport = function() {
+  const targetYear = document.getElementById('export-year-select').value;
+  closeOverlay('sub-page');
+  doExportExcel(targetYear);
+}
+
+/* ══ 匯出多活頁簿 Excel 檔案 (.xlsx) - 支援年份過濾 ══ */
+function doExportExcel(targetYear) {
+  if (typeof XLSX === 'undefined') {
+    toast('⚠️ Excel 匯出套件載入中，請稍後再試');
+    return;
+  }
+
+  showProgress('產生 Excel 檔案中...');
+
+  setTimeout(() => {
+    // 建立時間過濾器
+    const isMatch = (r) => targetYear === 'all' || (r.date && r.date.startsWith(targetYear));
+
+    // 1. 行程記錄
+    const regularRecs = S.records.filter(r => isMatch(r) && !r.isCashTip && !r.isPunchOnly).map(r => {
+      const p = getPlatform(r.platformId);
+      return { '日期': r.date, '平台': p.name, '接單數': r.orders||0, '里程(km)': r.mileage||0, '行程收入': r.income||0, '固定獎勵': r.bonus||0, '臨時獎勵': r.tempBonus||0, 'APP小費': r.tips||0, '總收入': recTotal(r), '工時(小時)': r.hours||0, '上線時間': r.punchIn||'', '下線時間': r.punchOut||'', '備註': r.note||'' };
+    });
+
+    // 2. 現金小費
+    const cashTipRecs = S.records.filter(r => isMatch(r) && r.isCashTip).map(r => {
+      const p = getPlatform(r.platformId);
+      return { '日期': r.date, '時間': r.time||'', '平台': p.name, '客給金額': r.givenAmt||0, '應收金額': r.costAmt||0, '實收小費': r.cashTipAmt||0, '備註': r.note||'' };
+    });
+
+    // 3. 加油記錄 (排除電動車)
+    const gasRecs = S.vehicleRecs.filter(r => isMatch(r) && r.type === 'fuel' && r.fuelType !== 'electric').map(r => {
+      const v = S.vehicles.find(x => x.id === r.vehicleId);
+      const diff = pf(r.km) - pf(r.prevKm);
+      return { '日期': r.date, '時間': r.time||'', '車輛名稱': v ? v.name : '未知', '油品': r.fuelType||'', '上次里程': r.prevKm||0, '加油里程': r.km||0, '行駛里程': diff > 0 ? diff : 0, '加油量(L)': r.liters||0, '單價': r.price||0, '折扣': r.discount||0, '花費金額': r.amount||0 };
+    });
+
+    // 4. 電動車換電與里程
+    const evRecs = S.vehicleRecs.filter(r => isMatch(r) && r.type === 'fuel' && r.fuelType === 'electric').map(r => {
+      const v = S.vehicles.find(x => x.id === r.vehicleId);
+      const diff = pf(r.km) - pf(r.prevKm);
+      return { '日期': r.date, '時間': r.time||'', '車輛名稱': v ? v.name : '未知', '上次里程': r.prevKm||0, '換電里程': r.km||0, '行駛里程': diff > 0 ? diff : 0 };
+    });
+
+    // 5. 保養維修記錄
+    const maintRecs = S.vehicleRecs.filter(r => isMatch(r) && r.type === 'maintenance').map(r => {
+      const v = S.vehicles.find(x => x.id === r.vehicleId);
+      return { '日期': r.date, '時間': r.time||'', '車輛名稱': v ? v.name : '未知', '保養里程': r.km||0, '保養項目': (r.items||[]).join(', '), '花費金額': r.amount||0, '店家': r.shop||'', '付款方式': r.payMethod||'', '備註': r.note||'' };
+    });
+
+    // 防止空資料表報錯的保護機制
+    const safeData = (arr) => arr.length > 0 ? arr : [{'系統提示': '該年份尚無此項目記錄'}];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(regularRecs)), "行程記錄");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(cashTipRecs)), "現金小費");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(gasRecs)), "加油記錄");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(evRecs)), "電動車里程");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(maintRecs)), "保養維修");
+
+    const fileNameYear = targetYear === 'all' ? '全部' : targetYear;
+    try {
+      XLSX.writeFile(wb, `外送記帳資料_${fileNameYear}年_${todayStr()}.xlsx`);
+      finishProgress(() => toast(`✅ ${fileNameYear}年 Excel 匯出完成`));
+    } catch (err) {
+      finishProgress(() => toast('❌ 匯出失敗，請重試'));
+    }
+  }, 500); 
+} { const headers =['日期','平台','接單數','里程','行程收入','固定獎勵','臨時獎勵','小費','總收入','工時','上線','下線','備註']; const rows = S.records.map(r=>{ const p = getPlatform(r.platformId); return[r.date, p.name, r.orders||0, r.mileage||0, r.income||0, r.bonus||0, r.tempBonus||0, r.tips||0, recTotal(r), r.hours||0, r.punchIn||'', r.punchOut||'', r.note||''].join(','); }); const csv =[headers.join(','), ...rows].join('\n'); const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`外送記錄_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url); toast('✅ CSV 匯出完成'); }
 
 async function doClearData() { 
   const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄與車輛資料</strong>嗎？<br>（這將保留您的平台設定與目標）此動作無法復原！'); 
