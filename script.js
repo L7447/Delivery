@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   外送記帳 App — script.js
+   外送記錄 App — script.js
    設計：由上到下分區註解，結構清晰，不閃爍，功能完整
    ══════════════════════════════════════════════════════ */
 
@@ -3887,7 +3887,7 @@ function doExportExcel(targetYear) {
 
     const fileNameYear = targetYear === 'all' ? '全部' : targetYear;
     try {
-      XLSX.writeFile(wb, `外送記帳資料_${fileNameYear}年_${todayStr()}.xlsx`);
+      XLSX.writeFile(wb, `外送記錄（${fileNameYear}年）${todayStr()}.xlsx`);
       finishProgress(() => toast(`✅ ${fileNameYear}年 Excel 匯出完成`));
     } catch (err) {
       finishProgress(() => toast('❌ 匯出失敗，請重試'));
@@ -4213,7 +4213,7 @@ async function doBackupToFile() {
   };
   
   const jsonStr = JSON.stringify(data, null, 2);
-  const fileName = `Delivery_Backup_${todayStr()}.json`;
+  const fileName = `外送記錄_${todayStr()}.json`;
 
   try {
     // 優先嘗試使用 File System Access API (支援 Chrome/Edge/Android)
