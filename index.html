@@ -338,21 +338,21 @@
         <div style="display:flex; gap:10px; margin-bottom:12px;">
           <div class="fg" style="flex:1.2"><label style="color:var(--t1); font-weight:800;">📆 日期</label><input type="date" class="finp" id="f-date"></div>
           <div class="fg" style="flex:1"><label style="color:var(--t1); font-weight:800;">⏱ 時間</label><input type="time" class="finp" id="f-time"></div>
-          <div class="fg" style="flex:0.8"><label style="color:var(--t1); font-weight:800;">📦 單數</label><input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()"></div>
         </div>
         <div style="margin-bottom:16px;">
-          <div class="form-lbl" style="color:var(--t1); font-weight:800;">⏱ 累計工時</div>
+          <div class="form-lbl" style="color:var(--t1); font-weight:800;">⏱ 上線時間</div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div class="fg" style="position:relative;"><input type="number" class="finp" id="f-hrs-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()"><span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">時</span></div>
             <div class="fg" style="position:relative;"><input type="number" class="finp" id="f-min-val" placeholder="0" inputmode="numeric" style="padding-right:32px;" oninput="enforceTimeLimits()" onblur="enforceTimeRules()"><span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--t3); pointer-events:none;">分</span></div>
           </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="fg" style="flex:0.8"><label style="color:var(--t1); font-weight:800;">📦 單數</label><input type="number" class="finp" id="f-orders" placeholder="0" inputmode="numeric" oninput="calcAddTotal()"></div>
           <div class="fg"><label style="color:var(--t1); font-weight:800;">💰 行程收入 ($)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
-          <div class="fg"><label style="color:var(--t1); font-weight:800;">🤑 小費 ($)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+          <div class="fg"><label style="color:var(--t1); font-weight:800;">🎁 固定獎勵</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-          <div class="fg"><label style="color:var(--t1); font-weight:800;">🎁 固定獎勵</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
+          <div class="fg"><label style="color:var(--t1); font-weight:800;">🤑 刷卡小費 ($)</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
           <div class="fg"><label style="color:var(--t1); font-weight:800;">⚡ 臨時獎勵</label><input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()"></div>
         </div>
         <div style="background:var(--sf2); padding:12px 16px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
