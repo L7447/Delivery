@@ -146,9 +146,9 @@
     #splash .pedestrian { bottom: 136px; z-index: 4; font-size: 22px; right: 120%; }
 
     /* 店家與店員 */
-    #splash .shop-area  { right: 15%; bottom: 154px; z-index: 5; }
+    #splash .shop-area  { right: 5%; bottom: 154px; z-index: 5; } /* 往右移到 5% 拉開距離 */
     #splash .building   { font-size: 44px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.10)); position: relative; z-index: 1; }
-    #splash .clerk      { position: absolute; font-size: 30px; bottom: 0; left: -25px; z-index: 2; transform: scaleX(-1); /* 轉向面對左邊的外送員 */ }
+    #splash .clerk      { position: absolute; font-size: 30px; bottom: 0; left: -25px; z-index: 2; transform: scaleX(-1); }
     #splash .shop-bag   { position: absolute; font-size: 16px; bottom: 10px; left: -32px; z-index: 3; transition: opacity 0.2s; }
 
     /* 顧客家 */
@@ -746,9 +746,10 @@
       if (isSkipped) return;
 
       setStatus('🏪', '接到新訂單，前往店家...');
+      // 機車停在 40% 處，與店家(5%)拉開安全距離
       await animate(vehicle, [
         { right: '-35%', transform: 'translateY(0)' },
-        { right: '35%',  transform: 'translateY(0)' }
+        { right: '40%',  transform: 'translateY(0)' }
       ], { duration: 1000, easing: 'ease-out' });
 
       await wait(700);
@@ -756,56 +757,66 @@
 
       setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
       await animate(vehicle, [
-        { right: '35%', transform: 'translateY(0)' },
-        { right: '35%', transform: 'translateY(-40px)' }
+        { right: '40%', transform: 'translateY(0)' },
+        { right: '40%', transform: 'translateY(-40px)' }
       ], { duration: 450, easing: 'ease-out' });
 
       await wait(700);
       if (isSkipped) return;
 
-      setStatus('🤝', '抵達店家，店員將餐點交給外送員...');
+      setStatus('🤝', '外送員下車，向店員取餐...');
       
-      // 1. 騎士下車走到店員面前
+      // 1. 騎士下車 (Y軸向下移動 22px 著地)
       await animate(riderWrapper, [
         { transform: 'translate(0, 0)' },
-        { transform: 'translate(20px, -6px)' },
-        { transform: 'translate(42px, 0)' } // 剛好走到店員前方
-      ], { duration: 600, easing: 'ease-in-out' });
+        { transform: 'translate(15px, 22px)' }
+      ], { duration: 300, easing: 'ease-in' });
+
+      // 2. 走路過去店員前 (Y軸保持 22px，並加入微小跳躍感)
+      await animate(riderWrapper, [
+        { transform: 'translate(15px, 22px)' },
+        { transform: 'translate(50px, 18px)' }, 
+        { transform: 'translate(85px, 22px)' }
+      ], { duration: 600, easing: 'linear' });
 
       await wait(300);
       if (isSkipped) return;
 
-      // 2. 餐點從店員手上「拋/遞」給外送員 (位移動畫)
+      // 3. 餐點從店員拋遞給外送員
       const riderBag = document.getElementById('sp-rider-bag');
       if (shopBag) {
         await animate(shopBag, [
           { transform: 'translate(0, 0)' },
-          { transform: 'translate(-15px, 8px)' } // 餐點往騎士的手上移動
+          { transform: 'translate(-25px, 12px)' } // 餐袋往左下方騎士手上移動
         ], { duration: 300, easing: 'ease-out' });
-        
-        // 隱藏店員的餐點
         shopBag.style.opacity = '0'; 
       }
-      
       // 顯示外送員手上的餐點
       if (riderBag) riderBag.style.opacity = '1'; 
       
       await wait(400);
       if (isSkipped) return;
 
-      // 3. 騎士拿著餐點走回車上
+      // 4. 騎士拿著餐點轉身走回車旁
       await animate(riderWrapper, [
-        { transform: 'translate(42px, 0)' },
-        { transform: 'translate(20px, -6px)' },
+        { transform: 'translate(85px, 22px)' },
+        { transform: 'translate(50px, 18px)' },
+        { transform: 'translate(15px, 22px)' }
+      ], { duration: 600, easing: 'linear' });
+
+      // 5. 跨步上車 (Y軸歸零)
+      await animate(riderWrapper, [
+        { transform: 'translate(15px, 22px)' },
         { transform: 'translate(0, 0)' }
-      ], { duration: 600, easing: 'ease-in-out' });
+      ], { duration: 300, easing: 'ease-out' });
 
-      if (deliveryBox) deliveryBox.textContent = '🥡';
-      if (riderBag) riderBag.style.opacity = '0';
+      await wait(300);
+      if (isSkipped) return;
 
+      // 機車準備出發
       await animate(vehicle, [
-        { right: '35%', transform: 'translateY(-28px)' },
-        { right: '35%', transform: 'translateY(0)' }
+        { right: '40%', transform: 'translateY(-28px)' },
+        { right: '40%', transform: 'translateY(0)' }
       ], { duration: 320, easing: 'ease-in' });
 
       await wait(400);
@@ -813,8 +824,9 @@
 
       setStatus('🛵', '外送中，穿梭市區...');
 
-      animate(shopArea, [{ right: '15%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
-      animate(vehicle, [{ right: '35%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
+      // 店家退後，機車往前騎
+      animate(shopArea, [{ right: '5%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
+      animate(vehicle, [{ right: '40%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
 
       let roadAnim = null;
       if (!isSkipped && roadDash) {
