@@ -1264,7 +1264,6 @@ async function confirmAddRecord() {
     checkImg.src = isDark ? 'images/Check3.png' : 'images/Check1.png';
     checkBtn.disabled = false; 
     goPage('home');
-    backgroundSync();
   });
 }
 
@@ -2737,7 +2736,11 @@ function renderSettings() {
   if (S.settings.themeMode === 'auto') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(已開啟定時自動切換)</span>';
   else if (S.settings.themeMode === 'dark') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(深色模式)</span>';
 
-  /* 替換 renderSettings 裡面的 HTML 字串頭部 */
+  // 💡 判斷上次備份時間
+  const lastBackupStr = S.settings.lastLocalBackup 
+    ? `<div style="font-size:11px; color:var(--text-blue); margin-top:4px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
+    : `<div style="font-size:11px; color:var(--t3); margin-top:4px;">尚未進行本機備份</div>`;
+
   const html  = `
   <div class="set-sec"><h3>帳號登入狀態</h3><div class="set-list">
     <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div>
@@ -2752,7 +2755,16 @@ function renderSettings() {
   </div></div>
 
   <div class="set-sec"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 另存新檔至本機 (JSON)</span><span class="arr">↓</span></div>
+      
+      <!-- 👇 這裡加入了上次備份時間的顯示 -->
+      <div class="set-row" onclick="doBackupToFile()">
+        <div class="sn">
+          <span style="display:block;">📂 另存新檔至本機 (JSON)</span>
+          ${lastBackupStr}
+        </div>
+        <span class="arr">↓</span>
+      </div>
+
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
@@ -3099,7 +3111,6 @@ async function requestLogin() {
           toast('✅ 登入成功');
           closeOverlay('sub-page');
           renderSettings();
-          restoreFromCloud(email);
         } else {
           // 📧 新用戶或未驗證帳號，顯示驗證碼輸入畫面
           document.getElementById('sub-body').innerHTML = `
@@ -3148,7 +3159,6 @@ async function verifyAuthCode(email) {
         toast('✅ 登入成功');
         closeOverlay('sub-page');
         renderSettings();
-        restoreFromCloud(email);
       } else {
         toast('⚠️ ' + data.message);
       }
@@ -4227,7 +4237,6 @@ async function doBackupToFile() {
       const writable = await handle.createWritable();
       await writable.write(jsonStr);
       await writable.close();
-      toast('✅ 成功儲存至本機資料夾！');
     } else {
       // 蘋果 iOS / Safari 降級使用傳統下載模式
       const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -4237,8 +4246,15 @@ async function doBackupToFile() {
       a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
-      toast('✅ 備份檔已下載');
     }
+
+    // 💡 成功備份後，記錄當下的日期與時間
+    const now = new Date();
+    S.settings.lastLocalBackup = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    saveSettings();
+    renderSettings(); // 重新渲染設定頁面，更新顯示的時間
+    
+    toast('✅ 成功儲存至本機資料夾！');
   } catch (err) {
     if (err.name !== 'AbortError') {
       console.error(err);
@@ -4344,10 +4360,6 @@ function init() {
       updateNavIndicator('home');
     });
   });
-
-  backgroundSync(); // APP 打開時，偷偷檢查有沒有漏掉沒傳的資料
-  window.addEventListener('online', backgroundSync);
-
 }
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
    defer 在 iOS 上不保證 DOMContentLoaded 已觸發，
