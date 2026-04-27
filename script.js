@@ -4012,12 +4012,10 @@ function openPrivacyPolicy(fromRegister = false) {
       • 統計「 使用人數 」。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">3. 資料及使用安全</strong><br>
-      • 使用Cloudflare部屬，啟用所有安全防護設定，保護APP使用安全。<br>
-
-      <div style="font-size:13px; font-weight:700;">帳號密碼：</div>
-      <p style="font-weight:500;">• 🛡️傳輸加密：Cloudflare 預設啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。</p>
-      <p style="font-weight:500;">• 🔐儲存加密：程式碼端透過 Web Cryptography API演算法，對密碼執行「加鹽與單向雜湊 (Salt & Cryptographic Hash)」處理，即使資料庫外洩，駭客也無法反推回真實密碼。</p>
-      • 記錄的資料，只儲存在「您自己的裝置」或「雲端硬碟」上，不會上傳至任何伺服器。<br><br>
+      • 使用Cloudflare部屬，啟用所有安全防護設定，保護APP的使用安全。<br><br>
+      • 🛡️傳輸加密：Cloudflare 預設啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。<br><br>
+      • 🔐儲存加密：程式碼端透過 Web Cryptography API 加密演算法，對密碼執行「加鹽與單向雜湊 (Salt & Cryptographic Hash)」處理，即使資料庫外洩，駭客也無法反推回真實密碼。<br><br>
+      • 記錄的資料，只儲存在「您的裝置」或「雲端硬碟」上，不會上傳至任何伺服器。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
       • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
