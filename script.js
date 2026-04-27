@@ -3982,8 +3982,8 @@ function openSpecialThanks() {
     <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
       <p style="margin-bottom:16px; font-weight:700;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法。</p>
       <hr style="border-color:2px; border-color: #000000;"></hr></br>
-      <p style="margin-bottom:16px; font-weight:500;">之前有看過多元計程車司機用的帳本APP，那時有在想：外送員要是也有這種東西就好了，只是當時我在開發其它東西，就沒放在心上；</p>
-      <p style="margin-bottom:16px; font-weight:500;">這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，因此也想做看看，頭一洗下去就停不下來了，過程中不斷地有新想法，一直加入新功能，遇到好幾個頑固的Bug，改了數不清幾次，做了幾十天，勉強地把『 外送記錄APP 』做出來了！</p>
+      <p style="margin-bottom:16px; font-weight:500;">之前有看過多元計程車司機用的帳本APP，那時有在想：外送員要是也有這種東西就好了，只是當時我在忙，就沒放在心上；</p>
+      <p style="margin-bottom:16px; font-weight:500;">這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，因此也想做看看；不斷地有新想法，一直加入新功能，改了數不清幾次，終於把『 外送記錄與分析APP 』做出來！</p>
       <hr style="border-color:2px; border-color: #000000;"></hr></br>
       <p style="margin-bottom:16px; font-weight:800;">所以真的非常感謝【 心酸熊貓人 】的這個想法，沒有這個想法，就沒有這個APP了！🙏</p>
       <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #DB2A75; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:800; font-size:18px;">
@@ -4012,10 +4012,10 @@ function openPrivacyPolicy(fromRegister = false) {
       • 統計「 使用人數 」。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">3. 資料及使用安全</strong><br>
-      • 使用Cloudflare部屬，啟用所有安全防護設定，保護APP的使用安全。<br><br>
-      • 🛡️傳輸加密：Cloudflare 預設啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。<br><br>
-      • 🔐儲存加密：程式碼端透過 Web Cryptography API 加密演算法，對密碼執行「加鹽與單向雜湊 (Salt & Cryptographic Hash)」處理，即使資料庫外洩，駭客也無法反推回真實密碼。<br><br>
-      • 記錄的資料，只儲存在「您的裝置」或「雲端硬碟」上，不會上傳至任何伺服器。<br><br>
+      • 使用Cloudflare部屬，啟用所有安全防護設定。<br><br>
+      • Cloudflare 預設啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸。<br><br>
+      • 密碼使用了crypto.subtle.digest('SHA-256')「加鹽雜湊」處理，駭客也無法反推回真實密碼。<br><br>
+      • 記錄只儲存在「您的裝置」上，不會上傳至任何伺服器。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
       • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
