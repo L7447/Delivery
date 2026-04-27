@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v161';
+const CACHE_NAME = 'delivery-app-v162';
 
 // 需要快取的靜態資源清單
 const ASSETS = [
@@ -26,7 +26,7 @@ const ASSETS = [
   '/images/calendar.png',
   '/images/Check1.png',
   '/images/Check2.png',   
-  '/images/xwiyxw.png',
+  '/images/Miyako.webp',
   '/images/close1.png',
   '/images/close2.png',
   '/images/close3.png',  
@@ -42,23 +42,19 @@ const ASSETS = [
   '/scooter/s7.png',
   '/scooter/s8.png',  
   '/scooter/s9.png',  
-  '/figure/1.png',
-  '/figure/2.png',
-  '/figure/3.png',
-  '/figure/4.png',
-  '/figure/5.png',
-  '/figure/6.png',
-  '/figure/7.png',
-  '/figure/8.png',  
-  '/background/bg1.png',
-  '/background/bg2.png',
-  '/background/bg3.png',
-  '/background/bg4.png',
-  '/background/bg5.png',
-  '/background/bg6.png',
-  '/background/bg7.png',
-  '/background/bg8.png',
-  '/background/bg9.png',  
+  '/figure/1.webp',
+  '/figure/2.webp',
+  '/figure/3.webp',
+  '/figure/4.webp',
+  '/figure/5.webp',
+  '/figure/6.webp',
+  '/figure/7.webp',
+  '/figure/8.webp',  
+  '/background/bg1.webp',
+  '/background/bg2.webp',
+  '/background/bg3.webp',
+  '/background/bg4.webp',
+  '/background/bg5.webp',
   'https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
 ];
