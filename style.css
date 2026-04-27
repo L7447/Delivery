@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   外送記帳 App — style.css (全域變數自適應版)
+   外送記錄 App — style.css (全域變數自適應版)
    ══════════════════════════════════════════════════════ */
 
 :root {
@@ -515,3 +515,35 @@ input:checked + .slider:before { transform: translateX(20px); }
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+/* ══ 天氣標籤專屬樣式 ══ */
+.weather-tags-container::-webkit-scrollbar { display: none; }
+.weather-tag {
+  background: var(--sf);
+  color: var(--t1);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  -webkit-tap-highlight-color: transparent;
+}
+.weather-tag:active {
+  transform: scale(0.92);
+  background: var(--acc-d);
+  color: var(--acc);
+  border-color: var(--acc);
+}
+
+/* ══ 登入/註冊卡片懸浮樣式 ══ */
+.auth-card {
+  background: var(--sf); 
+  padding: 20px; 
+  border-radius: 20px; 
+  box-shadow: 0 8px 24px rgba(0,0,0,0.04); 
+  border: 1px solid var(--border); 
+  margin-bottom: 20px;
+}
