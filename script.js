@@ -2736,17 +2736,18 @@ function renderSettings() {
   if (S.settings.themeMode === 'auto') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(已開啟定時自動切換)</span>';
   else if (S.settings.themeMode === 'dark') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(深色模式)</span>';
 
-  // 💡 判斷上次備份時間
+  // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<div style="font-size:11px; color:var(--text-blue); margin-top:4px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
-    : `<div style="font-size:11px; color:var(--t3); margin-top:4px;">尚未進行本機備份</div>`;
+    ? `<div style="font-size:11px; color:var(--text-blue); margin-top:2px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
+    : `<div style="font-size:11px; color:var(--t3); margin-top:2px;">尚未進行本機備份</div>`;
 
   const html  = `
-  <div class="set-sec"><h3>帳號登入狀態</h3><div class="set-list">
+  <!-- 縮小了區塊的 margin-bottom -->
+  <div class="set-sec" style="margin-bottom:12px;"><h3>帳號登入狀態</h3><div class="set-list">
     <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div>
   </div></div>
 
-  <div class="set-sec"><h3>功能設定</h3><div class="set-list">
+  <div class="set-sec" style="margin-bottom:12px;"><h3>功能設定</h3><div class="set-list">
     <div class="set-row" onclick="openPlatformList()"><span class="sn">🏪 平台列表與設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
@@ -2754,9 +2755,7 @@ function renderSettings() {
     <div class="set-row" onclick="openReminderSettings()"><span class="sn">⏰ 每日記錄通知提醒</span><span class="arr">›</span></div>
   </div></div>
 
-  <div class="set-sec"><h3>資料管理與備份</h3><div class="set-list">
-      
-      <!-- 👇 這裡加入了上次備份時間的顯示 -->
+  <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
       <div class="set-row" onclick="doBackupToFile()">
         <div class="sn">
           <span style="display:block;">📂 另存新檔至本機 (JSON)</span>
@@ -2764,16 +2763,18 @@ function renderSettings() {
         </div>
         <span class="arr">↓</span>
       </div>
-
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
   </div></div>
-  <div style="margin-top:0px; padding-bottom:16px; text-align:center;">
-      <span onclick="openOverlay('about-page')" style="font-size:20px; color:var(--text-blue); font-weight:800; cursor:pointer; padding:8px 16px; display:inline-block;">關於我們</span>
+  
+  <!-- 將關於我們往上提，縮小字體讓比例更精緻 -->
+  <div style="margin-top:0px; padding-bottom:8px; text-align:center;">
+      <span onclick="openOverlay('about-page')" style="font-size:15px; color:var(--text-blue); font-weight:800; cursor:pointer; padding:6px 16px; display:inline-block;">關於我們</span>
   </div>`;
+  
   document.getElementById('settings-content').innerHTML = html;
 }
 
@@ -4015,11 +4016,11 @@ function openPrivacyPolicy(fromRegister = false) {
       • 統計「 使用人數 」。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">3. 資料及使用安全</strong><br>
-      • 使用Cloudflare部屬，啟用所有安全防護設定，保護APP使用安全<br>
+      • 使用Cloudflare部屬，啟用所有安全防護設定，保護APP使用安全。<br>
 
-      <div style="font-size:15px; font-weight:700;">帳號密碼：</div>
-      • 🛡️傳輸加密：Cloudflare 預設強制啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。<br>
-      • 🔐儲存加密：程式碼端透過 WebCrypto API 或 bcrypt 等標準演算法，對密碼執行「加鹽與單向雜湊 (Salt & Cryptographic Hash)」處理，即使資料庫外洩，駭客也無法反推回真實密碼。<br>
+      <div style="font-size:13px; font-weight:700;">帳號密碼：</div>
+      <p>• 🛡️傳輸加密：Cloudflare 預設強制啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。</p>
+      <p>• 🔐儲存加密：程式碼端透過 WebCrypto API 或 bcrypt 等標準演算法，對密碼執行「加鹽與單向雜湊 (Salt & Cryptographic Hash)」處理，即使資料庫外洩，駭客也無法反推回真實密碼。</p>
       • 記錄的資料，只儲存在「您自己的裝置」或「雲端硬碟」上，不會上傳至任何伺服器。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
@@ -4230,6 +4231,11 @@ async function doBackupToFile() {
       const writable = await handle.createWritable();
       await writable.write(jsonStr);
       await writable.close();
+      
+      // ✅ 只有在這裡 (真正寫入檔案完畢後) 才會更新備份時間
+      updateLocalBackupTime();
+      toast('✅ 成功儲存至本機資料夾！');
+      
     } else {
       // 蘋果 iOS / Safari 降級使用傳統下載模式
       const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -4239,21 +4245,28 @@ async function doBackupToFile() {
       a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
+      
+      // ⚠️ 備註：傳統下載模式無法偵測使用者是否點擊取消，所以只要點了就會更新時間
+      updateLocalBackupTime();
+      toast('✅ 備份檔已下載');
     }
-
-    // 💡 成功備份後，記錄當下的日期與時間
-    const now = new Date();
-    S.settings.lastLocalBackup = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    saveSettings();
-    renderSettings(); // 重新渲染設定頁面，更新顯示的時間
-    
-    toast('✅ 成功儲存至本機資料夾！');
   } catch (err) {
-    if (err.name !== 'AbortError') {
+    // 如果使用者按了「取消」，瀏覽器會拋出 AbortError，此時什麼都不做 (也不會更新時間)
+    if (err.name === 'AbortError') {
+      console.log('使用者取消了儲存檔案');
+    } else {
       console.error(err);
-      toast('⚠️ 儲存失敗或取消');
+      toast('⚠️ 儲存失敗');
     }
   }
+}
+
+// 將更新時間的邏輯抽出來，讓程式碼更乾淨
+function updateLocalBackupTime() {
+  const now = new Date();
+  S.settings.lastLocalBackup = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  saveSettings();
+  renderSettings(); // 重新渲染設定頁面，更新顯示的時間
 }
 
 /* ══ 替換：備份至 Google Drive 引導 ══ */
