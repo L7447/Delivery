@@ -1052,6 +1052,9 @@ function openAddPage(record=null, prefill={}) {
   } else {
     switchAddTab('regular', 0);
     document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
+    // 👇 加入時間載入
+    document.getElementById('f-time').value = record?.time || nowTime();
+    
     let totalHours = pf(record?.hours || prefill.hours || 0); let h = Math.floor(totalHours); let m = Math.round((totalHours - h) * 60);
     document.getElementById('f-hrs-val').value = h > 0 ? h : ''; document.getElementById('f-min-val').value = m > 0 ? m : '';
     document.getElementById('f-orders').value = record?.orders || ''; 
@@ -1108,6 +1111,8 @@ function calcCashTip() {
 /* ══ 替換：重置新增記錄表單 ══ */
 function resetAddForm() {
   document.getElementById('f-date').value = todayStr();
+  // 👇 加入重置時間
+  if (document.getElementById('f-time')) document.getElementById('f-time').value = nowTime();
   document.getElementById('f-orders').value = '';
   document.getElementById('f-hrs-val').value = '';
   document.getElementById('f-min-val').value = '';
@@ -1239,7 +1244,11 @@ async function confirmAddRecord() {
     const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
     if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
     const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
-    rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: nowTime(), punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim(), syncStatus: 0, updatedAt: Date.now() };
+
+    // 👇 讀取使用者設定的時間
+    const recTime = document.getElementById('f-time') ? document.getElementById('f-time').value : nowTime();
+
+    rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: recTime, punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim(), syncStatus: 0, updatedAt: Date.now() };
   }
   
   /* 尋找 confirmAddRecord() 函式，替換其下半部程式碼 */
@@ -2912,64 +2921,71 @@ function renderAuthContent() {
   
   if (authMode === 'login') {
     contentHtml = `
-      <p style="font-size:13px;color:var(--hint-color);margin-bottom:16px;line-height:1.6; font-weight:600; background:var(--bg-input); padding:12px; border-radius:12px;">
-        💡 <b>歡迎回來！</b> 請輸入信箱與密碼直接登入。
-      </p>
-      <div class="fg" style="margin-bottom:16px;">
-        <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
-        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:12px;">
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:48px; margin-bottom:8px; line-height:1;">👋</div>
+        <h2 style="font-size:20px; font-weight:800; color:var(--t1);">歡迎回來</h2>
+        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">登入以同步您的外送記錄資料</p>
       </div>
-      <div class="fg" style="margin-bottom:24px;">
-        <label style="font-weight:700; color:var(--t1);">密碼</label>
-        <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼" style="padding:12px;">
+      
+      <div class="auth-card">
+        <div class="fg" style="margin-bottom:16px;">
+          <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
+          <input type="email" class="finp" id="auth-email" placeholder="name@example.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+        </div>
+        <div class="fg" style="margin-bottom:8px;">
+          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 密碼</label>
+          <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+        </div>
       </div>
 
       <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
 
-      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">登入帳號</button>
+      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:16px;font-size:16px;font-weight:800;border-radius:16px; box-shadow:0 8px 20px rgba(255,107,53,0.3); transition:0.2s;">登入帳號</button>
     `;
   } else {
-    // 註冊頁面：改為 4x2 網格 (不滑動)，且間距縮緊
+    // 註冊頁面：精緻網格頭像選擇
     let avatarsHtml = '';
     for(let i=1; i<=8; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
-      // 把 width 和 height 從 80px 稍微縮小為 60px 以適應網格
-      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
-      <p style="font-size:12px;color:var(--hint-color);margin-bottom:12px;line-height:1.4; font-weight:600; background:var(--bg-input); padding:10px; border-radius:10px;">
-        💡 <b>建立新帳號：</b> 系統將寄送驗證碼至信箱以開通帳號！
-      </p>
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="font-size:48px; margin-bottom:8px; line-height:1;">🚀</div>
+        <h2 style="font-size:20px; font-weight:800; color:var(--t1);">建立專屬帳號</h2>
+        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">幾秒鐘即可完成註冊，安全備份您的心血</p>
+      </div>
       
-      <!-- 頭像區塊：改為 4等分網格 -->
-      <div class="fg" style="margin-bottom:12px;">
-        <label style="font-weight:700; color:var(--t1);">選擇專屬頭像</label>
-        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; background:var(--bg-input); padding:10px; border-radius:12px; justify-items:center;">
-          ${avatarsHtml}
+      <div class="auth-card">
+        <div class="fg" style="margin-bottom:16px;">
+          <label style="font-weight:800; color:var(--t1); font-size:12px;">🎨 選擇專屬頭像</label>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; background:var(--bg-input); padding:12px; border-radius:16px; justify-items:center;">
+            ${avatarsHtml}
+          </div>
+        </div>
+        
+        <div class="fg" style="margin-bottom:16px;">
+          <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
+          <input type="email" class="finp" id="auth-email" placeholder="name@example.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+        </div>
+        
+        <div class="fg" style="margin-bottom:16px;">
+          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 設定密碼 (至少 6 個字元)</label>
+          <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+        </div>
+
+        <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:10px; padding:12px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer; transition:0.2s;">
+          <div id="privacy-chk-box" style="width:22px; height:22px; border-radius:6px; border:2px solid ${privacyAgreed ? 'var(--acc)' : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? 'var(--acc)' : 'transparent'}; transition:0.2s; flex-shrink:0;">
+            ${privacyAgreed ? '<span style="color:#fff; font-size:14px; font-weight:900;">✓</span>' : ''}
+          </div>
+          <span id="privacy-chk-text" style="font-size:13px; font-weight:700; color:${privacyAgreed ? 'var(--t1)' : 'var(--t3)'};">我已閱讀並同意 <span style="color:var(--text-blue); text-decoration:underline;">隱私權政策</span></span>
         </div>
       </div>
-      
-      <div class="fg" style="margin-bottom:12px;">
-        <label style="font-weight:700; color:var(--t1);">E-mail 信箱</label>
-        <input type="email" class="finp" id="auth-email" placeholder="輸入您的信箱地址" style="padding:10px;">
-      </div>
-      
-      <div class="fg" style="margin-bottom:16px;">
-        <label style="font-weight:700; color:var(--t1);">設定密碼 (至少 6 個字元)</label>
-        <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:10px;">
-      </div>
 
-      <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:8px; margin-bottom:16px; padding:10px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer;">
-        <div id="privacy-chk-box" style="width:20px; height:20px; border-radius:6px; border:2px solid ${privacyAgreed ? 'var(--acc)' : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? 'var(--acc)' : 'transparent'}; transition:0.2s; flex-shrink:0;">
-          ${privacyAgreed ? '<span style="color:#fff; font-size:12px; font-weight:900;">✓</span>' : ''}
-        </div>
-        <span id="privacy-chk-text" style="font-size:12px; font-weight:700; color:${privacyAgreed ? 'var(--t1)' : 'var(--t3)'};">我已閱讀並同意 <span style="color:var(--text-blue); text-decoration:underline;">隱私權政策</span></span>
-      </div>
+      <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
 
-      <div id="turnstile-widget" style="margin-bottom:12px; text-align:center; min-height:65px;"></div>
-
-      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:12px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">註冊並寄發驗證碼</button>
+      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:16px;font-size:16px;font-weight:800;border-radius:16px; box-shadow:0 8px 20px rgba(255,107,53,0.3); transition:0.2s;">註冊並寄發驗證碼</button>
     `;
   }
   
@@ -3982,10 +3998,10 @@ function openSpecialThanks() {
     <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
       <p style="margin-bottom:16px; font-weight:700;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法。</p>
       <hr style="border-color:2px; border-color: #000000;"></hr></br>
-      <p style="margin-bottom:16px; font-weight:500;">之前有看過多元計程車司機用的帳本APP，那時有在想：外送員要是也有這種東西就好了，只是當時我在忙，就沒放在心上；</p>
-      <p style="margin-bottom:16px; font-weight:500;">這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，因此也想做看看；不斷地有新想法，一直加入新功能，改了數不清幾次，終於把『 外送記錄與分析APP 』做出來！</p>
+      <p style="margin-bottom:16px; font-weight:500;">之前看過運轉手帳本APP，那時就在想「外送員要是也有這種APP就好了」，只是當時我在忙，就沒放在心上；</p>
+      <p style="margin-bottom:16px; font-weight:500;">這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，因此也想做看看；開發過程不斷地有新想法，一直加入新功能，修改了數不清次，終於把『 外送記錄與分析APP 』做出來！</p>
       <hr style="border-color:2px; border-color: #000000;"></hr></br>
-      <p style="margin-bottom:16px; font-weight:800;">所以真的非常感謝【 心酸熊貓人 】的這個想法，沒有這個想法，就沒有這個APP了！🙏</p>
+      <p style="margin-bottom:16px; font-weight:800;">真的非常感謝【 心酸熊貓人 】的這個想法，沒有這個想法，就沒有這個APP！🙏</p>
       <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #DB2A75; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:800; font-size:18px;">
         f  按讚 心酸熊貓人 🐼
       </a>
