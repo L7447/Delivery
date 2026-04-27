@@ -4018,16 +4018,9 @@ function openPrivacyPolicy(fromRegister = false) {
       • 使用Cloudflare部屬，啟用所有安全防護設定，保護APP使用安全<br>
 
       <div style="font-size:15px; font-weight:700;">帳號密碼：</div>
-      • 🛡️傳輸加密：Cloudflare 預設強制啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。
+      • 🛡️傳輸加密：Cloudflare 預設強制啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸，駭客在半路攔截也只能看到亂碼。<br>
       • 🔐儲存加密：程式碼端透過 WebCrypto API 或 bcrypt 等標準演算法，對密碼執行「加鹽與單向雜湊 (Salt & Cryptographic Hash)」處理，即使資料庫外洩，駭客也無法反推回真實密碼。<br>
-      
-      <div style="font-size:15px; font-weight:700;">資料庫：</div>
-      • Cloudflare D1 沒有任何公開的 IP 位址。 它是完全封閉在 Cloudflare 內部網路中的。全世界任何駭客都「無法」從外部直接連線到你的 D1 資料庫。<br>
-      • Cloudflare D1 只能被「授權的 Cloudflare Worker」存取，沒有任何程式、任何人可以對這個 D1 資料庫下達 SQL 指令。<br>
-      • 「參數化查詢」，免疫駭客 SQL 注入攻擊 (SQL Injection)。<br>
-      • 傳輸中加密 (In Transit)： 從使用者的手機到 Worker，再從 Worker 到 D1 資料庫，全程都走 Cloudflare 的內部企業級 TLS 加密通道。<br>
-      • 儲存時加密 (At Rest)： 存放在 Cloudflare 伺服器硬碟裡的 SQLite 檔案，預設都是經過 AES-256 加密的，即使是 Cloudflare 的機房員工拔走硬碟，也無法讀取裡面的資料。<br>
-      • 存取 D1 必須經過 Worker API，而 Worker API 受到 Cloudflare 全球 CDN 網路的保護。如果有惡意攻擊者想用機器人灌爆資料庫，Cloudflare 的 WAF (網頁應用程式防火牆) 和 DDoS 防禦機制會在最外層就把這些攻擊擋下來，根本碰不到資料庫。<br><br>
+      • 記錄的資料，只儲存在「您自己的裝置」或「雲端硬碟」上，不會上傳至任何伺服器。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
       • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
