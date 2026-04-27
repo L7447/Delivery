@@ -2894,7 +2894,7 @@ function initReminderCheck() {
 
 /* ══ 替換：登入系統拆分雙頁籤與頭像綁定 ══ */
 let authMode = 'login'; // 'login' 或 'register'
-let selectedAvatar = 'figure/1.png'; 
+let selectedAvatar = 'figure/1.webp'; 
 let privacyAgreed = false; // 👈 新增：隱私權同意狀態
 
 window.selectAvatar = function(src, el) {
@@ -2932,9 +2932,9 @@ function renderAuthContent() {
     // 註冊頁面：改為 4x2 網格 (不滑動)，且間距縮緊
     let avatarsHtml = '';
     for(let i=1; i<=8; i++) {
-      const isSel = selectedAvatar === `figure/${i}.png`;
+      const isSel = selectedAvatar === `figure/${i}.webp`;
       // 把 width 和 height 從 80px 稍微縮小為 60px 以適應網格
-      avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
@@ -3004,12 +3004,12 @@ window.openAvatarSettings = function() {
   document.getElementById('sub-top-right').innerHTML = `<button onclick="applyNewAvatar()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">套用</button>`;
   
   // 預設選中目前頭像
-  selectedAvatar = USER.avatar || 'figure/1.png';
+  selectedAvatar = USER.avatar || 'figure/1.webp';
 
   let avatarsHtml = '';
   for(let i=1; i<=8; i++) {
-    const isSel = selectedAvatar === `figure/${i}.png`;
-    avatarsHtml += `<img src="figure/${i}.png" class="avatar-opt" onclick="selectAvatar('figure/${i}.png', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+    const isSel = selectedAvatar === `figure/${i}.webp`;
+    avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
   }
   
   document.getElementById('sub-body').innerHTML = `
@@ -3482,15 +3482,11 @@ function openThemeSettings() {
   
   const bgs =[
     { id: '', name: '無背景 (預設)', type: 'color', val: 'var(--bg)' },
-    { id: 'background/bg1.jpg', name: '背景圖片 1', type: 'image', val: 'background/bg1.jpg' },
-    { id: 'background/bg2.jpg', name: '背景圖片 2', type: 'image', val: 'background/bg2.jpg' },
-    { id: 'background/bg3.jpg', name: '背景圖片 3', type: 'image', val: 'background/bg3.jpg' },
-    { id: 'background/bg4.jpg', name: '背景圖片 4', type: 'image', val: 'background/bg4.jpg' },    
-    { id: 'background/bg5.jpg', name: '背景圖片 5', type: 'image', val: 'background/bg5.jpg' },
-    { id: 'background/bg6.jpg', name: '背景圖片 6', type: 'image', val: 'background/bg6.jpg' },
-    { id: 'background/bg7.jpg', name: '背景圖片 7', type: 'image', val: 'background/bg7.jpg' },
-    { id: 'background/bg8.jpg', name: '背景圖片 8', type: 'image', val: 'background/bg8.jpg' },        
-    { id: 'background/bg9.jpg', name: '背景圖片 9', type: 'image', val: 'background/bg9.jpg' }
+    { id: 'background/bg1.webp', name: '背景圖片 1', type: 'image', val: 'background/bg1.webp' },
+    { id: 'background/bg2.webp', name: '背景圖片 2', type: 'image', val: 'background/bg2.webp' },
+    { id: 'background/bg3.webp', name: '背景圖片 3', type: 'image', val: 'background/bg3.webp' },
+    { id: 'background/bg4.webp', name: '背景圖片 4', type: 'image', val: 'background/bg4.webp' },    
+    { id: 'background/bg5.webp', name: '背景圖片 5', type: 'image', val: 'background/bg5.webp' }
   ];
 
   window._tmpTheme = { tm, as, ae, bg };
