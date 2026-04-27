@@ -1239,7 +1239,7 @@ async function confirmAddRecord() {
     const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
     if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
     const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
-    rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: nowTime(), punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim() };
+    rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: nowTime(), punchIn: '', punchOut: '', hours: totalHours, orders: pf(document.getElementById('f-orders').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim(), syncStatus: 0, updatedAt: Date.now() };
   }
   
   /* 尋找 confirmAddRecord() 函式，替換其下半部程式碼 */
@@ -1263,8 +1263,51 @@ async function confirmAddRecord() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     checkImg.src = isDark ? 'images/Check3.png' : 'images/Check1.png';
     checkBtn.disabled = false; 
-    goPage('home'); 
+    goPage('home');
+    backgroundSync();
   });
+}
+
+/* ══ 背景同步功能 (Offline-First 核心) ══ */
+async function backgroundSync() {
+  // 1. 沒登入或沒網路時，直接終止，等下次有網路再說
+  if (!USER.loggedIn || !navigator.onLine) return;
+
+  // 2. 從 LocalStorage 撈出所有「未同步」的記錄
+  const pendingRecords = S.records.filter(r => r.syncStatus === 0);
+  
+  if (pendingRecords.length === 0) return; // 全部都同步過了，沒事做
+
+  console.log(`準備在背景同步 ${pendingRecords.length} 筆資料...`);
+
+  try {
+    // 3. 發送給 Cloudflare Worker API
+    const res = await fetch(`${API_BASE_URL}/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: USER.email,
+        token: USER.token,
+        records: pendingRecords
+      })
+    });
+    
+    const data = await res.json();
+
+    if (data.success) {
+      // 4. 伺服器回傳成功！把這些資料在手機端標記為「已同步 (syncStatus: 1)」
+      S.records.forEach(r => {
+        if (data.syncedIds.includes(r.id)) {
+          r.syncStatus = 1; // 標記為已同步
+        }
+      });
+      // 存回 LocalStorage
+      localStorage.setItem(KEYS.records, JSON.stringify(S.records));
+      console.log('✅ 背景同步完成！');
+    }
+  } catch (error) {
+    console.warn('背景同步失敗，將在下次開啟時重試', error);
+  }
 }
 
 function cancelAddRecord() {
@@ -3008,7 +3051,7 @@ function openAuthModal() {
 }
 
 // 您的後端 API 網址 (本地測試為 localhost:3000，上線請改為實際網域)
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'https://delivery-api.fab2ci.workers.dev';
 
 /* ══ 寄送真實 Email 驗證碼 ══ */
 async function requestLogin() {
@@ -4245,6 +4288,10 @@ function init() {
       updateNavIndicator('home');
     });
   });
+
+  backgroundSync(); // APP 打開時，偷偷檢查有沒有漏掉沒傳的資料
+  window.addEventListener('online', backgroundSync);
+
 }
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
    defer 在 iOS 上不保證 DOMContentLoaded 已觸發，
