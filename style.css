@@ -548,6 +548,10 @@ input:checked + .slider:before { transform: translateX(20px); }
   margin-bottom: 20px;
 }
 
-.right-align::placeholder {
+/* 讓 E-mail 輸入框的提示文字靠右 */
+#auth-email::placeholder {
   text-align: right;
 }
+/* 確保各瀏覽器相容性 */
+#auth-email::-webkit-input-placeholder { text-align: right; }
+#auth-email::-moz-placeholder { text-align: right; }
