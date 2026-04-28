@@ -2747,8 +2747,8 @@ function renderSettings() {
 
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<div style="font-size:11px; color:var(--text-blue); margin:4px 0px 0px 25px; border:2px solid var(--red); background:var(--blue-d); padding:4px; border-radius:12px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
-    : `<div style="font-size:11px; color:var(--text-red); margin:4px 0px 0px 25px; border:2px solid var(--red); background:var(--blue-d); padding:4px; border-radius:12px;">尚未進行本機備份</div>`;
+    ? `<div style="font-size:11px; color:var(--text-blue); margin:2px 0px 0px 25px; border:1.5px solid var(--red); background:var(--blue-d); padding:4px; border-radius:6px; width:150px; height:20px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
+    : `<div style="font-size:11px; color:var(--text-red); margin:2px 0px 0px 25px; border:1.5px solid var(--red); background:var(--blue-d); padding:6px; border-radius:6px; width:150px; height:20px;">尚未進行本機備份</div>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -2952,7 +2952,7 @@ function renderAuthContent() {
     
     contentHtml = `
       <div style="text-align:center; margin-bottom:16px;">
-        <div style="font-size:48px; margin-bottom:8px; line-height:1;">🚀</div>
+        <div style="font-size:48px; margin-bottom:8px; line-height:1;">🚀
         <h2 style="font-size:20px; font-weight:800; color:var(--t1);">建立專屬帳號</h2>
         <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">幾秒鐘即可完成註冊</p>
       </div>
