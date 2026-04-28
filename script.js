@@ -2747,8 +2747,8 @@ function renderSettings() {
 
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<div style="font-size:11px; color:var(--text-blue); margin:2px 0px 0px 25px; border:1.5px solid var(--red); background:var(--blue-d); padding:4px; border-radius:6px; width:150px; height:20px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
-    : `<div style="font-size:11px; color:var(--text-red); margin:2px 0px 0px 25px; border:1.5px solid var(--red); background:var(--blue-d); padding:6px; border-radius:6px; width:150px; height:20px;">尚未進行本機備份</div>`;
+    ? `<div style="font-size:11px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}` 
+    : `<span style="font-size:11px; color:var(--text-red);">尚未進行本機備份</span></div>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -2951,26 +2951,26 @@ function renderAuthContent() {
     }
     
     contentHtml = `
-      <div style="text-align:center; margin-bottom:16px;">
-        <div style="font-size:48px; margin-bottom:8px; line-height:1;">🚀
+      <div style="text-align:center; margin-bottom:5px;">
+        <div style="font-size:48px; margin-bottom:8px; line-height:1;">🚀</div>
         <h2 style="font-size:20px; font-weight:800; color:var(--t1);">建立專屬帳號</h2>
         <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">幾秒鐘即可完成註冊</p>
       </div>
       
       <div class="auth-card">
-        <div class="fg" style="margin-bottom:16px;">
+        <div class="fg" style="margin-bottom:5px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">🎨 選擇專屬頭像</label>
           <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; background:var(--bg-input); padding:12px; border-radius:16px; justify-items:center;">
             ${avatarsHtml}
           </div>
         </div>
         
-        <div class="fg" style="margin-bottom:16px;">
+        <div class="fg" style="margin-bottom:5px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
           <input type="email" class="finp" id="auth-email" placeholder=" @gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         
-        <div class="fg" style="margin-bottom:16px;">
+        <div class="fg" style="margin-bottom:5px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 設定密碼 (至少 6 個字元)</label>
           <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
@@ -2983,7 +2983,7 @@ function renderAuthContent() {
         </div>
       </div>
 
-      <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
+      <div id="turnstile-widget" style="margin-bottom:5px; text-align:center; min-height:65px;"></div>
 
       <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:16px;font-size:16px;font-weight:800;border-radius:16px; box-shadow:0 8px 20px rgba(255,107,53,0.3); transition:0.2s;">註冊並寄發驗證碼</button>
     `;
@@ -3067,7 +3067,7 @@ function openAuthModal() {
   
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <div class="slide-tabs tabs-2" id="auth-tabs" style="margin-bottom:16px;">
+      <div class="slide-tabs tabs-2" id="auth-tabs" style="margin-bottom:5px;">
         <div class="slide-bg" id="auth-tab-bg" style="transform: translateX(0%); background:var(--acc);"></div>
         <button class="slide-btn active" onclick="switchAuthTab('login')">登入帳號</button>
         <button class="slide-btn" onclick="switchAuthTab('register')">建立新帳號</button>
