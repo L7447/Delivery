@@ -2747,8 +2747,8 @@ function renderSettings() {
 
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:11px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:11px; color:var(--text-red);">尚未進行本機備份</span>`;
+    ? `<span style="font-size:12px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</span>` 
+    : `<span style="font-size:12px; color:var(--text-red);">尚未進行本機備份</span>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -2765,7 +2765,7 @@ function renderSettings() {
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 另存新檔至本機 (JSON) ${lastBackupStr}</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 另存新檔至本機 (JSON)│ ${lastBackupStr}</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
