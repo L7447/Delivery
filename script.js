@@ -2747,12 +2747,12 @@ function renderSettings() {
 
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<div style="font-size:11px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}` 
-    : `<span style="font-size:11px; color:var(--text-red);">尚未進行本機備份</span></div>`;
+    ? `<div style="font-size:11px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
+    : `<div style="font-size:11px; color:var(--text-red);">尚未進行本機備份</div>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
-  <div class="set-sec" style="margin-bottom:12px;"><h3>帳號登入狀態</h3><div class="set-list">
+  <div class="set-sec" style="margin-bottom:5px;"><h3>帳號登入狀態</h3><div class="set-list">
     <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div>
   </div></div>
 
@@ -2767,8 +2767,8 @@ function renderSettings() {
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
       <div class="set-row" onclick="doBackupToFile()">
         <div class="sn">
-          <span style="display:block;">📂 另存新檔至本機 (JSON)</span>
-          ${lastBackupStr}
+          <span style="display:block;">📂 另存新檔至本機 (JSON) ${lastBackupStr}</span>
+          
         </div>
         <span class="arr">↓</span>
       </div>
