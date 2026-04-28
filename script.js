@@ -2747,8 +2747,8 @@ function renderSettings() {
 
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<div style="font-size:11px; color:var(--text-blue); margin-top:2px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
-    : `<div style="font-size:11px; color:var(--t3); margin-top:2px;">尚未進行本機備份</div>`;
+    ? `<div style="font-size:11px; color:var(--text-blue); margin:4px 0px 0px 20px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
+    : `<div style="font-size:11px; color:var(--text-red); margin:4px 0px 0px 20px;">尚未進行本機備份</div>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -4343,6 +4343,20 @@ async function restoreFromCloud(email) {
     finishProgress(() => toast('⚠️ 雲端還原失敗，請檢查網路'));
   }
 }
+
+/* ══ 檢查是否未啟用任何平台，若無則自動彈出設定 ══ */
+window.checkAndPromptPlatformSetup = function() {
+  // 檢查是否所有平台的 active 都是 false
+  const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
+  
+  if (!hasActivePlatform) {
+    // 稍微延遲一下，讓動畫退場更順暢再彈出視窗
+    setTimeout(() => {
+      openPlatformList();
+      toast('💡 歡迎使用！請先啟用您有在跑的外送平台', 4000);
+    }, 400);
+  }
+};
 
 function init() {
   // 初始化期間停用所有 transition，防止主題切換造成白色閃爍
