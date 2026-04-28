@@ -2765,7 +2765,7 @@ function renderSettings() {
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 另存新檔至本機 (JSON)${lastBackupStr}</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 另存新檔至本機 (JSON) ${lastBackupStr}</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
@@ -2924,7 +2924,7 @@ function renderAuthContent() {
       <div class="auth-card">
         <div class="fg" style="margin-bottom:16px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" class="right-align-placeholder" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" class="right-align" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         <div class="fg" style="margin-bottom:8px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 密碼</label>
@@ -2961,7 +2961,7 @@ function renderAuthContent() {
         
         <div class="fg" style="margin-bottom:5px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" class="right-align-placeholder" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" class="right-align" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         
         <div class="fg" style="margin-bottom:5px;">
