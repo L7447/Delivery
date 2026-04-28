@@ -2924,7 +2924,7 @@ function renderAuthContent() {
       <div class="auth-card">
         <div class="fg" style="margin-bottom:16px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder=" @gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" class="right-align-placeholder" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         <div class="fg" style="margin-bottom:8px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 密碼</label>
@@ -2961,7 +2961,7 @@ function renderAuthContent() {
         
         <div class="fg" style="margin-bottom:5px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder=" @gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" class="right-align-placeholder" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         
         <div class="fg" style="margin-bottom:5px;">
