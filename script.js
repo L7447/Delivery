@@ -2767,7 +2767,7 @@ function renderSettings() {
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
       <div class="set-row" onclick="doBackupToFile()">
         <div class="sn">
-          <span style="display:block;">📂 另存新檔至本機 (JSON) ${lastBackupStr}</span>
+          <span style="display:inline;">📂 另存新檔至本機 (JSON) ${lastBackupStr}</span>
           
         </div>
         <span class="arr">↓</span>
