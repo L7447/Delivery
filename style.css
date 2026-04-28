@@ -548,6 +548,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   margin-bottom: 20px;
 }
 
-.right-align-placeholder {
+.right-align::placeholder {
   text-align: right;
 }
