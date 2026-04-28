@@ -3345,17 +3345,42 @@ function openAdminGasPriceEdit() {
   document.getElementById('sub-page').style.zIndex = '1100'; 
 }
 
-function saveAdminGasPrice() {
+/* ✨ 修改：管理員真正將油價同步至 Cloudflare KV */
+async function saveAdminGasPrice() {
   const gp = {
     '92': pf(document.getElementById('gp-92').value) || 29.5,
     '95': pf(document.getElementById('gp-95').value) || 31.0,
     '98': pf(document.getElementById('gp-98').value) || 33.0
   };
-  // 儲存至全域變數 (之後你串接 MongoDB 時可將這裡改為 API POST)
-  localStorage.setItem('delivery_global_gas_prices', JSON.stringify(gp));
-  toast('✅ 全域油價已更新並同步');
-  document.getElementById('sub-page').style.zIndex = '200';
-  openAccountStats(); 
+
+  showProgress('同步油價至伺服器...');
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/gas-price`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminEmail: USER.email,
+        token: USER.token, // 雖然目前沒驗證 token，但依 API 格式傳遞
+        prices: gp
+      })
+    });
+    const data = await res.json();
+
+    finishProgress(() => {
+      if (data.success) {
+        // 同步成功後，也更新自己手機的本地暫存
+        localStorage.setItem('delivery_global_gas_prices', JSON.stringify(gp));
+        toast('✅ 全域油價已更新並同步至雲端');
+        document.getElementById('sub-page').style.zIndex = '200';
+        openAccountStats(); 
+      } else {
+        toast('⚠️ 同步失敗：' + data.message);
+      }
+    });
+  } catch(err) {
+    finishProgress(() => toast('連線失敗，無法同步油價'));
+  }
 }
 
 /* ✨ 新增：管理員編輯公告介面 */
@@ -4366,6 +4391,8 @@ function init() {
   applyTheme();
   applyBackground();
 
+  fetchGlobalGasPrice();
+
   initReminderCheck();
   setInterval(applyTheme, 60000);
 
@@ -4390,6 +4417,21 @@ function init() {
       updateNavIndicator('home');
     });
   });
+
+  /* ✨ 新增：從雲端獲取全域油價並寫入本地 */
+  async function fetchGlobalGasPrice() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/settings/gas-price`);
+      const data = await res.json();
+      if (data.success && data.prices) {
+        // 將雲端抓到的油價覆蓋本地的油價
+        localStorage.setItem('delivery_global_gas_prices', JSON.stringify(data.prices));
+        console.log("已從雲端更新全域油價:", data.prices);
+      }
+    } catch (e) {
+      console.warn("無法獲取雲端油價，將使用本地預設值", e);
+    }
+  }
 }
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
    defer 在 iOS 上不保證 DOMContentLoaded 已觸發，
