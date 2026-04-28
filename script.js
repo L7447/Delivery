@@ -2747,8 +2747,8 @@ function renderSettings() {
 
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<div style="font-size:11px; color:var(--text-blue); margin:4px 0px 0px 20px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
-    : `<div style="font-size:11px; color:var(--text-red); margin:4px 0px 0px 20px;">尚未進行本機備份</div>`;
+    ? `<div style="font-size:11px; color:var(--text-blue); margin:4px 0px 0px 25px; border:2px solid var(--red); background:var(--blue-d); padding:4px; border-radius:12px; font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</div>` 
+    : `<div style="font-size:11px; color:var(--text-red); margin:4px 0px 0px 25px; border:2px solid var(--red); background:var(--blue-d); padding:4px; border-radius:12px;">尚未進行本機備份</div>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -2924,13 +2924,13 @@ function renderAuthContent() {
       <div style="text-align:center; margin-bottom:20px;">
         <div style="font-size:48px; margin-bottom:8px; line-height:1;">👋</div>
         <h2 style="font-size:20px; font-weight:800; color:var(--t1);">歡迎回來</h2>
-        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">登入以同步您的外送記錄資料</p>
+        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;"></p>
       </div>
       
       <div class="auth-card">
         <div class="fg" style="margin-bottom:16px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="name@example.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder=" @gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         <div class="fg" style="margin-bottom:8px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 密碼</label>
@@ -2954,7 +2954,7 @@ function renderAuthContent() {
       <div style="text-align:center; margin-bottom:16px;">
         <div style="font-size:48px; margin-bottom:8px; line-height:1;">🚀</div>
         <h2 style="font-size:20px; font-weight:800; color:var(--t1);">建立專屬帳號</h2>
-        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">幾秒鐘即可完成註冊，安全備份您的心血</p>
+        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">幾秒鐘即可完成註冊</p>
       </div>
       
       <div class="auth-card">
@@ -2967,7 +2967,7 @@ function renderAuthContent() {
         
         <div class="fg" style="margin-bottom:16px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="name@example.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder=" @gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         
         <div class="fg" style="margin-bottom:16px;">
