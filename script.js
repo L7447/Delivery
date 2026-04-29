@@ -2945,28 +2945,28 @@ function renderAuthContent() {
     }
     
     contentHtml = `
-      <div style="text-align:center; margin-bottom:2px;">
+      <div style="text-align:center; margin-bottom:3px;">
         <div style="font-size:48px; margin-bottom:4px; line-height:1;">🚀</div>
         <h2 style="font-size:20px; font-weight:800; color:var(--t1);">建立專屬帳號</h2>
         <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">幾秒鐘即可完成註冊</p>
       </div>
       
       <div class="auth-card">
-        <div class="fg" style="margin-bottom:2px;">
+        <div class="fg" style="margin-bottom:3px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">🎨 選擇專屬頭像</label>
           <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; background:var(--bg-input); padding:6px; border-radius:16px; justify-items:center;">
             ${avatarsHtml}
           </div>
         </div>
         
-        <div class="fg" style="margin-bottom:2px;">
+        <div class="fg" style="margin-bottom:3px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="您的帳號@gmail.com" style="padding:7px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder="您的帳號@gmail.com" style="padding:12px; border-radius:12px; background:var(--bg-input);">
         </div>
         
-        <div class="fg" style="margin-bottom:2px;">
+        <div class="fg" style="margin-bottom:4px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 設定密碼 (至少12字元，含大小寫/數字/特殊符號)</label>
-          <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼 (含 !, @, #, $, %, ^, &)" style="padding:7px; border-radius:12px; background:var(--bg-input);">
+          <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼 (含 !, @, #, $, %, ^, &)" style="padding:12px; border-radius:12px; background:var(--bg-input);">
         </div>
 
         <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:10px; padding:8px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer; transition:0.2s;">
