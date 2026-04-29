@@ -4047,24 +4047,24 @@ function openPrivacyPolicy(fromRegister = false) {
       • 統計「 使用人數 」。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">3. 資料及使用安全</strong><br>
-      • <div style="color:var(--text-blue);">使用Cloudflare部屬，啟用所有安全防護設定。</div>
+      <div style="color:var(--text-blue);">• 使用Cloudflare部屬，啟用所有安全防護設定。</div>
       • Cloudflare 預設啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸。<br>
-      • <div style="color:var(--text-blue);">記錄只儲存在「您的裝置」上，不會上傳至任何伺服器。</div>
+      <div style="color:var(--text-blue);">• 記錄只儲存在「您的裝置」上，不會上傳至任何伺服器。</div>
 
       • 我們已將密碼雜湊演算法從單純的 SHA-256 升級為 PBKDF2。<br>
-        🚩<div style="color:var(--text-red);">「 PBKDF2 」的主要優勢：</div>
+        <div style="color:var(--text-red); font-weight:500;">🚩「 PBKDF2 」的主要優勢：</div>
 
         🔶加入隨機鹽值（Salting）：有效抵抗彩虹表（Rainbow Table）攻擊。<br>
-        🔷<div style="color:var(--text-blue);">高迭代次數（Key Stretching）：進行 100,000 次反覆運算，大幅增加暴力破解所需時間。</div>
+        <div style="color:var(--text-blue);">🔷高迭代次數（Key Stretching）：進行 100,000 次反覆運算，大幅增加暴力破解所需時間。</div>
         🔶計算密集型設計：顯著提升對 GPU/ASIC 大規模破解的抵抗力。<br><br>
 
-        🏁<div style="color:var(--text-blue);">相較於單純使用 SHA-256，PBKDF2 能提供更強的防護能力，有效降低密碼在資料外洩時被快速破解的風險。</div></div>
+        <div style="color:var(--text-blue);">🏁相較於單純使用 SHA-256，PBKDF2 能提供更強的防護能力，有效降低密碼在資料外洩時被快速破解的風險。</div><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
       • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">5. 聯絡方式</strong><br>
-      • 如有任何問題或建議，請透過【 設定 】→「 關於我們 」→『 聯絡我們 』，與我們聯繫。
+      • 如有任何問題或建議，請透過<br>【 設定 】→「 關於我們 」→『 聯絡我們 』，與我們聯繫。
       ${btnHtml}
       <div style="height:32px;"></div>
     </div>
