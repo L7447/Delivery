@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v197';
+const CACHE_NAME = 'delivery-app-v198';
 
 // 需要快取的靜態資源清單
 const ASSETS = [
