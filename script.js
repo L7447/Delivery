@@ -4056,12 +4056,13 @@ function openPrivacyPolicy(fromRegister = false) {
         <dl>
           <dl>
             <dd>🔶加入隨機鹽值（Salting）：有效抵抗彩虹表（Rainbow Table）攻擊。</dd>
-            <dd><div style="color:var(--text-blue);">🔷高迭代次數（Key Stretching）：進行 100,000 次反覆運算，大幅增加暴力破解所需時間。</dd>
-            <dd>🔶計算密集型設計：顯著提升對 GPU/ASIC 大規模破解的抵抗力。</dd>
-            <br>
-            <dd><div style="color:var(--text-blue);">🏁相較於單純使用 SHA-256；PBKDF2 能提供更強的防護能力，有效降低密碼在資料外洩時被快速破解的風險。</div></dd>
           </dl>
         </dl>
+            <dd><div style="color:var(--text-blue);">🔷高迭代運算：透過高迭代（10萬次）拖慢破解速度，大幅增加暴力破解所需時間。</dd>
+            <dd>🔶計算密集型設計：顯著提升對 GPU 大規模平行破解的抵抗力。</dd>
+            <br>
+            <dd><div style="color:var(--text-blue);">🏁相較於單純使用 SHA-256；PBKDF2 能提供更強的防護能力，有效降低密碼在資料外洩時被快速破解的風險。</div></dd>
+
       <div style="color:var(--acc); font-size:16px; font-weight:600;">4. 您的權利</div>
       • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
 
