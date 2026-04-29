@@ -1,4 +1,3 @@
-import { argon2id } from 'https://esm.sh/hash-wasm@4.11.0';
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -37,22 +36,36 @@ export default {
       });
 
     try {
-      // ==================== Argon2id 高安全密碼雜湊函式 ====================
+      // ==================== 原生 PBKDF2 高安全密碼雜湊 (保證部屬成功) ====================
       const hashPassword = async (password) => {
+        const encoder = new TextEncoder();
         const salt = crypto.getRandomValues(new Uint8Array(16));
         const saltHex = Array.from(salt)
           .map(b => b.toString(16).padStart(2, '0'))
           .join('');
 
-        const hashHex = await argon2id({
-          password: password,
-          salt: salt,
-          parallelism: 1,
-          iterations: 3,
-          memorySize: 65536, // 64 MB 記憶體硬性要求 (抵抗 GPU/ASIC)
-          hashLength: 32,
-          outputType: 'hex'
-        });
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw",
+          encoder.encode(password),
+          { name: "PBKDF2" },
+          false,
+          ["deriveBits"]
+        );
+
+        const hashBuffer = await crypto.subtle.deriveBits(
+          {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 250000, // 提升至 25 萬次高強度迭代
+            hash: "SHA-256"
+          },
+          keyMaterial,
+          256
+        );
+
+        const hashHex = Array.from(new Uint8Array(hashBuffer))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
 
         return `${saltHex}$${hashHex}`;
       };
@@ -61,20 +74,34 @@ export default {
         if (!storedHash || !storedHash.includes('$')) return false;
 
         const [saltHex, expectedHash] = storedHash.split('$');
-        
+        const encoder = new TextEncoder();
+
         const salt = new Uint8Array(
           saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16))
         );
 
-        const hashHex = await argon2id({
-          password: password,
-          salt: salt,
-          parallelism: 1,
-          iterations: 3,
-          memorySize: 65536,
-          hashLength: 32,
-          outputType: 'hex'
-        });
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw",
+          encoder.encode(password),
+          { name: "PBKDF2" },
+          false,
+          ["deriveBits"]
+        );
+
+        const hashBuffer = await crypto.subtle.deriveBits(
+          {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 250000, // 必須與加密時相同
+            hash: "SHA-256"
+          },
+          keyMaterial,
+          256
+        );
+
+        const hashHex = Array.from(new Uint8Array(hashBuffer))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
 
         return hashHex === expectedHash;
       };
@@ -155,7 +182,6 @@ export default {
         return jsonRes({ success: true, message: '驗證碼已寄出', directLogin: false });
       }
 
-      // === API 2: 驗證 ===
       if (path === '/api/auth/verify' && request.method === 'POST') {
         const { email, code } = await request.json();
         let userStr = await env.DB.get(`user:${email}`);
@@ -175,7 +201,6 @@ export default {
         return jsonRes({ success: true, message: '登入成功', user, token: user.sessionToken });
       }
 
-      // === API 3: 檢查存活 ===
       if (path === '/api/auth/check' && request.method === 'POST') {
         const { email, token } = await request.json();
         let userStr = await env.DB.get(`user:${email}`);
@@ -188,7 +213,6 @@ export default {
         return jsonRes({ active: true });
       }
 
-      // === API 4: 系統統計 ===
       if (path === '/api/stats' && request.method === 'GET') {
         const { keys } = await env.DB.list({ prefix: 'user:' });
         let verifiedCount = 0;
@@ -202,13 +226,10 @@ export default {
         return jsonRes({ success: true, total: keys.length, verified: verifiedCount });
       }
 
-      // === API 5: 管理員取得清單 ===
       if (path === '/api/admin/users' && request.method === 'POST') {
         const { adminEmail, token } = await request.json();
-        
         let adminStr = await env.DB.get(`user:${adminEmail}`);
         if (!adminStr) return jsonRes({ success: false, message: '權限不足' }, 403);
-        
         let admin = JSON.parse(adminStr);
         if (admin.sessionToken !== token || admin.role !== 'admin') {
           return jsonRes({ success: false, message: '權限不足' }, 403);
@@ -216,36 +237,25 @@ export default {
 
         const { keys } = await env.DB.list({ prefix: 'user:' });
         let users = [];
-        
         for (let key of keys) {
           let uStr = await env.DB.get(key.name);
           if (uStr) {
              let u = JSON.parse(uStr);
-             users.push({
-               email: u.email,
-               role: u.role,
-               verified: u.verified,
-               createdAt: u.createdAt
-             });
+             users.push({ email: u.email, role: u.role, verified: u.verified, createdAt: u.createdAt });
           }
         }
-        
         users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         return jsonRes({ success: true, users });
       }
 
-      // === API 6: 管理員刪除帳號 ===
       if (path === '/api/admin/delete' && request.method === 'POST') {
         const { adminEmail, token, targetEmail } = await request.json();
-        
         let adminStr = await env.DB.get(`user:${adminEmail}`);
         if (!adminStr) return jsonRes({ success: false, message: '權限不足' }, 403);
-        
         let admin = JSON.parse(adminStr);
         if (admin.sessionToken !== token || admin.role !== 'admin') {
           return jsonRes({ success: false, message: '權限不足' }, 403);
         }
-
         await env.DB.delete(`user:${targetEmail}`);
         return jsonRes({ success: true, message: '帳號已刪除' });
       }
