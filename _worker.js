@@ -1,3 +1,4 @@
+import { argon2id } from 'https://esm.sh/hash-wasm@4.11.0';
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -36,36 +37,22 @@ export default {
       });
 
     try {
-      // ==================== PBKDF2 高安全密碼雜湊函式 ====================
+      // ==================== Argon2id 高安全密碼雜湊函式 ====================
       const hashPassword = async (password) => {
-        const encoder = new TextEncoder();
         const salt = crypto.getRandomValues(new Uint8Array(16));
         const saltHex = Array.from(salt)
           .map(b => b.toString(16).padStart(2, '0'))
           .join('');
 
-        const keyMaterial = await crypto.subtle.importKey(
-          "raw",
-          encoder.encode(password),
-          { name: "PBKDF2" },
-          false,
-          ["deriveBits"]
-        );
-
-        const hashBuffer = await crypto.subtle.deriveBits(
-          {
-            name: "PBKDF2",
-            salt: salt,
-            iterations: 100000,
-            hash: "SHA-256"
-          },
-          keyMaterial,
-          256
-        );
-
-        const hashHex = Array.from(new Uint8Array(hashBuffer))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
+        const hashHex = await argon2id({
+          password: password,
+          salt: salt,
+          parallelism: 1,
+          iterations: 3,
+          memorySize: 65536, // 64 MB 記憶體硬性要求 (抵抗 GPU/ASIC)
+          hashLength: 32,
+          outputType: 'hex'
+        });
 
         return `${saltHex}$${hashHex}`;
       };
@@ -74,34 +61,20 @@ export default {
         if (!storedHash || !storedHash.includes('$')) return false;
 
         const [saltHex, expectedHash] = storedHash.split('$');
-        const encoder = new TextEncoder();
-
+        
         const salt = new Uint8Array(
           saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16))
         );
 
-        const keyMaterial = await crypto.subtle.importKey(
-          "raw",
-          encoder.encode(password),
-          { name: "PBKDF2" },
-          false,
-          ["deriveBits"]
-        );
-
-        const hashBuffer = await crypto.subtle.deriveBits(
-          {
-            name: "PBKDF2",
-            salt: salt,
-            iterations: 100000,
-            hash: "SHA-256"
-          },
-          keyMaterial,
-          256
-        );
-
-        const hashHex = Array.from(new Uint8Array(hashBuffer))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
+        const hashHex = await argon2id({
+          password: password,
+          salt: salt,
+          parallelism: 1,
+          iterations: 3,
+          memorySize: 65536,
+          hashLength: 32,
+          outputType: 'hex'
+        });
 
         return hashHex === expectedHash;
       };
