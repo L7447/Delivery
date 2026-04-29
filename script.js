@@ -4049,7 +4049,7 @@ function openPrivacyPolicy(fromRegister = false) {
       <strong style="color:var(--acc); font-size:15px;">3. 資料及使用安全</strong><br>
       • 使用Cloudflare部屬，啟用所有安全防護設定。<br><br>
       • Cloudflare 預設啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸。<br><br>
-      • 密碼使用了crypto.subtle.digest('SHA-256')「加鹽雜湊」處理，駭客也無法反推回真實密碼。<br><br>
+      • 密碼使用了「Argon2id」目前最安全的密碼雜湊演算法。<br><br>
       • 記錄只儲存在「您的裝置」上，不會上傳至任何伺服器。<br><br>
 
       <strong style="color:var(--acc); font-size:15px;">4. 您的權利</strong><br>
