@@ -2961,7 +2961,7 @@ function renderAuthContent() {
         
         <div class="fg" style="margin-bottom:5px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder="您的帳號@gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
         
         <div class="fg" style="margin-bottom:5px;">
@@ -3137,7 +3137,7 @@ async function requestLogin() {
               </p>
               <div class="fg" style="margin-bottom:20px;">
                 <label style="font-weight:700; color:var(--t1);">6位數驗證碼</label>
-                <input type="number" class="finp" id="auth-code" placeholder="請輸入信件中的數字" inputmode="numeric" style="font-size:24px; letter-spacing:8px; text-align:center; padding:12px; font-family:var(--mono);">
+                <input type="number" class="finp" id="auth-code" autocomplete="one-time-code" placeholder="請輸入信件中的數字" inputmode="numeric" style="font-size:24px; letter-spacing:8px; text-align:center; padding:12px; font-family:var(--mono);">
               </div>
               <button onclick="verifyAuthCode('${email}')" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">驗證並啟用帳號</button>
             </div>
