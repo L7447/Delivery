@@ -3,30 +3,22 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // === 【關鍵修復】===
-    // 如果請求路徑不是以 /api 開頭，代表是要讀取網頁 (index.html, css, js, 圖片等)
-    // 直接將請求交還給 Cloudflare Pages 的靜態資源伺服器
+    // === 靜態資源請求直接交給 ASSETS ===
     if (!path.startsWith('/api')) {
       return env.ASSETS.fetch(request);
     }
 
-    // === 以下為 API 專屬處理邏輯 ===
-    // === 安全設定：CORS 白名單過濾 ===
-    // 取得呼叫 API 的來源網址
+    // === CORS 白名單 ===
     const origin = request.headers.get('Origin');
-    
-    // 定義允許通行的網域白名單 (包含 HTTPS 專屬網域與 Pages 預設網域)
     const allowedOrigins = [
       'https://delivery-2ws.pages.dev',
       'https://deliveryman-records.xyz',
-      'https://www.deliveryman-records.xyz', // 包含 www 的版本
-      'http://localhost:8788'                // 預留給您未來在電腦本地端測試用
+      'https://www.deliveryman-records.xyz',
+      'http://localhost:8788'
     ];
 
-    // 檢查來源是否在白名單內
     const isAllowed = allowedOrigins.includes(origin);
 
-    // 如果不在白名單內，就回傳您的主網域(讓瀏覽器判定來源不符而阻擋)
     const corsHeaders = {
       'Access-Control-Allow-Origin': isAllowed ? origin : 'https://deliveryman-records.xyz',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
@@ -38,27 +30,56 @@ export default {
     }
 
     const jsonRes = (data, status = 200) => 
-      new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      new Response(JSON.stringify(data), { 
+        status, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
 
     try {
-      // 密碼加密函式
-      const hashPassword = async (pwd, salt) => {
-        const data = new TextEncoder().encode(pwd + salt);
-        const hash = await crypto.subtle.digest('SHA-256', data);
-        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+      // ==================== Argon2id 密碼雜湊函式 ====================
+      let argon2 = null;
+
+      const getArgon2 = async () => {
+        if (!argon2) {
+          const mod = await import('@rabbit-company/argon2id');
+          argon2 = mod.argon2id;
+        }
+        return argon2;
       };
+
+      /**
+       * 使用 Argon2id 產生密碼雜湊
+       */
+      const hashPassword = async (password) => {
+        const argon2id = await getArgon2();
+        return await argon2id.hash(password, {
+          memoryCost: 65536,   // 64MB 記憶體成本
+          timeCost: 3,         // 時間成本
+          parallelism: 1,      // Workers 建議保持較低
+          outputLen: 32
+        });
+      };
+
+      /**
+       * 驗證密碼
+       */
+      const verifyPassword = async (password, storedHash) => {
+        const argon2id = await getArgon2();
+        return await argon2id.verify(storedHash, password);
+      };
+
+      // ==================== API 路由 ====================
 
       // === API 1: 登入與註冊 ===
       if (path === '/api/auth/login' && request.method === 'POST') {
-        // 👇 接收前端傳來的 turnstileToken
         const { email, password, turnstileToken } = await request.json();
         if (!email || !password) return jsonRes({ success: false, message: '請填寫信箱與密碼' }, 400);
 
-        // 👇 呼叫 Cloudflare 驗證這串 Token 是不是合法的真人
+        // Turnstile 人機驗證
         if (!turnstileToken) return jsonRes({ success: false, message: '缺少人機驗證憑證' }, 403);
         
         const formData = new FormData();
-        formData.append('secret', env.TURNSTILE_SECRET_KEY); // 從環境變數讀取您的 Secret Key
+        formData.append('secret', env.TURNSTILE_SECRET_KEY);
         formData.append('response', turnstileToken);
 
         const turnstileCheck = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -70,14 +91,14 @@ export default {
         if (!turnstileResult.success) {
           return jsonRes({ success: false, message: '人機驗證失敗，請重試' }, 403);
         }
-        // 👆 驗證完成，接下來才是原本的資料庫檢查邏輯
 
         let userStr = await env.DB.get(`user:${email}`);
         let user = userStr ? JSON.parse(userStr) : null;
         
-        if (user) {
-          const hashedInput = await hashPassword(password, user.salt);
-          if (hashedInput !== user.password) return jsonRes({ success: false, message: '密碼錯誤' }, 401);
+        if (user && user.password) {
+          // 使用 Argon2id 驗證密碼
+          const isValid = await verifyPassword(password, user.password);
+          if (!isValid) return jsonRes({ success: false, message: '密碼錯誤' }, 401);
 
           if (user.verified) {
             user.sessionToken = crypto.randomUUID();
@@ -86,33 +107,43 @@ export default {
             return jsonRes({ success: true, message: '登入成功', user, token: user.sessionToken, directLogin: true });
           }
         } else {
-          const salt = crypto.randomUUID();
-          const hashedPassword = await hashPassword(password, salt);
-          // 若信箱與環境變數 ADMIN_EMAIL 相同則設為 admin
+          // 新註冊帳號
+          const hashedPassword = await hashPassword(password);
           const role = (email === env.ADMIN_EMAIL) ? 'admin' : 'user';
-          user = { email, password: hashedPassword, salt, role, verified: false, createdAt: new Date().toISOString() };
+          user = { 
+            email, 
+            password: hashedPassword, 
+            role, 
+            verified: false, 
+            createdAt: new Date().toISOString() 
+          };
         }
 
+        // 產生驗證碼並寄信
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         user.code = code;
         user.codeExpires = Date.now() + 10 * 60000;
         await env.DB.put(`user:${email}`, JSON.stringify(user));
 
-        // 呼叫 Resend 寄發驗證碼
         const resendReq = await fetch('https://api.resend.com/emails', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          headers: { 
+            'Authorization': `Bearer ${env.RESEND_API_KEY}`, 
+            'Content-Type': 'application/json' 
+          },
           body: JSON.stringify({
-            from: 'Delivery App <noreply@send.deliveryman-records.xyz>', // 需確保與 Resend 設定的寄件人相符
+            from: 'Delivery App <noreply@send.deliveryman-records.xyz>',
             to: email,
             subject: '外送記錄與分析 APP - 帳號驗證碼',
-            html: `<div style="padding:20px; font-family:sans-serif;"><h2>您的驗證碼為：<span style="color:#FF6B35; letter-spacing:4px;">${code}</span></h2><p>請在 10 分鐘內於 APP 輸入完成驗證。</p></div>`
+            html: `<div style="padding:20px; font-family:sans-serif;">
+                     <h2>您的驗證碼為：<span style="color:#FF6B35; letter-spacing:4px;">${code}</span></h2>
+                     <p>請在 10 分鐘內於 APP 輸入完成驗證。</p>
+                   </div>`
           })
         });
 
         if (!resendReq.ok) {
-           const errData = await resendReq.json();
-           return jsonRes({ success: false, message: '寄信失敗，請確認 Resend 設定或信箱是否為註冊信箱' }, 500);
+          return jsonRes({ success: false, message: '寄信失敗，請確認 Resend 設定' }, 500);
         }
 
         return jsonRes({ success: true, message: '驗證碼已寄出', directLogin: false });
@@ -213,11 +244,10 @@ export default {
         return jsonRes({ success: true, message: '帳號已刪除' });
       }
 
-      // 如果找不到 /api/ 下的路由
       return jsonRes({ success: false, message: 'API Not Found' }, 404);
 
     } catch (err) {
-      // 捕捉伺服器錯誤
+      console.error('Worker Error:', err);
       return jsonRes({ success: false, message: '伺服器錯誤', error: err.message }, 500);
     }
   }
