@@ -2924,11 +2924,11 @@ function renderAuthContent() {
       <div class="auth-card">
         <div class="fg" style="margin-bottom:16px;">
           <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="@gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+          <input type="email" class="finp" id="auth-email" placeholder="您的帳號@gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
-        <div class="fg" style="margin-bottom:8px;">
-          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 密碼</label>
-          <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+        <div class="fg" style="margin-bottom:5px;">
+          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 設定密碼 (至少12字元，含大小寫/數字/特殊符號)</label>
+          <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼 (含 !, @, #, $, %, ^, &)" style="padding:14px; border-radius:12px; background:var(--bg-input);">
         </div>
       </div>
 
@@ -3081,7 +3081,6 @@ async function requestLogin() {
   const email = document.getElementById('auth-email').value.trim();
   const pwd = document.getElementById('auth-pwd').value.trim();
 
-  // 👇 取得 Turnstile 驗證結果
   let turnstileToken = '';
   if (typeof turnstile !== 'undefined') {
     turnstileToken = turnstile.getResponse();
@@ -3092,15 +3091,21 @@ async function requestLogin() {
   }
 
   if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式（您的帳號@gmail.com）'); return; }
-  if(pwd.length < 6) { toast('密碼請至少輸入 6 個字元'); return; }
   
-  // 👈 註冊模式下，強制檢查隱私權同意狀態
+  // 統一登入與註冊的嚴格密碼驗證 (無舊用戶，一律採用最高標準)
+  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&])[A-Za-z\d!@#$%^&]{12,}$/;
+  if (!pwdRegex.test(pwd)) {
+    toast('密碼錯誤或強度不足：需至少12字元，並包含大小寫英文、數字及特殊符號(!@#$%^&)');
+    return;
+  }
+
   if (authMode === 'register' && !privacyAgreed) {
     toast('⚠️ 請點擊上方並閱讀同意隱私權政策');
     return;
   }
 
   showProgress('登入連線中...');
+  // ... (下方程式碼保持不變)
   
   try {
     // 呼叫更新後的 /auth/login API
@@ -4040,40 +4045,52 @@ function openPrivacyPolicy(fromRegister = false) {
 
   document.getElementById('privacy-body').innerHTML = `
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
-      <div style="color:var(--acc); font-size:16px; font-weight:600;">1. 我們使用到的資料</div>
-      • 帳號（ 電子郵件 ）註冊驗證使用。<br><br>
+      
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">1. 我們使用到的資料</div>
+      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
+        • 您的帳號（電子郵件）僅作為註冊與登入身份驗證使用。
+      </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:600;">2. 我們如何使用資訊</div>
-      • 統計「 使用人數 」。<br><br>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">2. 我們如何使用資訊</div>
+      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
+        • 僅用於統計系統整體的「總使用人數」，不做任何其他商業用途。
+      </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:600;">3. 資料及使用安全</div>
-      <div style="color:var(--text-blue);">• 使用Cloudflare部屬，啟用所有安全防護設定。</div>
-      • Cloudflare 預設啟用最高等級的 TLS 1.3 (HTTPS) 加密傳輸。<br>
-      <div style="color:var(--text-blue);">• 記錄只儲存在「您的裝置」上，不會上傳至任何伺服器。</div><br>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">3. 資料及使用安全</div>
+      <div style="background:var(--sf2); padding:14px; border-radius:12px; border:1px solid var(--border); margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+        
+        <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:14px; margin-bottom:6px;">
+          <span>🛡️</span> 基礎防禦與本機隱私
+        </div>
+        <div style="padding-left:4px; margin-bottom:12px;">
+          • 採用 Cloudflare 部署，預設啟用最高等級 <b>TLS 1.3 (HTTPS)</b> 加密傳輸。<br>
+          • 您的外送記錄與資料<b>僅儲存於「您的個人裝置」上</b>，絕不會上傳至任何雲端伺服器。
+        </div>
 
-      • 我們已將密碼雜湊演算法從單純的 SHA-256 升級為 PBKDF2。<br>
-        <div style="color:var(--text-red); font-weight:500;">🚩「 PBKDF2 」的主要優勢：</div>
-        <dl>
-          <dl>
-            <dd>🔶加入隨機鹽值（Salting）：有效抵抗彩虹表（Rainbow Table）攻擊。</dd>
-          </dl>
-        </dl>
-            <dd><div style="color:var(--text-blue);">🔷高迭代運算：透過高迭代（10萬次）拖慢破解速度，大幅增加暴力破解所需時間。</dd>
-            <dd>🔶計算密集型設計：顯著提升對 GPU 大規模平行破解的抵抗力。</dd>
-            <br>
-            <dd><div style="color:var(--text-blue);">🏁相較於單純使用 SHA-256；PBKDF2 能提供更強的防護能力，有效降低密碼在資料外洩時被快速破解的風險。</div></dd>
+        <div style="display:flex; align-items:center; gap:6px; color:var(--red); font-weight:800; font-size:14px; margin-top:16px; margin-bottom:6px;">
+          <span>🔐</span> 軍規級密碼安全 (PBKDF2)
+        </div>
+        <div style="padding-left:4px;">
+          • 我們採用美國國家標準技術研究所 (NIST) 認可的 <b>PBKDF2</b> 安全演算法。<br>
+          <div style="margin-top:8px; padding:10px; border-left:3px solid var(--acc); background:var(--bg-input); border-radius:4px 8px 8px 4px;">
+            <span style="color:var(--acc); font-weight:800;">優勢一：</span>每次產生獨立隨機鹽值（Salting），徹底無效化彩虹表（Rainbow Table）攻擊。<br>
+            <span style="color:var(--acc); font-weight:800;">優勢二：</span>超高強度迭代運算（高達 250,000 次），大幅增加暴力破解所需的時間與成本。<br>
+            <span style="color:var(--acc); font-weight:800;">優勢三：</span>強制嚴格的 12 字元密碼長度與複雜度要求，從源頭阻斷字典攻擊。
+          </div>
+        </div>
+      </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:600;">4. 您的權利</div>
-      • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">4. 您的權利與聯絡方式</div>
+      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
+        • 您可隨時聯繫我們，要求永久刪除您的註冊帳號。<br>
+        • 如有任何問題，請透過【設定】→「關於我們」→『聯絡我們』與我們聯繫。
+      </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:600;">5. 聯絡方式</div>
-      • 如有任何問題或建議，請透過<br>【 設定 】→「 關於我們 」→『 聯絡我們 』，與我們聯繫。
       ${btnHtml}
       <div style="height:32px;"></div>
     </div>
   `;
   
-  // 開啟全新的全螢幕隱私權頁面
   openOverlay('privacy-page');
 }
 
