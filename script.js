@@ -4052,13 +4052,14 @@ function openPrivacyPolicy(fromRegister = false) {
       <div style="color:var(--text-blue);">• 記錄只儲存在「您的裝置」上，不會上傳至任何伺服器。</div><br>
 
       • 我們已將密碼雜湊演算法從單純的 SHA-256 升級為 PBKDF2。<br>
-        <div style="color:var(--text-red); font-weight:500;">&nbsp;&nbsp;🚩「 PBKDF2 」的主要優勢：</div>
+        <div style="color:var(--text-red); font-weight:500;">🚩「 PBKDF2 」的主要優勢：</div>
+        <ol>
+          <li>🔶加入隨機鹽值（Salting）：有效抵抗彩虹表（Rainbow Table）攻擊。</li>
+          <li><div style="color:var(--text-blue);">🔷高迭代次數（Key Stretching）：進行 100,000 次反覆運算，大幅增加暴力破解所需時間。</li>
+          <li>🔶計算密集型設計：顯著提升對 GPU/ASIC 大規模破解的抵抗力。</li>
 
-        &emsp;🔶加入隨機鹽值（Salting）：有效抵抗彩虹表（Rainbow Table）攻擊。<br>
-        <div style="color:var(--text-blue);">&nbsp;&nbsp;🔷高迭代次數（Key Stretching）：進行 100,000 次反覆運算，大幅增加暴力破解所需時間。</div>
-        &emsp;🔶計算密集型設計：顯著提升對 GPU/ASIC 大規模破解的抵抗力。<br>
-
-        <div style="color:var(--text-blue);">&nbsp;&nbsp;🏁相較於單純使用 SHA-256；PBKDF2 能提供更強的防護能力，有效降低密碼在資料外洩時被快速破解的風險。</div><br>
+          <div style="color:var(--text-blue);">🏁相較於單純使用 SHA-256；PBKDF2 能提供更強的防護能力，有效降低密碼在資料外洩時被快速破解的風險。</div><br>
+        </ol>
 
       <div style="color:var(--acc); font-size:16px; font-weight:500;">4. 您的權利</div>
       • 您可隨時聯繫我們，幫您刪除帳號。<br><br>
