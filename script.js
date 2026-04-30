@@ -4074,9 +4074,9 @@ function openPrivacyPolicy(fromRegister = false) {
         </div>
         <div style="padding-left:4px;">
           • 我們採用美國國家標準技術研究所 (NIST) 認可的 <b>PBKDF2</b> 安全演算法。<br>
-          <div style="margin-top:8px; padding:10px; border-left:3px solid var(--acc); background:var(--bg-input); border-radius:4px 8px 8px 4px;">
+          <div style="margin-top:8px; padding:10px; border-left:3px solid var(--acc); background:var(--sf); border-radius:4px 8px 8px 4px;">
             <span style="color:var(--acc); font-weight:800;">優勢一：</span>每次產生獨立隨機鹽值（Salting），徹底無效化彩虹表（Rainbow Table）攻擊。<br>
-            <span style="color:var(--acc); font-weight:800;">優勢二：</span>超高強度迭代運算（高達 250,000 次），大幅增加暴力破解所需的時間與成本。<br>
+            <span style="color:var(--acc); font-weight:800;">優勢二：</span>超高強度迭代運算（高達 10 萬次），大幅增加暴力破解所需的時間與成本。<br>
             <span style="color:var(--acc); font-weight:800;">優勢三：</span>強制嚴格的 12 字元密碼長度與複雜度要求，從源頭阻斷字典攻擊。
           </div>
         </div>
