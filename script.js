@@ -219,10 +219,12 @@ function updateNavIndicator(activePg) {
 }
 
 function _bindNavEvents() {
-  document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
-    const pg = el.dataset.pg; 
-    if (pg === 'add') { if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增記錄'); return; } if (S.tab !== 'add') openAddPage(); } else { goPage(pg); }
-  }));
+  document.querySelectorAll('.ni[data-pg]').forEach(el => {
+    el.addEventListener('click', () => { 
+      const pg = el.dataset.pg; 
+      if (pg === 'add') { if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增記錄'); return; } if (S.tab !== 'add') openAddPage(); } else { goPage(pg); }
+    });
+  });
 }
 
 function switchHomeTab(tab, index) { S.homeSubTab = tab; document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); renderHome(); }
@@ -1167,7 +1169,7 @@ window.openVehInfo = function(id) {
 
 /* ══ 7. 設定管理與啟動 ═══════════════════════════════════ */
 function renderSettings() {
-  const isLogged = USER.loggedIn; const accStr = isLogged ? `👤 帳號：${USER.email}` : `✉️ 登入 / 註冊帳號`;
+  const isLogged = USER.loggedIn; const accStr = isLogged ? `👤 帳號：${esc(USER.email)}` : `✉️ 登入 / 註冊帳號`;
   let themeStatus = ''; if (S.settings.themeMode === 'auto') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(已開啟定時自動切換)</span>'; else if (S.settings.themeMode === 'dark') themeStatus = ' <span style="font-size:11px;color:var(--text-blue);">(深色模式)</span>';
   const lastBackupStr = S.settings.lastLocalBackup ? `<span style="font-size:12px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</span>` : `<span style="font-size:12px; color:var(--text-red);">尚未進行本機備份</span>`;
 
@@ -1345,7 +1347,6 @@ async function saveAdminGasPrice() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
       body: JSON.stringify({
-        adminEmail: USER.email,
         prices: gp
       })
     });
@@ -1387,7 +1388,7 @@ function openAnnouncementEdit() {
       
       <div class="fg">
         <label style="font-weight:700; color:var(--t1);">📝 公告內容支援換行</label>
-        <textarea id="ann-text" class="finp" rows="5" placeholder="輸入要顯示給所有外送員的公告內容..." style="resize:none; font-size:14px; line-height:1.5;">${ann.text}</textarea>
+        <textarea id="ann-text" class="finp" rows="5" placeholder="輸入要顯示給所有外送員的公告內容..." style="resize:none; font-size:14px; line-height:1.5;">${esc(ann.text)}</textarea>
       </div>
     </div>
     
@@ -1413,7 +1414,7 @@ function saveAnnouncement() {
 }
 
 async function adminDeleteUser(targetEmail) {
-  const ok = await customConfirm(`確定要強制刪除並封鎖 <b>${targetEmail}</b> 嗎？`);
+  const ok = await customConfirm(`確定要強制刪除並封鎖 <b>${esc(targetEmail)}</b> 嗎？`);
   if(!ok) return;
   
   showProgress('刪除帳號中...');
