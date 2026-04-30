@@ -3095,9 +3095,9 @@ async function requestLogin() {
   if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式（您的帳號@gmail.com）'); return; }
   
   // 統一登入與註冊的嚴格密碼驗證 (無舊用戶，一律採用最高標準)
-  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&])[A-Za-z\d!@#$%^&]{12,}$/;
+  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9\s])\S{12,}$/;
   if (!pwdRegex.test(pwd)) {
-    toast('密碼錯誤或強度不足：需至少12字元，並包含大小寫英文、數字及特殊符號(!@#$%^&)');
+    toast('密碼錯誤或強度不足：需至少12字元，並包含大小寫英文、數字及特殊符號');
     return;
   }
 
