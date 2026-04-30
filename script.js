@@ -2964,8 +2964,9 @@ function renderAuthContent() {
           <input type="email" class="finp" id="auth-email" placeholder="您的帳號@gmail.com" style="padding:12px; border-radius:12px; background:var(--bg-input);">
         </div>
         
-        <div class="fg" style="margin-bottom:4px;">
-          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 設定密碼 (至少12字元，含大小寫/數字/特殊符號)</label>
+        <div class="fg" style="margin-bottom:6px;">
+          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 設定密碼 (至少12字元，含大小寫/數字/特殊符號)</label><br>
+          <span style="font-weight:800; color:var(--t1); font-size:12px;">可以使用【密碼生成器】</span><a href="https://1password.com/zh-tw/password-generator" target="_blank"> 1Password </a><span style="font-weight:800; color:var(--t1); font-size:12px;">，選擇【隨機】生成密碼。</span><br>
           <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼 (含 !, @, #, $, %, ^, &)" style="padding:12px; border-radius:12px; background:var(--bg-input);">
         </div>
 
