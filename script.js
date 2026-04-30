@@ -2969,7 +2969,7 @@ function renderAuthContent() {
           <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:12px; border-radius:12px; background:var(--bg-input);">
         </div>
 
-        <span style="font-weight:800; color:var(--t1); font-size:12px;">可以使用<a href="https://1password.com/zh-tw/password-generator" target="_blank" rel="noopener noreferrer nofollow">1Password密碼生成器</a>，選擇(隨機)生成密碼。</span><span style="color:var(--text-red)">(密碼生成後，請先保存，避免不見)</span><br>
+        <div style="font-weight:800; color:var(--t1); font-size:12px;">可以使用<a href="https://1password.com/zh-tw/password-generator" target="_blank" rel="noopener noreferrer nofollow">1Password密碼生成器</a>，選擇(隨機)生成密碼。</span><span style="font-weight:600; font-size:12px; color:var(--text-red)">(密碼生成後，請先保存，避免不見)</span></div></div>
 
         <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:10px; padding:8px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer; transition:0.2s;">
           <div id="privacy-chk-box" style="width:22px; height:22px; border-radius:6px; border:2px solid ${privacyAgreed ? 'var(--acc)' : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? 'var(--acc)' : 'transparent'}; transition:0.2s; flex-shrink:0;">
