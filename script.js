@@ -1292,11 +1292,13 @@ async function backgroundSync() {
     // 3. 發送給 Cloudflare Worker API
     const res = await fetch(`${API_BASE_URL}/sync`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        // 👇 新增這行：把 Token 放在正確的位置送出
+        'Authorization': `Bearer ${USER.token}` 
+      },
       body: JSON.stringify({
-        email: USER.email,
-        token: USER.token,
-        records: pendingRecords
+        records: pendingRecords // email 也不用傳了，後端會從 token 自己抓
       })
     });
     
@@ -3359,10 +3361,9 @@ async function saveAdminGasPrice() {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/gas-price`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
       body: JSON.stringify({
         adminEmail: USER.email,
-        token: USER.token, // 雖然目前沒驗證 token，但依 API 格式傳遞
         prices: gp
       })
     });
@@ -3443,8 +3444,8 @@ async function adminDeleteUser(targetEmail) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/delete`, { 
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adminEmail: USER.email, token: USER.token, targetEmail: targetEmail })
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ adminEmail: USER.email, targetEmail: targetEmail })
     });
     const data = await res.json();
     
@@ -3468,8 +3469,8 @@ async function checkAccountStatus() {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/check`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: USER.email, token: USER.token }) 
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ email: USER.email }) 
     });
     const data = await res.json();
     
@@ -4354,7 +4355,7 @@ async function restoreFromCloud(email) {
   try {
     const res = await fetch(`${API_BASE_URL}/download`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
       body: JSON.stringify({ email: email })
     });
     const result = await res.json();
