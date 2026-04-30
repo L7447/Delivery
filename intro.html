@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外送記錄與分析 APP - 專為外送員打造的記帳神器</title>
+  <meta name="description" content="精準掌握每一分收入，自動計算時薪與達標進度。支援油耗、保養記錄，讓跑單更有感！">
+  <link rel="icon" href="icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E85D2A;
+      --primary-light: rgba(255, 107, 53, 0.1);
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- 導覽列 --- */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      padding: 12px 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo-area { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; color: var(--primary); }
+    .logo-area img { width: 36px; height: 36px; border-radius: 8px; }
+    
+    .btn {
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      padding: 10px 24px;
+      border-radius: 99px;
+      font-weight: 700;
+      transition: 0.3s;
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+      display: inline-block;
+    }
+    .btn:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+    /* --- 首頁 Hero 區塊 --- */
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 100vh;
+      padding: 100px 5% 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+      gap: 40px;
+    }
+    .hero-text { flex: 1; }
+    .hero-text h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 900; line-height: 1.2; margin-bottom: 20px; }
+    .hero-text p { font-size: 18px; color: var(--text-muted); margin-bottom: 30px; font-weight: 500; }
+    
+    .hero-image {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      position: relative;
+    }
+    /* 這裡使用您提供的吉祥物圖片 */
+    .hero-image img {
+      width: 100%;
+      max-width: 450px;
+      border-radius: 50%;
+      box-shadow: 0 24px 48px rgba(255, 107, 53, 0.2);
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+
+    /* --- 功能特色區塊 --- */
+    .features { padding: 80px 5%; background: var(--surface); text-align: center; }
+    .section-title { font-size: 32px; font-weight: 900; margin-bottom: 12px; }
+    .section-subtitle { color: var(--text-muted); margin-bottom: 60px; font-weight: 500; }
+    
+    .grid-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .feature-card {
+      background: var(--bg);
+      padding: 32px 24px;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      text-align: left;
+      transition: 0.3s;
+    }
+    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.05); border-color: var(--primary); }
+    .f-icon { font-size: 40px; margin-bottom: 16px; display: inline-block; padding: 12px; background: var(--surface); border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .feature-card h3 { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
+    .feature-card p { color: var(--text-muted); font-size: 15px; }
+
+    /* --- 深入介紹區塊 (圖文交錯) --- */
+    .showcase { padding: 80px 5%; max-width: 1100px; margin: 0 auto; }
+    .showcase-row {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      margin-bottom: 80px;
+    }
+    .showcase-row:nth-child(even) { flex-direction: row-reverse; }
+    .sc-text { flex: 1; }
+    .sc-text h2 { font-size: 28px; font-weight: 900; margin-bottom: 16px; color: var(--primary); }
+    .sc-text p { font-size: 16px; color: var(--text-muted); margin-bottom: 16px; }
+    .sc-text ul { list-style: none; }
+    .sc-text li { margin-bottom: 10px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .sc-text li::before { content: '✓'; color: white; background: var(--primary); width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+    
+    .sc-image { flex: 1; background: var(--primary-light); border-radius: 32px; padding: 40px; text-align: center; }
+    .sc-image .mockup { background: white; padding: 20px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); font-family: monospace; font-size: 14px; color: #333; text-align: left; }
+
+    /* --- 行動呼籲 --- */
+    .cta { background: linear-gradient(135deg, #FF8C42, #FF6B35); padding: 80px 5%; text-align: center; color: white; }
+    .cta h2 { font-size: 36px; font-weight: 900; margin-bottom: 20px; }
+    .cta p { font-size: 18px; margin-bottom: 30px; opacity: 0.9; }
+    .cta .btn { background: white; color: var(--primary); font-size: 18px; padding: 14px 32px; }
+    .cta .btn:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+
+    /* --- 頁尾 --- */
+    footer { padding: 40px 5%; text-align: center; color: var(--text-muted); font-size: 14px; border-top: 1px solid var(--border); background: var(--surface); }
+
+    /* --- RWD --- */
+    @media (max-width: 768px) {
+      .hero { flex-direction: column; text-align: center; padding-top: 120px; }
+      .hero-text h1 { font-size: 32px; }
+      .showcase-row, .showcase-row:nth-child(even) { flex-direction: column; }
+      .sc-image { padding: 20px; }
+    }
+
+    /* 捲動進入動畫 */
+    .fade-in { opacity: 0; transform: translateY(30px); transition: 0.8s ease-out; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- 導覽列 -->
+  <header>
+    <div class="logo-area">
+      <!-- 替換成您的 Icon 路徑 -->
+      <img src="icon-192.png" alt="Logo">
+      外送記錄與分析
+    </div>
+    <a href="index.html" class="btn">開啟網頁版 APP</a>
+  </header>
+
+  <!-- 首頁主視覺 -->
+  <section class="hero">
+    <div class="hero-text fade-in">
+      <h1>專為外送員打造的<br><span style="color: var(--primary);">記帳分析神器</span></h1>
+      <p>精準掌握每一分收入，自動計算時薪與達標進度。支援油耗計算、保養時間軸，讓跑單更有感！免安裝即可使用。</p>
+      <a href="/app" class="btn" style="font-size: 18px; padding: 14px 32px;">馬上免費使用 🚀</a>
+      <p style="font-size: 12px; margin-top: 16px; color: var(--text-muted);">支援 Uber Eats、foodpanda、foodomo 及現金小費</p>
+    </div>
+    <div class="hero-image fade-in">
+      <!-- 替換成您上面提供的那張超可愛吉祥物圖片 -->
+      <img src="icon-512.png" alt="外送員吉祥物">
+    </div>
+  </section>
+
+  <!-- 核心功能區塊 -->
+  <section class="features">
+    <h2 class="section-title fade-in">為什麼選擇我們？</h2>
+    <p class="section-subtitle fade-in">這不只是一個記帳工具，更是您的外送事業分析師</p>
+    
+    <div class="grid-features">
+      <div class="feature-card fade-in">
+        <div class="f-icon">📊</div>
+        <h3>精準收入分析</h3>
+        <p>自動計算單均、時薪，並內建「基本工資警示」標籤。輕鬆查看日、週、月、年趨勢與佔比圖表。</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="f-icon">🎁</div>
+        <h3>自動獎勵計算</h3>
+        <p>不再手動算單數！設定好熊貓週循環獎勵階距，輸入單數時系統將「自動」幫您帶入達標獎金。</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="f-icon">🛵</div>
+        <h3>車輛與保養管理</h3>
+        <p>支援汽油車與電動車。內建油耗計算、全域最新油價，並提供精美的「保養維修時間軸」搜尋功能。</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="f-icon">☁️</div>
+        <h3>雲端同步與安全</h3>
+        <p>資料存於手機本機，支援一鍵備份或背景雲端同步。登入採用 PBKDF2 軍規級密碼加密，隱私有保障。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 深入介紹區塊 -->
+  <section class="showcase">
+    
+    <!-- 圖文 1 -->
+    <div class="showcase-row fade-in">
+      <div class="sc-text">
+        <h2>告別糊塗帳，時薪一目了然</h2>
+        <p>我們知道外送收入結構複雜，包含行程費、達標獎金、天氣獎勵及客人小費。系統會自動幫您拆解「淨行程佔比」，並直接告訴您當下有沒有賺到基本時薪。</p>
+        <ul>
+          <li>支援「上線打卡」功能，精準記錄工時</li>
+          <li>現金小費獨立記錄，不干擾總收入數據</li>
+          <li>同儕比較功能，比對上月/去年同期業績</li>
+        </ul>
+      </div>
+      <div class="sc-image">
+        <div class="mockup" style="border: 2px solid #22C55E;">
+          <div style="font-weight: 900; font-size:18px; margin-bottom:8px;">📊 今日概況</div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:8px;">
+            <span>總收入</span><span style="color:#FF6B35; font-weight:800; font-size:18px;">$ 2,450</span>
+          </div>
+          <div style="margin-top:8px; font-size:12px; color:#666;">
+            時薪：$204 <span style="background:rgba(34,197,94,0.1); color:#22C55E; padding:2px 6px; border-radius:4px; font-weight:800;">🎉 符合基本工資</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 圖文 2 -->
+    <div class="showcase-row fade-in">
+      <div class="sc-text">
+        <h2>愛車保養與油耗，一手掌握</h2>
+        <p>跑外送最怕車子出狀況！APP 內建完整的車庫管理，無論您是騎 Gogoro 還是油車，都能完美適配。</p>
+        <ul>
+          <li>電動車專屬：計算換電里程與換電花費</li>
+          <li>汽油車專屬：自動計算 km/L 平均油耗</li>
+          <li>保養記錄：自動排序最新保養時間軸與里程差</li>
+        </ul>
+      </div>
+      <div class="sc-image">
+        <div class="mockup" style="border: 2px solid #3B82F6;">
+          <div style="font-weight: 900; font-size:18px; margin-bottom:8px;">🔧 保養時間軸</div>
+          <div style="border-left: 2px solid #ccc; padding-left: 12px; margin-left:6px;">
+            <div style="font-weight:800; margin-bottom:4px;">2024/11/20 <span style="font-size:12px; color:#3B82F6;">12,500 km</span></div>
+            <div style="color:#666; font-size:13px;">換機油, 齒輪油 @ 巷口車業</div>
+            <div style="font-size:11px; color:#999; margin-top:4px;">距離上次：+1,000 km</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- 行動呼籲 -->
+  <section class="cta fade-in">
+    <h2>準備好提升跑單效率了嗎？</h2>
+    <p>支援 PWA 漸進式網頁應用技術，Safari / Chrome 直接「加到主畫面」即可像 APP 一樣使用！</p>
+    <a href="index.html" class="btn">開始記錄我的外送日常</a>
+  </section>
+
+  <!-- 頁尾 -->
+  <footer>
+    <div style="margin-bottom: 12px;">
+      <strong>外送記錄與分析 APP</strong> © 2024
+    </div>
+    <p>由外送員為外送員設計開發 🛵</p>
+  </footer>
+
+  <!-- 簡單的滾動進入動畫腳本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    });
+  </script>
+</body>
+</html>
