@@ -469,10 +469,17 @@ function renderFullCalendar() {
   for (let i=first-1; i>=0; i--) { html += `<div class="fc-cell empty"><div class="fc-date">${pad(prevDays - i)}</div></div>`; }
   
   for (let day=1; day<=days; day++) {
-    const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); const isToday = ds === today;
-    let cls = 'fc-cell'; if(isToday) cls+=' today';
+    const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); 
+    const isToday = ds === today;
+    
+    let cls = 'fc-cell'; 
+    if(isToday) cls+=' today';
+    
     let contentHtml = `<div class="fc-date">${pad(day)}</div>`;
-    if(sum > 0) { cls += ' has-income'; contentHtml += `<div class="fc-amt">${fmt(sum)}</div>`; }
+    if(sum > 0) {
+      cls += ' has-income';
+      contentHtml += `<div class="fc-amt">${fmt(sum)}</div>`;
+    }
     html += `<div class="${cls}">${contentHtml}</div>`;
   }
   const totalCells = first + days; const remain = totalCells % 7 === 0 ? 0 : (Math.ceil(totalCells/7)*7) - totalCells;
@@ -483,13 +490,20 @@ function renderFullCalendar() {
 function renderHistRecords(ds) {
   const d = new Date(ds+'T00:00:00'); const dow = ['日','一','二','三','四','五','六'][d.getDay()];
   document.getElementById('hist-day-label').textContent = `${d.getMonth()+1} 月 ${d.getDate()} 日（星期${dow}）記錄`;
-  const recs = getDayRecs(ds); const total = recs.reduce((s,r)=>s+recTotal(r), 0); const cashTips = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
+  const recs = getDayRecs(ds); const total = recs.reduce((s,r)=>s+recTotal(r), 0); 
+  const cashTips = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
   const sumEl = document.getElementById('hist-day-summary');
   
   if (total > 0 || cashTips > 0) {
     const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0); const dayBonus = recs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = recs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = recs.reduce((s,r)=>s+pf(r.tips), 0);
+    
     let sumHtml = total > 0 ? buildSummaryCard('當日', total, orders, hours, dayBonus, dayTemp, dayTips, 'hist-day-card') : '';
-    if (cashTips > 0) { sumHtml += `<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:10px 16px; margin:4px 2px; display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13px; font-weight:700; color:#15803d;">💵 當日現金小費 (不計入總收入)</span><span style="font-family:var(--mono); font-size:16px; font-weight:800; color:#16a34a;">$${fmt(cashTips)}</span></div>`; }
+    if (cashTips > 0) {
+      sumHtml += `<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:10px 16px; margin:4px 2px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; font-weight:700; color:#15803d;">💵 當日現金小費 (不計入總收入)</span>
+        <span style="font-family:var(--mono); font-size:16px; font-weight:800; color:#16a34a;">$${fmt(cashTips)}</span>
+      </div>`;
+    }
     sumEl.innerHTML = sumHtml;
   } else { sumEl.innerHTML = ''; }
   
@@ -1160,7 +1174,7 @@ function renderSettings() {
   const html  = `
   <div class="set-sec" style="margin-bottom:5px;"><h3>帳號登入狀態</h3><div class="set-list"><div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div></div></div>
   <div class="set-sec" style="margin-bottom:12px;"><h3>功能設定</h3><div class="set-list"><div class="set-row" onclick="openPlatformList()"><span class="sn">🏪 平台列表與設定</span><span class="arr">›</span></div><div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div><div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div><div class="set-row" onclick="openThemeSettings()"><span class="sn">🎨 背景圖設定${themeStatus}</span><span class="arr">›</span></div><div class="set-row" onclick="openReminderSettings()"><span class="sn">⏰ 每日記錄通知提醒</span><span class="arr">›</span></div></div></div>
-  <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list"><div class="set-row" onclick="manualCloudSync()"><span class="sn" style="color:var(--blue); font-weight:800;">☁️ 一鍵同步至雲端資料庫</span><span class="arr">↑</span></div><div class="set-row" onclick="restoreFromCloud(USER.email)"><span class="sn" style="color:var(--green); font-weight:800;">📥 從雲端資料庫還原</span><span class="arr">↓</span></div><div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 儲存到本機 (.json) │ ${lastBackupStr}</span><span class="arr">↓</span></div><div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div><div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div><div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除本機資料 (不影響雲端)</span><span class="arr" style="color:var(--red)">!</span></div><div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div></div></div>
+  <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list"><div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 儲存到本機 (.json) │ ${lastBackupStr}</span><span class="arr">↓</span></div><div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div><div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除本機資料 (不影響雲端)</span><span class="arr" style="color:var(--red)">!</span></div><div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div></div></div>
   <div style="margin-top:0px; padding-bottom:8px; text-align:center;"><span onclick="openOverlay('about-page')" style="font-size:15px; color:var(--text-blue); font-weight:800; cursor:pointer; padding:6px 16px; display:inline-block;">關於我們</span></div>`;
   document.getElementById('settings-content').innerHTML = html;
 }
@@ -1282,12 +1296,10 @@ async function openAccountStats() {
   } catch (err) { document.getElementById('sub-body').innerHTML = baseHtml + `<div style="text-align:center; color:var(--red); margin-bottom:16px;">介面載入發生錯誤</div><button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`; }
 }
 
-/* ✨ 新增：管理員編輯全域油價設定 */
 function openAdminGasPriceEdit() {
   document.getElementById('sub-title').textContent = '全域油價設定';
   document.getElementById('sub-top-right').innerHTML = '';
   
-  // 預設油價
   let gp = { '92': 29.5, '95': 31.0, '98': 33.0 };
   try { 
     const saved = JSON.parse(localStorage.getItem('delivery_global_gas_prices'));
@@ -1319,7 +1331,6 @@ function openAdminGasPriceEdit() {
   document.getElementById('sub-page').style.zIndex = '1100'; 
 }
 
-/* ✨ 修改：管理員真正將油價同步至 Cloudflare KV */
 async function saveAdminGasPrice() {
   const gp = {
     '92': pf(document.getElementById('gp-92').value) || 29.5,
@@ -1355,7 +1366,6 @@ async function saveAdminGasPrice() {
   }
 }
 
-/* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
   document.getElementById('sub-title').textContent = '系統公告設定';
   document.getElementById('sub-top-right').innerHTML = '';
@@ -1402,7 +1412,6 @@ function saveAnnouncement() {
   if (S.tab === 'home') renderHome();
 }
 
-/* ══ 管理員刪除 API 呼叫 (帶上憑證) ══ */
 async function adminDeleteUser(targetEmail) {
   const ok = await customConfirm(`確定要強制刪除並封鎖 <b>${targetEmail}</b> 嗎？`);
   if(!ok) return;
@@ -1430,7 +1439,6 @@ async function adminDeleteUser(targetEmail) {
   }
 }
 
-/* ══ 踢下線檢查 (顯示共用時間) ══ */
 async function checkAccountStatus() {
   if (!USER.loggedIn) return false;
   try {
@@ -1721,7 +1729,7 @@ window.addRewardTier = function() {
 }
 
 function renderRewardForm() {
-  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); 
+  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); 
   let tiersHtml = '';
   tempTiers.forEach((t, idx) => {
     tiersHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;background:var(--bg-input);padding:8px;border-radius:8px;">
@@ -1869,7 +1877,7 @@ function doExportExcel(targetYear) {
 } 
 
 async function doClearData() { 
-  const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄與車輛資料</strong>嗎？<br>（這將保留您的平台設定與目標）此動作無法復原！'); 
+  const ok = await customConfirm('⚠️ 確定要<strong>清除本機所有記錄與車輛資料</strong>嗎？<br>（這將保留您的平台設定與目標）此動作無法復原！'); 
   if (!ok) return; 
   S.records=[]; S.vehicles=[]; S.vehicleRecs=[]; 
   saveRecords(); saveVehicles(); saveVehicleRecs(); 
