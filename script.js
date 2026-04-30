@@ -4046,22 +4046,22 @@ function openPrivacyPolicy(fromRegister = false) {
   }
 
   document.getElementById('privacy-body').innerHTML = `
-    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:8px 4px;">
+    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:0px 4px;">
       
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">1. 我們使用到的資料</div>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
       <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
         • 您的帳號（電子郵件）僅作為註冊與登入身份驗證使用。
       </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">2. 我們如何使用資訊</div>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資訊</div>
       <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
         • 僅用於統計系統整體的「總使用人數」，不做任何其他商業用途。
       </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">3. 資料及使用安全</div>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
       <div style="background:var(--sf2); padding:14px; border-radius:12px; border:1px solid var(--border); margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
-        <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:14px; margin-bottom:6px;">
+        <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
         </div>
         <div style="padding-left:4px; margin-bottom:12px;">
@@ -4069,7 +4069,7 @@ function openPrivacyPolicy(fromRegister = false) {
           • 您的外送記錄與資料<b>僅儲存於「您的個人裝置」上</b>，絕不會上傳至任何雲端伺服器。
         </div>
 
-        <div style="display:flex; align-items:center; gap:6px; color:var(--red); font-weight:800; font-size:14px; margin-top:16px; margin-bottom:6px;">
+        <div style="display:flex; align-items:center; gap:6px; color:var(--red); font-weight:800; font-size:12px; margin-top:16px; margin-bottom:6px;">
           <span>🔐</span> 軍規級密碼安全 (PBKDF2)
         </div>
         <div style="padding-left:4px;">
@@ -4082,7 +4082,7 @@ function openPrivacyPolicy(fromRegister = false) {
         </div>
       </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:6px;">4. 您的權利與聯絡方式</div>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">4. 您的權利與聯絡方式</div>
       <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
         • 您可隨時聯繫我們，要求永久刪除您的註冊帳號。<br>
         • 如有任何問題，請透過【設定】→「關於我們」→『聯絡我們』與我們聯繫。
