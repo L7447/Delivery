@@ -14,37 +14,6 @@
   <!-- ══════════════════════════════════════════════════════
        iOS PWA 白屏完整修復方案
        ══════════════════════════════════════════════════════ -->
-
-  <!-- [修復1] 最優先鎖定背景色：在任何外部 CSS 載入前阻止白底 -->
-  <!-- ★ 深色模式防閃爍：同步讀取 localStorage，第一幀就設好 data-theme 和背景色 -->
-  <script>
-    (function() {
-      try {
-        var s = JSON.parse(localStorage.getItem('delivery_settings') || '{}');
-        var mode = (s.themeMode) || 'light';
-        var isDark = false;
-        if (mode === 'dark') {
-          isDark = true;
-        } else if (mode === 'auto') {
-          var now = new Date();
-          var cur = now.getHours() * 60 + now.getMinutes();
-          var start_str = (s.autoDarkStart || '18:00').split(':');
-          var end_str   = (s.autoDarkEnd   || '06:00').split(':');
-          var st = parseInt(start_str[0]) * 60 + parseInt(start_str[1]);
-          var en = parseInt(end_str[0])   * 60 + parseInt(end_str[1]);
-          isDark = st < en ? (cur >= st && cur <= en) : (cur >= st || cur <= en);
-        }
-        if (isDark) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-          document.documentElement.style.background = '#0b1220';
-          // 加到 <head> 裡的 style 讓 body 也立刻變深色
-          document.write('<style>html,body{background:#0b1220!important;color:#e6eef8!important;}</style>');
-        } else {
-          document.documentElement.setAttribute('data-theme', 'light');
-        }
-      } catch(e) {}
-    })();
-  </script>
   <style>
     html, body { background: #f8fafc; margin: 0; padding: 0; }
     html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none !important; }
@@ -628,7 +597,7 @@
   <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
     <!--<img src="images/Miyako.webp" alt="Logo" style="width:400px; height:400px; margin:1px; object-fit:contain; pointer-events:none; user-select:none; -webkit-user-drag:none;" oncontextmenu="return false;">-->
 
-    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">ej/ao3tjpfu8製作 2026 © v1.5.2.351</div>
+    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">ej/ao3tjpfu8製作 2026 © v1.5.2.516</div>
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
       <!--<div onclick="openSpecialThanks()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">-->
