@@ -386,15 +386,19 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .plat-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 
 /* ══ 系統提示 (Toast) ══ */
-#toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) translateY(12px); background: #1C1917; color: #fff; padding: 10px 22px; border-radius: 24px; font-size: 13px; opacity: 0; transition: .25s; z-index: 99999; pointer-events: none; text-align: center; box-shadow: 0 6px 24px rgba(0,0,0,.3); }
+#toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) translateY(12px); background: rgba(15, 23, 42, 0.95); color: #fff; padding: 14px 28px; border-radius: 28px; font-size: 15px; opacity: 0; transition: .25s; z-index: 99999; pointer-events: none; text-align: center; box-shadow: 0 10px 36px rgba(0,0,0,.35); min-width: 220px; line-height: 1.5; }
 #toast.show { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
 
 /* ══ 對話框與遮罩 ══ */
-#confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
+#confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(6px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 22px; }
 #confirm-overlay.show { display: flex; }
-#confirm-box { background: var(--sf); border-radius: 16px; padding: 24px 20px 16px; width: 100%; max-width: 320px; }
-#confirm-msg { font-size: 15px; color: var(--t1); line-height: 1.6; }
+#confirm-box { background: var(--sf); border-radius: 24px; padding: 28px 24px 20px; width: 100%; max-width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,.18); }
+#confirm-msg { font-size: 17px; color: var(--t1); line-height: 1.75; letter-spacing: 0.01em; }
 #confirm-msg strong { color: var(--red); }
+#confirm-box button { font-size: 15px; padding: 14px 16px; border-radius: 16px; font-family: var(--sans); }
+#confirm-ok-btn { background: var(--red); color: #fff; font-weight: 700; }
+#confirm-cancel-btn { background: var(--sf2); color: var(--t2); }
+#confirm-box div[style*="display:flex"] { margin-top: 24px; }
 
 #detail-overlay { position: fixed; inset: 0; max-width: 430px; margin: 0 auto; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 300; display: none; align-items: flex-end; justify-content: center; pointer-events: none; }
 #detail-overlay.show { display: flex; pointer-events: auto; }
@@ -452,6 +456,12 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6;      box-shadow: 0 4px
 .scooter-mask { mask-size: contain; -webkit-mask-size: contain; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; mask-position: center; -webkit-mask-position: center; width: 32px; height: 32px; }
 .item-chip { padding: 6px 12px; border-radius: 20px; background: var(--sf2); color: var(--t2); border: 1px solid var(--border); font-size: 12px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
 .item-chip.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+.veh-label { display: inline-block; background: rgba(59,130,246,0.1); color: var(--blue); padding: 8px 10px; border-radius: 14px; font-size: 13px; font-weight: 600; line-height: 1.4; }
+.veh-label:not(:last-child) { margin-bottom: 6px; }
+.veh-label-note { background: rgba(120,130,150,0.11); color: var(--t2); }
+.veh-label-shop { background: rgba(139,92,246,0.12); color: #6d28d9; }
+.veh-label-km { background: rgba(16,185,129,0.12); color: #047857; }
+.veh-label-item { background: rgba(59,130,246,0.12); color: #1d4ed8; }
 
 /* ══ 現金小費專屬樣式 ══ */
 .finp-ct { border: 1px solid var(--green); background: rgba(34, 197, 94, 0.05); color: var(--green); font-weight: 700; }
