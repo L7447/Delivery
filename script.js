@@ -935,11 +935,11 @@ function toggleCalendarGrid() {
   }
 }
 
-/* ══ 替換：產生單筆記錄卡片 (加入淨行程、佔比、基本工資判斷) ══ */
+/* ══ 美化版：單筆記錄卡片 (包含保養維修項目 + 車行 + 備註) ══ */
 function buildRecItem(r) {
   const cid = `hrc-${r.id}`;
   
-  // 處理現金小費專屬卡片
+  // 1. 現金小費專屬卡片
   if (r.isCashTip) {
     const plat = getPlatform(r.platformId);
     return `
@@ -958,7 +958,7 @@ function buildRecItem(r) {
       </div>`;
   }
   
-  // 處理純打卡紀錄
+  // 2. 純打卡紀錄
   if (r.isPunchOnly) {
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')">
@@ -969,20 +969,19 @@ function buildRecItem(r) {
         <span style="font-size:13px; font-weight:800; color:var(--t2); font-family:var(--mono);">${fmtHours(r.hours)}</span>
       </div>`;
   }
-  
-  // 一般行程紀錄計算
+
+  // 3. 一般行程記錄
   const plat = getPlatform(r.platformId); 
   const total = recTotal(r);
   const totalBonus = pf(r.bonus) + pf(r.tempBonus);
-  const income = total - totalBonus - pf(r.tips); // 算出淨行程
-  
+  const income = total - totalBonus - pf(r.tips);
+
   const _orders = pf(r.orders); 
   const _hours = pf(r.hours);
   const avgOrd = _orders > 0 ? Math.round(total / _orders) : 0;
   const ordHr = _hours > 0 ? (_orders / _hours).toFixed(1) : 0;
   const avgHr = _hours > 0 ? Math.round(total / _hours) : 0;
 
-  // 計算佔比
   const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
   const bonPct = total > 0 ? Math.round((totalBonus / total) * 100) : 0;
   const tipPct = total > 0 ? Math.round((pf(r.tips) / total) * 100) : 0;
@@ -992,7 +991,7 @@ function buildRecItem(r) {
   if (r.mileage > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.mileage} km</span>`; 
   if (_hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(_hours)}</span>`;
 
-  // 👇 基本工資判斷邏輯 (單筆記錄使用)
+  // 基本工資判斷
   let recWageHtml = '';
   if (_hours > 0) {
     let wageStatus = ''; let wageColor = ''; let wageBg = '';
@@ -1004,6 +1003,36 @@ function buildRecItem(r) {
     recWageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:12px; padding:6px 5px; border-radius:5px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
   }
 
+  // === 新增：保養維修專屬美化顯示 ===
+  if (r.type === 'maintenance' || r.type === 'maint') {
+    const maintItems = (r.items && r.items.length > 0) 
+      ? r.items.map(item => safeText(item)).join('、') 
+      : '未填寫項目';
+
+    const shopInfo = r.shop ? `<span style="color:var(--blue); font-weight:600;">${safeText(r.shop)}</span>` : '';
+    const noteInfo = r.note ? `<span style="color:var(--t3); font-size:12.5px;">｜${safeTextWithBr(r.note)}</span>` : '';
+
+    return `
+      <div class="hist-rec-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')">
+        <div class="hrc-top">
+          <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
+          <div class="hrc-row1">
+            <span class="hrc-plat-tag" style="background:#8b5cf6; color:#fff;">🔧 保養維修</span>
+            <span style="font-size:12px; color:var(--t2);">${safeText(r.date)} ${safeText(r.time || '')}</span>
+          </div>
+          <div style="font-size:14px; font-weight:600; color:var(--t1); margin:6px 0 4px;">
+            ${maintItems}
+            ${shopInfo}
+            ${noteInfo}
+          </div>
+          <div style="font-family:var(--mono); font-size:17px; font-weight:800; color:#8b5cf6;">
+            -$${fmt(r.amount || 0)}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // === 一般行程記錄（保持原本美化）===
   return `
     <div class="hist-rec-card" data-id="${safeText(r.id)}">
       <div class="hrc-top" onclick="openDetailOverlay('${safeText(r.id)}')">
@@ -1018,7 +1047,6 @@ function buildRecItem(r) {
           ${tagsHtml}
         </div>
         
-        <!-- 單筆記錄。新增：單筆記錄的淨行程、獎勵、小費佔比結構 -->
         <div style="display:flex; justify-content:center; gap:6px; margin-top:3px; flex-wrap:wrap; text-align:center;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             淨行程<br>
@@ -1036,7 +1064,6 @@ function buildRecItem(r) {
             <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
           </div>
         </div>
-
       </div>
 
       <div id="${cid}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
@@ -1047,7 +1074,7 @@ function buildRecItem(r) {
           <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span></div>
           <div class="h-div" style="height:30px;"></div>
           <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span>
-            ${recWageHtml} <!-- 單筆記錄的基本工資徽章 -->
+            ${recWageHtml}
           </div>
         </div>
       </div>
@@ -4549,10 +4576,10 @@ function showBackupReminder() {
   });
 }
 
-// 設定應用鎖密碼（只在第一次登入時呼叫）
+// 設定應用鎖密碼（第一次使用）
 async function setupAppLock() {
-  const password = prompt("為了保護您的外送記錄，請設定 6 位數應用鎖密碼\n\n此密碼用來加密本機資料，下次完全關閉 PWA 後重新開啟時需要輸入。");
-
+  const password = await showLockKeyboard("請設定 6 位數應用鎖密碼");
+  
   if (!password) {
     toast("已取消設定應用鎖，資料將以較低安全性儲存");
     return false;
@@ -4563,27 +4590,23 @@ async function setupAppLock() {
     toast("✅ 應用鎖設定成功！資料已加密保護");
     return true;
   } else {
-    toast("設定失敗，請重新設定 6 位數字密碼");
-    return await setupAppLock(); // 失敗後重試
+    toast("設定失敗，請重新設定");
+    return await setupAppLock(); // 重試
   }
 }
-
-let unlockAttempts = 0;
 
 // 輸入應用鎖密碼進行解鎖
 async function unlockApp() {
   const savedSalt = localStorage.getItem('app_lock_salt');
   
-  // 第一次使用，還沒設定應用鎖
   if (!savedSalt) {
-    toast("首次使用，請設定應用鎖密碼");
     return await setupAppLock();
   }
 
   appLockSalt = JSON.parse(savedSalt);
 
   while (unlockAttempts < 5) {
-    const password = prompt(`請輸入 6 位數應用鎖密碼\n\n剩餘嘗試次數：${5 - unlockAttempts}`);
+    const password = await showLockKeyboard("請輸入 6 位數應用鎖密碼");
 
     if (!password) {
       unlockAttempts++;
@@ -4601,30 +4624,26 @@ async function unlockApp() {
     }
   }
 
-  // 失敗 5 次後，顯示補救選單
-  unlockAttempts = 0; // 重置計數
+  unlockAttempts = 0;
 
+  // 失敗後顯示補救選單
   const choice = await customConfirm(`
-    <div style="text-align:center; padding:10px 0;">
+    <div style="text-align:center;">
       <h3 style="color:var(--red);">應用鎖密碼輸入錯誤過多</h3>
-      <p style="font-size:15px; margin:16px 0; line-height:1.5;">
-        您可以選擇以下方式繼續：
-      </p>
-      <div style="background:var(--sf2); padding:12px; border-radius:12px; text-align:left; font-size:14px;">
-        • <strong>從備份 JSON 檔還原</strong>（推薦）<br>
-        • 重置所有本地資料（會清除全部記錄）
+      <p>您可以選擇：</p>
+      <div style="background:var(--sf2); padding:12px; border-radius:12px; margin:12px 0; text-align:left;">
+        • 從 JSON 備份檔還原（推薦）<br>
+        • 重置所有本地資料
       </div>
     </div>
   `);
 
   if (choice) {
-    // 使用者選擇「從 JSON 備份還原」
     await restoreFromLocalBackup();
     return true;
   } else {
-    // 重置所有資料
-    const resetConfirm = await customConfirm("⚠️ 確定要清除所有本地資料嗎？此動作無法復原！");
-    if (resetConfirm) {
+    const resetOk = await customConfirm("⚠️ 確定清除所有本地資料嗎？");
+    if (resetOk) {
       localStorage.clear();
       location.reload();
     }
@@ -4686,38 +4705,138 @@ async function restoreFromLocalBackup() {
   fi.click();
 }
 
+/* ====================== 美化版應用鎖密碼輸入介面 ====================== */
+
+// 6位數應用鎖輸入狀態
+let currentLockCode = '';
+let lockResolve = null;
+
+// 顯示美化數字鍵盤
+function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼") {
+  return new Promise((resolve) => {
+    lockResolve = resolve;
+    currentLockCode = '';
+
+    const html = `
+      <div style="padding:20px 16px; text-align:center;">
+        <div style="font-size:22px; font-weight:700; margin-bottom:24px; color:var(--t1);">${title}</div>
+        
+        <!-- 6 個輸入格 -->
+        <div id="lock-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:32px;">
+          ${Array(6).fill(0).map(() => `
+            <div class="lock-dot" style="width:18px; height:18px; border:2px solid var(--t3); border-radius:50%; transition:all 0.2s;"></div>
+          `).join('')}
+        </div>
+
+        <!-- 數字鍵盤 -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; max-width:280px; margin:0 auto;">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `
+            <button onclick="lockKeyPress(${n})" style="height:62px; font-size:24px; font-weight:700; background:var(--sf); border:1px solid var(--border); border-radius:16px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+              ${n}
+            </button>
+          `).join('')}
+          
+          <button onclick="lockKeyPress(0)" style="height:62px; font-size:24px; font-weight:700; background:var(--sf); border:1px solid var(--border); border-radius:16px; box-shadow:0 2px 6px rgba(0,0,0,0.05); grid-column:2;">
+            0
+          </button>
+          
+          <button onclick="lockBackspace()" style="height:62px; font-size:20px; background:var(--sf); border:1px solid var(--border); border-radius:16px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+            ←
+          </button>
+        </div>
+
+        <div style="margin-top:24px;">
+          <button onclick="lockCancel()" style="background:transparent; border:none; color:var(--t3); font-size:15px; padding:8px 20px;">取消</button>
+        </div>
+      </div>
+    `;
+
+    // 使用 sub-page 作為鍵盤容器
+    document.getElementById('sub-title').textContent = '應用鎖';
+    document.getElementById('sub-body').innerHTML = html;
+    openOverlay('sub-page');
+  });
+}
+
+// 數字鍵盤按鍵處理
+window.lockKeyPress = function(num) {
+  if (currentLockCode.length >= 6) return;
+  
+  currentLockCode += num;
+  updateLockDots();
+
+  // 輸入滿 6 位自動確認
+  if (currentLockCode.length === 6) {
+    setTimeout(() => {
+      closeOverlay('sub-page');
+      if (lockResolve) lockResolve(currentLockCode);
+    }, 180);
+  }
+};
+
+window.lockBackspace = function() {
+  currentLockCode = currentLockCode.slice(0, -1);
+  updateLockDots();
+};
+
+window.lockCancel = function() {
+  closeOverlay('sub-page');
+  if (lockResolve) lockResolve(null);
+};
+
+function updateLockDots() {
+  const dots = document.querySelectorAll('.lock-dot');
+  dots.forEach((dot, i) => {
+    if (i < currentLockCode.length) {
+      dot.style.background = 'var(--acc)';
+      dot.style.borderColor = 'var(--acc)';
+    } else {
+      dot.style.background = 'transparent';
+      dot.style.borderColor = 'var(--t3)';
+    }
+  });
+}
+
 async function init() {
-  // 1. 初始化期間停用所有 transition，防止主題切換造成白色閃爍
+  // 1. 先停用 transition，防止閃爍
   document.documentElement.classList.add('no-tr');
 
-  // === 【最重要】先進行應用鎖解鎖 ===
+  // === 2. 最重要：先完成應用鎖解鎖 ===
   const isUnlocked = await unlockApp();
   if (!isUnlocked) {
-    // 解鎖失敗時顯示錯誤畫面
     document.getElementById('app').innerHTML = `
       <div style="padding:40px; text-align:center; color:var(--red); height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column;">
         <h2 style="margin-bottom:16px;">應用鎖解鎖失敗</h2>
         <p style="font-size:15px; color:var(--t2);">請重新整理頁面後再試</p>
       </div>`;
-    return;   // 直接結束 init，不繼續往下執行
+    return;
   }
 
-  // === 解鎖成功後，才開始正常初始化 ===
-  await loadAll();           // ← 注意這裡要加 await
+  // === 3. 解鎖成功後，才進行後續初始化 ===
+  try {
+    await loadAll();           // 等待資料解密載入完成
+  } catch (e) {
+    console.error("載入資料失敗", e);
+    toast("資料載入失敗，請重新整理");
+  }
+
   applyTheme();
   applyBackground();
 
   fetchGlobalGasPrice();
   initReminderCheck();
 
+  // 初始化平台設定
   if (!S.platforms || !S.platforms.length) {
     S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
     savePlatforms();
   }
 
+  // 設定當前頁籤
   S.tab = 'home';
   document.body.setAttribute('data-tab', 'home');
 
+  // 初始化導覽列狀態
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
     const isActive = n.dataset.pg === 'home';
     n.classList.toggle('active', isActive);
@@ -4725,9 +4844,10 @@ async function init() {
     if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
 
+  // 4. 最後才渲染首頁（確保資料已載入）
   renderHome();
 
-  // 所有 DOM 穩定後，恢復 transition 並初始化導覽列
+  // 恢復 transition 與導覽列指示器
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       document.documentElement.classList.remove('no-tr');
