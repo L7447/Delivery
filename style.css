@@ -60,82 +60,6 @@
   --nav: 64px;             
 }
 
-/* ══ 深色模式 (Dark Mode) 變數定義 ══ */
-:root[data-theme="dark"] {
-  --nav-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
-  --nav-bg: rgba(22, 32, 52, 0.97);
-  --bg: #0b1220;
-  --sf: rgba(255, 255, 255, 0.06);
-  --sf2: rgba(255, 255, 255, 0.1);
-  --border: rgba(255, 255, 255, 0.08);
-  --bg-header: rgba(11, 18, 32, 0.85);
-  --collapse-bg: rgba(255, 255, 255, 0.03);
-  --bg-input: rgba(255, 255, 255, 0.1);
-
-  --t1: #e6eef8;
-  --t2: rgba(230, 238, 248, 0.7);
-  --t3: rgba(230, 238, 248, 0.4);
-  --nav-text: #ffffff;
-  --hint-color: #FFEA00;
-
-  --card-border: #444444;
-  --cashtip-bg: #1a3a22;
-  --cashtip-border: #22c55e;
-  --tab3-bg: #3b82f6;
-  --tab3-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
-  --dow-color: #60a5fa;
-
-  /* 👇 加入這兩行：深色模式時，日程表卡片背景變為淺灰，文字強制深色 */
-  --schedule-bg: #e5e7eb;
-  --schedule-text: #1C1917;
-
-  /* 在這兩個深色模式區塊內加入： */
-  --chart-text: #e6eef8; /* 深色模式下圖表字體變亮 */
-
-  --text-cyan: #22d3ee;
-  --text-red: #ff6b6b;
-  --text-blue: #60a5fa;
-}
-
-/* 讓作業系統的深色模式生效 (當沒有手動強制切換為淺色時) */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --nav-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
-    --nav-bg: rgba(22, 32, 52, 0.97);
-    --bg: #0b1220;
-    --sf: rgba(255, 255, 255, 0.06);
-    --sf2: rgba(255, 255, 255, 0.1);
-    --border: rgba(255, 255, 255, 0.08);
-    --bg-header: rgba(11, 18, 32, 0.85);
-    --collapse-bg: rgba(255, 255, 255, 0.03);
-    --bg-input: rgba(255, 255, 255, 0.1);
-
-    --t1: #e6eef8;
-    --t2: rgba(230, 238, 248, 0.7);
-    --t3: rgba(230, 238, 248, 0.4);
-    --nav-text: #ffffff;
-    --hint-color: #FFEA00;
-
-    --card-border: #444444;
-    --cashtip-bg: #1a3a22;
-    --cashtip-border: #22c55e;
-    --tab3-bg: #3b82f6;
-    --tab3-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
-    --dow-color: #60a5fa;
-
-    /* 👇 同樣加入這兩行 */
-    --schedule-bg: #e5e7eb;
-    --schedule-text: #1C1917;
-
-    /* 在這兩個深色模式區塊內加入： */
-    --chart-text: #e6eef8; /* 深色模式下圖表字體變亮 */
-
-    --text-cyan: #22d3ee;
-    --text-red: #ff6b6b;
-    --text-blue: #60a5fa;
-  }
-}
-
 /* ══ 全域基本設定 ══ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 /* 移除 background transition，防止 applyTheme() 觸發時出現白色閃爍
@@ -385,9 +309,67 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .set-row .sn-sub { font-size: 11px; color: var(--t3); margin-top: 2px; }
 .plat-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 
-/* ══ 系統提示 (Toast) ══ */
-#toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) translateY(12px); background: rgba(15, 23, 42, 0.95); color: #fff; padding: 14px 28px; border-radius: 28px; font-size: 15px; opacity: 0; transition: .25s; z-index: 99999; pointer-events: none; text-align: center; box-shadow: 0 10px 36px rgba(0,0,0,.35); min-width: 220px; line-height: 1.5; }
-#toast.show { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+/* ══ 系統提示 (Toast) 全新美化加大版 ══ */
+#toast { 
+  position: fixed; 
+  top: 80px; /* 從中間改為上方滑出，更符合現代 APP 體驗 */
+  left: 50%; 
+  transform: translate(-50%, -20px); 
+  background: rgba(30, 41, 59, 0.95); 
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff; 
+  padding: 16px 28px; 
+  border-radius: 99px; 
+  font-size: 16px; /* 字體加大 */
+  font-weight: 800; /* 加粗 */
+  opacity: 0; 
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+  z-index: 999999; 
+  pointer-events: none; 
+  text-align: center; 
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25); 
+  min-width: 260px; 
+  line-height: 1.5; 
+  letter-spacing: 0.5px;
+}
+#toast.show { 
+  opacity: 1; 
+  transform: translate(-50%, 0); 
+}
+
+/* ══ 車輛與保養店家標籤 (Chip) 樣式 ══ */
+.shop-chip {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(139,92,246,0.1);
+  border: 1px solid rgba(139,92,246,0.3);
+  color: #6d28d9;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.shop-chip:active { transform: scale(0.95); background: rgba(139,92,246,0.2); }
+.shop-chip-del {
+  margin-left: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--red);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.shop-chip-del:active { background: var(--red); color: #fff; }
 
 /* ══ 對話框與遮罩 ══ */
 #confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(6px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 22px; }
