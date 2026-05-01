@@ -264,7 +264,7 @@ function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.remove('show');
-  if (id === 'sub-page') {
+  if (id === 'sub-page' || id === 'lock-page') {
     el.style.zIndex = '';
   }
 }
@@ -1368,7 +1368,7 @@ function resetAddForm() {
   switchAddTab('regular', 0); // ✅ 強制切換回預設的「行程記錄」頁籤
 }
 
-function renderPlatformChips() { const container = document.getElementById('platform-chips'); const active = S.platforms.filter(p=>p.active); if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id; container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${safeText(p.id)}')"><span>${safeText(p.name)}</span></div>`).join(''); }
+function renderPlatformChips() { const container = document.getElementById('platform-chips'); const active = Array.isArray(S.platforms) ? S.platforms.filter(p=>p.active) : []; if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id; container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${safeText(p.id)}')"><span>${safeText(p.name)}</span></div>`).join(''); }
 /* 替換原有的 selectPlatform */
 function selectPlatform(id) { 
   S.selPlatformId = id; 
@@ -3823,8 +3823,13 @@ async function deleteReward(i) {
 function openPlatformList() {
   document.getElementById('sub-title').textContent = '平台列表';
   document.getElementById('sub-top-right').innerHTML = '';
-  const platforms = Array.isArray(S.platforms) ? S.platforms : [];
-  document.getElementById('sub-body').innerHTML = `
+  const platforms = Array.isArray(S.platforms) ? S.platforms : DEFAULT_PLATFORMS.map(p => ({ ...p }));
+  const body = document.getElementById('sub-body');
+  if (!body) {
+    console.warn('sub-body element missing when opening platform list');
+    return;
+  }
+  body.innerHTML = `
     <div class="set-list">
       ${platforms.length > 0 ? platforms.map(p => `
         <div class="set-row" onclick="openPlatformEdit('${safeText(p.id)}')">
@@ -3844,7 +3849,6 @@ function openPlatformList() {
     <div style="margin-top:12px; font-size:11px; color:var(--hint-color); font-weight:700; text-align:center;">
       💡 點擊平台名稱可進入自訂顏色與詳細設定
     </div>`;
-  
   openOverlay('sub-page');
 }
 
@@ -4760,13 +4764,14 @@ function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼") {
       </div>
     `;
 
-    // 強制提高層級
-    const subPage = document.getElementById('sub-page');
-    if (subPage) subPage.style.zIndex = '9999';
+    const lockPage = document.getElementById('lock-page');
+    if (lockPage) lockPage.style.zIndex = '9999';
 
-    document.getElementById('sub-title').textContent = '應用鎖';
-    document.getElementById('sub-body').innerHTML = html;
-    openOverlay('sub-page');
+    const lockTitle = document.getElementById('lock-title');
+    const lockBody = document.getElementById('lock-body');
+    if (lockTitle) lockTitle.textContent = '應用鎖';
+    if (lockBody) lockBody.innerHTML = html;
+    openOverlay('lock-page');
   });
 }
 
@@ -4780,7 +4785,7 @@ window.lockKeyPress = function(num) {
   // 輸入滿 6 位自動確認
   if (currentLockCode.length === 6) {
     setTimeout(() => {
-      closeOverlay('sub-page');
+      closeOverlay('lock-page');
       if (lockResolve) lockResolve(currentLockCode);
     }, 180);
   }
@@ -4792,7 +4797,7 @@ window.lockBackspace = function() {
 };
 
 window.lockCancel = function() {
-  closeOverlay('sub-page');
+  closeOverlay('lock-page');
   if (lockResolve) lockResolve(null);
 };
 
