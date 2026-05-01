@@ -11,6 +11,21 @@ const DEFAULT_PLATFORMS =[
   { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
 
+function normalizePlatforms(rawPlatforms) {
+  if (!Array.isArray(rawPlatforms)) return DEFAULT_PLATFORMS.map(p => ({ ...p }));
+  return DEFAULT_PLATFORMS.map(dp => {
+    const sp = rawPlatforms.find(s => s.id === dp.id) || {};
+    const active = sp.active === true || sp.active === 'true';
+    return {
+      id: dp.id,
+      name: dp.name,
+      color: typeof sp.color === 'string' && sp.color.trim() ? sp.color : dp.color,
+      active,
+      ruleDesc: dp.ruleDesc
+    };
+  });
+}
+
 /* ====================== XSS 防護：HTML 轉義函式 ====================== */
 function escapeHtml(unsafe) {
   if (unsafe == null) return '';
@@ -462,15 +477,13 @@ async function loadAll() {
     const savedPlatforms = localStorage.getItem(KEYS.platforms);
     if (savedPlatforms) {
       const parsed = JSON.parse(savedPlatforms);
-      S.platforms = DEFAULT_PLATFORMS.map(dp => {
-        const sp = parsed.find(s => s.id === dp.id);
-        return sp ? { ...dp, ...sp } : { ...dp };
-      });
+      S.platforms = normalizePlatforms(parsed);
     } else {
-      S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
+      S.platforms = normalizePlatforms([]);
     }
-  } catch { 
-    S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); 
+  } catch (e) {
+    console.warn('Platforms data invalid, using defaults', e);
+    S.platforms = normalizePlatforms([]);
   }
 
   try {
@@ -4601,7 +4614,7 @@ function showBackupReminder() {
 
 // 設定應用鎖密碼（第一次使用）
 async function setupAppLock() {
-  const password = await showLockKeyboard("請設定 6 位數應用鎖密碼");
+  const password = await showLockKeyboard("請設定 6 位數應用鎖密碼", 'setup');
   
   if (!password) {
     toast("已取消設定應用鎖，資料將以較低安全性儲存");
@@ -4626,10 +4639,17 @@ async function unlockApp() {
     return await setupAppLock();
   }
 
-  appLockSalt = JSON.parse(savedSalt);
+  try {
+    const parsedSalt = JSON.parse(savedSalt);
+    if (!Array.isArray(parsedSalt) || parsedSalt.length !== 16) throw new Error('invalid app lock salt');
+    appLockSalt = new Uint8Array(parsedSalt);
+  } catch (e) {
+    console.warn('app_lock_salt invalid, forcing reset to setup mode', e);
+    return await setupAppLock();
+  }
 
   while (unlockAttempts < 5) {
-    const password = await showLockKeyboard("請輸入 6 位數應用鎖密碼");
+    const password = await showLockKeyboard("請輸入 6 位數應用鎖密碼", 'unlock');
 
     if (!password) {
       unlockAttempts++;
@@ -4734,50 +4754,60 @@ async function restoreFromLocalBackup() {
 let currentLockCode = '';
 let lockResolve = null;
 let unlockAttempts = 0;
+let currentLockMode = 'unlock';
+
+function buildLockKeyboardHtml(title, mode) {
+  const subtitle = mode === 'setup'
+    ? '首次使用請設定密碼，之後開啟應用需輸入。'
+    : '請輸入 6 位數密碼以解鎖應用，系統將保護您的本機資料。';
+
+  return `
+    <div style="padding:24px 18px; text-align:center; max-width:360px; margin:0 auto;">
+      <div style="width:72px; height:72px; margin:0 auto 14px; border-radius:24px; background:linear-gradient(135deg, rgba(37,99,235,0.16), rgba(16,185,129,0.15)); display:flex; align-items:center; justify-content:center; box-shadow:0 16px 40px rgba(15,23,42,0.08);">
+        <span style="font-size:34px;">🔒</span>
+      </div>
+      <div style="font-size:22px; font-weight:800; margin-bottom:10px; color:var(--t1);">${title}</div>
+      <div style="font-size:13px; color:var(--t3); line-height:1.6; margin-bottom:22px;">${subtitle}</div>
+
+      <!-- 6 個輸入格 -->
+      <div id="lock-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:30px;">
+        ${Array(6).fill(0).map(() => `
+          <div class="lock-dot" style="width:18px; height:18px; border:2px solid var(--t3); border-radius:50%; transition:all 0.2s;"></div>
+        `).join('')}
+      </div>
+
+      <!-- 數字鍵盤 -->
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; max-width:320px; margin:0 auto;">
+        ${[1,2,3,4,5,6,7,8,9].map(n => `
+          <button onclick="lockKeyPress(${n})" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">
+            ${n}
+          </button>
+        `).join('')}
+        <div></div>
+        <button onclick="lockKeyPress(0)" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">0</button>
+        <button onclick="lockBackspace()" style="height:62px; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); display:flex; align-items:center; justify-content:center; padding:0;">
+          <img src="images/backspace.png" alt="刪除" style="width:22px; height:22px;">
+        </button>
+      </div>
+    </div>
+  `;
+}
 
 // 顯示美化數字鍵盤
-function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼") {
+function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼", mode = 'unlock') {
   return new Promise((resolve) => {
+    currentLockMode = mode;
     lockResolve = resolve;
     currentLockCode = '';
 
-    const html = `
-      <div style="padding:24px 18px; text-align:center; max-width:360px; margin:0 auto;">
-        <div style="width:72px; height:72px; margin:0 auto 14px; border-radius:24px; background:linear-gradient(135deg, rgba(37,99,235,0.16), rgba(16,185,129,0.15)); display:flex; align-items:center; justify-content:center; box-shadow:0 16px 40px rgba(15,23,42,0.08);">
-          <span style="font-size:34px;">🔒</span>
-        </div>
-        <div style="font-size:22px; font-weight:800; margin-bottom:10px; color:var(--t1);">${title}</div>
-        <div style="font-size:13px; color:var(--t3); line-height:1.6; margin-bottom:22px;">請輸入 6 位數密碼以解鎖應用，系統將保護您的本機資料。</div>
-        
-        <!-- 6 個輸入格 -->
-        <div id="lock-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:30px;">
-          ${Array(6).fill(0).map(() => `
-            <div class="lock-dot" style="width:18px; height:18px; border:2px solid var(--t3); border-radius:50%; transition:all 0.2s;"></div>
-          `).join('')}
-        </div>
-
-        <!-- 數字鍵盤 -->
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; max-width:320px; margin:0 auto;">
-          ${[1,2,3,4,5,6,7,8,9].map(n => `
-            <button onclick="lockKeyPress(${n})" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">
-              ${n}
-            </button>
-          `).join('')}
-          
-          <button onclick="lockBackspace()" style="height:62px; font-size:20px; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">←</button>
-          <button onclick="lockKeyPress(0)" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">0</button>
-          <button onclick="lockCancel()" style="height:62px; font-size:15px; background:rgba(248,248,250,0.9); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.05); color:var(--t3);">取消</button>
-        </div>
-      </div>
-    `;
-
+    const html = buildLockKeyboardHtml(title, mode);
     const lockPage = document.getElementById('lock-page');
     if (lockPage) lockPage.style.zIndex = '9999';
     closeOverlay('sub-page');
 
     const lockTitle = document.getElementById('lock-title');
     const lockBody = document.getElementById('lock-body');
-    if (lockTitle) lockTitle.textContent = '應用鎖';
+    if (lockTitle) lockTitle.textContent = mode === 'setup' ? '設定應用鎖' : '解鎖應用鎖';
     if (lockBody) lockBody.innerHTML = html;
     openOverlay('lock-page');
   });
