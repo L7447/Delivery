@@ -1492,8 +1492,7 @@ async function confirmAddRecord() {
     }
     saveRecords(); 
     resetAddForm(); // 👈 加入這行，儲存後清空表單
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    checkImg.src = isDark ? 'images/Check3.png' : 'images/Check1.png';
+    checkImg.src = 'images/Check1.png';
     checkBtn.disabled = false; 
     goPage('home');
   });
@@ -2491,13 +2490,16 @@ function renderVehicleContent() {
       const isFuel = r.type === 'fuel'; 
       const isEV = r.fuelType === 'electric'; 
       
-      let iconContent = '';
-      let mainText = '';
-      let rightText = '';
-      let rightColor = 'var(--t1)';
-      let kmText = '';
+      let htmlContent = '';
 
       if (isFuel) {
+          // 原本的油耗與換電版面 (不變)
+          let iconContent = '';
+          let rightText = '';
+          let rightColor = 'var(--t1)';
+          let kmText = '';
+          let mainText = '';
+
           if (isEV) {
               iconContent = `<div style="background:#dbeafe; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔋</div>`;
               mainText = `電池 (電動車)`;
@@ -2512,30 +2514,45 @@ function renderVehicleContent() {
               rightColor = 'var(--t1)';
               kmText = `${r.prevKm} → ${r.km} km`;
           }
-      } else {
-          iconContent = `<div style="background:#d1fae5; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔧</div>`;
-          const itemLabel = (r.items || []).map(i => safeText(i)).join('、') || '保養維修';
-          const detailArr = [];
-          if (r.shop) detailArr.push(safeText(r.shop));
-          if (r.note) detailArr.push(safeText(r.note));
-          const detailText = detailArr.length ? ` （${detailArr.join('｜')}）` : '';
-          mainText = `${itemLabel}${detailText}`;
-          kmText = `${r.km} km`;
-          rightText = `-$${fmt(r.amount)}`;
-          rightColor = 'var(--t1)';
-      }
 
-      html += `
-        <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:2px; padding:3px 6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-          <div style="display:flex; align-items:center; gap:12px;">
-            ${iconContent}
-            <div>
-              <div style="font-size:15px; font-weight:800; color:var(--t1); margin-bottom:4px;">${mainText}</div>
-              <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
-            </div>
-          </div>
-          <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:${rightColor};">${rightText}</div>
-        </div>`;
+          htmlContent = `
+            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:2px; padding:3px 6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+              <div style="display:flex; align-items:center; gap:12px;">
+                ${iconContent}
+                <div>
+                  <div style="font-size:15px; font-weight:800; color:var(--t1); margin-bottom:4px;">${mainText}</div>
+                  <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
+                </div>
+              </div>
+              <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:${rightColor};">${rightText}</div>
+            </div>`;
+      } else {
+          // 👇 全新設計的保養維修卡片
+          const shopTag = r.shop ? `<span class="veh-label veh-label-shop" style="margin:0; padding:2px 8px; font-size:11px; border-radius:8px;">🏠 ${safeText(r.shop)}</span>` : '';
+          const itemsTag = (r.items||[]).length ? `<span class="veh-label veh-label-item" style="margin:0; padding:4px 8px; font-size:12px;">🔧 ${(r.items||[]).map(i=>safeText(i)).join('、')}</span>` : '';
+          const kmTag = r.km ? `<span class="veh-label veh-label-km" style="margin:0; padding:4px 8px; font-size:12px;">🛣️ ${r.km} km</span>` : '';
+          const noteTag = r.note ? `<span class="veh-label veh-label-note" style="margin:0; padding:4px 8px; font-size:12px;">📝 ${safeText(r.note)}</span>` : '';
+
+          htmlContent = `
+            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:var(--sf); border:1px solid var(--border); border-radius:16px; margin-bottom:8px; padding:12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-size:14px; font-family:var(--mono); font-weight:800; color:var(--blue);">${r.date.slice(5)} ${r.time||''}</span>
+                    ${shopTag}
+                  </div>
+                  <div style="font-size:18px; font-weight:900; color:var(--t1); font-family:var(--mono); margin-top:2px;">-$${fmt(r.amount)}</div>
+                </div>
+                <div style="background:#d1fae5; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">🔧</div>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; border-top:1px dashed var(--border); padding-top:10px;">
+                ${itemsTag}
+                ${kmTag}
+                ${noteTag}
+              </div>
+            </div>`;
+      }
+      html += htmlContent;
     });
   }
   container.innerHTML = html;
@@ -2725,8 +2742,7 @@ function confirmAddVehRec() {
     
     editingVehRecId = null; 
     saveVehicleRecs(); 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    checkImg.src = isDark ? 'images/Check3.png' : 'images/Check1.png';
+    checkImg.src = 'images/Check1.png';
     checkBtn.disabled = false; 
     closeOverlay('veh-rec-add-page'); 
     renderVehicles();
@@ -2852,22 +2868,23 @@ function setShopInput(value) {
 
 function renderShopHistory() {
   const container = document.getElementById('shop-history-container');
-  container.innerHTML = '';
   if (!S.settings.shopHistory) S.settings.shopHistory = [];
-  S.settings.shopHistory.forEach((shop, i) => {
-    const chip = document.createElement('div');
-    chip.className = 'shop-chip';
-    const label = document.createElement('span');
-    label.textContent = shop;
-    label.addEventListener('click', () => setShopInput(shop));
-    const del = document.createElement('span');
-    del.className = 'shop-chip-del';
-    del.textContent = '✕';
-    del.addEventListener('click', () => deleteShopHistory(i));
-    chip.appendChild(label);
-    chip.appendChild(del);
-    container.appendChild(chip);
-  });
+  
+  if (S.settings.shopHistory.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  // 使用新的 .shop-chip 樣式，並支援單引號跳脫防錯
+  container.innerHTML = S.settings.shopHistory.map((shop, i) => {
+    const safeShopStr = safeText(shop).replace(/'/g, "\\'");
+    return `
+      <div class="shop-chip">
+        <span style="flex:1;" onclick="setShopInput('${safeShopStr}')">${safeText(shop)}</span>
+        <span class="shop-chip-del" onclick="event.stopPropagation(); deleteShopHistory(${i})">✕</span>
+      </div>
+    `;
+  }).join('');
 }
 function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); saveSettings(); renderShopHistory(); }
 
@@ -3235,7 +3252,7 @@ function renderAuthContent() {
     if (document.getElementById('turnstile-widget')) {
       turnstile.render('#turnstile-widget', {
         sitekey: '0x4AAAAAADC958xr-t5UGd36',
-        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+        theme: 'light'
       });
     }
   };
@@ -3810,7 +3827,7 @@ async function deleteReward(i) {
 /* 替換 openPlatformList 函式，並加上 togglePlatform 函式 */
 function openPlatformList() {
   document.getElementById('sub-title').textContent = '平台列表';
-  document.getElementById('sub-top-right').innerHTML = '';
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="closeOverlay('sub-page'); goPage('home');" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">完成</button>`;
   const platforms = Array.isArray(S.platforms) ? S.platforms : DEFAULT_PLATFORMS.map(p => ({ ...p }));
   const body = document.getElementById('sub-body');
   if (!body) {
@@ -4364,68 +4381,28 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-/* ══ 背景主題與深色模式套用函式 ══ */
-function applyTheme() {
-  const mode = S.settings.themeMode || 'light';
-  let isDark = false;
-  
-  if (mode === 'dark') {
-    isDark = true;
-  } else if (mode === 'auto') {
-    const now = new Date();
-    const current = now.getHours() * 60 + now.getMinutes();
-    const [sH, sM] = (S.settings.autoDarkStart || '18:00').split(':').map(Number);
-    const[eH, eM] = (S.settings.autoDarkEnd || '06:00').split(':').map(Number);
-    const start = sH * 60 + sM;
-    const end = eH * 60 + eM;
-    
-    if (start < end) {
-      isDark = current >= start && current <= end;
-    } else {
-      isDark = current >= start || current <= end;
-    }
-  }
-  
-  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-
-  /* 在 applyTheme 函式的結尾加入： */
-  const checkImg1 = document.getElementById('add-save-img');
-  const checkImg2 = document.getElementById('veh-save-img');
-  const checkSrc = isDark ? 'images/Check3.png' : 'images/Check1.png';
-  if(checkImg1 && (checkImg1.src.includes('Check1.png') || checkImg1.src.includes('Check3.png'))) checkImg1.src = checkSrc;
-  if(checkImg2 && (checkImg2.src.includes('Check1.png') || checkImg2.src.includes('Check3.png'))) checkImg2.src = checkSrc;
-}
-
-/* ══ 背景主題與深色模式套用函式 ══ */
+/* ══ 升級版：外觀與自訂背景套用 ══ */
 function applyBackground() {
   const bg = S.settings.bg;
   const root = document.documentElement;
-  const isDark = root.getAttribute('data-theme') === 'dark';
   
   if (bg && bg !== '#fafafa' && bg !== '#424242') {
-    // 1. 設定身體背景圖片
+    // 設定身體背景圖片與白色半透明遮罩
     document.body.style.background = `url('${bg}') center/cover fixed no-repeat`;
+    document.body.style.boxShadow = 'inset 0 0 0 9999px rgba(255, 255, 255, 0.3)';
     
-    // 2. 針對圖片加入半透明遮罩，確保文字清晰可見
-    // 深色模式加深色遮罩(0.7)；淺色模式加白色遮罩(0.3)
-    document.body.style.boxShadow = isDark 
-      ? 'inset 0 0 0 9999px rgba(11, 18, 32, 0.75)' 
-      : 'inset 0 0 0 9999px rgba(255, 255, 255, 0.3)';
-    
-    // 3. 讓主頁面透明化以透出背景圖
+    // 讓主頁面透明化以透出背景圖
     root.style.setProperty('--bg', 'transparent');
-    root.style.setProperty('--bg-header', isDark ? 'rgba(11, 18, 32, 0.6)' : 'rgba(255, 255, 255, 0.6)');
-    
-    // 4. 設定彈出視窗為不透明毛玻璃，解決視窗變透明的問題
-    root.style.setProperty('--overlay-bg', isDark ? 'rgba(11, 18, 32, 0.95)' : 'rgba(240, 244, 248, 0.95)');
+    root.style.setProperty('--bg-header', 'rgba(255, 255, 255, 0.6)');
+    root.style.setProperty('--overlay-bg', 'rgba(240, 244, 248, 0.95)');
   } else {
     // 沒選背景圖時，恢復純色
     document.body.style.background = ''; 
     document.body.style.boxShadow = 'none';
     
-    root.style.setProperty('--bg', isDark ? '#0b1220' : '#f0f4f8');
-    root.style.setProperty('--bg-header', isDark ? 'rgba(11, 18, 32, 0.85)' : 'rgba(240, 244, 248, 0.85)');
-    root.style.setProperty('--overlay-bg', isDark ? '#0b1220' : '#f0f4f8');
+    root.style.setProperty('--bg', '#f0f4f8');
+    root.style.setProperty('--bg-header', 'rgba(240, 244, 248, 0.85)');
+    root.style.setProperty('--overlay-bg', '#f0f4f8');
   }
 }
 
@@ -4577,6 +4554,8 @@ window.checkAndPromptPlatformSetup = function() {
   }
 };
 
+window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
+
 async function init() {
   document.documentElement.classList.add('no-tr');
 
@@ -4589,7 +4568,6 @@ async function init() {
   }
 
   // === 第三步：套用主題與背景 ===
-  applyTheme();
   applyBackground();
 
   // === 第四步：初始化其他設定 ===
