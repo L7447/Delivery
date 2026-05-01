@@ -1020,7 +1020,7 @@ function buildRecItem(r) {
             <span class="hrc-plat-tag" style="background:#8b5cf6; color:#fff;">🔧 保養維修</span>
             <span style="font-size:12px; color:var(--t2);">${safeText(r.date)} ${safeText(r.time || '')}</span>
           </div>
-          <div style="font-size:14px; font-weight:600; color:var(--t1); margin:6px 0 4px;">
+          <div style="font-size:14px; font-weight:600; color:var(--t1); margin:6px 0 4px; line-height:1.4;">
             ${maintItems}
             ${shopInfo}
             ${noteInfo}
@@ -4751,7 +4751,10 @@ function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼") {
       </div>
     `;
 
-    // 使用 sub-page 作為鍵盤容器
+    // 強制提高層級
+    const subPage = document.getElementById('sub-page');
+    if (subPage) subPage.style.zIndex = '9999';
+
     document.getElementById('sub-title').textContent = '應用鎖';
     document.getElementById('sub-body').innerHTML = html;
     openOverlay('sub-page');
@@ -4798,45 +4801,44 @@ function updateLockDots() {
 }
 
 async function init() {
-  // 1. 先停用 transition，防止閃爍
   document.documentElement.classList.add('no-tr');
 
-  // === 2. 最重要：先完成應用鎖解鎖 ===
+  // === 第一步：應用鎖解鎖（最優先）===
   const isUnlocked = await unlockApp();
   if (!isUnlocked) {
     document.getElementById('app').innerHTML = `
       <div style="padding:40px; text-align:center; color:var(--red); height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column;">
-        <h2 style="margin-bottom:16px;">應用鎖解鎖失敗</h2>
-        <p style="font-size:15px; color:var(--t2);">請重新整理頁面後再試</p>
+        <h2>應用鎖解鎖失敗</h2>
+        <p style="margin-top:16px;">請重新整理頁面後再試</p>
       </div>`;
     return;
   }
 
-  // === 3. 解鎖成功後，才進行後續初始化 ===
+  // === 第二步：等待資料完全載入 ===
   try {
-    await loadAll();           // 等待資料解密載入完成
+    await loadAll();
   } catch (e) {
-    console.error("載入資料失敗", e);
+    console.error("資料解密失敗", e);
     toast("資料載入失敗，請重新整理");
   }
 
+  // === 第三步：套用主題與背景 ===
   applyTheme();
   applyBackground();
 
+  // === 第四步：初始化其他設定 ===
   fetchGlobalGasPrice();
   initReminderCheck();
 
-  // 初始化平台設定
-  if (!S.platforms || !S.platforms.length) {
+  if (!S.platforms || S.platforms.length === 0) {
     S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
     savePlatforms();
   }
 
-  // 設定當前頁籤
+  // === 第五步：設定頁面狀態並渲染 ===
   S.tab = 'home';
   document.body.setAttribute('data-tab', 'home');
 
-  // 初始化導覽列狀態
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
     const isActive = n.dataset.pg === 'home';
     n.classList.toggle('active', isActive);
@@ -4844,10 +4846,10 @@ async function init() {
     if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
 
-  // 4. 最後才渲染首頁（確保資料已載入）
+  // 最後才渲染首頁
   renderHome();
 
-  // 恢復 transition 與導覽列指示器
+  // 恢復動畫與導覽列
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       document.documentElement.classList.remove('no-tr');
@@ -4855,7 +4857,6 @@ async function init() {
     });
   });
 
-  // 定期備份提醒
   showBackupReminderIfNeeded();
 }
 
