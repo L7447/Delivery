@@ -1,0 +1,20 @@
+name = "delivery-api"
+main = "worker.js"
+compatibility_date = "2024-04-18"
+
+[vars]
+ADMIN_EMAIL = "cws38721@gmail.com"
+
+# D1 資料庫
+[[kv_namespaces]]
+binding = "DB"
+id = "2431dd31af0a48bbaa18defd160f11f7"
+
+# Rate Limiting 專用 KV
+[[kv_namespaces]]
+binding = "RATE_KV"
+id = "26ff34f7ad6c4c348d7489a2eec382b3"
+
+# 每天凌晨 3 點執行清理未驗證帳號
+[triggers]
+crons = ["0 3 * * *"]
