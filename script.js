@@ -260,7 +260,14 @@ function customConfirm(msg) {
   });
 }
 function openOverlay(id)  { document.getElementById(id)?.classList.add('show'); }
-function closeOverlay(id) { document.getElementById(id)?.classList.remove('show'); }
+function closeOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('show');
+  if (id === 'sub-page') {
+    el.style.zIndex = '';
+  }
+}
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
 /* 退出按鈕點擊動畫：換圖、延遲 1.5 秒後執行動作 */
@@ -2518,7 +2525,12 @@ function renderVehicleContent() {
           }
       } else {
           iconContent = `<div style="background:#d1fae5; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔧</div>`;
-          mainText = r.items.join(', '); 
+          const itemLabel = (r.items || []).map(i => safeText(i)).join('、') || '保養維修';
+          const detailArr = [];
+          if (r.shop) detailArr.push(safeText(r.shop));
+          if (r.note) detailArr.push(safeText(r.note));
+          const detailText = detailArr.length ? ` （${detailArr.join('｜')}）` : '';
+          mainText = `${itemLabel}${detailText}`;
           kmText = `${r.km} km`;
           rightText = `-$${fmt(r.amount)}`;
           rightColor = 'var(--t1)';
@@ -3811,9 +3823,10 @@ async function deleteReward(i) {
 function openPlatformList() {
   document.getElementById('sub-title').textContent = '平台列表';
   document.getElementById('sub-top-right').innerHTML = '';
+  const platforms = Array.isArray(S.platforms) ? S.platforms : [];
   document.getElementById('sub-body').innerHTML = `
     <div class="set-list">
-      ${S.platforms.map(p => `
+      ${platforms.length > 0 ? platforms.map(p => `
         <div class="set-row" onclick="openPlatformEdit('${safeText(p.id)}')">
           <div class="plat-color-dot" style="background:${p.color}"></div>
           <div class="sn">
@@ -3826,7 +3839,7 @@ function openPlatformList() {
             <span class="slider"></span>
           </label>
         </div>
-      `).join('')}
+      `).join('') : `<div class="empty-tip" style="padding:20px; text-align:center;">目前沒有可用平台，請稍後重新整理或回到設定頁</div>`}
     </div>
     <div style="margin-top:12px; font-size:11px; color:var(--hint-color); font-weight:700; text-align:center;">
       💡 點擊平台名稱可進入自訂顏色與詳細設定
@@ -4718,35 +4731,31 @@ function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼") {
     currentLockCode = '';
 
     const html = `
-      <div style="padding:20px 16px; text-align:center;">
-        <div style="font-size:22px; font-weight:700; margin-bottom:24px; color:var(--t1);">${title}</div>
+      <div style="padding:24px 18px; text-align:center; max-width:360px; margin:0 auto;">
+        <div style="width:72px; height:72px; margin:0 auto 14px; border-radius:24px; background:linear-gradient(135deg, rgba(37,99,235,0.16), rgba(16,185,129,0.15)); display:flex; align-items:center; justify-content:center; box-shadow:0 16px 40px rgba(15,23,42,0.08);">
+          <span style="font-size:34px;">🔒</span>
+        </div>
+        <div style="font-size:22px; font-weight:800; margin-bottom:10px; color:var(--t1);">${title}</div>
+        <div style="font-size:13px; color:var(--t3); line-height:1.6; margin-bottom:22px;">請輸入 6 位數密碼以解鎖應用，系統將保護您的本機資料。</div>
         
         <!-- 6 個輸入格 -->
-        <div id="lock-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:32px;">
+        <div id="lock-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:30px;">
           ${Array(6).fill(0).map(() => `
             <div class="lock-dot" style="width:18px; height:18px; border:2px solid var(--t3); border-radius:50%; transition:all 0.2s;"></div>
           `).join('')}
         </div>
 
         <!-- 數字鍵盤 -->
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; max-width:280px; margin:0 auto;">
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; max-width:320px; margin:0 auto;">
           ${[1,2,3,4,5,6,7,8,9].map(n => `
-            <button onclick="lockKeyPress(${n})" style="height:62px; font-size:24px; font-weight:700; background:var(--sf); border:1px solid var(--border); border-radius:16px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+            <button onclick="lockKeyPress(${n})" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">
               ${n}
             </button>
           `).join('')}
           
-          <button onclick="lockKeyPress(0)" style="height:62px; font-size:24px; font-weight:700; background:var(--sf); border:1px solid var(--border); border-radius:16px; box-shadow:0 2px 6px rgba(0,0,0,0.05); grid-column:2;">
-            0
-          </button>
-          
-          <button onclick="lockBackspace()" style="height:62px; font-size:20px; background:var(--sf); border:1px solid var(--border); border-radius:16px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
-            ←
-          </button>
-        </div>
-
-        <div style="margin-top:24px;">
-          <button onclick="lockCancel()" style="background:transparent; border:none; color:var(--t3); font-size:15px; padding:8px 20px;">取消</button>
+          <button onclick="lockBackspace()" style="height:62px; font-size:20px; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">←</button>
+          <button onclick="lockKeyPress(0)" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">0</button>
+          <button onclick="lockCancel()" style="height:62px; font-size:15px; background:rgba(248,248,250,0.9); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.05); color:var(--t3);">取消</button>
         </div>
       </div>
     `;
