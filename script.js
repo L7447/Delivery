@@ -4570,6 +4570,12 @@ async function restoreFromCloud(email) {
 
 /* ══ 檢查是否未啟用任何平台，若無則自動彈出設定 ══ */
 window.checkAndPromptPlatformSetup = function() {
+  const lockPage = document.getElementById('lock-page');
+  if (lockPage && lockPage.classList.contains('show')) {
+    setTimeout(() => window.checkAndPromptPlatformSetup(), 300);
+    return;
+  }
+
   // 檢查是否所有平台的 active 都是 false
   const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
   
@@ -4727,6 +4733,7 @@ async function restoreFromLocalBackup() {
 // 6位數應用鎖輸入狀態
 let currentLockCode = '';
 let lockResolve = null;
+let unlockAttempts = 0;
 
 // 顯示美化數字鍵盤
 function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼") {
@@ -4766,6 +4773,7 @@ function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼") {
 
     const lockPage = document.getElementById('lock-page');
     if (lockPage) lockPage.style.zIndex = '9999';
+    closeOverlay('sub-page');
 
     const lockTitle = document.getElementById('lock-title');
     const lockBody = document.getElementById('lock-body');
@@ -4862,6 +4870,9 @@ async function init() {
 
   // 最後才渲染首頁
   renderHome();
+  setTimeout(() => {
+    if (window.checkAndPromptPlatformSetup) window.checkAndPromptPlatformSetup();
+  }, 400);
 
   // 恢復動畫與導覽列
   requestAnimationFrame(() => {
