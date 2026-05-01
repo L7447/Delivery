@@ -50,88 +50,69 @@ function safeTextWithBr(value) {
   return escapeHtmlWithBr(value);
 }
 
-/* ====================== 本地資料加密 Wrapper (AES-GCM) ====================== */
+/* ====================== IndexedDB 儲存協助函式 ====================== */
+const DB_NAME = 'delivery_records_db';
+const DB_VERSION = 1;
+const DB_STORES = ['records', 'vehicleRecs'];
 
-// 全域變數
-let encryptionKey = null;        // 目前 session 的加密金鑰
-let appLockSalt = null;          // 用來衍生金鑰的 salt
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-// 從 6 位數密碼衍生加密金鑰
-async function deriveEncryptionKey(password) {
-  if (!password || password.length !== 6 || !/^\d{6}$/.test(password)) {
-    toast("應用鎖密碼必須是 6 位數字");
-    return false;
-  }
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      DB_STORES.forEach(storeName => {
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.createObjectStore(storeName);
+        }
+      });
+    };
 
-  try {
-    const encoder = new TextEncoder();
-    // 如果是第一次設定，就產生新的 salt；否則使用已儲存的 salt
-    if (!appLockSalt) {
-      appLockSalt = crypto.getRandomValues(new Uint8Array(16));
-    } else {
-      appLockSalt = new Uint8Array(appLockSalt);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function idbGet(storeName) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openDb();
+      const tx = db.transaction(storeName, 'readonly');
+      const request = tx.objectStore(storeName).get('payload');
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    } catch (err) {
+      reject(err);
     }
-
-    const baseKey = await crypto.subtle.importKey(
-      "raw", encoder.encode(password), "PBKDF2", false, ["deriveKey"]
-    );
-
-    encryptionKey = await crypto.subtle.deriveKey(
-      { 
-        name: "PBKDF2", 
-        salt: appLockSalt, 
-        iterations: 600000, 
-        hash: "SHA-256" 
-      },
-      baseKey,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt", "decrypt"]
-    );
-
-    // 儲存 salt 到 localStorage（下次解鎖時需要）
-    localStorage.setItem('app_lock_salt', JSON.stringify(Array.from(appLockSalt)));
-    return true;
-  } catch (e) {
-    console.error("衍生加密金鑰失敗", e);
-    return false;
-  }
+  });
 }
 
-// 加密資料
-async function encryptData(data) {
-  if (!encryptionKey) throw new Error("尚未設定應用鎖");
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(JSON.stringify(data));
-
-  const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv },
-    encryptionKey,
-    encoded
-  );
-
-  return {
-    version: 1,
-    iv: Array.from(iv),
-    salt: Array.from(appLockSalt),
-    data: Array.from(new Uint8Array(encrypted))
-  };
+function idbSet(storeName, value) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openDb();
+      const tx = db.transaction(storeName, 'readwrite');
+      const request = tx.objectStore(storeName).put(value, 'payload');
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
-// 解密資料
-async function decryptData(encryptedObj) {
-  if (!encryptionKey) throw new Error("請先輸入應用鎖密碼");
-
-  const iv = new Uint8Array(encryptedObj.iv);
-  const encryptedData = new Uint8Array(encryptedObj.data);
-
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: iv },
-    encryptionKey,
-    encryptedData
-  );
-
-  return JSON.parse(new TextDecoder().decode(decrypted));
+function idbDelete(storeName) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openDb();
+      const tx = db.transaction(storeName, 'readwrite');
+      const request = tx.objectStore(storeName).delete('payload');
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 
@@ -279,7 +260,7 @@ function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.remove('show');
-  if (id === 'sub-page' || id === 'lock-page') {
+  if (id === 'sub-page') {
     el.style.zIndex = '';
   }
 }
@@ -459,17 +440,17 @@ function calcNextDates(id) {
 /* ══ 加密版 loadAll() ═══════════════════════════════════════════════ */
 async function loadAll() {
   try {
-    // 讀取 Records
-    const encryptedRecords = localStorage.getItem(KEYS.records + '_enc');
-    if (encryptedRecords) {
-      const parsed = JSON.parse(encryptedRecords);
-      S.records = await decryptData(parsed);
+    const storedRecords = await idbGet('records');
+    if (Array.isArray(storedRecords)) {
+      S.records = storedRecords;
     } else {
-      S.records = [];
+      const localRecords = JSON.parse(localStorage.getItem(KEYS.records) || '[]');
+      S.records = Array.isArray(localRecords) ? localRecords : [];
+      if (Array.isArray(S.records)) await idbSet('records', S.records);
     }
-  } catch (e) { 
-    console.warn("解密 records 失敗，使用空陣列", e);
-    S.records = []; 
+  } catch (e) {
+    console.warn('IndexedDB records 讀取失敗，使用空陣列', e);
+    S.records = [];
   }
 
   try {
@@ -487,18 +468,16 @@ async function loadAll() {
   }
 
   try {
-    // 讀取 Settings
-    const encryptedSettings = localStorage.getItem(KEYS.settings + '_enc');
-    if (encryptedSettings) {
-      const parsed = JSON.parse(encryptedSettings);
-      const decrypted = await decryptData(parsed);
-      S.settings = { ...DEFAULT_SETTINGS, shopHistory: [], ...decrypted };
+    const savedSettings = localStorage.getItem(KEYS.settings);
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      S.settings = { ...DEFAULT_SETTINGS, shopHistory: [], ...parsed };
     } else {
       S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] };
     }
-  } catch (e) { 
-    console.warn("解密 settings 失敗，使用預設值", e);
-    S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] }; 
+  } catch (e) {
+    console.warn('Settings 讀取失敗，使用預設值', e);
+    S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] };
   }
 
   try {
@@ -506,29 +485,29 @@ async function loadAll() {
   } catch { S.punch = null; }
 
   try {
-    const encryptedVehicles = localStorage.getItem(KEYS.vehicles + '_enc');
-    if (encryptedVehicles) {
-      const parsed = JSON.parse(encryptedVehicles);
-      S.vehicles = await decryptData(parsed);
+    const savedVehicles = localStorage.getItem(KEYS.vehicles);
+    if (savedVehicles) {
+      S.vehicles = JSON.parse(savedVehicles);
     } else {
       S.vehicles = [];
     }
-  } catch (e) { 
-    console.warn("解密 vehicles 失敗", e);
-    S.vehicles = []; 
+  } catch (e) {
+    console.warn('Vehicles 讀取失敗', e);
+    S.vehicles = [];
   }
 
   try {
-    const encryptedVehRecs = localStorage.getItem(KEYS.vehicleRecs + '_enc');
-    if (encryptedVehRecs) {
-      const parsed = JSON.parse(encryptedVehRecs);
-      S.vehicleRecs = await decryptData(parsed);
+    const storedVehRecs = await idbGet('vehicleRecs');
+    if (Array.isArray(storedVehRecs)) {
+      S.vehicleRecs = storedVehRecs;
     } else {
-      S.vehicleRecs = [];
+      const localVehRecs = JSON.parse(localStorage.getItem(KEYS.vehicleRecs) || '[]');
+      S.vehicleRecs = Array.isArray(localVehRecs) ? localVehRecs : [];
+      if (Array.isArray(S.vehicleRecs)) await idbSet('vehicleRecs', S.vehicleRecs);
     }
-  } catch (e) { 
-    console.warn("解密 vehicleRecs 失敗", e);
-    S.vehicleRecs = []; 
+  } catch (e) {
+    console.warn('IndexedDB vehicleRecs 讀取失敗，使用空陣列', e);
+    S.vehicleRecs = [];
   }
 }
 
@@ -548,34 +527,30 @@ function performAutoBackup() {
 /* ══ 加密版儲存函式 ═══════════════════════════════════════════════ */
 async function saveRecords() {
   try {
-    const encrypted = await encryptData(S.records);
-    localStorage.setItem(KEYS.records + '_enc', JSON.stringify(encrypted));
+    await idbSet('records', S.records);
   } catch (e) {
-    console.error("加密儲存 records 失敗", e);
+    console.error('IndexedDB 儲存 records 失敗', e);
   }
 }
-async function saveSettings() {
+function saveSettings() {
   try {
-    const encrypted = await encryptData(S.settings);
-    localStorage.setItem(KEYS.settings + '_enc', JSON.stringify(encrypted));
+    localStorage.setItem(KEYS.settings, JSON.stringify(S.settings));
   } catch (e) {
-    console.error("加密儲存 settings 失敗", e);
+    console.error('儲存 settings 失敗', e);
   }
 }
-async function saveVehicles() {
+function saveVehicles() {
   try {
-    const encrypted = await encryptData(S.vehicles);
-    localStorage.setItem(KEYS.vehicles + '_enc', JSON.stringify(encrypted));
+    localStorage.setItem(KEYS.vehicles, JSON.stringify(S.vehicles));
   } catch (e) {
-    console.error("加密儲存 vehicles 失敗", e);
+    console.error('儲存 vehicles 失敗', e);
   }
 }
 async function saveVehicleRecs() {
   try {
-    const encrypted = await encryptData(S.vehicleRecs);
-    localStorage.setItem(KEYS.vehicleRecs + '_enc', JSON.stringify(encrypted));
+    await idbSet('vehicleRecs', S.vehicleRecs);
   } catch (e) {
-    console.error("加密儲存 vehicleRecs 失敗", e);
+    console.error('IndexedDB 儲存 vehicleRecs 失敗', e);
   }
 }
 // Platforms 不敏感，保持原本明文儲存
@@ -1025,25 +1000,27 @@ function buildRecItem(r) {
 
   // === 新增：保養維修專屬美化顯示 ===
   if (r.type === 'maintenance' || r.type === 'maint') {
-    const maintItems = (r.items && r.items.length > 0) 
-      ? r.items.map(item => safeText(item)).join('、') 
-      : '未填寫項目';
+    const maintItems = (r.items && r.items.length > 0)
+      ? r.items.map(item => safeText(item)).join('、')
+      : '未填寫保養項目';
 
-    const shopInfo = r.shop ? `<span style="color:var(--blue); font-weight:600;">${safeText(r.shop)}</span>` : '';
-    const noteInfo = r.note ? `<span style="color:var(--t3); font-size:12.5px;">｜${safeTextWithBr(r.note)}</span>` : '';
+    const shopInfo = r.shop ? `<span style="font-size:13px; color:var(--t2);">${safeText(r.shop)}</span>` : '';
+    const noteLabel = r.note ? `<span class="veh-label veh-label-note">備註：${safeTextWithBr(r.note)}</span>` : '';
+    const kmLabel = r.km ? `<span class="veh-label veh-label-km">距離：${safeText(r.km.toString())} km</span>` : '';
 
     return `
       <div class="hist-rec-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')">
         <div class="hrc-top">
           <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
-          <div class="hrc-row1">
+          <div class="hrc-row1" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="hrc-plat-tag" style="background:#8b5cf6; color:#fff;">🔧 保養維修</span>
-            <span style="font-size:12px; color:var(--t2);">${safeText(r.date)} ${safeText(r.time || '')}</span>
+            <span style="font-size:13px; color:var(--blue); font-weight:700;">${safeText(r.date)} ${safeText(r.time || '')}</span>
+            ${r.shop ? `<span style="font-size:13px; color:var(--t2);">${safeText(r.shop)}</span>` : ''}
           </div>
-          <div style="font-size:14px; font-weight:600; color:var(--t1); margin:6px 0 4px; line-height:1.4;">
-            ${maintItems}
-            ${shopInfo}
-            ${noteInfo}
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin:10px 0;">
+            <span class="veh-label veh-label-item">項目：${maintItems}</span>
+            ${kmLabel}
+            ${noteLabel}
           </div>
           <div style="font-family:var(--mono); font-size:17px; font-weight:800; color:#8b5cf6;">
             -$${fmt(r.amount || 0)}
@@ -1557,8 +1534,7 @@ async function backgroundSync() {
           r.syncStatus = 1; // 標記為已同步
         }
       });
-      // 存回 LocalStorage
-      localStorage.setItem(KEYS.records, JSON.stringify(S.records));
+      await saveRecords();
       console.log('✅ 背景同步完成！');
     }
   } catch (error) {
@@ -3030,11 +3006,10 @@ function renderSettings() {
     <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openReminderSettings()"><span class="sn">⏰ 每日記錄通知提醒</span><span class="arr">›</span></div>
-    <div class="set-row" onclick="showBackupReminder()"><span class="sn">💾 資料備份與清理提醒</span><span class="arr">›</span></div>
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="doBackupToFile()"><span class="sn">📂 儲存到本機 (.json) │ ${lastBackupStr}</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 備份到本機 (.json) │ ${lastBackupStr}</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
@@ -4455,6 +4430,13 @@ function applyBackground() {
 }
 
 /* ══ 真正儲存為實體檔案至本機資料夾 (File System API 或 下載) ══ */
+async function confirmBackupToFile() {
+  const ok = await customConfirm('是否要備份目前資料到本機 JSON 檔？');
+  if (ok) {
+    await doBackupToFile();
+  }
+}
+
 async function doBackupToFile() {
   const data = { 
     exportedAt: new Date().toISOString(), 
@@ -4583,12 +4565,6 @@ async function restoreFromCloud(email) {
 
 /* ══ 檢查是否未啟用任何平台，若無則自動彈出設定 ══ */
 window.checkAndPromptPlatformSetup = function() {
-  const lockPage = document.getElementById('lock-page');
-  if (lockPage && lockPage.classList.contains('show')) {
-    setTimeout(() => window.checkAndPromptPlatformSetup(), 300);
-    return;
-  }
-
   // 檢查是否所有平台的 active 都是 false
   const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
   
@@ -4601,277 +4577,15 @@ window.checkAndPromptPlatformSetup = function() {
   }
 };
 
-function showBackupReminder() {
-  const last = S.settings.lastLocalBackup || '從未備份';
-  customConfirm(`
-    上次本地備份：<b>${last}</b><br><br>
-    建議<strong>每個月備份一次</strong>，並清理 2 年以上舊記錄以節省空間。<br><br>
-    是否現在備份？
-  `).then(ok => {
-    if (ok) doBackupToFile();
-  });
-}
-
-// 設定應用鎖密碼（第一次使用）
-async function setupAppLock() {
-  const password = await showLockKeyboard("請設定 6 位數應用鎖密碼", 'setup');
-  
-  if (!password) {
-    toast("已取消設定應用鎖，資料將以較低安全性儲存");
-    return false;
-  }
-
-  const success = await deriveEncryptionKey(password);
-  if (success) {
-    toast("✅ 應用鎖設定成功！資料已加密保護");
-    return true;
-  } else {
-    toast("設定失敗，請重新設定");
-    return await setupAppLock(); // 重試
-  }
-}
-
-// 輸入應用鎖密碼進行解鎖
-async function unlockApp() {
-  const savedSalt = localStorage.getItem('app_lock_salt');
-  
-  if (!savedSalt) {
-    return await setupAppLock();
-  }
-
-  try {
-    const parsedSalt = JSON.parse(savedSalt);
-    if (!Array.isArray(parsedSalt) || parsedSalt.length !== 16) throw new Error('invalid app lock salt');
-    appLockSalt = new Uint8Array(parsedSalt);
-  } catch (e) {
-    console.warn('app_lock_salt invalid, forcing reset to setup mode', e);
-    return await setupAppLock();
-  }
-
-  while (unlockAttempts < 5) {
-    const password = await showLockKeyboard("請輸入 6 位數應用鎖密碼", 'unlock');
-
-    if (!password) {
-      unlockAttempts++;
-      continue;
-    }
-
-    const success = await deriveEncryptionKey(password);
-    if (success) {
-      unlockAttempts = 0;
-      toast("✅ 應用鎖解鎖成功");
-      return true;
-    } else {
-      unlockAttempts++;
-      toast(`密碼錯誤！剩餘 ${5 - unlockAttempts} 次嘗試`);
-    }
-  }
-
-  unlockAttempts = 0;
-
-  // 失敗後顯示補救選單
-  const choice = await customConfirm(`
-    <div style="text-align:center;">
-      <h3 style="color:var(--red);">應用鎖密碼輸入錯誤過多</h3>
-      <p>您可以選擇：</p>
-      <div style="background:var(--sf2); padding:12px; border-radius:12px; margin:12px 0; text-align:left;">
-        • 從 JSON 備份檔還原（推薦）<br>
-        • 重置所有本地資料
-      </div>
-    </div>
-  `);
-
-  if (choice) {
-    await restoreFromLocalBackup();
-    return true;
-  } else {
-    const resetOk = await customConfirm("⚠️ 確定清除所有本地資料嗎？");
-    if (resetOk) {
-      localStorage.clear();
-      location.reload();
-    }
-    return false;
-  }
-}
-
-// 從本地 JSON 備份檔還原 + 重新設定應用鎖
-async function restoreFromLocalBackup() {
-  const fi = document.createElement('input');
-  fi.type = 'file';
-  fi.accept = '.json';
-
-  fi.onchange = async () => {
-    const file = fi.files[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const backupData = JSON.parse(text);
-
-      const confirmRestore = await customConfirm(`
-        即將還原以下備份資料：<br><br>
-        記錄筆數：${backupData.records?.length || 0} 筆<br>
-        車輛數：${backupData.vehicles?.length || 0} 台<br><br>
-        確定要覆蓋目前資料嗎？
-      `);
-
-      if (!confirmRestore) return;
-
-      // 還原資料
-      if (backupData.records) S.records = backupData.records;
-      if (backupData.vehicles) S.vehicles = backupData.vehicles;
-      if (backupData.vehicleRecs) S.vehicleRecs = backupData.vehicleRecs;
-      if (backupData.settings) S.settings = { ...S.settings, ...backupData.settings };
-
-      saveRecords();
-      saveVehicles();
-      saveVehicleRecs();
-      saveSettings();
-
-      toast("✅ 備份資料還原成功！");
-
-      // 還原成功後，強制重新設定應用鎖密碼
-      setTimeout(async () => {
-        toast("請重新設定 6 位數應用鎖密碼");
-        const lockSet = await setupAppLock();
-        if (lockSet) {
-          toast("✅ 應用鎖已重新設定，資料已加密保護");
-        }
-      }, 800);
-
-    } catch (err) {
-      toast("❌ 檔案格式錯誤或損毀，請確認是有效的備份檔");
-      console.error(err);
-    }
-  };
-
-  fi.click();
-}
-
-/* ====================== 美化版應用鎖密碼輸入介面 ====================== */
-
-// 6位數應用鎖輸入狀態
-let currentLockCode = '';
-let lockResolve = null;
-let unlockAttempts = 0;
-let currentLockMode = 'unlock';
-
-function buildLockKeyboardHtml(title, mode) {
-  const subtitle = mode === 'setup'
-    ? '首次使用請設定密碼，之後開啟應用需輸入。'
-    : '請輸入 6 位數密碼以解鎖應用，系統將保護您的本機資料。';
-
-  return `
-    <div style="padding:24px 18px; text-align:center; max-width:360px; margin:0 auto;">
-      <div style="width:72px; height:72px; margin:0 auto 14px; border-radius:24px; background:linear-gradient(135deg, rgba(37,99,235,0.16), rgba(16,185,129,0.15)); display:flex; align-items:center; justify-content:center; box-shadow:0 16px 40px rgba(15,23,42,0.08);">
-        <span style="font-size:34px;">🔒</span>
-      </div>
-      <div style="font-size:22px; font-weight:800; margin-bottom:10px; color:var(--t1);">${title}</div>
-      <div style="font-size:13px; color:var(--t3); line-height:1.6; margin-bottom:22px;">${subtitle}</div>
-
-      <!-- 6 個輸入格 -->
-      <div id="lock-dots" style="display:flex; justify-content:center; gap:12px; margin-bottom:30px;">
-        ${Array(6).fill(0).map(() => `
-          <div class="lock-dot" style="width:18px; height:18px; border:2px solid var(--t3); border-radius:50%; transition:all 0.2s;"></div>
-        `).join('')}
-      </div>
-
-      <!-- 數字鍵盤 -->
-      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; max-width:320px; margin:0 auto;">
-        ${[1,2,3,4,5,6,7,8,9].map(n => `
-          <button onclick="lockKeyPress(${n})" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">
-            ${n}
-          </button>
-        `).join('')}
-        <div></div>
-        <button onclick="lockKeyPress(0)" style="height:62px; font-size:24px; font-weight:700; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); color:var(--t1);">0</button>
-        <button onclick="lockBackspace()" style="height:62px; background:var(--bg); border:1px solid var(--border); border-radius:18px; box-shadow:0 6px 16px rgba(15,23,42,0.08); display:flex; align-items:center; justify-content:center; padding:0;">
-          <img src="images/backspace.png" alt="刪除" style="width:22px; height:22px;">
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-// 顯示美化數字鍵盤
-function showLockKeyboard(title = "請輸入 6 位數應用鎖密碼", mode = 'unlock') {
-  return new Promise((resolve) => {
-    currentLockMode = mode;
-    lockResolve = resolve;
-    currentLockCode = '';
-
-    const html = buildLockKeyboardHtml(title, mode);
-    const lockPage = document.getElementById('lock-page');
-    if (lockPage) lockPage.style.zIndex = '9999';
-    closeOverlay('sub-page');
-
-    const lockTitle = document.getElementById('lock-title');
-    const lockBody = document.getElementById('lock-body');
-    if (lockTitle) lockTitle.textContent = mode === 'setup' ? '設定應用鎖' : '解鎖應用鎖';
-    if (lockBody) lockBody.innerHTML = html;
-    openOverlay('lock-page');
-  });
-}
-
-// 數字鍵盤按鍵處理
-window.lockKeyPress = function(num) {
-  if (currentLockCode.length >= 6) return;
-  
-  currentLockCode += num;
-  updateLockDots();
-
-  // 輸入滿 6 位自動確認
-  if (currentLockCode.length === 6) {
-    setTimeout(() => {
-      closeOverlay('lock-page');
-      if (lockResolve) lockResolve(currentLockCode);
-    }, 180);
-  }
-};
-
-window.lockBackspace = function() {
-  currentLockCode = currentLockCode.slice(0, -1);
-  updateLockDots();
-};
-
-window.lockCancel = function() {
-  closeOverlay('lock-page');
-  if (lockResolve) lockResolve(null);
-};
-
-function updateLockDots() {
-  const dots = document.querySelectorAll('.lock-dot');
-  dots.forEach((dot, i) => {
-    if (i < currentLockCode.length) {
-      dot.style.background = 'var(--acc)';
-      dot.style.borderColor = 'var(--acc)';
-    } else {
-      dot.style.background = 'transparent';
-      dot.style.borderColor = 'var(--t3)';
-    }
-  });
-}
-
 async function init() {
   document.documentElement.classList.add('no-tr');
 
-  // === 第一步：應用鎖解鎖（最優先）===
-  const isUnlocked = await unlockApp();
-  if (!isUnlocked) {
-    document.getElementById('app').innerHTML = `
-      <div style="padding:40px; text-align:center; color:var(--red); height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column;">
-        <h2>應用鎖解鎖失敗</h2>
-        <p style="margin-top:16px;">請重新整理頁面後再試</p>
-      </div>`;
-    return;
-  }
-
-  // === 第二步：等待資料完全載入 ===
+  // === 載入資料 ===
   try {
     await loadAll();
   } catch (e) {
-    console.error("資料解密失敗", e);
-    toast("資料載入失敗，請重新整理");
+    console.error('資料載入失敗', e);
+    toast('資料載入失敗，請重新整理');
   }
 
   // === 第三步：套用主題與背景 ===
@@ -4912,20 +4626,6 @@ async function init() {
     });
   });
 
-  showBackupReminderIfNeeded();
-}
-
-/* 定期備份提醒函式 */
-function showBackupReminderIfNeeded() {
-  const lastBackup = S.settings.lastLocalBackup || null;
-  const now = Date.now();
-  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-
-  if (!lastBackup || new Date(lastBackup.split(' ')[0].replace(/\//g, '-')).getTime() < thirtyDaysAgo) {
-    setTimeout(() => {
-      toast('💡 建議每月備份一次 JSON 檔，以防忘記應用鎖密碼', 7000);
-    }, 3000);
-  }
 }
 
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
