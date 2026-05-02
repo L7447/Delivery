@@ -110,7 +110,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .tabs-4 .slide-bg { width: calc(25% - 2px); }
 .tabs-5 .slide-bg { width: calc(20% - 1.6px); }
 .tabs-6 .slide-bg { width: calc(16.666% - 1.33px); }
-.slide-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: 999px; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s; z-index: 0; }
+.slide-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: 999px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s; z-index: 0; }
 body[data-tab="home"] .slide-bg    { background: var(--acc); box-shadow: 0 2px 8px rgba(255,107,53, 0.3); }
 body[data-tab="history"] .slide-bg { background: var(--blue); box-shadow: 0 2px 8px rgba(59,130,246, 0.3); }
 body[data-tab="report"] .slide-bg  { background: var(--green); box-shadow: 0 2px 8px rgba(34,197,94, 0.3); }
@@ -216,7 +216,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .auth-switch-btn:active { background: #eff6ff; }
 
 /* ══ 14. Toast 提示與遮罩 ══ */
-#toast { position: fixed; top: 18% !important; left: 50%; transform: translate(-50%, -20px) !important; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 16px 28px; border-radius: 99px; font-size: 15px; font-weight: 800; opacity: 0; transition: all 0.4s; z-index: 999999; pointer-events: none; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.25); min-width: 240px; letter-spacing: 0.5px; }
+#toast { position: fixed; top: 30% !important; left: 50%; transform: translate(-50%, -20px) !important; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 16px 28px; border-radius: 99px; font-size: 15px; font-weight: 800; opacity: 0; transition: all 0.4s; z-index: 999999; pointer-events: none; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.25); min-width: 240px; letter-spacing: 0.5px; }
 #toast.show { opacity: 1; transform: translate(-50%, 0) !important; }
 #confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
 #confirm-overlay.show { display: flex; }
