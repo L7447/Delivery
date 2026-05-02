@@ -2527,29 +2527,39 @@ function renderVehicleContent() {
               <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:${rightColor};">${rightText}</div>
             </div>`;
       } else {
-          // 👇 全新設計的保養維修卡片
-          const shopTag = r.shop ? `<span class="veh-label veh-label-shop" style="margin:0; padding:2px 8px; font-size:11px; border-radius:8px;">🏠 ${safeText(r.shop)}</span>` : '';
-          const itemsTag = (r.items||[]).length ? `<span class="veh-label veh-label-item" style="margin:0; padding:4px 8px; font-size:12px;">🔧 ${(r.items||[]).map(i=>safeText(i)).join('、')}</span>` : '';
-          const kmTag = r.km ? `<span class="veh-label veh-label-km" style="margin:0; padding:4px 8px; font-size:12px;">🛣️ ${r.km} km</span>` : '';
-          const noteTag = r.note ? `<span class="veh-label veh-label-note" style="margin:0; padding:4px 8px; font-size:12px;">📝 ${safeText(r.note)}</span>` : '';
+          // 👇 全新設計的保養維修卡片 (移除所有 Emoji，使用清新標籤與細體時間)
+          const itemsTag = (r.items||[]).length ? `<div style="display:flex; gap:6px; flex-wrap:wrap;">${(r.items||[]).map(i=>`<span class="maint-chip chip-item">${safeText(i)}</span>`).join('')}</div>` : '';
+          const noteTag = r.note ? `<span class="maint-chip chip-note">${safeText(r.note)}</span>` : '';
+          const kmTag = r.km ? `<span class="maint-chip chip-km">${r.km} km</span>` : '';
+          
+          // 店家與時間區塊
+          const dateTimeStr = `<span style="font-size:14px; font-weight:400; color:#3b82f6; font-family:var(--mono); letter-spacing:0.5px;">${r.date.slice(5).replace('-','/')} ${r.time||''}</span>`;
+          const shopTag = r.shop ? `<span class="maint-chip chip-shop">${safeText(r.shop)}</span>` : '';
 
           htmlContent = `
-            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:var(--sf); border:1px solid var(--border); border-radius:16px; margin-bottom:8px; padding:12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:10px;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span style="font-size:14px; font-family:var(--mono); font-weight:800; color:var(--blue);">${r.date.slice(5)} ${r.time||''}</span>
-                    ${shopTag}
-                  </div>
-                  <div style="font-size:18px; font-weight:900; color:var(--t1); font-family:var(--mono); margin-top:2px;">-$${fmt(r.amount)}</div>
+            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:#ffffff; border-radius:20px; margin-bottom:12px; padding:16px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.04); display:flex; align-items:center; gap:16px; border:1px solid #f1f5f9;">
+              
+              <!-- 左側：清新的淺綠色方塊 -->
+              <div style="width:48px; height:48px; border-radius:14px; background:#d1fae5; flex-shrink:0;"></div>
+
+              <!-- 中間：標籤與時間 -->
+              <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                  ${itemsTag}
+                  ${noteTag}
                 </div>
-                <div style="background:#d1fae5; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">🔧</div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                  ${kmTag}
+                  ${dateTimeStr}
+                  ${shopTag}
+                </div>
               </div>
-              <div style="display:flex; flex-wrap:wrap; gap:6px; border-top:1px dashed var(--border); padding-top:10px;">
-                ${itemsTag}
-                ${kmTag}
-                ${noteTag}
+
+              <!-- 右側：金額 -->
+              <div style="font-family:var(--title); font-size:22px; font-weight:900; color:#0f172a; flex-shrink:0;">
+                -$${fmt(r.amount)}
               </div>
+              
             </div>`;
       }
       html += htmlContent;
@@ -3171,83 +3181,108 @@ window.selectAvatar = function(src, el) {
     el.style.transform = 'scale(1.05)';
 }
 
+/* ══ 全新極簡風：登入與註冊彈窗 ══ */
+function openAuthModal() {
+  document.getElementById('sub-title').textContent = '帳號管理';
+  document.getElementById('sub-top-right').innerHTML = '';
+  authMode = 'login'; 
+  privacyAgreed = false; 
+  
+  // 移除舊版的 slide-tabs，直接載入內容區域
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;" id="auth-content-area"></div>
+  `;
+  renderAuthContent();
+  openOverlay('sub-page');
+}
 function renderAuthContent() {
   let contentHtml = '';
   
   if (authMode === 'login') {
     contentHtml = `
-      <div style="text-align:center; margin-bottom:20px;">
-        <div style="font-size:48px; margin-bottom:8px; line-height:1;">👋</div>
-        <h2 style="font-size:20px; font-weight:800; color:var(--t1);">歡迎回來</h2>
-        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;"></p>
-      </div>
-      
-      <div class="auth-card">
-        <div class="fg" style="margin-bottom:16px;">
-          <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="您的帳號@gmail.com" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+      <div class="auth-wrapper">
+        <h2 class="auth-title">Log In.</h2>
+        <p class="auth-subtitle">Log In with your data that you entered during your registration.</p>
+        
+        <div class="auth-input-group">
+          <label class="auth-input-label">Email</label>
+          <input type="email" class="auth-input" id="auth-email" placeholder="alma.lawson@example.com">
         </div>
-        <div class="fg" style="margin-bottom:5px;">
-          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 密碼</label>
-          <input type="password" class="finp" id="auth-pwd" placeholder="輸入密碼" style="padding:14px; border-radius:12px; background:var(--bg-input);">
+        
+        <div class="auth-input-group">
+          <label class="auth-input-label">Password</label>
+          <input type="password" class="auth-input" id="auth-pwd" placeholder="Enter Your Password">
+        </div>
+
+        <div id="turnstile-widget" style="margin-top:8px; min-height:65px;"></div>
+
+        <button onclick="requestLogin()" class="auth-btn-blue">Log in ➔</button>
+        
+        <div class="auth-switch-text">
+          Don't have an account? <span class="auth-switch-link" onclick="switchAuthTab('register')">Sign Up</span>
         </div>
       </div>
-
-      <div id="turnstile-widget" style="margin-bottom:16px; text-align:center; min-height:65px;"></div>
-
-      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:16px;font-size:16px;font-weight:800;border-radius:16px; box-shadow:0 8px 20px rgba(255,107,53,0.3); transition:0.2s;">登入帳號</button>
     `;
   } else {
-    // 註冊頁面：精緻網格頭像選擇
+    // 註冊頁面：包含頭像選擇與隱私權同意
     let avatarsHtml = '';
     for(let i=1; i<=8; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
-      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:48px; height:48px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.1)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
-      <div style="text-align:center; margin-bottom:3px;">
-        <div style="font-size:48px; margin-bottom:4px; line-height:1;">🚀</div>
-        <h2 style="font-size:20px; font-weight:800; color:var(--t1);">建立專屬帳號</h2>
-        <p style="font-size:12px; color:var(--t2); font-weight:600; margin-top:4px;">幾秒鐘即可完成註冊</p>
-      </div>
-      
-      <div class="auth-card">
-        <div class="fg" style="margin-bottom:3px;">
-          <label style="font-weight:800; color:var(--t1); font-size:12px;">🎨 選擇專屬頭像</label>
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; background:var(--bg-input); padding:6px; border-radius:16px; justify-items:center;">
+      <div class="auth-wrapper">
+        <h2 class="auth-title">Create account</h2>
+        <p class="auth-subtitle">Give Us of some your information to get free access.</p>
+        
+        <div class="auth-input-group" style="padding:12px 16px;">
+          <label class="auth-input-label">Select Avatar</label>
+          <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-top:8px;">
             ${avatarsHtml}
           </div>
         </div>
         
-        <div class="fg" style="margin-bottom:3px;">
-          <label style="font-weight:800; color:var(--t1); font-size:12px;">✉️ E-mail 信箱</label>
-          <input type="email" class="finp" id="auth-email" placeholder="您的帳號@gmail.com" style="padding:12px; border-radius:12px; background:var(--bg-input);">
+        <div class="auth-input-group">
+          <label class="auth-input-label">Your E-mail</label>
+          <input type="email" class="auth-input" id="auth-email" placeholder="example@mail.com">
         </div>
         
-        <div class="fg" style="margin-bottom:3px;">
-          <label style="font-weight:800; color:var(--t1); font-size:12px;">🔒 設定密碼 (至少12位數以上，含大小寫/數字/特殊符號)</label>
-          <input type="password" class="finp" id="auth-pwd" placeholder="設定密碼" style="padding:12px; border-radius:12px; background:var(--bg-input);">
+        <div class="auth-input-group">
+          <label class="auth-input-label">Enter your password</label>
+          <input type="password" class="auth-input" id="auth-pwd" placeholder="••••••••">
         </div>
 
-        <div style="font-weight:800; color:var(--t1); font-size:12px;">可以使用<a href="https://1password.com/zh-tw/password-generator" target="_blank" rel="noopener noreferrer nofollow"> 1Password 密碼生成器 </a>，選擇(隨機)生成密碼。</span><span style="font-weight:600; font-size:12px; color:var(--text-red)">(密碼生成後，請先保存，避免不見)</span></div><br>
+        <div style="font-weight:600; color:#64748b; font-size:11px; margin:-4px 0 16px 4px; line-height:1.5;">
+          密碼需至少12字元，含大小寫、數字與特殊符號。<br>
+          推薦使用 <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; font-weight:700;">1Password 生成器</a>。
+        </div>
 
-        <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:center; gap:10px; padding:8px; background:var(--bg-input); border-radius:12px; border: 1px solid var(--border); cursor:pointer; transition:0.2s;">
-          <div id="privacy-chk-box" style="width:22px; height:22px; border-radius:6px; border:2px solid ${privacyAgreed ? 'var(--acc)' : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? 'var(--acc)' : 'transparent'}; transition:0.2s; flex-shrink:0;">
-            ${privacyAgreed ? '<span style="color:#fff; font-size:14px; font-weight:900;">✓</span>' : ''}
+        <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; cursor:pointer;">
+          <div id="privacy-chk-box" style="width:20px; height:20px; border-radius:6px; border:2px solid ${privacyAgreed ? '#2563eb' : '#cbd5e1'}; display:flex; align-items:center; justify-content:center; background:${privacyAgreed ? '#2563eb' : 'transparent'}; transition:0.2s; flex-shrink:0; margin-top:2px;">
+            ${privacyAgreed ? '<span style="color:#fff; font-size:12px; font-weight:900;">✓</span>' : ''}
           </div>
-          <span id="privacy-chk-text" style="font-size:13px; font-weight:700; color:${privacyAgreed ? 'var(--t1)' : 'var(--t3)'};">我已閱讀並同意 <span style="color:var(--text-blue); text-decoration:underline;">隱私權政策</span></span>
+          <span id="privacy-chk-text" style="font-size:12px; font-weight:600; color:${privacyAgreed ? '#0f172a' : '#64748b'}; line-height:1.5;">
+            By creating an account you agree to the <span style="color:#2563eb; font-weight:700;">Terms of Use</span> and our <span style="color:#2563eb; font-weight:700;">Privacy policy</span>
+          </span>
+        </div>
+
+        <div id="turnstile-widget" style="margin-top:8px; min-height:65px;"></div>
+
+        <button onclick="requestLogin()" class="auth-btn-blue" style="background:#93c5fd; color:#1e3a8a; box-shadow:0 8px 24px rgba(147, 197, 253, 0.4);">
+          Create Account Now ➔
+        </button>
+        
+        <div class="auth-switch-text">
+          Already an account? <span class="auth-switch-link" onclick="switchAuthTab('login')">Log In.</span>
         </div>
       </div>
-
-      <div id="turnstile-widget" style="margin-bottom:5px; text-align:center; min-height:65px;"></div>
-
-      <button onclick="requestLogin()" class="btn-acc" style="width:100%;padding:16px;font-size:16px;font-weight:800;border-radius:16px; box-shadow:0 8px 20px rgba(255,107,53,0.3); transition:0.2s;">註冊並寄發驗證碼</button>
     `;
   }
   
   document.getElementById('auth-content-area').innerHTML = contentHtml;
 
+  // 渲染 Cloudflare 人機驗證
   const renderTurnstileWidget = () => {
     if (document.getElementById('turnstile-widget')) {
       turnstile.render('#turnstile-widget', {
@@ -3267,6 +3302,10 @@ function renderAuthContent() {
     script.defer = true;
     document.body.appendChild(script);
   }
+}
+window.switchAuthTab = function(mode) {
+  authMode = mode;
+  renderAuthContent();
 }
 
 /* ══ 新增：更改頭像獨立設定頁 ══ */
@@ -3314,26 +3353,6 @@ window.switchAuthTab = function(mode) {
     document.getElementById('auth-tab-bg').style.transform = 'translateX(100%)';
   }
   renderAuthContent();
-}
-
-function openAuthModal() {
-  document.getElementById('sub-title').textContent = '帳號管理';
-  document.getElementById('sub-top-right').innerHTML = '';
-  authMode = 'login'; 
-  privacyAgreed = false; // 👈 每次開啟都重置隱私權同意狀態
-  
-  document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px;">
-      <div class="slide-tabs tabs-2" id="auth-tabs" style="margin-bottom:5px;">
-        <div class="slide-bg" id="auth-tab-bg" style="transform: translateX(0%); background:var(--acc);"></div>
-        <button class="slide-btn active" onclick="switchAuthTab('login')">登入帳號</button>
-        <button class="slide-btn" onclick="switchAuthTab('register')">建立新帳號</button>
-      </div>
-      <div id="auth-content-area"></div>
-    </div>
-  `;
-  renderAuthContent();
-  openOverlay('sub-page');
 }
 
 // 您的後端 API 網址 (本地測試為 localhost:3000，上線請改為實際網域)
