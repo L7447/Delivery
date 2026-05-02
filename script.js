@@ -577,26 +577,34 @@ function goPage(name) {
   if (name === 'settings') renderSettings();
 }
 
-/* ══ 底部導覽列滑動指示條 (強化復歸機制) ══ */
+/* ══ 底部導覽列滑動指示條 (終極防錯亂機制) ══ */
 function updateNavIndicator(activePg) {
-  const indicator = document.getElementById('nav-indicator');
-  const activeEl = document.querySelector(`.ni[data-pg="${activePg}"]`);
-  const nav = document.getElementById('nav');
-  
-  if (!indicator || !activeEl || !nav) return;
-  
-  // 如果導覽列寬度還是 0 (代表被隱藏或還沒畫出來)，延遲 50 毫秒再試一次
-  if (nav.offsetWidth === 0) {
-    setTimeout(() => updateNavIndicator(activePg), 50);
-    return;
-  }
-  
-  const navRect = nav.getBoundingClientRect();
-  const itemRect = activeEl.getBoundingClientRect();
-  
-  // 計算置中位移
-  const offsetX = itemRect.left - navRect.left + (activeEl.offsetWidth - indicator.offsetWidth) / 2;
-  indicator.style.transform = `translateY(-50%) translateX(${offsetX}px)`;
+  // 使用 requestAnimationFrame 等待瀏覽器下一幀繪製完畢
+  requestAnimationFrame(() => {
+    const indicator = document.getElementById('nav-indicator');
+    const activeEl = document.querySelector(`.ni[data-pg="${activePg}"]`);
+    const nav = document.getElementById('nav');
+    
+    if (!indicator || !activeEl || !nav) return;
+    
+    // 如果寬度為 0 (可能剛啟動還在背景)，不要計算，直接返回避免版面崩潰
+    if (nav.offsetWidth === 0 || activeEl.offsetWidth === 0) {
+      // 設定一個延遲重試，最多試 5 次
+      setTimeout(() => updateNavIndicator(activePg), 100);
+      return;
+    }
+    
+    try {
+      const navRect = nav.getBoundingClientRect();
+      const itemRect = activeEl.getBoundingClientRect();
+      
+      // 計算圖示中心點，確保背景膠囊完美置中
+      const offsetX = itemRect.left - navRect.left + (activeEl.offsetWidth - indicator.offsetWidth) / 2;
+      indicator.style.transform = `translateY(-50%) translateX(${offsetX}px)`;
+    } catch(e) {
+      console.warn("導覽列對齊失敗，忽略此次操作:", e);
+    }
+  });
 }
 /* 替換導覽列切換邏輯，未登入禁止進入新增頁面 */
 function _bindNavEvents() {
@@ -4551,9 +4559,12 @@ function showInitialSetupModal() {
 /* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
+/* ══ 系統啟動主流程 ══ */
 async function init() {
+  // 1. 載入資料
   try { await loadAll(); } catch (e) { console.error(e); toast('資料載入失敗'); }
   
+  // 2. 背景與設定初始化
   applyBackground();
   fetchGlobalGasPrice();
   initReminderCheck();
@@ -4563,19 +4574,18 @@ async function init() {
     savePlatforms();
   }
 
-  // 設定頁面狀態並強制渲染
+  // 3. 設定預設分頁與首頁狀態
   S.homeSubTab = 'schedule'; 
-  goPage('home');
 
-  // 給予一點時間讓 DOM 繪製，再對齊導覽列 (確保滑動正常)
+  // 4. 等待一切就緒後，再執行跳頁與定位
   setTimeout(() => {
-    updateNavIndicator('home');
-  }, 100);
-
-  // 檢查是否初次使用
-  setTimeout(() => {
-    if (window.checkAndPromptPlatformSetup) window.checkAndPromptPlatformSetup();
-  }, 600);
+    goPage('home'); // 這個動作會順便觸發 renderHome()
+    
+    // 檢查初次使用設定
+    if (window.checkAndPromptPlatformSetup) {
+      window.checkAndPromptPlatformSetup();
+    }
+  }, 100); // 延遲 100ms，確保 DOM 架構已經被瀏覽器建立
 }
 
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
