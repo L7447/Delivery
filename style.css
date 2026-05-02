@@ -232,3 +232,52 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 #confirm-overlay.show { display: flex; }
 #confirm-box { background: var(--sf); border-radius: 24px; padding: 24px; width: 100%; max-width: 340px; box-shadow: 0 20px 40px rgba(0,0,0,.15); }
 #confirm-msg { font-size: 16px; font-weight: 700; color: var(--t1); line-height: 1.6; margin-bottom: 24px; text-align: center; }
+
+/* ══════════════════════════════════════════════════════
+   緊急修復與樣式補回區塊
+   ══════════════════════════════════════════════════════ */
+
+/* 1. 補回：設定、帳號、車輛資訊頁的列表樣式 */
+.set-sec { margin-bottom: 20px; }
+.set-sec h3 { font-size: 11px; color: #2563eb; letter-spacing: 1px; margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
+.set-list { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+.set-row { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; cursor: pointer; transition: .12s; font-weight: 600; color: #0f172a;}
+.set-row:last-child { border-bottom: none; }
+.set-row .sn { flex: 1; display: flex; flex-direction: column; }
+.set-row .arr { color: #94a3b8; font-size: 16px; font-weight: bold; }
+.set-row .sn-sub { font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 500;}
+.plat-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+/* 2. 復原：原本的記錄卡片樣式 */
+.hist-rec-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; margin-top:2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
+.punch-card-compact { display: flex; align-items: center; padding: 10px 12px; cursor: pointer; }
+.hrc-top { padding: 8px 10px; position: relative; cursor: pointer; }
+.hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
+.hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; font-weight: 600; margin-bottom: 3px; }
+.hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hrc-amt { font-family: var(--mono); font-size: 18px; font-weight: 800; color: #0f172a; }
+.hrc-stat { font-size: 12px; font-weight: 600; color: #475569; }
+.h-div { width: 2px; height: 15px; background: #cbd5e1; }
+.hrc-toggle { position: absolute; right: 10px; top: 10px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 70%); color: #0044cc; font-size: 22px; cursor: pointer; transition: transform 0.3s; }
+.hrc-collapse { background: #ffffff; border-top: 1.5px dashed #e2e8f0; display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+
+/* 3. 調整：Toast 提示訊息往中間移 (將 top 調整為 18%) */
+#toast { 
+  top: 18% !important; 
+  transform: translate(-50%, -20px) !important;
+}
+#toast.show { transform: translate(-50%, 0) !important; }
+
+/* 4. 補回：切換按鈕的滑動效果與正確尺寸 */
+.slide-tabs { position: relative; display: flex; background: rgba(0,0,0,0.06); border-radius: 999px; padding: 4px; margin-bottom: 12px; }
+.tabs-2 .slide-bg { width: calc(50% - 4px); }
+.tabs-3 .slide-bg { width: calc(33.333% - 2.66px); }
+.tabs-4 .slide-bg { width: calc(25% - 2px); }
+.tabs-5 .slide-bg { width: calc(20% - 1.6px); }
+.tabs-6 .slide-bg { width: calc(16.666% - 1.33px); }
+.slide-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: 999px; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s; z-index: 0; }
+.slide-btn { flex: 1; position: relative; z-index: 1; border: none; background: transparent; padding: 10px 0; color: #475569; font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: color 0.3s; }
+.slide-btn.active { color: #fff; font-weight: 700; }
+
+/* 5. 補回：搜尋和日曆的圓形按鈕 */
+.icon-btn { width: 32px; height: 32px; border-radius: 50%; background: #ffffff; border: 1.5px solid #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569; -webkit-tap-highlight-color: transparent; }
