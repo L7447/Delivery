@@ -87,94 +87,50 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 /* 針對所有會滾動的內容區域增加 padding-bottom，避免內容被懸浮導覽列遮擋 */
 #home-bottom-content, #hist-content, #page-add > div:nth-child(2), #page-report > div:nth-child(2), #vehicle-content, #settings-content { padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
 
-/* 膠囊式懸浮導覽列 */
+/* ══ 膠囊式懸浮導覽列 (全新藍底高對比版) ══ */
 #nav { 
   position: fixed; 
   bottom: calc(13px + env(safe-area-inset-bottom)); 
-  left: 10px; 
-  right: 10px; 
-  height: 76px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-around; 
-  background: var(--nav-bg, rgba(240, 244, 248, 0.97)); 
-  backdrop-filter: blur(20px); 
-  -webkit-backdrop-filter: blur(20px); 
-  border: 1px solid var(--border); 
-  border-radius: 38px; 
-  z-index: 90; 
-  padding: 0 10px; /* 修改為對稱的 padding */
-  box-shadow: var(--nav-shadow, 0 8px 24px rgba(0,0,0,0.1)); 
+  left: 10px; right: 10px; height: 76px; 
+  display: flex; align-items: center; justify-content: space-around; 
+  background: #2563eb; /* 藍色背景 */
+  border-radius: 38px; z-index: 90; padding: 0 10px; 
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35); 
 }
-
 /* 滑動背景膠囊 */
 #nav-indicator {
-  align-items: center; 
-  justify-content: center; 
-  position: absolute;
-  top: 50%;
-  left: 0; /* 修改這裡：歸零，交由 JS 精準計算位移 */
-  width: 72px; /* 稍微縮小寬度，讓膠囊看起來更精緻 */
-  height: 66px;
-  background: rgba(120, 130, 150, 0.15);
-  border-radius: 25px;
+  position: absolute; top: 50%; left: 0;
+  width: 72px; height: 66px;
+  background: #ffffff; /* 點選時背景變純白 */
+  border-radius: 33px;
   transform: translateY(-50%) translateX(0px);
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-  /* z-index 低於 .ni，確保圖示文字在膠囊上方 */
-  z-index: 0;
+  pointer-events: none; z-index: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-
-/* 單個導覽列項目 (加上寬高以確保點擊背景呈完美橢圓/圓角矩形) */
 .ni { 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  justify-content: center; 
-  gap: 4px; 
-  cursor: pointer; 
-  height: 58px; 
-  width: 58px; 
-  border-radius: 22px; 
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; 
+  cursor: pointer; height: 58px; width: 58px; border-radius: 22px; 
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-  -webkit-tap-highlight-color: transparent;
-  /* z-index 高於 indicator，讓圖示浮在膠囊上方 */
-  position: relative;
-  z-index: 1;
+  -webkit-tap-highlight-color: transparent; position: relative; z-index: 1;
 }
-
-/* 點擊時輕微縮小，給予實體回饋感 */
-.ni:active {
-  transform: scale(0.88);
-}
-
-/* Active 狀態：不加自己的背景，完全由 #nav-indicator 統一負責 */
-.ni.active { 
-  background: transparent; 
-}
-
+.ni:active { transform: scale(0.88); }
+.ni.active { background: transparent; }
+/* 圖示處理：未點選時轉純白，點選時恢復原始彩色 */
 .ni-img { 
-  width: 24px; 
-  height: 24px; 
-  object-fit: contain; 
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-}
-
-.ni .lb { 
-  font-size: 10px; 
-  color: var(--nav-text); 
-  font-weight: 600; 
-  transition: color 0.3s; 
-}
-
-/* Active 狀態：文字變藍色、維持原本粗細，圖片上浮放大 */
-.ni.active .lb { 
-  color: var(--blue); /* 改為藍色 */
-  font-weight: 600; /* 不變粗體，維持 600 */
+  width: 24px; height: 24px; object-fit: contain; 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+  filter: brightness(0) invert(1); /* 轉純白 */
+  opacity: 0.9;
 }
 .ni.active .ni-img { 
   transform: translateY(-2px) scale(1.08); 
+  filter: none; /* 恢復彩色 */
+  opacity: 1;
 }
+/* 文字處理：未點選時淺白，點選時深藍高對比 */
+.ni .lb { font-size: 10px; color: rgba(255, 255, 255, 0.85); font-weight: 600; transition: color 0.3s; }
+.ni.active .lb { color: #2563eb; font-weight: 800; }
 
 /* ══ 彈出視窗 ══ */
 .overlay-page { 
@@ -658,3 +614,29 @@ input:checked + .slider:before { transform: translateX(20px); }
 .auth-btn-blue:active { transform: scale(0.96); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
 .auth-switch-text { text-align: center; margin-top: 24px; font-size: 13px; color: #64748b; font-weight: 600; }
 .auth-switch-link { color: #2563eb; cursor: pointer; text-decoration: none; font-weight: 700; }
+
+/* ══ 車輛紀錄標籤 (極簡細緻版) ══ */
+.vr-chip {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+/* 保養類標籤 */
+.chip-item  { background: #eff6ff; color: #4f46e5; border: 1px solid #c7d2fe; }
+.chip-shop  { background: #fdf4ff; color: #7c3aed; border: 1px solid #e9d5ff; }
+.chip-km    { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.chip-note  { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; }
+/* 燃料類標籤 */
+.chip-fuel   { background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; }
+.chip-liters { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.chip-dist   { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
+
+/* ══ 修復登入註冊切換按鈕點擊範圍 ══ */
+.auth-switch-link {
+  color: #2563eb; cursor: pointer; text-decoration: none; font-weight: 700;
+  position: relative; z-index: 10; padding: 4px 8px; display: inline-block;
+}
