@@ -2493,73 +2493,45 @@ function renderVehicleContent() {
       let htmlContent = '';
 
       if (isFuel) {
-          // 原本的油耗與換電版面 (不變)
-          let iconContent = '';
-          let rightText = '';
-          let rightColor = 'var(--t1)';
-          let kmText = '';
-          let mainText = '';
+          // ── 燃料紀錄卡片 (無大圖示，極簡版) ──
+          let fuelTypeTag = isEV 
+            ? `<span class="vr-chip chip-fuel">🔋 電池 (電動車)</span>`
+            : `<span class="vr-chip chip-fuel">⛽ ${r.fuelType||'95'} 無鉛汽油</span>`;
+            
+          let litersTag = (!isEV && r.liters) ? `<span class="vr-chip chip-liters">💧 ${r.liters} L</span>` : '';
+          
+          const diff = pf(r.km) - pf(r.prevKm);
+          let distTag = diff > 0 ? `<span class="vr-chip chip-dist">🛣️ ${diff} km</span>` : '';
+          let kmRangeTag = `<span class="vr-chip chip-km">${r.prevKm} → ${r.km}</span>`;
 
-          if (isEV) {
-              iconContent = `<div style="background:#dbeafe; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔋</div>`;
-              mainText = `電池 (電動車)`;
-              const diff = pf(r.km) - pf(r.prevKm);
-              rightText = `${diff > 0 ? diff : 0} km`;
-              rightColor = 'var(--acc)';
-              kmText = `${r.prevKm} → ${r.km} km`;
-          } else {
-              iconContent = `<div style="background:#fee2e2; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">⛽</div>`;
-              mainText = `${r.fuelType||'95'} ${r.fuelType==='柴油'?'':'無鉛'}`;
-              rightText = `-$${fmt(r.amount)}`;
-              rightColor = 'var(--t1)';
-              kmText = `${r.prevKm} → ${r.km} km`;
-          }
+          const amountStr = isEV ? '' : `-$${fmt(r.amount)}`;
 
           htmlContent = `
-            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:var(--sf); border:1px solid var(--border); border-radius:12px; margin-bottom:2px; padding:3px 6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-              <div style="display:flex; align-items:center; gap:12px;">
-                ${iconContent}
-                <div>
-                  <div style="font-size:15px; font-weight:800; color:var(--t1); margin-bottom:4px;">${mainText}</div>
-                  <div style="font-size:11px; font-family:var(--mono); color:var(--t3);">${kmText} • ${r.date.slice(5)} ${r.time||''}</div>
-                </div>
+            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:#ffffff; border-radius:16px; margin-bottom:8px; padding:10px 12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #f1f5f9; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:13px; font-family:var(--mono); font-weight:700; color:#ea580c;">${r.date.slice(5).replace('-','/')} ${r.time||''}</span>
+                <span style="font-size:16px; font-weight:900; color:#0f172a; font-family:var(--mono);">${amountStr}</span>
               </div>
-              <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:${rightColor};">${rightText}</div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                ${fuelTypeTag} ${litersTag} ${distTag} ${kmRangeTag}
+              </div>
             </div>`;
       } else {
-          // 👇 全新設計的保養維修卡片 (移除所有 Emoji，使用清新標籤與細體時間)
-          const itemsTag = (r.items||[]).length ? `<div style="display:flex; gap:6px; flex-wrap:wrap;">${(r.items||[]).map(i=>`<span class="maint-chip chip-item">${safeText(i)}</span>`).join('')}</div>` : '';
-          const noteTag = r.note ? `<span class="maint-chip chip-note">${safeText(r.note)}</span>` : '';
-          const kmTag = r.km ? `<span class="maint-chip chip-km">${r.km} km</span>` : '';
-          
-          // 店家與時間區塊
-          const dateTimeStr = `<span style="font-size:14px; font-weight:400; color:#3b82f6; font-family:var(--mono); letter-spacing:0.5px;">${r.date.slice(5).replace('-','/')} ${r.time||''}</span>`;
-          const shopTag = r.shop ? `<span class="maint-chip chip-shop">${safeText(r.shop)}</span>` : '';
+          // ── 保養維修紀錄卡片 (無大圖示，極簡版) ──
+          const itemsTag = (r.items||[]).length ? (r.items||[]).map(i=>`<span class="vr-chip chip-item">🔧 ${safeText(i)}</span>`).join('') : '';
+          const shopTag = r.shop ? `<span class="vr-chip chip-shop">🏠 ${safeText(r.shop)}</span>` : '';
+          const kmTag = r.km ? `<span class="vr-chip chip-km">🛣️ ${r.km} km</span>` : '';
+          const noteTag = r.note ? `<span class="vr-chip chip-note">📝 ${safeText(r.note)}</span>` : '';
 
           htmlContent = `
-            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:#ffffff; border-radius:20px; margin-bottom:12px; padding:16px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.04); display:flex; align-items:center; gap:16px; border:1px solid #f1f5f9;">
-              
-              <!-- 左側：清新的淺綠色方塊 -->
-              <div style="width:48px; height:48px; border-radius:14px; background:#d1fae5; flex-shrink:0;"></div>
-
-              <!-- 中間：標籤與時間 -->
-              <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
-                <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-                  ${itemsTag}
-                  ${noteTag}
-                </div>
-                <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                  ${kmTag}
-                  ${dateTimeStr}
-                  ${shopTag}
-                </div>
+            <div onclick="openAddVehRec('${safeText(r.id)}')" style="background:#ffffff; border-radius:16px; margin-bottom:8px; padding:10px 12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #f1f5f9; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:13px; font-family:var(--mono); font-weight:700; color:#3b82f6;">${r.date.slice(5).replace('-','/')} ${r.time||''}</span>
+                <span style="font-size:16px; font-weight:900; color:#0f172a; font-family:var(--mono);">-$${fmt(r.amount)}</span>
               </div>
-
-              <!-- 右側：金額 -->
-              <div style="font-family:var(--title); font-size:22px; font-weight:900; color:#0f172a; flex-shrink:0;">
-                -$${fmt(r.amount)}
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                ${itemsTag} ${shopTag} ${kmTag} ${noteTag}
               </div>
-              
             </div>`;
       }
       html += htmlContent;
@@ -3201,30 +3173,29 @@ function renderAuthContent() {
   if (authMode === 'login') {
     contentHtml = `
       <div class="auth-wrapper">
-        <h2 class="auth-title">Log In.</h2>
-        <p class="auth-subtitle">Log In with your data that you entered during your registration.</p>
+        <h2 class="auth-title">登入帳號</h2>
+        <p class="auth-subtitle">請輸入您註冊時的電子郵件與密碼</p>
         
         <div class="auth-input-group">
-          <label class="auth-input-label">Email</label>
-          <input type="email" class="auth-input" id="auth-email" placeholder="alma.lawson@example.com">
+          <label class="auth-input-label">電子郵件</label>
+          <input type="email" class="auth-input" id="auth-email" placeholder="你的帳號@gmail.com">
         </div>
         
         <div class="auth-input-group">
-          <label class="auth-input-label">Password</label>
-          <input type="password" class="auth-input" id="auth-pwd" placeholder="Enter Your Password">
+          <label class="auth-input-label">密碼</label>
+          <input type="password" class="auth-input" id="auth-pwd" placeholder="請輸入密碼">
         </div>
 
         <div id="turnstile-widget" style="margin-top:8px; min-height:65px;"></div>
 
-        <button onclick="requestLogin()" class="auth-btn-blue">Log in ➔</button>
+        <button onclick="requestLogin()" class="auth-btn-blue">登入 ➔</button>
         
         <div class="auth-switch-text">
-          Don't have an account? <span class="auth-switch-link" onclick="switchAuthTab('register')">Sign Up</span>
+          還沒有帳號嗎？ <span class="auth-switch-link" onclick="switchAuthTab('register')">註冊新帳號</span>
         </div>
       </div>
     `;
   } else {
-    // 註冊頁面：包含頭像選擇與隱私權同意
     let avatarsHtml = '';
     for(let i=1; i<=8; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
@@ -3233,24 +3204,24 @@ function renderAuthContent() {
     
     contentHtml = `
       <div class="auth-wrapper">
-        <h2 class="auth-title">Create account</h2>
-        <p class="auth-subtitle">Give Us of some your information to get free access.</p>
+        <h2 class="auth-title">註冊新帳號</h2>
+        <p class="auth-subtitle">填寫以下資訊即可免費建立專屬帳號</p>
         
         <div class="auth-input-group" style="padding:12px 16px;">
-          <label class="auth-input-label">Select Avatar</label>
+          <label class="auth-input-label">選擇專屬頭像</label>
           <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-top:8px;">
             ${avatarsHtml}
           </div>
         </div>
         
         <div class="auth-input-group">
-          <label class="auth-input-label">Your E-mail</label>
-          <input type="email" class="auth-input" id="auth-email" placeholder="example@mail.com">
+          <label class="auth-input-label">電子郵件</label>
+          <input type="email" class="auth-input" id="auth-email" placeholder="你的帳號@gmail.com">
         </div>
         
         <div class="auth-input-group">
-          <label class="auth-input-label">Enter your password</label>
-          <input type="password" class="auth-input" id="auth-pwd" placeholder="••••••••">
+          <label class="auth-input-label">密碼</label>
+          <input type="password" class="auth-input" id="auth-pwd" placeholder="請設定密碼">
         </div>
 
         <div style="font-weight:600; color:#64748b; font-size:11px; margin:-4px 0 16px 4px; line-height:1.5;">
@@ -3263,45 +3234,26 @@ function renderAuthContent() {
             ${privacyAgreed ? '<span style="color:#fff; font-size:12px; font-weight:900;">✓</span>' : ''}
           </div>
           <span id="privacy-chk-text" style="font-size:12px; font-weight:600; color:${privacyAgreed ? '#0f172a' : '#64748b'}; line-height:1.5;">
-            By creating an account you agree to the <span style="color:#2563eb; font-weight:700;">Terms of Use</span> and our <span style="color:#2563eb; font-weight:700;">Privacy policy</span>
+            建立帳號即代表您同意我們的 <span style="color:#2563eb; font-weight:700;">服務條款與隱私權政策</span>
           </span>
         </div>
 
         <div id="turnstile-widget" style="margin-top:8px; min-height:65px;"></div>
 
         <button onclick="requestLogin()" class="auth-btn-blue" style="background:#93c5fd; color:#1e3a8a; box-shadow:0 8px 24px rgba(147, 197, 253, 0.4);">
-          Create Account Now ➔
+          立即註冊 ➔
         </button>
         
         <div class="auth-switch-text">
-          Already an account? <span class="auth-switch-link" onclick="switchAuthTab('login')">Log In.</span>
+          已經有帳號了？ <span class="auth-switch-link" onclick="switchAuthTab('login')">登入</span>
         </div>
       </div>
     `;
   }
-  
   document.getElementById('auth-content-area').innerHTML = contentHtml;
-
-  // 渲染 Cloudflare 人機驗證
-  const renderTurnstileWidget = () => {
-    if (document.getElementById('turnstile-widget')) {
-      turnstile.render('#turnstile-widget', {
-        sitekey: '0x4AAAAAADC958xr-t5UGd36',
-        theme: 'light'
-      });
-    }
-  };
-
-  if (typeof turnstile !== 'undefined') {
-    renderTurnstileWidget();
-  } else {
-    window.onTurnstileLoad = renderTurnstileWidget;
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-  }
+  // ... 人機驗證碼 logic 保留
+  const renderTurnstileWidget = () => { if (document.getElementById('turnstile-widget')) { turnstile.render('#turnstile-widget', { sitekey: '0x4AAAAAADC958xr-t5UGd36', theme: 'light' }); } };
+  if (typeof turnstile !== 'undefined') { renderTurnstileWidget(); } else { window.onTurnstileLoad = renderTurnstileWidget; const script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad'; script.async = true; script.defer = true; document.body.appendChild(script); }
 }
 window.switchAuthTab = function(mode) {
   authMode = mode;
@@ -4559,19 +4511,63 @@ async function restoreFromCloud(email) {
   }
 }
 
-/* ══ 檢查是否未啟用任何平台，若無則自動彈出設定 ══ */
+/* ══ 初次使用平台懸浮設定 ══ */
 window.checkAndPromptPlatformSetup = function() {
-  // 檢查是否所有平台的 active 都是 false
   const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
-  
   if (!hasActivePlatform) {
-    // 稍微延遲一下，讓動畫退場更順暢再彈出視窗
     setTimeout(() => {
-      openPlatformList();
-      toast('💡 歡迎使用！請先啟用您有在跑的外送平台', 4000);
+      showInitialSetupModal();
     }, 400);
   }
 };
+function showInitialSetupModal() {
+  const ov = document.createElement('div');
+  ov.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; transition:0.3s;";
+  
+  let platHtml = DEFAULT_PLATFORMS.map(p => `
+    <label style="display:flex; align-items:center; gap:12px; padding:14px; background:var(--bg-input); border-radius:12px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
+      <input type="checkbox" value="${p.id}" style="width:20px; height:20px; accent-color:var(--acc);">
+      <span style="font-weight:700; font-size:15px; color:var(--t1);">${p.name}</span>
+    </label>
+  `).join('');
+
+  ov.innerHTML = `
+    <div style="background:#fff; border-radius:24px; padding:24px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.2); transform:translateY(20px); transition:0.3s;" id="init-setup-box">
+      <div style="font-size:44px; text-align:center; margin-bottom:12px;">👋</div>
+      <h3 style="text-align:center; font-size:22px; font-weight:800; color:var(--t1); margin-bottom:8px;">歡迎使用！</h3>
+      <p style="text-align:center; font-size:13px; color:var(--t2); font-weight:600; margin-bottom:24px;">請先勾選您有在跑的外送平台：</p>
+      ${platHtml}
+      <button id="init-setup-btn" style="width:100%; background:var(--acc); color:#fff; border:none; padding:16px; border-radius:16px; font-size:16px; font-weight:800; margin-top:16px; box-shadow:0 6px 16px rgba(255,107,53,0.3); cursor:pointer; transition:0.2s;">開始記錄 ➔</button>
+    </div>
+  `;
+  document.body.appendChild(ov);
+
+  requestAnimationFrame(() => {
+    ov.style.opacity = '1';
+    document.getElementById('init-setup-box').style.transform = 'translateY(0)';
+  });
+
+  document.getElementById('init-setup-btn').addEventListener('click', () => {
+    const checks = ov.querySelectorAll('input[type="checkbox"]');
+    let hasChecked = false;
+    checks.forEach(chk => {
+      const p = S.platforms.find(x => x.id === chk.value);
+      if (p) p.active = chk.checked;
+      if (chk.checked) hasChecked = true;
+    });
+
+    if (!hasChecked) { toast('⚠️ 請至少選擇一個平台'); return; }
+
+    savePlatforms();
+    renderHome();
+    renderSettings();
+
+    ov.style.opacity = '0';
+    document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
+    setTimeout(() => ov.remove(), 300);
+    toast('✅ 平台設定完成！');
+  });
+}
 
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
