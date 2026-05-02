@@ -4559,12 +4559,10 @@ function showInitialSetupModal() {
 /* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
-/* ══ 系統啟動主流程 ══ */
+/* ══ 系統啟動主流程 (終極防錯亂：強制模擬點擊) ══ */
 async function init() {
-  // 1. 載入資料
-  try { await loadAll(); } catch (e) { console.error(e); toast('資料載入失敗'); }
+  try { await loadAll(); } catch (e) { console.error(e); }
   
-  // 2. 背景與設定初始化
   applyBackground();
   fetchGlobalGasPrice();
   initReminderCheck();
@@ -4574,18 +4572,22 @@ async function init() {
     savePlatforms();
   }
 
-  // 3. 設定預設分頁與首頁狀態
-  S.homeSubTab = 'schedule'; 
-
-  // 4. 等待一切就緒後，再執行跳頁與定位
+  // 💡 終極防呆：給予瀏覽器 800 毫秒的充分時間建立畫面後，再用程式「模擬點擊首頁」
   setTimeout(() => {
-    goPage('home'); // 這個動作會順便觸發 renderHome()
+    S.homeSubTab = 'schedule';
     
-    // 檢查初次使用設定
-    if (window.checkAndPromptPlatformSetup) {
-      window.checkAndPromptPlatformSetup();
+    // 像人類一樣去點擊那個首頁按鈕，保證觸發所有正常的排版邏輯
+    const homeBtn = document.querySelector('.ni[data-pg="home"]');
+    if (homeBtn) {
+      homeBtn.click();
+    } else {
+      goPage('home');
     }
-  }, 1000); // 延遲 100ms，確保 DOM 架構已經被瀏覽器建立
+    
+    setTimeout(() => updateNavIndicator('home'), 150);
+
+    if (window.checkAndPromptPlatformSetup) window.checkAndPromptPlatformSetup();
+  }, 800);
 }
 
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
@@ -4602,3 +4604,14 @@ if (document.readyState === 'loading') {
   init();
 }
 /* ══ 7. 設定管理與啟動 結束 ═══════════════════════════════════ */
+/* 💡 終極防錯亂 Part 2：解決 APP 關閉重開(喚醒)時的破圖問題 */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+     // 當手機把 APP 從背景叫回來時，延遲 200 毫秒等畫面恢復
+     setTimeout(() => {
+       // 強制再次點擊「目前的頁籤」，強迫瀏覽器重新畫出裡面的所有內容！
+       const activeBtn = document.querySelector(`.ni[data-pg="${S.tab}"]`);
+       if (activeBtn) activeBtn.click();
+     }, 200);
+  }
+});
