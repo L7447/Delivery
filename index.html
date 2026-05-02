@@ -400,10 +400,10 @@
         <!-- 中間：不設定寬度，由內容自然撐開，被左右兩側夾在絕對正中間 -->
         <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
           <div class="pg-title" style="margin:0; font-size:20px;">車輛管理</div>
-          <div style="display:flex; align-items:center; gap:12px; background:var(--sf2); padding:4px 12px 1px 12px; border-radius:20px;">
-            <button class="mbtn" onclick="changeVehMonth(-1)" style="width:24px; height:24px; font-size:11px; box-shadow:none; color:var(--acc);">◀</button>
-            <h2 id="veh-month-label" style="font-size:14px; font-weight:800; color:var(--t1); margin:0; min-width:85px; text-align:center;"></h2>
-            <button class="mbtn" onclick="changeVehMonth(1)" style="width:24px; height:24px; font-size:11px; box-shadow:none; color:var(--acc);">▶</button>
+          <div class="veh-month-nav">
+            <button class="veh-month-btn" onclick="changeVehMonth(-1)">◀</button>
+            <div id="veh-month-label" class="veh-month-text"></div>
+            <button class="veh-month-btn" onclick="changeVehMonth(1)">▶</button>
           </div>
         </div>
 
@@ -597,7 +597,7 @@
   <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
     <!--<img src="images/Miyako.webp" alt="Logo" style="width:400px; height:400px; margin:1px; object-fit:contain; pointer-events:none; user-select:none; -webkit-user-drag:none;" oncontextmenu="return false;">-->
 
-    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">ej/ao3tjpfu8製作 2026 © v1.5.2.516</div>
+    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">ej/ao3tjpfu8製作 2026 © v1.5.2.1353</div>
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
       <!--<div onclick="openSpecialThanks()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">-->
