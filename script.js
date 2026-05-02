@@ -375,8 +375,6 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
     </div>`;
 }
 
-
-
 // 修復：計算平台日程表的函式
 function calcNextDates(id) {
   const today = new Date();
@@ -2098,7 +2096,6 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
 }
 
 /* ══ 替換：同儕比較功能 ══ */    
-
 function _initCmpPeriods() {
   if(S.cmpType === 'month') {
     S.cmpPeriods = [`${S.rptY}-${pad(S.rptM)}`, `${S.rptY-1}-${pad(S.rptM)}`, `${S.rptY-2}-${pad(S.rptM)}`];
@@ -3167,6 +3164,11 @@ function openAuthModal() {
   renderAuthContent();
   openOverlay('sub-page');
 }
+// 確保寫入 window 全域，避免被任何區塊覆蓋
+window.switchAuthTab = function(mode) {
+  authMode = mode;
+  renderAuthContent();
+};
 function renderAuthContent() {
   let contentHtml = '';
   
@@ -3191,7 +3193,7 @@ function renderAuthContent() {
         <button onclick="requestLogin()" class="auth-btn-blue">登入 ➔</button>
         
         <div class="auth-switch-text">
-          還沒有帳號嗎？ <span class="auth-switch-link" onclick="switchAuthTab('register')">註冊新帳號</span>
+          還沒有帳號嗎？ <span class="auth-switch-link" onclick="window.switchAuthTab('register')">註冊新帳號</span>
         </div>
       </div>
     `;
@@ -3245,14 +3247,22 @@ function renderAuthContent() {
         </button>
         
         <div class="auth-switch-text">
-          已經有帳號了？ <span class="auth-switch-link" onclick="switchAuthTab('login')">登入</span>
+          已經有帳號了？ <span class="auth-switch-link" onclick="window.switchAuthTab('login')">登入</span>
         </div>
       </div>
     `;
   }
   document.getElementById('auth-content-area').innerHTML = contentHtml;
-  // ... 人機驗證碼 logic 保留
-  const renderTurnstileWidget = () => { if (document.getElementById('turnstile-widget')) { turnstile.render('#turnstile-widget', { sitekey: '0x4AAAAAADC958xr-t5UGd36', theme: 'light' }); } };
+  // 渲染 Cloudflare 人機驗證
+  const renderTurnstileWidget = () => {
+    if (document.getElementById('turnstile-widget')) {
+      turnstile.render('#turnstile-widget', {
+        sitekey: '0x4AAAAAADC958xr-t5UGd36',
+        theme: 'light',
+        appearance: 'always' // 👈 加入這行，強制顯示小工具
+      });
+    }
+  };
   if (typeof turnstile !== 'undefined') { renderTurnstileWidget(); } else { window.onTurnstileLoad = renderTurnstileWidget; const script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad'; script.async = true; script.defer = true; document.body.appendChild(script); }
 }
 window.switchAuthTab = function(mode) {
