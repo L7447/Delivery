@@ -310,9 +310,9 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
-  // 👇 基本工資判斷邏輯 (給總結卡片使用)
+  // 👇 基本工資分析邏輯 (收入為 0 時不顯示)
   let wageHtml = '';
-  if (hours > 0) {
+  if (hours > 0 && total > 0) {
     let wageStatus = ''; let wageColor = ''; let wageBg = '';
     if (avgHr <= 154) { wageStatus = ' 😭 嚴重低於基本工資 '; wageColor = 'var(--red)'; wageBg = 'var(--red-d)'; } 
     else if (avgHr <= 175) { wageStatus = ' ⚠️⚠️ 低於基本工資 '; wageColor = 'var(--acc2)'; wageBg = 'var(--acc-d)'; } 
@@ -647,7 +647,7 @@ function renderHome() {
   // 👇 加入這兩行防呆機制，確保不會因為找不到子分頁而錯亂白屏
   if (!S.homeSubTab) S.homeSubTab = 'schedule';
   document.getElementById('home-tab-bg').style.transform = S.homeSubTab === 'schedule' ? 'translateX(0%)' : 'translateX(100%)';
-    
+
   try {
     const today = todayStr();
     const dayRecs = getDayRecs(today) || [];
@@ -4566,37 +4566,20 @@ function showInitialSetupModal() {
 
     savePlatforms();
     
-    // 👇 強制重新載入首頁並定位導覽列
-    S.homeSubTab = 'schedule';
-    goPage('home');
-    setTimeout(() => updateNavIndicator('home'), 100);
-    
-    renderSettings();
-
-    ov.style.opacity = '0';
-    document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
-    setTimeout(() => ov.remove(), 300);
-    toast('✅ 平台設定完成！');
+    // 👇 最保守的終極解法：儲存平台後，直接強制重新整理網頁！保證首頁 100% 正常渲染
+    ov.innerHTML = `<div style="text-align:center; color:#fff; font-size:18px; font-weight:700;">設定完成，載入中...</div>`;
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   });
 }
 /* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
 async function init() {
-  document.documentElement.classList.add('no-tr');
-
-  // === 載入資料 ===
-  try {
-    await loadAll();
-  } catch (e) {
-    console.error('資料載入失敗', e);
-    toast('資料載入失敗，請重新整理');
-  }
-
-  // === 第三步：套用主題與背景 ===
+  try { await loadAll(); } catch (e) { console.error(e); toast('資料載入失敗'); }
+  
   applyBackground();
-
-  // === 第四步：初始化其他設定 ===
   fetchGlobalGasPrice();
   initReminderCheck();
 
@@ -4605,13 +4588,12 @@ async function init() {
     savePlatforms();
   }
 
-  // === 第五步：設定頁面狀態並強制渲染 ===
-  S.homeSubTab = 'schedule'; // 明確給定預設分頁
+  // 設定頁面狀態並強制渲染
+  S.homeSubTab = 'schedule'; 
   goPage('home');
 
-  // 給予瀏覽器 100 毫秒渲染時間，再移動導覽列膠囊
+  // 給予一點時間讓 DOM 繪製，再對齊導覽列 (確保滑動正常)
   setTimeout(() => {
-    document.documentElement.classList.remove('no-tr');
     updateNavIndicator('home');
   }, 100);
 
