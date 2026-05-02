@@ -577,19 +577,25 @@ function goPage(name) {
   if (name === 'settings') renderSettings();
 }
 
-/* ══ 底部導覽列滑動指示條 ══ */
+/* ══ 底部導覽列滑動指示條 (強化復歸機制) ══ */
 function updateNavIndicator(activePg) {
   const indicator = document.getElementById('nav-indicator');
   const activeEl = document.querySelector(`.ni[data-pg="${activePg}"]`);
-  if (!indicator || !activeEl) return;
   const nav = document.getElementById('nav');
+  
+  if (!indicator || !activeEl || !nav) return;
+  
+  // 如果導覽列寬度還是 0 (代表被隱藏或還沒畫出來)，延遲 50 毫秒再試一次
+  if (nav.offsetWidth === 0) {
+    setTimeout(() => updateNavIndicator(activePg), 50);
+    return;
+  }
   
   const navRect = nav.getBoundingClientRect();
   const itemRect = activeEl.getBoundingClientRect();
   
-  // 動態幾何計算：計算圖示中心點，確保背景膠囊完美置中，不再受螢幕寬度影響
+  // 計算置中位移
   const offsetX = itemRect.left - navRect.left + (activeEl.offsetWidth - indicator.offsetWidth) / 2;
-  
   indicator.style.transform = `translateY(-50%) translateX(${offsetX}px)`;
 }
 /* 替換導覽列切換邏輯，未登入禁止進入新增頁面 */
@@ -4555,7 +4561,12 @@ function showInitialSetupModal() {
     if (!hasChecked) { toast('⚠️ 請至少選擇一個平台'); return; }
 
     savePlatforms();
-    renderHome();
+    
+    // 👇 強制重新載入首頁並定位導覽列
+    S.homeSubTab = 'schedule';
+    goPage('home');
+    setTimeout(() => updateNavIndicator('home'), 100);
+    
     renderSettings();
 
     ov.style.opacity = '0';
@@ -4590,21 +4601,20 @@ async function init() {
     savePlatforms();
   }
 
-  // === 第五步：設定頁面狀態並渲染 ===
-  // 改用 goPage('home') 以確保所有 DOM 的 Active 狀態都被正確喚醒，解決畫面錯亂
+  // === 第五步：設定頁面狀態並強制渲染 ===
+  S.homeSubTab = 'schedule'; // 明確給定預設分頁
   goPage('home');
-  
+
+  // 給予瀏覽器 100 毫秒渲染時間，再移動導覽列膠囊
+  setTimeout(() => {
+    document.documentElement.classList.remove('no-tr');
+    updateNavIndicator('home');
+  }, 100);
+
+  // 檢查是否初次使用
   setTimeout(() => {
     if (window.checkAndPromptPlatformSetup) window.checkAndPromptPlatformSetup();
-  }, 400);
-
-  // 恢復動畫與導覽列
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      document.documentElement.classList.remove('no-tr');
-      updateNavIndicator('home');
-    });
-  });
+  }, 600);
 }
 
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
