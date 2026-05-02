@@ -4585,7 +4585,7 @@ async function init() {
     if (window.checkAndPromptPlatformSetup) {
       window.checkAndPromptPlatformSetup();
     }
-  }, 100); // 延遲 100ms，確保 DOM 架構已經被瀏覽器建立
+  }, 1000); // 延遲 100ms，確保 DOM 架構已經被瀏覽器建立
 }
 
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
