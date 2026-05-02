@@ -643,10 +643,16 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
+/* ══ 首頁渲染 (終極防錯亂保護版) ══ */
 function renderHome() {
-  // 👇 加入這兩行防呆機制，確保不會因為找不到子分頁而錯亂白屏
+  const topEl = document.getElementById('home-top-content');
+  const botEl = document.getElementById('home-bottom-content');
+  const tabBg = document.getElementById('home-tab-bg');
+  
+  // 1. 防護：確保 DOM 元素存在才執行
+  if (!topEl || !botEl) return;
   if (!S.homeSubTab) S.homeSubTab = 'schedule';
-  document.getElementById('home-tab-bg').style.transform = S.homeSubTab === 'schedule' ? 'translateX(0%)' : 'translateX(100%)';
+  if (tabBg) tabBg.style.transform = S.homeSubTab === 'schedule' ? 'translateX(0%)' : 'translateX(100%)';
 
   try {
     const today = todayStr();
@@ -658,76 +664,70 @@ function renderHome() {
     
     const dateObj = new Date(today + 'T00:00:00');
     const dow     = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
-
     const activePlatforms = (S.platforms || []).filter(p => p.active);
-    const platStats = activePlatforms.map(p => {
-      const recs = dayRecs.filter(r => r.platformId === p.id);
-      return {
-        ...p,
-        sum:    recs.reduce((s, r) => s + recTotal(r), 0),
-        orders: recs.reduce((s, r) => s + pf(r.orders), 0),
-        hours:  recs.reduce((s, r) => s + pf(r.hours), 0)
-      };
-    }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
-    let topHtml = `
-      <div style="padding:16px 16px 0; flex-shrink:0;">`;
+    let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
 
-    // ✨ 新增：讀取並顯示公告 (支援關閉記憶)
+    // 公告系統
     try {
       const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
-      const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); // 讀取已關閉的公告內容
-      
-      // 只有當公告啟用、有內容，且「與上次關閉的內容不同」時才顯示
-      if (ann.active && ann.text.trim() !== '' && ann.text !== dismissedAnn) {
-        const safeText = encodeURIComponent(ann.text); // 將內容編碼，避免引號破壞 HTML
+      const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
+      if (ann.active && ann.text && ann.text !== dismissedAnn) {
+        const safeText = encodeURIComponent(ann.text); 
         topHtml += `
           <div id="home-announcement-card" style="position:relative; background:linear-gradient(135deg, var(--acc), var(--acc2)); color:#fff; padding:12px 16px; border-radius:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(255,107,53,0.3); display:flex; gap:10px; align-items:flex-start; transition:0.3s;">
             <button onclick="dismissAnnouncement('${safeText}')" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.15); border:none; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; transition:0.2s;">✕</button>
             <span style="font-size:20px;">📢</span>
-            <div style="font-size:13px; font-weight:600; line-height:1.5; padding-right:18px;">
-              ${safeTextWithBr(ann.text)}
-            </div>
-          </div>
-        `;
+            <div style="font-size:13px; font-weight:600; line-height:1.5; padding-right:18px;">${safeTextWithBr(ann.text)}</div>
+          </div>`;
       }
     } catch(e) {}
 
-    // ... 原本的 home-header 繼續拼接 ...
+    // 今日概況標題
     topHtml += `
-        <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
-          <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:800; color:var(--t1); line-height:1.2;">今日概況</div>
-          <div class="home-pg-date" style="font-size:13px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-            <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b>
-          </div>
+      <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
+        <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1); line-height:1.2;">今日概況</div>
+        <div class="home-pg-date" style="font-size:13px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b>
         </div>
-        <div class="today-hero">`;
+      </div>
+      <div class="today-hero">`;
 
-    if (platStats.length > 0) {
-      // 👈 加入與日程表相同的大外框 (白底/灰底自適應)
-      topHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
-      platStats.forEach(p => {
-        topHtml += `
-          <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1);">
-            <span class="hp-name" style="width:35%; white-space:nowrap;">${safeText(p.name)}收入：</span>
-            <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
-            <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
-            <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
-          </div>`;
-      });
-      topHtml += `</div>`;
+    // 平台各別統計
+    if (activePlatforms.length > 0) {
+      const platStats = activePlatforms.map(p => {
+        const recs = dayRecs.filter(r => r.platformId === p.id);
+        return { ...p, sum: recs.reduce((s, r) => s + recTotal(r), 0), orders: recs.reduce((s, r) => s + pf(r.orders), 0), hours: recs.reduce((s, r) => s + pf(r.hours), 0) };
+      }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
+
+      if (platStats.length > 0) {
+        topHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
+        platStats.forEach(p => {
+          topHtml += `
+            <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1);">
+              <span class="hp-name" style="width:35%; white-space:nowrap;">${safeText(p.name)}收入：</span>
+              <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
+              <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
+              <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
+            </div>`;
+        });
+        topHtml += `</div>`;
+      } else {
+        topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`;
+      }
     } else {
-      topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`;
+      topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">尚未啟用平台</div>`;
     }
 
+    // 總計卡片
     const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0);
     const dayTemp  = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0);
     const dayTips  = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
-    
     topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card');
     topHtml += `</div>`;
 
-    const isPunched = S.punch && S.punch.date === today;
+    // 打卡模組
+    const isPunched = S.punch && S.punch.date === todayStr();
     let punchStatusStr = '離線';
     if (isPunched && S.punch && typeof S.punch.startTime === 'string') {
       const startParts = S.punch.startTime.split(':');
@@ -737,8 +737,6 @@ function renderHome() {
         punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`;
       }
     }
-    /* 替換 renderHome() 中間的打卡與日程表區塊 */
-    // 修正離線字體顏色：使用 var(--t3) 讓他在深淺色下都不會太亮
     topHtml += `
       <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin:8px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
         <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
@@ -748,22 +746,18 @@ function renderHome() {
         <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
           ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
         </button>
-      </div>`;
+      </div></div>`;
 
-    if (!S.homeSubTab) S.homeSubTab = 'schedule';
+    // 底部內容 (平台排程 / 目標進度)
     let bottomHtml = '';
-
     if (S.homeSubTab === 'schedule') {
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
-        // 大外框，背景白(自適應)，內距5px，圓角25px
         bottomHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
           if (!events) return;
-          
-          // 漸層背景與標籤美化
           bottomHtml += `
             <div style="border: 2px solid ${p.color}; background: ${p.color}35; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; margin-bottom: 10px;">
@@ -771,82 +765,56 @@ function renderHome() {
               </div>
               <div style="display:flex; gap:6px;">${events.map(ev => {
                 const isToday = ev.diff === 0;
-                const dateColor = isToday ? 'var(--green)' : 'var(--t1)';
                 let diffColor = isToday ? 'var(--green)' : 'var(--t2)';
-                
-                // 依照名稱決定框色與字色
-                let nameColor = 'var(--t3)';
-                let borderColor = 'var(--border)';
+                let nameColor = 'var(--t3)'; let borderColor = 'var(--border)';
                 if (ev.name.includes('結算') || ev.name.includes('取單')) { nameColor = 'var(--red)'; borderColor = 'var(--red)'; }
                 else if (ev.name.includes('明細')) { nameColor = 'var(--acc2)'; borderColor = 'var(--acc2)'; }
                 else if (ev.name.includes('發薪')) { nameColor = '#00BFFF'; borderColor = '#00BFFF'; }
-                
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
-                
-                // 👇 這裡的 background 改用 var(--schedule-bg)，dateColor 加上 var(--schedule-text) 確保字體對比度
                 return `
                   <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 2.5px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                     <span style="font-size:13px; color:${nameColor}; font-weight:500; margin-bottom:4px; letter-spacing:0.5px;">${safeText(ev.name)}</span>
-                    <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--schedule-text);">${safeText(ev.dateStr)} <span style="font-size:11px; font-weight:700; color:${diffColor};">(${safeText(ev.diffStr)})</span></span>
+                    <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--chart-text);">${safeText(ev.dateStr)} <span style="font-size:11px; font-weight:700; color:${diffColor};">(${safeText(ev.diffStr)})</span></span>
                   </div>`;
               }).join('')}</div>
             </div>`;
         });
         bottomHtml += `</div>`;
       }
-    }
-
-    else if (S.homeSubTab === 'goal') {
+    } else if (S.homeSubTab === 'goal') {
       const goals = S.settings.goals || {};
-      const weekly = pf(goals.weekly);
-      const monthly = pf(goals.monthly);
-      const yearly = pf(goals.yearly);
-      
+      const weekly = pf(goals.weekly); const monthly = pf(goals.monthly); const yearly = pf(goals.yearly);
       if (weekly > 0 || monthly > 0 || yearly > 0) {
         bottomHtml += `<div class="card" style="border: 1px solid var(--border); display:flex; flex-direction:column; gap:16px;">`;
-        
-        // 本週目標 (計算剩餘天數)
         if (weekly > 0) {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
           for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
           const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          const remainDaysW = 7 - wDay;
-          
-          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${remainDaysW} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${7 - wDay} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
-        
-        // 本月目標 (計算剩餘天數)
         if (monthly > 0) {
-          const monthRecs  = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
+          const monthRecs = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
           const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          const remainDaysM = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate();
-          
-          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${remainDaysM} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
-        
-        // 本年目標 (計算剩餘天數)
         if (yearly > 0) {
           const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
           const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); const yColor = yPct >= 100 ? 'var(--green)' : yPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          const remainDaysY = Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000);
-          
-          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">👑 本年目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${remainDaysY} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${yColor}">${yPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${yPct}%;background:${yColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(yearTotal)}</span><span>${yRemain>0?`還差 $ ${fmt(yRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">👑 本年目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${yColor}">${yPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${yPct}%;background:${yColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(yearTotal)}</span><span>${yRemain>0?`還差 $ ${fmt(yRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
-
         bottomHtml += `</div>`;
       } else {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`;
       }
     }
 
-    const topEl = document.getElementById('home-top-content');
-    const botEl = document.getElementById('home-bottom-content');
-    if (topEl) topEl.innerHTML = topHtml;
-    if (botEl) botEl.innerHTML = bottomHtml;
+    // 2. 確定安全後才賦值
+    topEl.innerHTML = topHtml;
+    botEl.innerHTML = bottomHtml;
 
   } catch (error) {
-    console.error("首頁渲染錯誤：", error);
-    document.getElementById('home-bottom-content').innerHTML = `<div class="empty-tip">渲染發生錯誤，請重新整理頁面。</div>`;
+    console.error("首頁渲染發生嚴重錯誤：", error);
+    botEl.innerHTML = `<div class="empty-tip" style="color:var(--red);">系統發生例外錯誤，請往下拉動重新整理</div>`;
   }
 }
 
@@ -4566,11 +4534,18 @@ function showInitialSetupModal() {
 
     savePlatforms();
     
-    // 👇 最保守的終極解法：儲存平台後，直接強制重新整理網頁！保證首頁 100% 正常渲染
-    ov.innerHTML = `<div style="text-align:center; color:#fff; font-size:18px; font-weight:700;">設定完成，載入中...</div>`;
+    // 👇 平滑退場，不重新整理網頁
+    ov.style.opacity = '0';
+    document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
     setTimeout(() => {
-      window.location.reload();
-    }, 500);
+      ov.remove();
+      // 強制寫入狀態並重新渲染
+      S.homeSubTab = 'schedule';
+      goPage('home');
+      renderSettings();
+      setTimeout(() => updateNavIndicator('home'), 100);
+      toast('✅ 平台設定完成！');
+    }, 300);
   });
 }
 /* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
