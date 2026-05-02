@@ -644,6 +644,10 @@ function switchVehicleTab(tab, index) {
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 function renderHome() {
+  // 👇 加入這兩行防呆機制，確保不會因為找不到子分頁而錯亂白屏
+  if (!S.homeSubTab) S.homeSubTab = 'schedule';
+  document.getElementById('home-tab-bg').style.transform = S.homeSubTab === 'schedule' ? 'translateX(0%)' : 'translateX(100%)';
+    
   try {
     const today = todayStr();
     const dayRecs = getDayRecs(today) || [];
@@ -4575,7 +4579,7 @@ function showInitialSetupModal() {
     toast('✅ 平台設定完成！');
   });
 }
-
+/* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
 async function init() {
