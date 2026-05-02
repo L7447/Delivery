@@ -547,3 +547,114 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* 確保各瀏覽器相容性 */
 #auth-email::-webkit-input-placeholder { text-align: right; }
 #auth-email::-moz-placeholder { text-align: right; }
+
+/* ══════════════════════════════════════════════════════
+   全新 UI 升級樣式 (保養標籤、月份導航、登入註冊介面)
+   ══════════════════════════════════════════════════════ */
+/* ── 1. 車輛月份導航 ── */
+.veh-month-nav {
+  background: #ffffff;
+  border-radius: 99px;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  border: 1px solid #f1f5f9;
+}
+.veh-month-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.veh-month-btn:active { background: #f1f5f9; color: #0f172a; }
+.veh-month-text {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  padding: 0 12px;
+  min-width: 110px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* ── 2. 保養維修彩色標籤 (Chips) ── */
+.maint-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.chip-item { background: #eef2ff; color: #4f46e5; } /* 藍紫色 (保養項目) */
+.chip-note { background: #f3f4f6; color: #475569; } /* 灰色 (備註) */
+.chip-km   { background: #ecfdf5; color: #059669; } /* 綠色 (里程) */
+.chip-shop { background: #f5f3ff; color: #7c3aed; } /* 紫色 (店家) */
+
+/* ── 3. 全新登入/註冊介面 ── */
+.auth-wrapper {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+  border: 1px solid #f1f5f9;
+  margin-bottom: 20px;
+}
+.auth-title { font-size: 26px; font-weight: 800; color: #0f172a; margin-bottom: 8px; font-family: var(--title); }
+.auth-subtitle { font-size: 13px; color: #64748b; margin-bottom: 24px; line-height: 1.5; font-weight: 500; }
+.auth-input-group {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  transition: 0.3s;
+  background: #ffffff;
+}
+.auth-input-group:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+.auth-input-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; display: block; font-weight: 600; }
+.auth-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  background: transparent;
+  padding: 4px 0;
+}
+.auth-input::placeholder { color: #cbd5e1; }
+.auth-btn-blue {
+  width: 100%;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 99px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  transition: 0.2s;
+}
+.auth-btn-blue:active { transform: scale(0.96); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+.auth-switch-text { text-align: center; margin-top: 24px; font-size: 13px; color: #64748b; font-weight: 600; }
+.auth-switch-link { color: #2563eb; cursor: pointer; text-decoration: none; font-weight: 700; }
