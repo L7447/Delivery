@@ -77,7 +77,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .fixed-header { padding: 16px 16px 12px; flex-shrink: 0; background: var(--bg-header); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 20; border-bottom: 1px solid rgba(0, 0, 0, 0.05); }
 
 /* ══ 4. 共用 UI 元件 ══ */
-.pg-title { font-family: var(--title); font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 16px; }
+.pg-title { font-family: var(--title); font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 16px; }
 .sec-title { font-size: 11px; font-weight: 600; color: var(--t3); letter-spacing: .8px; margin-bottom: 6px; }
 .mbtn { width: 36px; height: 36px; border-radius: 12px; background: var(--sf); border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--acc); font-weight: 900; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
 .mbtn:active { transform: translateY(2px); background: var(--sf2); }
@@ -216,7 +216,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .auth-switch-btn:active { background: #eff6ff; }
 
 /* ══ 14. Toast 提示與遮罩 ══ */
-#toast { position: fixed; top: 30% !important; left: 50%; transform: translate(-50%, -20px) !important; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 16px 28px; border-radius: 99px; font-size: 15px; font-weight: 800; opacity: 0; transition: all 0.4s; z-index: 999999; pointer-events: none; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.25); min-width: 240px; letter-spacing: 0.5px; }
+#toast { position: fixed; top: 40% !important; left: 50%; transform: translate(-50%, -20px) !important; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 16px 28px; border-radius: 99px; font-size: 15px; font-weight: 800; opacity: 0; transition: all 0.4s; z-index: 999999; pointer-events: none; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.25); min-width: 240px; letter-spacing: 0.5px; }
 #toast.show { opacity: 1; transform: translate(-50%, 0) !important; }
 #confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
 #confirm-overlay.show { display: flex; }
