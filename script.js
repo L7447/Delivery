@@ -4559,7 +4559,7 @@ function showInitialSetupModal() {
 /* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
-/* ══ 系統啟動主流程 (終極防錯亂：強制模擬點擊) ══ */
+/* ══ 系統啟動主流程 (分離架構：資料先載入，等待進場) ══ */
 async function init() {
   try { await loadAll(); } catch (e) { console.error(e); }
   
@@ -4572,23 +4572,55 @@ async function init() {
     savePlatforms();
   }
 
-  // 💡 終極防呆：給予瀏覽器 800 毫秒的充分時間建立畫面後，再用程式「模擬點擊首頁」
-  setTimeout(() => {
-    S.homeSubTab = 'schedule';
-    
-    // 像人類一樣去點擊那個首頁按鈕，保證觸發所有正常的排版邏輯
-    const homeBtn = document.querySelector('.ni[data-pg="home"]');
-    if (homeBtn) {
-      homeBtn.click();
-    } else {
-      goPage('home');
-    }
-    
-    setTimeout(() => updateNavIndicator('home'), 150);
-
-    if (window.checkAndPromptPlatformSetup) window.checkAndPromptPlatformSetup();
-  }, 800);
+  // 檢查是否因為沒有動畫 (例如重整頁面) 而無法觸發進場
+  const splash = document.getElementById('splash');
+  if (!splash) {
+    window.onSplashFinished();
+  }
 }
+
+/* ══ ★ 核心修復：這是在動畫結束後，被呼叫的「進場載入函式」 ══ */
+window.onSplashFinished = function() {
+  // 1. 強制插入一個漂亮的載入畫面遮住一切，爭取手機繪製的時間
+  const loadingDiv = document.createElement('div');
+  loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out;";
+  loadingDiv.innerHTML = `
+    <div style="width:44px; height:44px; border:4px solid #e2e8f0; border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;"></div>
+    <div style="font-weight:800; color:var(--t2); font-size:15px; letter-spacing:1px;">系統準備中...</div>
+    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+  `;
+  document.body.appendChild(loadingDiv);
+
+  // 2. 延遲 500 毫秒 (讓手機背景將前一個動畫的垃圾回收清空)
+  setTimeout(() => {
+    
+    // 3. 安全地啟動首頁與排版
+    S.homeSubTab = 'schedule';
+    goPage('home');
+    
+    // 確保畫面 DOM 長出來後，對齊底部膠囊
+    setTimeout(() => updateNavIndicator('home'), 100);
+
+    // 4. 漸隱並移除載入畫面，完美登場
+    loadingDiv.style.opacity = '0';
+    setTimeout(() => loadingDiv.remove(), 500);
+
+  }, 500);
+};
+
+/* ══ APP 被滑回背景再點開時的「強制重新排版」 ══ */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+     // 當手機把 APP 從背景叫回來時，延遲 300 毫秒等畫面恢復
+     setTimeout(() => {
+       // 強迫系統重新計算當前分頁的所有內容高度，避免空白破圖！
+       if (S.tab) {
+         goPage(S.tab);
+         updateNavIndicator(S.tab);
+       }
+     }, 300);
+  }
+});
 
 /* ══ iOS Safari 安全啟動：確保 DOM 完全就緒後才執行所有初始化 ══
    defer 在 iOS 上不保證 DOMContentLoaded 已觸發，
@@ -4604,14 +4636,3 @@ if (document.readyState === 'loading') {
   init();
 }
 /* ══ 7. 設定管理與啟動 結束 ═══════════════════════════════════ */
-/* 💡 終極防錯亂 Part 2：解決 APP 關閉重開(喚醒)時的破圖問題 */
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-     // 當手機把 APP 從背景叫回來時，延遲 200 毫秒等畫面恢復
-     setTimeout(() => {
-       // 強制再次點擊「目前的頁籤」，強迫瀏覽器重新畫出裡面的所有內容！
-       const activeBtn = document.querySelector(`.ni[data-pg="${S.tab}"]`);
-       if (activeBtn) activeBtn.click();
-     }, 200);
-  }
-});
