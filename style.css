@@ -47,7 +47,7 @@
 }
 
 /* ══ 1. 基礎設定與頁面架構 ══ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; background: var(--bg); color: var(--t1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none !important; }
 #app { width: 100%; height: 100dvh; position: relative; overflow: hidden; }
@@ -116,7 +116,7 @@ body[data-tab="home"] .slide-bg    { background: var(--acc); box-shadow: 0 2px 8
 body[data-tab="history"] .slide-bg { background: var(--blue); box-shadow: 0 2px 8px rgba(59,130,246, 0.3); }
 body[data-tab="report"] .slide-bg  { background: var(--green); box-shadow: 0 2px 8px rgba(34,197,94, 0.3); }
 body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px rgba(139,92,246, 0.3); } 
-.slide-btn { flex: 1; position: relative; z-index: 1; border: none; background: transparent; padding: 10px 0; color: #475569; font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: color 0.3s; }
+.slide-btn { flex: 1; position: relative; z-index: 1; border: none; background: transparent; padding: 10px 0; color: #475569; font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: color 0.3s; -webkit-tap-highlight-color: transparent; outline: none; }
 .slide-btn.active { color: #fff; font-weight: 700; }
 
 /* ══ 7. 首頁專區 (打卡按鈕) ══ */
@@ -226,68 +226,21 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .chart-scroll-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px; }
 
 /* ══ 儲存進度條動畫框 (修復補回版) ══ */
-#progress-overlay {
-  position: fixed; inset: 0; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(4px);
-  z-index: 99999; display: none; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.3s; pointer-events: none;
-}
+#progress-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:99999;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s;pointer-events:none;}
 #progress-overlay.show { display: flex; opacity: 1; pointer-events: auto; }
-#big-progress-container {
-  width: 300px;
-  height: 90px;
-  background-color: #1A1A1A; 
-  border-radius: 50px; 
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-#big-progress-fill {
-  position: absolute;
-  top: 0; left: 0; bottom: 0;
-  width: 0%;
-  background-color: #FFFFFF; 
-}
-#big-progress-text {
-  position: relative;
-  z-index: 1;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: #FFFFFF;
-  mix-blend-mode: difference; 
-}
+#big-progress-container{width:300px;height:90px;background-color:#1A1A1A;border-radius:50px;position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;}
+#big-progress-fill{position:absolute;top:0;left:0;bottom:0;width:0%;background-color:#FFFFFF;}
+#big-progress-text{position:relative;z-index:1;font-size:20px;font-weight:800;letter-spacing:2px;color:#FFFFFF;mix-blend-mode:difference;}
 
 /* ══════════════════════════════════════════════════════
    模組化共用樣式 (天氣標籤、平台標籤、全新 Auth 介面)
    ══════════════════════════════════════════════════════ */
 
 /* ── 1. 共用平台圓角標籤 (Platform Badge) ── */
-.plat-badge {
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 4px 12px;
-  border-radius: 12px;
-  letter-spacing: 0.5px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
+.plat-badge{color:#fff;font-size:12px;font-weight:800;padding:4px 6px;border-radius:12px;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
 
 /* ── 2. 天氣標籤模組化 (多彩設計) ── */
-.w-tag {
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: transform 0.2s, filter 0.2s;
-}
+.w-tag{padding:6px 12px;border-radius:16px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;transition:transform 0.2s,filter 0.2s;}
 .w-tag:active { transform: scale(0.92); filter: brightness(0.9); }
 /* 各別天氣顏色 */
 .w-rain    { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
@@ -298,15 +251,10 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .w-typhoon { background: #fce7f3; color: #db2777; border: 1px solid #fbcfe8; }
 
 /* ── 3. 全新 Auth (登入/註冊) 極限縮小內距版 ── */
-.auth-wrapper {
-  background: #fff;
-  border-radius: 20px;
-  padding: 5px 16px 16px 16px; /* ⬇️ 上下內距縮小為 5px */
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-  border: 1px solid var(--border);
-  margin-top: 4px; /* ⬇️ 與上面距離 4px */
-  margin-bottom: 20px;
-}
+.auth-wrapper{background:#fff;border-radius:20px;padding:5px 16px 16px 16px;/* ⬇️ 上下內距縮小為 5px */
+ box-shadow:0 10px 30px rgba(0,0,0,0.05);border:1px solid var(--border);margin-top:4px;/* ⬇️ 與上面距離 4px */
+ margin-bottom:20px;}
+
 .auth-title { font-size: 20px; font-weight: 800; color: var(--t1); margin: 8px 0 4px 0; }
 .auth-subtitle { font-size: 12px; color: var(--t2); margin-bottom: 12px; font-weight: 600; }
 .auth-input-group { border: 1px solid var(--border); border-radius: 12px; padding: 6px 12px; margin-bottom: 10px; background: #fff; }
