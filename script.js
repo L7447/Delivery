@@ -3243,7 +3243,7 @@ function renderAuthContent() {
     let avatarsHtml = '';
     for(let i=1; i<=22; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
-      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:70px; height:70px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
@@ -3331,7 +3331,7 @@ window.openAvatarSettings = function() {
   
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <div style="display:flex; flex-wrap:wrap; gap:16px; background:var(--bg-input); padding:16px; border-radius:16px; justify-content:center;">
+      <div style="display:flex; flex-wrap:wrap; gap:8px; background:var(--bg-input); padding:16px; border-radius:16px; justify-content:center;">
         ${avatarsHtml}
       </div>
     </div>
@@ -3481,7 +3481,7 @@ async function openAccountStats() {
   /* 替換 openAccountStats() 裡面的 avatarImg 宣告 */
   const avatarImg = USER.avatar 
     ? `<div style="position:relative; display:inline-block;">
-         <img src="${USER.avatar}" style="width:128px; height:128px; object-fit:contain; margin-bottom:12px; border:none; border-radius:0; image-rendering: pixelated; image-rendering: crisp-edges;">
+         <img src="${USER.avatar}" style="width:192px; height:192px; object-fit:contain; margin-bottom:4px; border:none; border-radius:0; image-rendering: pixelated; image-rendering: crisp-edges;">
          <div onclick="openAvatarSettings()" style="position:absolute; bottom:16px; right:-10px; background:var(--sf); border:2px solid var(--acc); color:var(--acc); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">✎</div>
        </div>` 
     : `<div style="font-size:48px; margin-bottom:8px;">${USER.role === 'admin' ? '👑' : '🧑‍🚀'}</div>`;
