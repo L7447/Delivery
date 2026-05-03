@@ -14,6 +14,7 @@
   --t1: #0f172a; 
   --t2: #475569; 
   --t3: #94a3b8; 
+  --t4: #12b63b;
   --hint-color: #3b82f6;
 
   --card-border: #cbd5e1;
@@ -196,19 +197,12 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .set-list { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
 .set-row { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; cursor: pointer; transition: .12s; font-weight: 600; color: #0f172a;}
 .set-row:last-child { border-bottom: none; }
-.set-row .sn { flex: 1; display: flex; flex-direction: column; }
+.set-row .sn { flex: 1; display: flex; flex-direction: row; }
 .set-row .arr { color: #94a3b8; font-size: 16px; font-weight: bold; }
 .set-row .sn-sub { font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 500;}
 .plat-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 
 /* ══ 13. 登入與註冊介面 ══ */
-.auth-wrapper { background: #fff; border-radius: 24px; padding: 32px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid var(--border); margin-bottom: 20px; }
-.auth-title { font-size: 26px; font-weight: 800; color: var(--t1); margin-bottom: 8px; }
-.auth-subtitle { font-size: 13px; color: var(--t2); margin-bottom: 24px; line-height: 1.5; font-weight: 600; }
-.auth-input-group { border: 1px solid var(--border); border-radius: 16px; padding: 10px 16px; margin-bottom: 16px; transition: 0.2s; background: #fff; }
-.auth-input-group:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-.auth-input-label { font-size: 11px; color: var(--t3); margin-bottom: 4px; display: block; font-weight: 700; }
-.auth-input { width: 100%; border: none; outline: none; font-size: 15px; font-weight: 700; color: var(--t1); background: transparent; padding: 4px 0; }
 .auth-btn-blue { width: 100%; background: #2563eb; color: #fff; border-radius: 16px; padding: 16px; font-size: 16px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 8px 20px rgba(37,99,235,0.25); display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 8px; transition: 0.2s; }
 .auth-btn-blue:active { transform: scale(0.96); }
 .auth-switch-text { text-align: center; margin-top: 24px; font-size: 13px; color: var(--t2); font-weight: 600; }
@@ -216,11 +210,11 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .auth-switch-btn:active { background: #eff6ff; }
 
 /* ══ 14. Toast 提示與遮罩 ══ */
-#toast { position: fixed; top: 40% !important; left: 50%; transform: translate(-50%, -20px) !important; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 16px 28px; border-radius: 99px; font-size: 15px; font-weight: 800; opacity: 0; transition: all 0.4s; z-index: 999999; pointer-events: none; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.25); min-width: 240px; letter-spacing: 0.5px; }
+#toast { position: fixed; top: 40% !important; left: 50%; transform: translate(-50%, -20px) !important; background: rgba(35, 74, 137, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 16px 28px; border-radius: 99px; font-size: 22px; font-weight: 700; opacity: 0; transition: all 0.4s; z-index: 999999; pointer-events: none; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.25); min-width: 300px; letter-spacing: 0.5px; }
 #toast.show { opacity: 1; transform: translate(-50%, 0) !important; }
 #confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
 #confirm-overlay.show { display: flex; }
-#confirm-box { background: var(--sf); border-radius: 24px; padding: 24px; width: 100%; max-width: 340px; box-shadow: 0 20px 40px rgba(0,0,0,.15); }
+#confirm-box { background: var(--sf); border-radius: 24px; padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,.15); }
 #confirm-msg { font-size: 16px; font-weight: 700; color: var(--t1); line-height: 1.6; margin-bottom: 24px; text-align: center; }
 
 /* 其他輔助類 */
@@ -233,7 +227,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 
 /* ══ 儲存進度條動畫框 (修復補回版) ══ */
 #progress-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  position: fixed; inset: 0; background: rgba(24, 78, 196, 0.6); backdrop-filter: blur(4px);
   z-index: 99999; display: none; align-items: center; justify-content: center;
   opacity: 0; transition: opacity 0.3s; pointer-events: none;
 }
@@ -317,8 +311,8 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .auth-subtitle { font-size: 12px; color: var(--t2); margin-bottom: 12px; font-weight: 600; }
 .auth-input-group { border: 1px solid var(--border); border-radius: 12px; padding: 6px 12px; margin-bottom: 10px; background: #fff; }
 .auth-input-group:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-.auth-input-label { font-size: 11px; color: var(--t3); margin-bottom: 2px; display: block; font-weight: 700; }
-.auth-input { width: 100%; border: none; outline: none; font-size: 15px; font-weight: 700; color: var(--t1); background: transparent; padding: 2px 0; }
+.auth-input-label { font-size: 14px; color: var(--t4); margin-bottom: 2px; display: block; font-weight: 500; }
+.auth-input { width: 100%; border: none; outline: none; font-size: 11px; font-weight: 400; color: var(--t1); background: transparent; padding: 2px 0; }
 
 /* ══ 模組化：撥動開關 (Toggle Switch) ══ */
 .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
