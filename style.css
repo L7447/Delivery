@@ -265,3 +265,57 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
   color: #FFFFFF;
   mix-blend-mode: difference; 
 }
+
+/* ══════════════════════════════════════════════════════
+   模組化共用樣式 (天氣標籤、平台標籤、全新 Auth 介面)
+   ══════════════════════════════════════════════════════ */
+
+/* ── 1. 共用平台圓角標籤 (Platform Badge) ── */
+.plat-badge {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* ── 2. 天氣標籤模組化 (多彩設計) ── */
+.w-tag {
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s, filter 0.2s;
+}
+.w-tag:active { transform: scale(0.92); filter: brightness(0.9); }
+/* 各別天氣顏色 */
+.w-rain    { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+.w-hot     { background: #ffedd5; color: #ea580c; border: 1px solid #fed7aa; }
+.w-storm   { background: #f3f4f6; color: #475569; border: 1px solid #e2e8f0; }
+.w-cold    { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.w-flood   { background: #ccfbf1; color: #0d9488; border: 1px solid #99f6e4; }
+.w-typhoon { background: #fce7f3; color: #db2777; border: 1px solid #fbcfe8; }
+
+/* ── 3. 全新 Auth (登入/註冊) 極限縮小內距版 ── */
+.auth-wrapper {
+  background: #fff;
+  border-radius: 20px;
+  padding: 5px 16px 16px 16px; /* ⬇️ 上下內距縮小為 5px */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border: 1px solid var(--border);
+  margin-top: 4px; /* ⬇️ 與上面距離 4px */
+  margin-bottom: 20px;
+}
+.auth-title { font-size: 20px; font-weight: 800; color: var(--t1); margin: 8px 0 4px 0; }
+.auth-subtitle { font-size: 12px; color: var(--t2); margin-bottom: 12px; font-weight: 600; }
+.auth-input-group { border: 1px solid var(--border); border-radius: 12px; padding: 6px 12px; margin-bottom: 10px; background: #fff; }
+.auth-input-group:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.auth-input-label { font-size: 11px; color: var(--t3); margin-bottom: 2px; display: block; font-weight: 700; }
+.auth-input { width: 100%; border: none; outline: none; font-size: 15px; font-weight: 700; color: var(--t1); background: transparent; padding: 2px 0; }
