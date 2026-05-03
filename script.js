@@ -712,8 +712,8 @@ function renderHome() {
         topHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
         platStats.forEach(p => {
           topHtml += `
-            <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1);">
-              <span class="hp-name" style="width:35%; white-space:nowrap;">${safeText(p.name)}收入：</span>
+            <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:4px;">
+              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span>收入：</span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
               <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
               <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
@@ -798,17 +798,17 @@ function renderHome() {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
           for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
           const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📊 本週目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${7 - wDay} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${wColor}">${wPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          bottomHtml += `...<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)} / ${fmt(weekly)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
         if (monthly > 0) {
           const monthRecs = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
           const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">📈 本月目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${mColor}">${mPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          bottomHtml += `...<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)} / ${fmt(monthly)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
         if (yearly > 0) {
           const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
           const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); const yColor = yPct >= 100 ? 'var(--green)' : yPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--t2)">👑 本年目標進度 <span style="font-size:11px;color:var(--t3);font-weight:500;">(剩 ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} 天)</span></span><span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${yColor}">${yPct}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${yPct}%;background:${yColor}"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(yearTotal)}</span><span>${yRemain>0?`還差 $ ${fmt(yRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          bottomHtml += `...<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(yearTotal)} / ${fmt(yearly)}</span><span>${yRemain>0?`還差 $ ${fmt(yRemain)}`:'🎉 已達標！'}</span></div></div>`;
         }
         bottomHtml += `</div>`;
       } else {
@@ -1749,7 +1749,10 @@ function renderRptOverview() {
       <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:35px; height:35px; background: hsla(320, 75%, 34%, 0.50); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
-        <div style="font-size:16px; font-weight:900; color: #ff0000; margin-bottom:6px;">${filterName} <span style="font-size:14px; font-weight:800; color: var(--t2);">本月總收入</span></div>
+        <div style="margin-bottom:6px;">
+          ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}; box-shadow:0 2px 6px ${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}60; font-size:14px; padding:4px 14px;">${filterName}</span>`}
+          <span style="font-size:14px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
+        </div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         
         <div style="display:flex; justify-content:center; gap:5px; margin-top:8px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
@@ -3142,7 +3145,11 @@ window.switchAuthTab = function(mode) {
   renderAuthContent();
 };
 function openAuthModal() {
-  document.getElementById('sub-title').textContent = '帳號管理';
+  // 👇 強制覆蓋外層標題字體大小
+  const subTitleEl = document.getElementById('sub-title');
+  subTitleEl.textContent = '帳號管理';
+  subTitleEl.style.cssText = "font-size: 24px !important; font-weight: 700 !important;";
+  // ...
   document.getElementById('sub-top-right').innerHTML = '';
   authMode = 'login'; 
   privacyAgreed = false; 
@@ -3184,20 +3191,20 @@ function renderAuthContent() {
       </div>
     `;
   } else {
+// 👇 雙排 60x60 頭像 (強制 4 欄)
     let avatarsHtml = '';
     for(let i=1; i<=8; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
-      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:48px; height:48px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.1)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
       <div class="auth-wrapper">
-        <h2 class="auth-title">註冊新帳號</h2>
-        <p class="auth-subtitle">填寫以下資訊即可免費建立專屬帳號</p>
+        <h2 class="auth-title">建立新帳號</h2>
         
-        <div class="auth-input-group" style="padding:12px 16px;">
-          <label class="auth-input-label">選擇專屬頭像</label>
-          <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-top:8px;">
+        <div class="auth-input-group" style="padding:8px; margin-top:8px;">
+          <label class="auth-input-label" style="margin-left:4px;">選擇專屬頭像</label>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; justify-items:center; margin-top:6px;">
             ${avatarsHtml}
           </div>
         </div>
@@ -3208,7 +3215,7 @@ function renderAuthContent() {
         </div>
         
         <div class="auth-input-group">
-          <label class="auth-input-label">密碼</label>
+          <label class="auth-input-label">設定密碼</label>
           <input type="password" class="auth-input" id="auth-pwd" placeholder="請設定密碼">
         </div>
 
@@ -3825,7 +3832,23 @@ function togglePlatform(id, isChecked) {
 function openPlatformEdit(id) {
   const p = S.platforms.find(x=>x.id===id); if (!p) return;
   document.getElementById('sub-title').textContent = p.name; 
-  document.getElementById('sub-body').innerHTML = `<div style="margin-bottom:16px; padding:12px; background:var(--sf2); border-radius:var(--rs); font-size:12px; color:var(--t2); line-height:1.6;"><strong>📝 結算與發薪規則：</strong><br>${p.ruleDesc ? p.ruleDesc.replace(/｜/g, '<br>') : ''}</div><div class="fg" style="margin-bottom:16px"><label>自訂平台顏色</label><div style="display:flex;gap:8px"><input type="color" id="sp-color-pick" value="${safeText(p.color)}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px"><input type="text" class="finp" id="sp-color" value="${safeText(p.color)}" style="flex:1"></div></div><div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:12px;background:var(--sf2);border-radius:var(--rs)"><label style="font-size:14px;font-weight:600;flex:1;cursor:pointer" for="sp-active">啟用此平台</label><input type="checkbox" id="sp-active" ${p.active?'checked':''} style="width:20px;height:20px;cursor:pointer"></div><div style="display:flex;gap:8px"><button onclick="openPlatformList()" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-size:14px;font-weight:600;cursor:pointer;">返回列表</button><button onclick="savePlatformEdit('${id}')" class="btn-acc" style="flex:2;padding:12px;font-size:14px;font-weight:700;border-radius:var(--rs)">儲存設定</button></div>`;
+  document.getElementById('sub-title').style.cssText = "font-size: 16px !important; font-weight: 600 !important;"; // 恢復標題大小
+  
+  // 👇 換成滑動開關 .switch
+  document.getElementById('sub-body').innerHTML = `
+    <div style="margin-bottom:16px; padding:12px; background:var(--sf2); border-radius:var(--rs); font-size:12px; color:var(--t2); line-height:1.6;"><strong>📝 結算與發薪規則：</strong><br>${p.ruleDesc ? p.ruleDesc.replace(/｜/g, '<br>') : ''}</div>
+    <div class="fg" style="margin-bottom:16px"><label>自訂平台顏色</label><div style="display:flex;gap:8px"><input type="color" id="sp-color-pick" value="${safeText(p.color)}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px"><input type="text" class="finp" id="sp-color" value="${safeText(p.color)}" style="flex:1"></div></div>
+    
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding:12px;background:var(--sf2);border-radius:var(--rs)">
+      <label style="font-size:14px;font-weight:700;color:var(--t1);">啟用此平台</label>
+      <label class="switch">
+        <input type="checkbox" id="sp-active" ${p.active?'checked':''}>
+        <span class="slider"></span>
+      </label>
+    </div>
+    
+    <div style="display:flex;gap:8px"><button onclick="openPlatformList()" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-size:14px;font-weight:700;cursor:pointer;">返回</button><button onclick="savePlatformEdit('${id}')" class="btn-acc" style="flex:2;padding:12px;font-size:14px;font-weight:800;border-radius:var(--rs)">儲存設定</button></div>`;
+  
   document.getElementById('sp-color-pick').addEventListener('input', e => { document.getElementById('sp-color').value = e.target.value; });
 }
 
