@@ -177,7 +177,7 @@ function fmtHours(hVal) {
   return `${mins}m`;
 }
 
-function toast(msg, ms=2200) {
+function toast(msg, ms=3000) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), ms);
@@ -3746,7 +3746,7 @@ async function checkAccountStatus() {
       if (data.reason === 'kicked') {
         // 👈 將後端傳來的踢人時間格式化顯示
         const kickTime = new Date(data.kickedAt).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-        toast(`⚠️ 此帳號已於 [${kickTime}] 在其他裝置登入，您已被強制登出`, 4000);
+        toast(`⚠️ 此帳號已於 [${kickTime}] 在其他裝置登入，您已被強制登出`, 5000);
       } else {
         toast('⚠️ 您的帳號已被停權或刪除');
       }
@@ -4139,7 +4139,7 @@ function doExportExcel(targetYear) {
     } catch (err) {
       finishProgress(() => toast('❌ 匯出失敗，請重試'));
     }
-  }, 500); 
+  }, 700); 
 } 
 
 async function doClearData() { 
@@ -4465,7 +4465,7 @@ async function doBackupToFile() {
       
       // ✅ 只有在這裡 (真正寫入檔案完畢後) 才會更新備份時間
       updateLocalBackupTime();
-      toast('✅ 成功儲存至本機資料夾！');
+      toast('✅ 成功儲存至本機！');
       
     } else {
       // 蘋果 iOS / Safari 降級使用傳統下載模式
@@ -4628,8 +4628,8 @@ function showInitialSetupModal() {
       goPage('home');
       renderSettings();
       setTimeout(() => updateNavIndicator('home'), 100);
-      toast('✅ 平台設定完成！');
-    }, 300);
+      toast('✅ 啟用平台，設定完成！');
+    }, 700);
   });
 }
 /* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
