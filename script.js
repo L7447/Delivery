@@ -798,17 +798,53 @@ function renderHome() {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
           for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
           const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `...<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(weekTotal)} / ${fmt(weekly)}</span><span>${wRemain>0?`還差 $ ${fmt(wRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          // 👇 已經修正好的排版
+          bottomHtml += `
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                <span style="font-size:13px;font-weight:800;color:var(--t2)">📊 本週目標進度 <span style="font-size:11px;color:var(--t3);font-weight:600;">(剩 ${7 - wDay} 天)</span></span>
+                <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:${wColor}">${wPct}%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-top:6px;font-weight:600;">
+                <span style="font-family:var(--mono);">已達 $ ${fmt(weekTotal)} / ${fmt(weekly)}</span>
+                <span style="color:${wRemain > 0 ? 'var(--t3)' : 'var(--green)'};">${wRemain>0 ? `還差 $ ${fmt(wRemain)}` : '🎉 已達標！'}</span>
+              </div>
+            </div>`;
         }
         if (monthly > 0) {
           const monthRecs = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
           const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `...<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(monthTotal)} / ${fmt(monthly)}</span><span>${mRemain>0?`還差 $ ${fmt(mRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          // 👇 已經修正好的排版
+          bottomHtml += `
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                <span style="font-size:13px;font-weight:800;color:var(--t2)">📈 本月目標進度 <span style="font-size:11px;color:var(--t3);font-weight:600;">(剩 ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} 天)</span></span>
+                <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:${mColor}">${mPct}%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-top:6px;font-weight:600;">
+                <span style="font-family:var(--mono);">已達 $ ${fmt(monthTotal)} / ${fmt(monthly)}</span>
+                <span style="color:${mRemain > 0 ? 'var(--t3)' : 'var(--green)'};">${mRemain>0 ? `還差 $ ${fmt(mRemain)}` : '🎉 已達標！'}</span>
+              </div>
+            </div>`;
         }
         if (yearly > 0) {
           const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
           const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); const yColor = yPct >= 100 ? 'var(--green)' : yPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          bottomHtml += `...<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"><span>已達 $ ${fmt(yearTotal)} / ${fmt(yearly)}</span><span>${yRemain>0?`還差 $ ${fmt(yRemain)}`:'🎉 已達標！'}</span></div></div>`;
+          // 👇 已經修正好的排版
+          bottomHtml += `
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                <span style="font-size:13px;font-weight:800;color:var(--t2)">👑 本年目標進度 <span style="font-size:11px;color:var(--t3);font-weight:600;">(剩 ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} 天)</span></span>
+                <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:${yColor}">${yPct}%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" style="width:${yPct}%;background:${yColor}"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-top:6px;font-weight:600;">
+                <span style="font-family:var(--mono);">已達 $ ${fmt(yearTotal)} / ${fmt(yearly)}</span>
+                <span style="color:${yRemain > 0 ? 'var(--t3)' : 'var(--green)'};">${yRemain>0 ? `還差 $ ${fmt(yRemain)}` : '🎉 已達標！'}</span>
+              </div>
+            </div>`;
         }
         bottomHtml += `</div>`;
       } else {
@@ -1427,9 +1463,11 @@ function calcAutoReward() {
     }
   });
 
-  if(totalAutoBonus > 0) {
-      if(!bonusEl.value || pf(bonusEl.value) === 0) {
+  if (totalAutoBonus > 0) {
+      // 只有當欄位是「空的」，或者是跟「上次自動計算的值一樣」時才覆寫，確保使用者手動修改的值被保留
+      if (bonusEl.value === '' || parseFloat(bonusEl.value) === 0 || bonusEl.dataset.lastAuto === bonusEl.value) {
           bonusEl.value = totalAutoBonus;
+          bonusEl.dataset.lastAuto = totalAutoBonus; // 記住這是系統自動帶入的
           toast(`🎁 達標！自動帶入獎金差額 $${totalAutoBonus}`);
       }
   }
@@ -3193,7 +3231,7 @@ function renderAuthContent() {
   } else {
 // 👇 雙排 60x60 頭像 (強制 4 欄)
     let avatarsHtml = '';
-    for(let i=1; i<=8; i++) {
+    for(let i=1; i<=22; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
       avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
@@ -3275,7 +3313,7 @@ window.openAvatarSettings = function() {
   selectedAvatar = USER.avatar || 'figure/1.webp';
 
   let avatarsHtml = '';
-  for(let i=1; i<=8; i++) {
+  for(let i=1; i<=22; i++) {
     const isSel = selectedAvatar === `figure/${i}.webp`;
     avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
   }
@@ -3803,7 +3841,7 @@ function openPlatformList() {
             <div style="font-weight:600">${safeText(p.name)}</div>
             <div class="sn-sub">${p.active ? '✅ 已啟用' : '❌ 已停用'}</div>
           </div>
-          <!-- 撥動開關 (stopPropagation 阻止點擊開關時進入編輯頁) -->
+          <!-- 👇 套用滑動開關 (.switch) 結構 -->
           <label class="switch" onclick="event.stopPropagation()">
             <input type="checkbox" ${p.active ? 'checked' : ''} onchange="togglePlatform('${safeText(p.id)}', this.checked)">
             <span class="slider"></span>
@@ -4530,10 +4568,14 @@ function showInitialSetupModal() {
   ov.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; transition:0.3s;";
   
   let platHtml = DEFAULT_PLATFORMS.map(p => `
-    <label style="display:flex; align-items:center; gap:12px; padding:14px; background:var(--bg-input); border-radius:12px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);">
-      <input type="checkbox" value="${p.id}" style="width:20px; height:20px; accent-color:var(--acc);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:14px; background:var(--bg-input); border-radius:12px; margin-bottom:8px; border:1px solid var(--border);">
       <span style="font-weight:700; font-size:15px; color:var(--t1);">${p.name}</span>
-    </label>
+      <!-- 👇 套用滑動開關 (.switch) 結構 -->
+      <label class="switch">
+        <input type="checkbox" class="init-plat-chk" value="${p.id}">
+        <span class="slider"></span>
+      </label>
+    </div>
   `).join('');
 
   ov.innerHTML = `
@@ -4553,7 +4595,7 @@ function showInitialSetupModal() {
   });
 
   document.getElementById('init-setup-btn').addEventListener('click', () => {
-    const checks = ov.querySelectorAll('input[type="checkbox"]');
+    const checks = ov.querySelectorAll('.init-plat-chk');
     let hasChecked = false;
     checks.forEach(chk => {
       const p = S.platforms.find(x => x.id === chk.value);
