@@ -1418,7 +1418,7 @@ function getRewardWindow(dStr, r) {
   return { start: todayStr(startD), end: todayStr(endD) };
 }
 
-/* ══ 自動計算獎勵 (單數為0清除、精準差額發放) ══ */
+/* ══ 自動計算獎勵 (單數為0清除、防抖不狂彈 Toast) ══ */
 function calcAutoReward() {
   const platId = S.selPlatformId;
   const dStr = document.getElementById('f-date') ? document.getElementById('f-date').value : todayStr();
@@ -1427,9 +1427,13 @@ function calcAutoReward() {
 
   if(!platId || !dStr) return;
 
-  // 當單數小於等於 0 (或被清除) 時，清空固定獎勵欄位並停止計算
+  // 當單數小於等於 0 時，清空自動獎勵紀錄並停止計算
   if (curOrders <= 0) {
-     bonusEl.value = '';
+     if (bonusEl.dataset.lastAuto) {
+         bonusEl.value = '';
+         delete bonusEl.dataset.lastAuto;
+         delete bonusEl.dataset.achieved; // 清除達標紀錄
+     }
      return;
   }
 
@@ -1440,7 +1444,7 @@ function calcAutoReward() {
     const rWindow = getRewardWindow(dStr, r);
     if(!rWindow) return;
     
-    // 👉 確保目前輸入的這筆單，日期真的落在這個獎勵區間內
+    // 確保目前輸入的這筆單，日期真的落在這個獎勵區間內
     if (dStr < rWindow.start || dStr > rWindow.end) return;
 
     let accum = 0;
@@ -1464,12 +1468,18 @@ function calcAutoReward() {
   });
 
   if (totalAutoBonus > 0) {
-      // 只有當欄位是「空的」，或者是跟「上次自動計算的值一樣」時才覆寫，確保使用者手動修改的值被保留
-      if (bonusEl.value === '' || parseFloat(bonusEl.value) === 0 || bonusEl.dataset.lastAuto === bonusEl.value) {
+      // 👇 加入防抖判斷：如果這個金額已經被系統記錄過「已達標」，就不再彈出 Toast 也不覆寫！
+      const currentAchieved = bonusEl.dataset.achieved;
+      if (currentAchieved !== String(totalAutoBonus)) {
+          // 只有當尚未紀錄此階段，或者是完全空白時才覆寫
           bonusEl.value = totalAutoBonus;
-          bonusEl.dataset.lastAuto = totalAutoBonus; // 記住這是系統自動帶入的
+          bonusEl.dataset.lastAuto = totalAutoBonus; 
+          bonusEl.dataset.achieved = totalAutoBonus; // 📝 記住這次已經達標的金額
           toast(`🎁 達標！自動帶入獎金差額 $${totalAutoBonus}`);
       }
+  } else {
+      // 如果退階 (譬如把單數改小)，則清除達標紀錄
+      delete bonusEl.dataset.achieved;
   }
 }
 
@@ -3229,11 +3239,11 @@ function renderAuthContent() {
       </div>
     `;
   } else {
-// 👇 雙排 60x60 頭像 (強制 4 欄)
+    // 👇 雙排 11 行左右滑動頭像 (22 張)
     let avatarsHtml = '';
     for(let i=1; i<=22; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
-      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:50px; height:50px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
@@ -3241,8 +3251,9 @@ function renderAuthContent() {
         <h2 class="auth-title">建立新帳號</h2>
         
         <div class="auth-input-group" style="padding:8px; margin-top:8px;">
-          <label class="auth-input-label" style="margin-left:4px;">選擇專屬頭像</label>
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; justify-items:center; margin-top:6px;">
+          <label class="auth-input-label" style="margin-left:4px;">選擇專屬頭像 (可左右滑動)</label>
+          <!-- 👇 改變 Grid 排版為雙橫排滑動 -->
+          <div style="display:grid; grid-template-rows:repeat(2, 1fr); grid-auto-flow:column; gap:8px; margin-top:6px; overflow-x:auto; padding-bottom:8px; padding-left:4px;">
             ${avatarsHtml}
           </div>
         </div>
