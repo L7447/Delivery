@@ -3243,7 +3243,7 @@ function renderAuthContent() {
     let avatarsHtml = '';
     for(let i=1; i<=22; i++) {
       const isSel = selectedAvatar === `figure/${i}.webp`;
-      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:50px; height:50px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:60px; height:60px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
@@ -3253,7 +3253,7 @@ function renderAuthContent() {
         <div class="auth-input-group" style="padding:8px; margin-top:8px;">
           <label class="auth-input-label" style="margin-left:4px;">選擇專屬頭像 (可左右滑動)</label>
           <!-- 👇 改變 Grid 排版為雙橫排滑動 -->
-          <div style="display:grid; grid-template-rows:repeat(2, 1fr); grid-auto-flow:column; gap:8px; margin-top:6px; overflow-x:auto; padding-bottom:8px; padding-left:4px;">
+          <div style="display:grid; grid-template-columns: repeat(11, 1fr); grid-auto-flow: row; gap:8px; margin-top:6px; overflow-x:auto; padding-bottom:8px; padding-left:4px; width: 100%; height: 100%; object-fit: contain;">
             ${avatarsHtml}
           </div>
         </div>
