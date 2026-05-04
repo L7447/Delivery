@@ -3025,8 +3025,8 @@ function renderSettings() {
   
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:12px; color:var(--text-blue); font-weight:600; font-family:var(--mono);"> 上次存檔：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:12px; color:var(--text-red);"> 尚未進行本機存檔</span>`;
+    ? `<span style="font-size:12px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
+    : `<span style="font-size:12px; color:var(--text-red);">&emsp;尚未進行本機存檔</span>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -3174,7 +3174,7 @@ function initReminderCheck() {
 
 /* ══ 替換：登入系統拆分雙頁籤與頭像綁定 ══ */
 let authMode = 'login'; // 'login' 或 'register'
-let selectedAvatar = 'figure/1.webp'; 
+let selectedAvatar = 'figure/fig1.webp'; 
 let privacyAgreed = false; // 👈 新增：隱私權同意狀態
 
 window.selectAvatar = function(src, el) {
@@ -3242,8 +3242,8 @@ function renderAuthContent() {
     // 👇 雙排 11 行左右滑動頭像 (22 張)
     let avatarsHtml = '';
     for(let i=1; i<=22; i++) {
-      const isSel = selectedAvatar === `figure/${i}.webp`;
-      avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:70px; height:70px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+      const isSel = selectedAvatar === `figure/fig${i}.webp`;
+      avatarsHtml += `<img src="figure/fig${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/fig${i}.webp', this)" style="width:70px; height:70px; object-fit:contain; border:2px solid ${isSel?'#2563eb':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.08)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
     }
     
     contentHtml = `
@@ -3321,12 +3321,12 @@ window.openAvatarSettings = function() {
   document.getElementById('sub-top-right').innerHTML = `<button onclick="applyNewAvatar()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">套用</button>`;
   
   // 預設選中目前頭像
-  selectedAvatar = USER.avatar || 'figure/1.webp';
+  selectedAvatar = USER.avatar || 'figure/fig1.webp';
 
   let avatarsHtml = '';
   for(let i=1; i<=22; i++) {
-    const isSel = selectedAvatar === `figure/${i}.webp`;
-    avatarsHtml += `<img src="figure/${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/${i}.webp', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
+    const isSel = selectedAvatar === `figure/fig${i}.webp`;
+    avatarsHtml += `<img src="figure/fig${i}.webp" class="avatar-opt" onclick="selectAvatar('figure/fig${i}.webp', this)" style="width:80px; height:80px; object-fit:contain; border:2px solid ${isSel?'var(--acc)':'transparent'}; border-radius:12px; cursor:pointer; transition:transform 0.2s; transform:${isSel?'scale(1.05)':'scale(1)'}; flex-shrink:0; image-rendering: pixelated; image-rendering: crisp-edges;">`;
   }
   
   document.getElementById('sub-body').innerHTML = `
@@ -4251,20 +4251,20 @@ function openPrivacyPolicy(fromRegister = false) {
   }
 
   document.getElementById('privacy-body').innerHTML = `
-    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:0px 4px;">
+    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:0px 10px;">
       
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
-      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
+      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:8px;">
         • 您的【電子郵件】，僅作為「註冊的帳號」與「收驗證碼」使用。
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資料</div>
-      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
+      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:8px;">
         • 僅用於統計「總使用人數」，不做任何商業或其它用途。
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background:var(--sf2); padding:14px; border-radius:12px; border:1px solid var(--border); margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background:var(--sf2); padding:14px; border-radius:12px; border:1px solid var(--border); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
         <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
