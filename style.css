@@ -168,7 +168,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .fc-cell.empty { background: transparent; }
 .fc-date { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--t1); margin-bottom: auto; line-height: 1; }
 .fc-cell.empty .fc-date { color: var(--t3); }
-.fc-cell.has-income { background: rgba(234, 138, 255, 0.4); }
+.fc-cell.has-income { background: rgba(238, 161, 255, 0.2); }
 .fc-cell.has-income .fc-amt { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--green); text-align: right; margin-top: auto; position: absolute; bottom: 6px; right: 6px; }
 .fc-cell.today .fc-date { color: #fff; background: #2563eb; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: -2px 0 0 -2px; }
 
@@ -239,12 +239,12 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .plat-badge{color:#fff;font-size:12px;font-weight:700;padding:5px 3px;border-radius:30px;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
 
 /* ── 2. 天氣標籤模組化 (多彩設計) ── */
-.w-tag{padding:6px 12px;border-radius:16px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;transition:transform 0.2s,filter 0.2s;}
+.w-tag{padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:transform 0.2s,filter 0.2s;}
 .w-tag:active { transform: scale(0.92); filter: brightness(0.9); }
 /* 各別天氣顏色 */
 .w-rain    { background: #e0f2fe; color: #0284c7; border: 1.5px solid #bae6fd; }
 .w-hot     { background: #ffedd5; color: #ea580c; border: 1.5px solid #fed7aa; }
-.w-storm   { background: #f3f4f6; color: #00d0ff; border: 1.5px solid #8fdbff; }
+.w-storm   { background: #9cedff; color: #00d0ff; border: 1.5px solid #8fdbff; }
 .w-cold    { background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; }
 .w-flood   { background: #ccfbf1; color: #0d9488; border: 1.5px solid #99f6e4; }
 .w-typhoon { background: #fce7f3; color: #db2777; border: 1.5px solid #fbcfe8; }
