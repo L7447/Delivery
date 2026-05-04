@@ -713,7 +713,7 @@ function renderHome() {
         platStats.forEach(p => {
           topHtml += `
             <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:4px;">
-              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span> 收入：</span>
+              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span><span style="font-weight:700;"> 收入：</span></span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
               <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
               <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
@@ -780,7 +780,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) { nameColor = '#00BFFF'; borderColor = '#00BFFF'; }
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 2.5px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                  <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 3px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                     <span style="font-size:13px; color:${nameColor}; font-weight:500; margin-bottom:4px; letter-spacing:0.5px;">${safeText(ev.name)}</span>
                     <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--chart-text);">${safeText(ev.dateStr)} <span style="font-size:11px; font-weight:700; color:${diffColor};">(${safeText(ev.diffStr)})</span></span>
                   </div>`;
@@ -1799,7 +1799,7 @@ function renderRptOverview() {
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
           ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}; box-shadow:0 2px 6px ${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}60; font-size:14px; padding:4px 14px;">${filterName}</span>`}
-          <span style="font-size:16px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
+          <span style="font-size:18px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
         </div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         
@@ -3025,8 +3025,8 @@ function renderSettings() {
   
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:12px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:12px; color:var(--text-red);">&emsp;尚未進行本機存檔</span>`;
+    ? `<span style="font-size:15px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
+    : `<span style="font-size:15px; color:var(--text-red);  font-weight:600; font-family:var(--mono);">&emsp;尚未進行本機存檔</span>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -4254,17 +4254,17 @@ function openPrivacyPolicy(fromRegister = false) {
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:0px 10px;">
       
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
-      <div style="background:var(--sf2); padding:10px 6px; border-radius:12px; margin-bottom:8px;">
+      <div style="background:var(--sf2); padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
         • 您的【電子郵件】，僅作為「註冊的帳號」與「收驗證碼」使用。
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資料</div>
-      <div style="background:var(--sf2); padding:10px 6px; border-radius:12px; margin-bottom:8px;">
+      <div style="background:var(--sf2); padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
         • 僅用於統計「總使用人數」，不做任何商業或其它用途。
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background: rgba(94, 255, 118, 0.4); padding:6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background: rgba(165, 255, 178, 0.3); padding:3px 6px 5px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
         <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
@@ -4288,7 +4288,7 @@ function openPrivacyPolicy(fromRegister = false) {
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">4. 您的權利與聯絡方式</div>
-      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
+      <div style="background:var(--sf2); padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:16px;">
         • 您可隨時聯繫我們，要求永久刪除您的註冊帳號。<br>
         • 如有任何問題，請透過【設定】→「關於我們」→『聯絡我們』與我們聯繫。
       </div>
