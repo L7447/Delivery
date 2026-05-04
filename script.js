@@ -713,7 +713,7 @@ function renderHome() {
         platStats.forEach(p => {
           topHtml += `
             <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:4px;">
-              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span>收入：</span>
+              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span> 收入：</span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
               <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
               <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
@@ -3025,8 +3025,8 @@ function renderSettings() {
   
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:12px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">上次備份：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:12px; color:var(--text-red);">尚未進行本機備份</span>`;
+    ? `<span style="font-size:12px; color:var(--text-blue); font-weight:600; font-family:var(--mono);"> 上次存檔：${S.settings.lastLocalBackup}</span>` 
+    : `<span style="font-size:12px; color:var(--text-red);"> 尚未進行本機存檔</span>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -3042,8 +3042,8 @@ function renderSettings() {
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 備份到本機 (.json) │ ${lastBackupStr}</span><span class="arr">↓</span></div>
-      <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原備份</span><span class="arr">↑</span></div>
+      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 儲存到本機 (.json) │ ${lastBackupStr}</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原記錄檔</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
@@ -4084,7 +4084,7 @@ function doExportExcel(targetYear) {
     return;
   }
 
-  showProgress('產生 Excel 檔案中...');
+  showProgress('匯出 Excel 檔案中...');
 
   setTimeout(() => {
     // 建立時間過濾器
@@ -4255,12 +4255,12 @@ function openPrivacyPolicy(fromRegister = false) {
       
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
       <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
-        • 您的帳號（電子郵件）僅作為註冊與登入身份驗證使用。
+        • 您的【電子郵件】，僅作為「註冊的帳號」與「收驗證碼」使用。
       </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資訊</div>
+      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資料</div>
       <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:16px;">
-        • 僅用於統計系統整體的「總使用人數」，不做任何其他商業用途。
+        • 僅用於統計「總使用人數」，不做任何商業或其它用途。
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
@@ -4271,7 +4271,7 @@ function openPrivacyPolicy(fromRegister = false) {
         </div>
         <div style="padding-left:4px; margin-bottom:12px;">
           • 採用 Cloudflare 部署，預設啟用最高等級 <b>TLS 1.3 (HTTPS)</b> 加密傳輸。<br>
-          • 您的外送記錄與資料<b>僅儲存於「您的個人裝置」上</b>，絕不會上傳至任何雲端伺服器。
+          • 您的外送記錄與資料，<b>僅儲存於「您的個人裝置」上</b>，絕不會上傳至任何雲端伺服器。
         </div>
 
         <div style="display:flex; align-items:center; gap:6px; color:var(--red); font-weight:800; font-size:12px; margin-top:16px; margin-bottom:6px;">
@@ -4282,7 +4282,7 @@ function openPrivacyPolicy(fromRegister = false) {
           <div style="margin-top:8px; padding:10px; border-left:3px solid var(--acc); background:var(--sf); border-radius:4px 8px 8px 4px;">
             <span style="color:var(--acc); font-weight:800;">優勢一：</span>每次產生獨立隨機鹽值（Salting），徹底無效化彩虹表（Rainbow Table）攻擊。<br>
             <span style="color:var(--acc); font-weight:800;">優勢二：</span>超高強度迭代運算（高達 10 萬次），大幅增加暴力破解所需的時間與成本。<br>
-            <span style="color:var(--acc); font-weight:800;">優勢三：</span>強制嚴格的 12 字元密碼長度與複雜度要求，從源頭阻斷字典攻擊。
+            <span style="color:var(--acc); font-weight:800;">優勢三：</span>強制嚴格的「12 位數密碼長度與複雜度」要求，從源頭阻斷字典攻擊。
           </div>
         </div>
       </div>
@@ -4433,7 +4433,7 @@ function applyBackground() {
 
 /* ══ 真正儲存為實體檔案至本機資料夾 (File System API 或 下載) ══ */
 async function confirmBackupToFile() {
-  const ok = await customConfirm('是否要備份目前資料到本機 JSON 檔？');
+  const ok = await customConfirm('是否要儲存記錄檔到本機？');
   if (ok) {
     await doBackupToFile();
   }
