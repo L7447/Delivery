@@ -709,10 +709,10 @@ function renderHome() {
       }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
       if (platStats.length > 0) {
-        topHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
+        topHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:2px;">`;
         platStats.forEach(p => {
           topHtml += `
-            <div class="hero-plat-row" style="display:flex; align-items:center; padding:12px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:4px;">
+            <div class="hero-plat-row" style="display:flex; align-items:center; padding:8px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
               <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span><span style="font-weight:700;"> 收入：</span></span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
               <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
@@ -3025,8 +3025,8 @@ function renderSettings() {
   
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:13px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:13px; color:var(--text-red);  font-weight:600; font-family:var(--mono);">&emsp;尚未進行本機存檔</span>`;
+    ? `<span style="font-size:15px; color:var(--text-blue); font-weight:700; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
+    : `<span style="font-size:15px; color:var(--text-red);  font-weight:700; font-family:var(--mono);">&emsp;尚未進行本機存檔</span>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -3042,7 +3042,7 @@ function renderSettings() {
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 儲存到本機 (.json) │ ${lastBackupStr}</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 儲存到本機 (.json) ${lastBackupStr}</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原記錄檔</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
@@ -4264,7 +4264,7 @@ function openPrivacyPolicy(fromRegister = false) {
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background: rgba(140, 255, 167, 0.15); padding:3px 6px 5px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background: rgba(140, 255, 167, 0.3); padding:3px 6px 5px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
         <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
