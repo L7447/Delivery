@@ -4254,17 +4254,17 @@ function openPrivacyPolicy(fromRegister = false) {
     <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:0px 10px;">
       
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
-      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:8px;">
+      <div style="background:var(--sf2); padding:10px 6px; border-radius:12px; margin-bottom:8px;">
         • 您的【電子郵件】，僅作為「註冊的帳號」與「收驗證碼」使用。
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資料</div>
-      <div style="background:var(--sf2); padding:10px 14px; border-radius:12px; margin-bottom:8px;">
+      <div style="background:var(--sf2); padding:10px 6px; border-radius:12px; margin-bottom:8px;">
         • 僅用於統計「總使用人數」，不做任何商業或其它用途。
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background:var(--sf2); padding:14px; border-radius:12px; border:1px solid var(--border); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background:var(--sf2); padding:6px; border-radius:12px; border:1.5px solid rgba(212, 255, 199, 0.7); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
         <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
