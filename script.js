@@ -611,7 +611,7 @@ function _bindNavEvents() {
   document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
     const pg = el.dataset.pg; 
     if (pg === 'add') {
-      if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增記錄'); return; }
+      if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增記錄'); return; }
       if (S.tab !== 'add') openAddPage(); 
     } else {
       goPage(pg); 
@@ -776,7 +776,7 @@ function renderHome() {
                 let diffColor = isToday ? 'var(--green)' : 'var(--t2)';
                 let nameColor = 'var(--t3)'; let borderColor = 'var(--border)';
                 if (ev.name.includes('結算') || ev.name.includes('取單')) { nameColor = 'var(--red)'; borderColor = 'var(--red)'; }
-                else if (ev.name.includes('明細')) { nameColor = 'var(--acc2)'; borderColor = 'var(--acc2)'; }
+                else if (ev.name.includes('明細')) { nameColor = 'var(--acc)'; borderColor = 'var(--acc)'; }
                 else if (ev.name.includes('發薪')) { nameColor = '#00BFFF'; borderColor = '#00BFFF'; }
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
@@ -1799,7 +1799,7 @@ function renderRptOverview() {
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
           ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}; box-shadow:0 2px 6px ${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}60; font-size:14px; padding:4px 14px;">${filterName}</span>`}
-          <span style="font-size:14px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
+          <span style="font-size:16px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
         </div>
         <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
         
@@ -2586,7 +2586,7 @@ const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞
 
 /* ══ 替換：新增車輛記錄 (阻擋電動車抓油價，並修正保養項目空白問題) ══ */
 function openAddVehRec(recordId = null) {
-  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號才能新增車輛記錄'); return; }
+  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增車輛記錄'); return; }
   
   editingVehRecId = recordId; const isEdit = !!recordId; 
   if (!isEdit && S.vehicles.length === 0) { toast('請先新增車輛'); return; }
