@@ -140,7 +140,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .hrc-amt { font-family: var(--mono); font-size: 18px; font-weight: 800; color: #0f172a; }
 .hrc-stat { font-size: 12px; font-weight: 600; color: #475569; }
 .h-div { width: 2px; height: 15px; background: #cbd5e1; }
-.hrc-toggle { position: absolute; right: 10px; top: 10px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 70%); color: #0044cc; font-size: 22px; cursor: pointer; transition: transform 0.3s; }
+.hrc-toggle { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 70%); color: #0044cc; font-size: 22px; cursor: pointer; transition: transform 0.3s; }
 .hrc-collapse { background: #ffffff; border-top: 1.5px dashed #e2e8f0; display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
 
 /* ══ 9. 現代化小日曆 (極簡縮小版) ══ */
@@ -158,18 +158,18 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 
 /* ══ 10. 全螢幕大日曆 (修復補回版) ══ */
 @media screen and (orientation:portrait){#full-calendar-overlay.show{width:100vh;height:100vw;transform:rotate(90deg);transform-origin:top left;position:fixed;top:0;left:100vw;}
-#fc-body{padding-bottom:30px !important;}
+#fc-body{padding-bottom:5px !important;}
 }
 #fc-body { background: var(--sf); }
 #fc-dow { padding-top: 4px; }
-.fc-dow-cell { text-align: center; font-size: 12px; font-weight: 700; color: #ea580c; padding: 8px 0; }
+.fc-dow-cell { text-align: center; font-size: 12px; font-weight: 700; color: #ff5900; padding: 8px 0; }
 #fc-grid { background: var(--border); display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0; align-content: start; }
 .fc-cell { background: var(--sf); display: flex; flex-direction: column; padding: 6px; min-height: 54px; position: relative; }
 .fc-cell.empty { background: transparent; }
 .fc-date { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--t1); margin-bottom: auto; line-height: 1; }
 .fc-cell.empty .fc-date { color: var(--t3); }
-.fc-cell.has-income { background: rgba(190, 59, 246, 0.15); }
-.fc-cell.has-income .fc-amt { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--green); text-align: right; margin-top: auto; position: absolute; bottom: 6px; right: 6px; }
+.fc-cell.has-income { background: hsla(282, 92%, 90%, 0.15); }
+.fc-cell.has-income .fc-amt { font-family: var(--sans); font-size: 13px; font-weight: 600; color: #00ff5e; text-align: right; margin-top: auto; position: absolute; bottom: 6px; right: 6px; }
 .fc-cell.today .fc-date { color: #fff; background: #2563eb; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: -2px 0 0 -2px; }
 
 /* ══ 11. 車輛管理：月份導航與標籤 ══ */
@@ -236,7 +236,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
    ══════════════════════════════════════════════════════ */
 
 /* ── 1. 共用平台圓角標籤 (Platform Badge) ── */
-.plat-badge{color:#fff;font-size:12px;font-weight:700;padding:5px 5px;border-radius:50%;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
+.plat-badge{color:#fff;font-size:12px;font-weight:700;padding:5px 5px;border: radius 30px;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
 
 /* ── 2. 天氣標籤模組化 (多彩設計) ── */
 .w-tag{padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:transform 0.2s,filter 0.2s;}
