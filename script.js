@@ -4264,7 +4264,7 @@ function openPrivacyPolicy(fromRegister = false) {
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background:var(--sf2); padding:6px; border-radius:12px; border:1.5px solid rgba(212, 255, 199, 0.7); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background: rgba(94, 255, 118, 0.4); padding:6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
         <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
