@@ -767,7 +767,7 @@ function renderHome() {
           const events = calcNextDates(p.id); 
           if (!events) return;
           bottomHtml += `
-            <div style="border: 2px solid ${p.color}; background: ${p.color}35; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
+            <div style="border: 1.5px solid ${p.color}; background: ${p.color}15; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
               <div style="display:flex; align-items:center; margin-bottom: 10px;">
                 <span style="background:${p.color}; color:#fff; font-size:12px; font-weight:800; padding:4px 12px; border-radius:12px; letter-spacing:0.5px; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span>
               </div>
@@ -780,7 +780,7 @@ function renderHome() {
                 else if (ev.name.includes('發薪')) { nameColor = '#00BFFF'; borderColor = '#00BFFF'; }
                 if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
                 return `
-                  <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 3px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                  <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 2.5px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                     <span style="font-size:13px; color:${nameColor}; font-weight:500; margin-bottom:4px; letter-spacing:0.5px;">${safeText(ev.name)}</span>
                     <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--chart-text);">${safeText(ev.dateStr)} <span style="font-size:11px; font-weight:700; color:${diffColor};">(${safeText(ev.diffStr)})</span></span>
                   </div>`;
@@ -1794,7 +1794,7 @@ function renderRptOverview() {
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:35px; height:35px; background: hsla(320, 75%, 34%, 0.50); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.50); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
@@ -3025,8 +3025,8 @@ function renderSettings() {
   
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:15px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:15px; color:var(--text-red);  font-weight:600; font-family:var(--mono);">&emsp;尚未進行本機存檔</span>`;
+    ? `<span style="font-size:13px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
+    : `<span style="font-size:13px; color:var(--text-red);  font-weight:600; font-family:var(--mono);">&emsp;尚未進行本機存檔</span>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -4264,7 +4264,7 @@ function openPrivacyPolicy(fromRegister = false) {
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background: rgba(165, 255, 178, 0.3); padding:3px 6px 5px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background: rgba(140, 255, 167, 0.15); padding:3px 6px 5px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
         <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
