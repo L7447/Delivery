@@ -254,7 +254,7 @@
   <section class="page active" id="page-home" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
     <div id="home-top-content" style="flex-shrink:0;"></div> 
     <div style="padding: 0 16px; flex-shrink:0;">
-      <div class="slide-tabs tabs-2">
+      <div class="slide-tabs tabs-2" style="margin-bottom: 4px;">
         <div class="slide-bg" id="home-tab-bg" style="transform: translateX(0%);"></div>
         <button class="slide-btn active" id="btn-home-schedule" onclick="switchHomeTab('schedule', 0)">平台日程表</button>
         <button class="slide-btn" id="btn-home-goal" onclick="switchHomeTab('goal', 1)">目標進度</button>
@@ -351,9 +351,11 @@
             <button type="button" class="w-tag w-flood" onclick="addWeatherTag('🌊淹水')">🌊淹水</button>
             <button type="button" class="w-tag w-typhoon" onclick="addWeatherTag('🌀颱風')">🌀颱風</button>
           </div>
-          <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事">
+          <div style="position:relative;">
+            <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事" style="padding-right: 36px;">
+            <button type="button" onclick="document.getElementById('f-note').value=''" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:var(--border); color:var(--t2); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; font-weight:900;">✕</button>
+          </div>
         </div>
-      </div>
 
       <!-- 2. 現金小費表單 -->
       <div id="add-form-cashtip" style="display:none;">
@@ -443,10 +445,20 @@
 
       </div>
 
-      <!-- 選擇車輛標題往下拉近清單 -->
-      <div style="font-size:11px; font-weight:700; color:var(--t3); margin:8px 0 3px 4px;">選擇車輛</div>
-      <!-- 車輛清單 (水平滾動) -->
-      <div id="veh-selector-container" style="margin-bottom:16px; min-height:80px;"></div>
+      <!-- 選擇車輛標題與折疊按鈕 -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 4px 6px 4px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="font-size:11px; font-weight:700; color:var(--t3);">選擇車輛</div>
+          <!-- 👇 車輛資訊標籤改放這裡 -->
+          <div id="veh-current-info" style="display:none; align-items:center; gap:6px;"></div>
+        </div>
+        <div id="veh-selector-toggle-btn" onclick="toggleVehSelector()" style="background: #bbf7d0; color: #059669; font-size:14px; font-weight:900; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.3s;">▲</div>
+      </div>
+      <!-- 包裝層以支援折疊動畫 -->
+      <div id="veh-selector-wrapper" style="max-height:160px; overflow:hidden; transition:max-height 0.3s ease, opacity 0.3s ease; opacity:1;">
+        <!-- 車輛清單 (水平滾動) -->
+        <div id="veh-selector-container" style="margin-bottom:16px; min-height:80px;"></div>
+      </div>
 
       <!-- 紫色頁籤改為預設藍色漸層 -->
       <!-- 擴充為四個頁籤 -->
@@ -537,7 +549,7 @@
 <input type="file" id="restore-file" accept=".json" style="display:none">
 
 <div class="overlay-page" id="full-calendar-overlay" style="background:var(--bg); z-index:900;">
-  <div class="top-bar">
+  <div class="top-bar" style="padding: 6px 16px;">
     <button class="bar-btn" onclick="animateClose(this, () => closeFullCalendar())"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
     <div style="display:flex;align-items:center;gap:12px;"><button class="mbtn" onclick="changeFullCalMonth(-1)">◀</button><h2 id="fc-title" style="font-size:18px;min-width:100px;text-align:center;"></h2><button class="mbtn" onclick="changeFullCalMonth(1)">▶</button></div>
     <div style="width:36px"></div>
@@ -622,7 +634,7 @@
   <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
     <!--<img src="images/Miyako.webp" alt="Logo" style="width:400px; height:400px; margin:1px; object-fit:contain; pointer-events:none; user-select:none; -webkit-user-drag:none;" oncontextmenu="return false;">-->
 
-    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">ej/ao3tjpfu8製作 2026 © v1.5.3.1630</div>
+    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">ej/ao3tjpfu8製作 2026 © v1.5.6.1618</div>
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
       <!--<div onclick="openSpecialThanks()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">-->
