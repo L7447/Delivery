@@ -11,6 +11,167 @@ const DEFAULT_PLATFORMS =[
   { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
 ];
 
+/* ════ 基本工資設定區 (預設值)(範圍設定) 開始════ 
+ * 未來調薪時，只需更改這裡的 max (最大) 與 min (最小) 數值即可！
+ * 預設 Infinity 代表「無限大」。
+ */
+const DEFAULT_WAGE_RULES = [
+  { max: 165,      min: 0,   text: '🚑 嚴重低於基本工資', color: 'var(--red)',   bg: 'var(--red-d)' },
+  { max: 185,      min: 166, text: '😭 低於基本工資',     color: 'var(--acc)',   bg: 'var(--acc-d)' },
+  { max: 195,      min: 186, text: '🥲 略低於基本工資',   color: 'var(--blue)',  bg: 'var(--blue-d)' },
+  { max: Infinity, min: 196, text: '🎉 符合基本工資',     color: 'var(--green)', bg: 'var(--green-d)' }
+];
+// 動態取得目前設定的工資規則 (若無則使用預設)
+function getActiveWageRules() {
+  return (S.settings && S.settings.wageRules) ? S.settings.wageRules : DEFAULT_WAGE_RULES;
+}
+/* === 全域：基本工資標籤產生器 === */
+function getWageBadge(hours, total) {
+  if (hours <= 0 || total <= 0) return '';
+  const avg = Math.round(total / hours); // 計算時薪
+  const rules = getActiveWageRules();
+  // 自動比對目前時薪落在哪個設定的區間內
+  const rule = rules.find(r => avg >= r.min && avg <= r.max);
+  if (!rule) return ''; // 找不到對應規則時防呆
+  return `<div style="margin-top:6px;"><span style="background:${rule.bg}; color:${rule.color}; font-size:11px; padding:4px 6px; border-radius:5px; font-weight:800; white-space:nowrap; display:inline-block; line-height:1;">${rule.text}</span></div>`;
+}
+/* ══ ✨ 新增：基本工資分析設定 ══ */
+function openWageSettings() {
+  document.getElementById('sub-title').textContent = '基本工資分析設定';
+  
+  // 右上角放入重設預設值按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="resetWageSettings()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05); transition:0.2s;">↺ 預設值</button>
+  `;
+
+  // 讀取目前的規則設定
+  const rules = getActiveWageRules();
+  const l1 = rules[0].max;
+  const l2 = rules[1].max;
+  const l3 = rules[2].max;
+
+  // 產生 4 個不同顏色的背景區塊 (順序：由最高階至最低階)
+  document.getElementById('sub-body').innerHTML = `
+    <div style="background:var(--sf2); padding:16px; border-radius:12px; margin-bottom:16px;">
+      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
+        💡 請設定各階層的「最高時薪界線」，系統會依據此數值自動計算銜接區間。<br>例如：設定 165，則 0~165 元會被判定為嚴重低於基本工資。
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      
+      <!-- 第 4 階 (綠) -->
+      <div style="background:var(--green-d); border:1.5px solid var(--green); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:14px; font-weight:800; color:var(--green); margin-bottom:4px;">🎉 符合基本工資</div>
+          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 <span id="lbl-l4-min" style="color:var(--green); font-weight:800;">${l3+1}</span> 元 以上</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
+          <input type="text" class="finp" value="無限" disabled style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--green); font-weight:800; background:#fff; opacity:0.8;">
+        </div>
+      </div>
+
+      <!-- 第 3 階 (藍) -->
+      <div style="background:var(--blue-d); border:1.5px solid var(--blue); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:14px; font-weight:800; color:var(--blue); margin-bottom:4px;">🥲 略低於基本工資</div>
+          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 <span id="lbl-l3-min">${l2+1}</span> ~ <span id="lbl-l3-max" style="color:var(--t1); font-weight:800;">${l3}</span> 元</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
+          <input type="number" id="w-l3" class="finp" value="${l3}" oninput="updateWageLabels()" style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--blue); font-weight:800; background:#fff;">
+        </div>
+      </div>
+
+      <!-- 第 2 階 (橘) -->
+      <div style="background:var(--acc-d); border:1.5px solid var(--acc); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:14px; font-weight:800; color:var(--acc); margin-bottom:4px;">😭 低於基本工資</div>
+          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 <span id="lbl-l2-min">${l1+1}</span> ~ <span id="lbl-l2-max" style="color:var(--t1); font-weight:800;">${l2}</span> 元</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
+          <input type="number" id="w-l2" class="finp" value="${l2}" oninput="updateWageLabels()" style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--acc); font-weight:800; background:#fff;">
+        </div>
+      </div>
+
+      <!-- 第 1 階 (紅) -->
+      <div style="background:var(--red-d); border:1.5px solid var(--red); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:14px; font-weight:800; color:var(--red); margin-bottom:4px;">🚑 嚴重低於基本工資</div>
+          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 0 ~ <span id="lbl-l1" style="color:var(--t1); font-weight:800;">${l1}</span> 元</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
+          <input type="number" id="w-l1" class="finp" value="${l1}" oninput="updateWageLabels()" style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--red); font-weight:800; background:#fff;">
+        </div>
+      </div>
+
+    </div>
+
+    <button onclick="saveWageSettings()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:24px;">✅ 儲存工資設定</button>
+  `;
+
+  openOverlay('sub-page');
+}
+// 使用者輸入時，即時更新下方的關聯數字預覽
+window.updateWageLabels = function() {
+  const l1 = parseInt(document.getElementById('w-l1').value) || 0;
+  const l2 = parseInt(document.getElementById('w-l2').value) || 0;
+  const l3 = parseInt(document.getElementById('w-l3').value) || 0;
+
+  document.getElementById('lbl-l1').textContent = l1;
+  document.getElementById('lbl-l2-min').textContent = l1 + 1;
+  document.getElementById('lbl-l2-max').textContent = l2;
+  document.getElementById('lbl-l3-min').textContent = l2 + 1;
+  document.getElementById('lbl-l3-max').textContent = l3;
+  document.getElementById('lbl-l4-min').textContent = l3 + 1;
+}
+// 儲存設定
+function saveWageSettings() {
+  const l1 = parseInt(document.getElementById('w-l1').value) || 0;
+  const l2 = parseInt(document.getElementById('w-l2').value) || 0;
+  const l3 = parseInt(document.getElementById('w-l3').value) || 0;
+  // 防呆：確保數字是遞增的，否則邏輯會壞掉
+  if (l1 >= l2 || l2 >= l3) {
+    toast('⚠️ 設定錯誤：金額必須依序遞增 (第一階 < 第二階 < 第三階)');
+    return;
+  }
+
+  S.settings.wageRules = [
+    { max: l1,       min: 0,      text: '🚑 嚴重低於基本工資', color: 'var(--red)',   bg: 'var(--red-d)' },
+    { max: l2,       min: l1 + 1, text: '😭 低於基本工資',     color: 'var(--acc)',   bg: 'var(--acc-d)' },
+    { max: l3,       min: l2 + 1, text: '🥲 略低於基本工資',   color: 'var(--blue)',  bg: 'var(--blue-d)' },
+    { max: Infinity, min: l3 + 1, text: '🎉 符合基本工資',     color: 'var(--green)', bg: 'var(--green-d)' }
+  ];
+
+  saveSettings();
+  closeOverlay('sub-page');
+  toast('✅ 基本工資設定已儲存');
+  
+  // 儲存後自動重繪目前所在畫面，讓新設定立即生效
+  if (S.tab === 'history') renderHistory();
+  if (S.tab === 'home') renderHome();
+  if (S.tab === 'report') renderReport();
+}
+// 一鍵重設為預設值
+function resetWageSettings() {
+  customConfirm('確定要將基本工資分析設定重設為「系統預設值」嗎？').then(ok => {
+    if (ok) {
+      S.settings.wageRules = null; // 清空設定即可自動套用 DEFAULT_WAGE_RULES
+      saveSettings();
+      toast('✅ 已重設為預設值');
+      openWageSettings(); // 重新渲染設定彈窗
+      
+      if (S.tab === 'history') renderHistory();
+      if (S.tab === 'home') renderHome();
+      if (S.tab === 'report') renderReport();
+    }
+  });
+}
+/* ════ 基本工資設定區 (預設值)(範圍設定) 結束════ */
+
 function normalizePlatforms(rawPlatforms) {
   if (!Array.isArray(rawPlatforms)) return DEFAULT_PLATFORMS.map(p => ({ ...p }));
   return DEFAULT_PLATFORMS.map(dp => {
@@ -310,22 +471,13 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
-  // 👇 基本工資分析邏輯 (收入為 0 時不顯示)
-  let wageHtml = '';
-  if (hours > 0 && total > 0) {
-    let wageStatus = ''; let wageColor = ''; let wageBg = '';
-    if (avgHr <= 154) { wageStatus = ' 😭 嚴重低於基本工資 '; wageColor = 'var(--red)'; wageBg = 'var(--red-d)'; } 
-    else if (avgHr <= 175) { wageStatus = ' ⚠️⚠️ 低於基本工資 '; wageColor = 'var(--acc2)'; wageBg = 'var(--acc-d)'; } 
-    else if (avgHr <= 195) { wageStatus = ' ⚠️ 略低於基本工資 '; wageColor = 'var(--blue)'; wageBg = 'var(--blue-d)'; } 
-    else { wageStatus = ' 🎉 符合基本工資 '; wageColor = 'var(--green)'; wageBg = 'var(--green-d)'; }
-    
-    wageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:11px; padding:4px 6px; border-radius:5px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
-  }
+  // 👇 基本工資分析
+  const wageHtml = getWageBadge(hours, total);
 
   return `
     <div class="hist-rec-card" style="border: 1.5px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-      <div class="hrc-top" onclick="foldCard('${cardId}', event)">
-        <div class="hrc-toggle" id="${cardId}-btn">▼</div>
+      <div class="hrc-top" onclick="foldCard('${cardId}', event)" style="padding: 2px 10px;">
+        <div class="hrc-toggle" id="${cardId}-btn" style="top: 2px;">▼</div>
         <div class="hrc-row1">
           <span class="hrc-plat-tag" style="background:var(--t2);">${title}</span>
         </div>
@@ -611,7 +763,7 @@ function _bindNavEvents() {
   document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
     const pg = el.dataset.pg; 
     if (pg === 'add') {
-      if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增記錄'); return; }
+      // if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增記錄'); return; }
       if (S.tab !== 'add') openAddPage(); 
     } else {
       goPage(pg); 
@@ -693,10 +845,10 @@ function renderHome() {
 
     // 今日概況標題
     topHtml += `
-      <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px;">
+      <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:3px;">
         <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1); line-height:1.2;">今日概況</div>
-        <div class="home-pg-date" style="font-size:13px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-          <b>${dateObj.getFullYear()}</b> 年 <b>${dateObj.getMonth()+1}</b> 月 <b>${dateObj.getDate()}</b> 日 星期 <b>${dow}</b>
+        <div class="home-pg-date" style="font-size:14px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <b style="color:#ea580c; font-family:var(--mono);">${dateObj.getFullYear()}</b> 年 <b style="color:#ea580c; font-family:var(--mono);">${dateObj.getMonth()+1}</b> 月 <b style="color:#ea580c; font-family:var(--mono);">${dateObj.getDate()}</b> 日 星期 <b style="color:#ea580c;">${dow}</b>
         </div>
       </div>
       <div class="today-hero">`;
@@ -709,14 +861,14 @@ function renderHome() {
       }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
 
       if (platStats.length > 0) {
-        topHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:2px;">`;
+        topHtml += `<div style="background:var(--sf); padding:4px 5px; border-radius:25px; border:1.5px solid var(--border); display:flex; flex-direction:column; gap:1px;">`;
         platStats.forEach(p => {
           topHtml += `
-            <div class="hero-plat-row" style="display:flex; align-items:center; padding:8px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}30); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
-              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span><span style="font-weight:700;"> 收入：</span></span>
+            <div class="hero-plat-row" style="display:flex; align-items:center; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}25); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
+              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span><span style="font-size:14px; font-weight:800;"> 收入：</span></span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
-              <span class="hp-ord" style="font-weight:600; width:20%; text-align:right;">${p.orders} 單</span>
-              <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
+              <span class="hp-ord" style="font-weight:600; width:20%; text-align:right; color: #ff6600;">${p.orders} 單</span>
+              <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; color: var(--text-blue); opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
             </div>`;
         });
         topHtml += `</div>`;
@@ -746,7 +898,7 @@ function renderHome() {
       }
     }
     topHtml += `
-      <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin:8px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
+      <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; margin:4px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
         <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
           <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
           <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span>
@@ -762,7 +914,7 @@ function renderHome() {
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
-        bottomHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:4px;">`;
+        bottomHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:2px;">`;
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
           if (!events) return;
@@ -1006,17 +1158,8 @@ function buildRecItem(r) {
   if (r.mileage > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${r.mileage} km</span>`; 
   if (_hours > 0) tagsHtml += `<span class="h-div"></span><span class="hrc-stat">${fmtHours(_hours)}</span>`;
 
-  // 基本工資判斷
-  let recWageHtml = '';
-  if (_hours > 0) {
-    let wageStatus = ''; let wageColor = ''; let wageBg = '';
-    if (avgHr <= 154) { wageStatus = '😭嚴重低於基本工資'; wageColor = 'var(--red)'; wageBg = 'var(--red-d)'; } 
-    else if (avgHr <= 175) { wageStatus = '⚠️⚠️低於基本工資'; wageColor = 'var(--acc2)'; wageBg = 'var(--acc-d)'; } 
-    else if (avgHr <= 195) { wageStatus = '⚠️略低於基本工資'; wageColor = 'var(--blue)'; wageBg = 'var(--blue-d)'; } 
-    else { wageStatus = '🎉符合基本工資'; wageColor = 'var(--green)'; wageBg = 'var(--green-d)'; }
-    
-    recWageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:12px; padding:6px 5px; border-radius:5px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
-  }
+  // 👇 基本工資分析
+  const recWageHtml = getWageBadge(_hours, total);
 
   // === 新增：保養維修專屬美化顯示 ===
   if (r.type === 'maintenance' || r.type === 'maint') {
@@ -1141,7 +1284,7 @@ function renderHistory() {
 
 function renderHistDayView() {
   const content = document.getElementById('hist-content'); const { calY:y, calM:m } = S;
-  content.innerHTML = `<div id="hist-header" style="padding:0 16px 6px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><button class="mbtn" id="hist-prev">◀</button><h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2><button class="mbtn" id="hist-next">▶</button><button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▲</button></div><div style="display:flex; gap:8px;"><button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button></div></div><div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;"><div class="month-grid" id="hist-calendar"></div></div><div class="hist-divider"></div><div id="hist-day-summary" style="margin:6px 0 4px;"></div><div class="sec-title" id="hist-day-label" style="margin-bottom:4px; padding:0 4px;">指定日記錄</div></div><div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:3px;"></div>`;
+  content.innerHTML = `<div id="hist-header" style="padding:0 16px 6px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><button class="mbtn" id="hist-prev">◀</button><h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2><button class="mbtn" id="hist-next">▶</button><button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▲</button></div><div style="display:flex; gap:8px;"><button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button></div></div><div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;"><div class="month-grid" id="hist-calendar"></div></div><div class="hist-divider"></div><div id="hist-day-summary" style="margin:6px 0 4px;"></div><div class="sec-title" id="hist-day-label" style="margin-bottom:4px; padding:0 4px; color: #000000;">指定日記錄</div></div><div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:3px;"></div>`;
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   renderHistCalendarGrid(); renderHistRecords(S.selDate);
@@ -1241,7 +1384,7 @@ function renderHistRecords(ds) {
     
     let sumHtml = total > 0 ? buildSummaryCard('當日', total, orders, hours, dayBonus, dayTemp, dayTips, 'hist-day-card') : '';
     if (cashTips > 0) {
-      sumHtml += `<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:10px 16px; margin:4px 2px; display:flex; justify-content:space-between; align-items:center;">
+      sumHtml += `<div style="background:#f0fdf4; border:1.5px solid #708090; border-radius:12px; padding:5px 16px; margin:2px 0px; display:flex; justify-content:space-between; align-items:center;">
         <span style="font-size:13px; font-weight:700; color:#15803d;">💵 當日現金小費 (不計入總收入)</span>
         <span style="font-family:var(--mono); font-size:16px; font-weight:800; color:#16a34a;">$${fmt(cashTips)}</span>
       </div>`;
@@ -1767,16 +1910,8 @@ function renderRptOverview() {
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
-  // 👇 基本工資分析邏輯
-  let wageHtml = '';
-  if (hours > 0) {
-    let wageStatus = ''; let wageColor = ''; let wageBg = '';
-    if (avgHr <= 154) { wageStatus = ' 😭 嚴重低於基本工資 '; wageColor = 'var(--red)'; wageBg = 'var(--red-d)'; } 
-    else if (avgHr <= 175) { wageStatus = ' ⚠️⚠️ 低於基本工資 '; wageColor = 'var(--acc2)'; wageBg = 'var(--acc-d)'; } 
-    else if (avgHr <= 195) { wageStatus = ' ⚠️ 略低於基本工資 '; wageColor = 'var(--blue)'; wageBg = 'var(--blue-d)'; } 
-    else { wageStatus = ' 🎉 符合基本工資 '; wageColor = 'var(--green)'; wageBg = 'var(--green-d)'; }
-    wageHtml = `<div style="margin-top:6px;"><span style="background:${wageBg}; color:${wageColor}; font-size:12px; padding:6px 5px; border-radius:5px; font-weight:800; letter-spacing:0px; white-space:nowrap; display:inline-block; line-height:1;">${wageStatus}</span></div>`;
-  }
+  // 👇 基本工資分析
+  const wageHtml = getWageBadge(hours, total);
 
   // 頂部導航
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; background:var(--sf); padding:8px; border-radius:12px; border:1px solid var(--border);">
@@ -1794,9 +1929,9 @@ function renderRptOverview() {
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:12px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.50); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:2px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.50); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
       
-      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:10px 0px; cursor:pointer; text-align:center;">
+      <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:4px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
           ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}; box-shadow:0 2px 6px ${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}60; font-size:14px; padding:4px 14px;">${filterName}</span>`}
           <span style="font-size:18px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
@@ -2262,6 +2397,50 @@ function selectVehicle(id) {
   S.selVehicleId = id; 
   _syncVehSelectorActive(id); // 呼叫更新樣式而不重繪
   renderVehicleContent();     // 只重繪下方的詳細紀錄與數據框
+  updateCurrentVehInfoDisplay(id);
+}
+
+/* ══ 車輛選單折疊功能 ══ */
+window.toggleVehSelector = function() {
+  const wrap = document.getElementById('veh-selector-wrapper');
+  const btn = document.getElementById('veh-selector-toggle-btn');
+  if (wrap.style.maxHeight === '0px' || wrap.style.maxHeight === '') {
+    wrap.style.maxHeight = '160px'; // 展開
+    wrap.style.opacity = '1';
+    btn.style.transform = 'rotate(0deg)';
+  } else {
+    wrap.style.maxHeight = '0px';   // 折疊
+    wrap.style.opacity = '0';
+    btn.style.transform = 'rotate(180deg)';
+  }
+};
+
+/* ══ 更新：目前所選車輛的標籤資訊 (橫向排版) ══ */
+function updateCurrentVehInfoDisplay(id) {
+  const infoEl = document.getElementById('veh-current-info');
+  if (!infoEl) return;
+  const v = S.vehicles.find(x => x.id === id);
+  if (!v) {
+    infoEl.style.display = 'none';
+    return;
+  }
+  infoEl.style.display = 'flex';
+
+  const fuelMap = { '92':'92無鉛', '95':'95無鉛', '98':'98無鉛', 'electric':'電動車' };
+  const fName = fuelMap[v.defaultFuel] || v.defaultFuel;
+  const isEV = v.defaultFuel === 'electric';
+
+  // 根據 油車 / 電車 給予兩種不同的顏色設計
+  const tagBg = isEV ? 'rgba(59,130,246,0.12)' : 'rgba(234,88,12,0.12)';
+  const tagColor = isEV ? '#2563eb' : '#ea580c';
+  const fuelIcon = isEV ? '🔋' : '⛽';
+  const fuelColor = isEV ? '#059669' : '#64748b'; 
+
+  // 橫向排版： [名稱標籤]  [圖示+油品]
+  infoEl.innerHTML = `
+    <span style="background:${tagBg}; color:${tagColor}; font-size:11px; font-weight:800; padding:2px 6px; border-radius:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100px;" title="${safeText(v.name)}">${safeText(v.name)}</span>
+    <span style="font-size:11px; font-weight:800; color:${fuelColor}; white-space:nowrap;">${fuelIcon} ${fName}</span>
+  `;
 }
 
 /* ══ 替換：車輛清單渲染 (排版對齊 11.jpg) ══ */
@@ -2280,6 +2459,7 @@ function renderVehicles() {
   }
   if (S.vehicles.length === 0) { selectorContainer.innerHTML = ''; container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return; }
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
+  updateCurrentVehInfoDisplay(S.selVehicleId); // 👈 加入這行，保證一進畫面就更新
 
   let selectorHtml = `<div style="display:flex; gap:16px; overflow-x:auto; padding:4px 4px 8px;" class="hide-scroll">`;
   const fuelMap = { '92':'92 無鉛', '95':'95 無鉛', '98':'98 無鉛', 'electric':'電動車' };
@@ -2586,7 +2766,7 @@ const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞
 
 /* ══ 替換：新增車輛記錄 (阻擋電動車抓油價，並修正保養項目空白問題) ══ */
 function openAddVehRec(recordId = null) {
-  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增車輛記錄'); return; }
+  //if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增車輛記錄'); return; }
   
   editingVehRecId = recordId; const isEdit = !!recordId; 
   if (!isEdit && S.vehicles.length === 0) { toast('請先新增車輛'); return; }
@@ -3025,8 +3205,8 @@ function renderSettings() {
   
   // 判斷上次備份時間
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:15px; color:var(--text-blue); font-weight:700; font-family:var(--mono);">&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:15px; color:var(--text-red);  font-weight:700; font-family:var(--mono);">&emsp;尚未進行本機存檔</span>`;
+    ? `<span style="font-size:15px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;&emsp;&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
+    : `<span style="font-size:15px; color: #ff0000;  font-weight:600; font-family:var(--mono);">&emsp;&emsp;&emsp;🆘 尚未進行本機存檔</span>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -3039,6 +3219,7 @@ function renderSettings() {
     <div class="set-row" onclick="openGoalSettings()"><span class="sn">🎯 收入目標設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openRewardSettings()"><span class="sn">🎁 獎勵項目設定</span><span class="arr">›</span></div>
     <div class="set-row" onclick="openReminderSettings()"><span class="sn">⏰ 每日記錄通知提醒</span><span class="arr">›</span></div>
+    <div class="set-row" onclick="openWageSettings()"><span class="sn">⚖️ 基本工資分析設定</span><span class="arr">›</span></div>
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
@@ -3763,7 +3944,7 @@ async function checkAccountStatus() {
 /* ══ 替換：移除煩人的驗證進度條，登入後直接放行 ══ */
 const originalConfirmAddRecord = confirmAddRecord;
 confirmAddRecord = async function() {
-  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號'); return; }
+  //if (!USER.loggedIn) { toast('⚠️ 請先登入帳號'); return; }
   // 取消原本的「驗證權限中...」進度條，直接執行新增動作
   originalConfirmAddRecord();
 }
@@ -4264,7 +4445,7 @@ function openPrivacyPolicy(fromRegister = false) {
       </div>
 
       <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background: rgba(140, 255, 167, 0.3); padding:3px 6px 5px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background: rgba(140, 255, 167, 0.3); padding:3px 6px 10px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
         <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
@@ -4275,8 +4456,7 @@ function openPrivacyPolicy(fromRegister = false) {
         </div>
 
         <div style="display:flex; align-items:center; gap:6px; color:var(--red); font-weight:800; font-size:12px; margin-top:16px; margin-bottom:6px;">
-          <span>🔐</span> 軍規級密碼安全 (PBKDF2)
-        </div>
+          <span>🔐</span> 軍規級密碼安全 (PBKDF2) </div>
         <div style="padding-left:4px;">
           • 我們採用美國國家標準技術研究所 (NIST) 認可的 <b>PBKDF2</b> 安全演算法。<br>
           <div style="margin-top:8px; padding:10px; border-left:3px solid var(--acc); background:var(--sf); border-radius:4px 8px 8px 4px;">
