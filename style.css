@@ -11,11 +11,7 @@
   --overlay-bg: rgba(240, 244, 248, 0.95);
   --bg-input: #f8fafc;
 
-  --t1: #0f172a; 
-  --t2: #475569; 
-  --t3: #94a3b8; 
-  --t4: #12b63b;
-  --hint-color: #3b82f6;
+  --t1:#0f172a;--t2:#475569;--t3:#94a3b8;--t4:#12b63b;--hint-color:#3b82f6;
 
   --card-border: #cbd5e1;
   --cashtip-bg: rgba(34, 197, 94, 0.08);
@@ -120,7 +116,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .slide-btn.active { color: #fff; font-weight: 700; }
 
 /* ══ 7. 首頁專區 (打卡按鈕) ══ */
-.punch-card-new { background: var(--sf); border: 1px solid var(--border); border-radius: 20px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
+.punch-card-new { background: var(--sf); border: 1px solid var(--border); border-radius: 20px; padding: 1px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
 .punch-status-left { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--t2); }
 @keyframes blinkEffect { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
 .punch-dot-new { width: 12px; height: 12px; border-radius: 50%; background: #e2e8f0; }
@@ -131,28 +127,29 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .btn-go-offline { background: var(--red); color: #fff; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
 
 /* ══ 8. 記錄卡片與下拉面板 ══ */
-.hist-rec-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; margin-top:2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
-.punch-card-compact { display: flex; align-items: center; padding: 10px 12px; cursor: pointer; }
-.hrc-top { padding: 8px 10px; position: relative; cursor: pointer; }
-.hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
-.hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; font-weight: 600; margin-bottom: 3px; }
+.hist-rec-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; margin-top:1px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
+/* 上線打卡記錄 */
+.punch-card-compact { display: flex; align-items: center; padding: 4px 12px; cursor: pointer; border-radius: 13px; }
+.hrc-top { padding: 2px 10px; position: relative; cursor: pointer; }
+.hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
+.hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; font-weight: 600; margin-bottom: 1px; }
 .hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hrc-amt { font-family: var(--mono); font-size: 18px; font-weight: 800; color: #0f172a; }
 .hrc-stat { font-size: 12px; font-weight: 600; color: #475569; }
 .h-div { width: 2px; height: 15px; background: #cbd5e1; }
-.hrc-toggle { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 70%); color: #0044cc; font-size: 22px; cursor: pointer; transition: transform 0.3s; }
+.hrc-toggle { position: absolute; right: 10px; top: 2px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 70%); color: #0044cc; font-size: 22px; cursor: pointer; transition: transform 0.3s; }
 .hrc-collapse { background: #ffffff; border-top: 1.5px dashed #e2e8f0; display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
 
 /* ══ 9. 現代化小日曆 (極簡縮小版) ══ */
-#hist-calendar { background: #ffffff; border-radius: 16px; padding: 8px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid #f1f5f9; }
-.month-grid { display: flex; flex-direction: column; gap: 2px; }
-.month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+#hist-calendar { background: #ffffff; border-radius: 18px; padding: 1px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid #f1f5f9; }
+.month-grid { display: flex; flex-direction: column; gap: 0px; }
+.month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0px; }
 .month-cell { padding: 0; position: relative; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 40px; background: transparent !important; -webkit-tap-highlight-color: transparent; }
-.month-cell.month-dow { font-size: 13px; color: #ea580c; font-weight: 900; cursor: default; min-height: 20px; padding-bottom: 4px; }
+.month-cell.month-dow { font-size: 13px; color: #ff5900; font-weight: 900; cursor: default; min-height: 20px; padding-bottom: 2px; }
 .day-num { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: 600; color: #334155; transition: 0.2s; z-index: 1; }
 .month-cell:active .day-num { transform: scale(0.9); }
-.month-cell.sel .day-num { background: #2563eb; color: #ffffff; font-weight: 800; box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3); }
-.month-cell.today:not(.sel) .day-num { background: #eff6ff; color: #2563eb; font-weight: 800; }
+.month-cell.sel .day-num { background: #2563eb; color: #ffffff; font-weight: 800; }
+.month-cell.today:not(.sel) .day-num { background: hsl(32, 100%, 50%); color: #1c1c1c; font-weight: 800; }
 .has-rec-dot { position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: #10b981; z-index: 2; }
 .month-cell.sel .has-rec-dot { background: #60a5fa; }
 
@@ -163,13 +160,13 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 #fc-body { background: var(--sf); }
 #fc-dow { padding-top: 4px; }
 .fc-dow-cell { text-align: center; font-size: 12px; font-weight: 700; color: #ff5900; padding: 8px 0; }
-#fc-grid { background: var(--border); display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0; align-content: start; }
+#fc-grid { background: var(--border); display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0; grid-auto-rows: 1fr; }
 .fc-cell { background: var(--sf); display: flex; flex-direction: column; padding: 6px; min-height: 54px; position: relative; }
 .fc-cell.empty { background: transparent; }
 .fc-date { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--t1); margin-bottom: auto; line-height: 1; }
 .fc-cell.empty .fc-date { color: var(--t3); }
-.fc-cell.has-income { background: hsla(282, 100%, 63%, 0.7); }
-.fc-cell.has-income .fc-amt { font-family: var(--sans); font-size: 13px; font-weight: 600; color: #00ff5e; text-align: right; margin-top: auto; position: absolute; bottom: 6px; right: 6px; }
+.fc-cell.has-income { background: #ecfdf5; }
+.fc-cell.has-income .fc-amt { font-family: var(--sans); font-size: 13px; font-weight: 800; color: #059669; text-align: right; margin-top: auto; position: absolute; bottom: 6px; right: 6px; }
 .fc-cell.today .fc-date { color: #fff; background: #2563eb; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: -2px 0 0 -2px; }
 
 /* ══ 11. 車輛管理：月份導航與標籤 ══ */
@@ -196,7 +193,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .set-list { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
 .set-row { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; cursor: pointer; transition: .12s; font-weight: 600; color: #0f172a;}
 .set-row:last-child { border-bottom: none; }
-.set-row .sn { flex: 1; display: flex; flex-direction: column; gap: 4px;}
+.set-row .sn { flex: 1; display: flex; flex-direction: column; gap: 6px;}
 .set-row .arr { color: #94a3b8; font-size: 16px; font-weight: bold; }
 .set-row .sn-sub { font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 500;}
 .plat-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
