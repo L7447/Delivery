@@ -95,6 +95,9 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 #add-form-regular .finp:focus { background: var(--sf); }
 #veh-rec-add-page .finp, #veh-rec-add-page .fsel { border: 1.5px solid var(--veh-inp-border, #e2e8f0); background: var(--veh-inp-bg, #f8fafc); color: var(--veh-inp-color, #0f172a); }
 #veh-rec-add-page .finp:focus, #veh-rec-add-page .fsel:focus { background: var(--sf); }
+/* 👇 新增這兩行：現金小費表單輸入框專屬綠色 */
+#add-form-cashtip .finp { border: 1.5px solid var(--green); background: rgba(34, 197, 94, 0.05); color: var(--green); font-weight: 700; }
+#add-form-cashtip .finp:focus { background: var(--sf); }
 
 /* 進度條 */
 .progress-track { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 6px 0; }
@@ -143,7 +146,8 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 /* ══ 9. 現代化小日曆 (極簡縮小版) ══ */
 #hist-calendar { background: #ffffff; border-radius: 18px; padding: 1px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid #f1f5f9; }
 .month-grid { display: flex; flex-direction: column; gap: 0px; }
-.month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0px; }
+.month-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0px; overflow: hidden; transition: max-height 0.35s ease, opacity 0.2s ease; max-height: 60px; }
+.collapsed-cal .month-row:not(.header-row):not(.current-week) { max-height: 0px; opacity: 0; }
 .month-cell { padding: 0; position: relative; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 40px; background: transparent !important; -webkit-tap-highlight-color: transparent; }
 .month-cell.month-dow { font-size: 13px; color: #ff5900; font-weight: 900; cursor: default; min-height: 20px; padding-bottom: 2px; }
 .day-num { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: 600; color: #334155; transition: 0.2s; z-index: 1; }
