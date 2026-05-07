@@ -1091,13 +1091,15 @@ function foldCard(id, e) {
 }
 
 function toggleCalendarGrid() {
-  const wrap = document.getElementById('hist-calendar-wrap');
+  const grid = document.getElementById('hist-calendar');
   const btn = document.getElementById('hist-cal-toggle');
-  if (wrap.style.maxHeight === '0px' || wrap.style.maxHeight === '') {
-    wrap.style.maxHeight = '500px';
+  if (!grid || !btn) return;
+  
+  if (grid.classList.contains('collapsed-cal')) {
+    grid.classList.remove('collapsed-cal');
     btn.textContent = '▲';
   } else {
-    wrap.style.maxHeight = '0px';
+    grid.classList.add('collapsed-cal');
     btn.textContent = '▼';
   }
 }
@@ -1284,7 +1286,30 @@ function renderHistory() {
 
 function renderHistDayView() {
   const content = document.getElementById('hist-content'); const { calY:y, calM:m } = S;
-  content.innerHTML = `<div id="hist-header" style="padding:0 16px 6px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><button class="mbtn" id="hist-prev">◀</button><h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2><button class="mbtn" id="hist-next">▶</button><button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▲</button></div><div style="display:flex; gap:8px;"><button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button></div></div><div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;"><div class="month-grid" id="hist-calendar"></div></div><div class="hist-divider"></div><div id="hist-day-summary" style="margin:6px 0 4px;"></div><div class="sec-title" id="hist-day-label" style="margin-bottom:4px; padding:0 4px; color: #000000;">指定日記錄</div></div><div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:3px;"></div>`;
+  content.innerHTML = `<div id="hist-header" style="padding:0 16px 6px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="mbtn" id="hist-prev">◀</button>
+        <h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2>
+        <button class="mbtn" id="hist-next">▶</button>
+        <!-- 👇 這裡將箭頭改為預設 ▼ -->
+        <button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="font-size:12px; color:var(--t3);" title="收起/展開日曆">▼</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+        <button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button>
+      </div>
+    </div>
+    <div id="hist-calendar-wrap" style="transition: max-height 0.3s ease; overflow: hidden; max-height: 500px;">
+      <!-- 👇 這裡加入 collapsed-cal 讓它預設為折疊狀態 -->
+      <div class="month-grid collapsed-cal" id="hist-calendar"></div>
+    </div>
+    <div class="hist-divider"></div>
+    <div id="hist-day-summary" style="margin:6px 0 4px;"></div>
+    <div class="sec-title" id="hist-day-label" style="margin-bottom:4px; padding:0 4px; color: #000000;">指定日記錄</div>
+  </div>
+  <div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:3px;"></div>`;
+  
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   renderHistCalendarGrid(); renderHistRecords(S.selDate);
@@ -1292,14 +1317,45 @@ function renderHistDayView() {
 
 function renderHistCalendarGrid() {
   const { calY:y, calM:m } = S; const grid = document.getElementById('hist-calendar'); const first = new Date(y, m-1, 1).getDay(); const days  = new Date(y, m, 0).getDate(); const DOW = ['日','一','二','三','四','五','六'];
-  let html = `<div class="month-row">`; DOW.forEach(d => { html += `<div class="month-cell month-dow">${d}</div>`; }); html += `</div><div class="month-row">`;
-  let col = 0; for (let i=0; i<first; i++) { html += `<div class="month-cell"></div>`; col++; }
+  
+  let html = `<div class="month-row header-row">`; 
+  DOW.forEach(d => { html += `<div class="month-cell month-dow">${d}</div>`; }); 
+  html += `</div><div class="month-row">`;
+  
+  let col = 0; 
+  for (let i=0; i<first; i++) { html += `<div class="month-cell"></div>`; col++; }
   for (let day=1; day<=days; day++) {
-    const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); const cls = ['month-cell', ds===todayStr()?'today':'', ds===S.selDate?'sel':''].filter(Boolean).join(' '); const dotHtml = sum > 0 ? `<div class="has-rec-dot"></div>` : '';
+    const ds  = `${y}-${pad(m)}-${pad(day)}`; 
+    const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); 
+    const cls = ['month-cell', ds===todayStr()?'today':'', ds===S.selDate?'sel':''].filter(Boolean).join(' '); 
+    const dotHtml = sum > 0 ? `<div class="has-rec-dot"></div>` : '';
     html += `<div class="${cls}" data-ds="${ds}">${dotHtml}<div class="day-num">${day}</div></div>`;
-    col++; if (col % 7 === 0 && day < days) { html += `</div><div class="month-row">`; }
-  } html += `</div>`; grid.innerHTML = html;
-  grid.querySelectorAll('.month-cell[data-ds]').forEach(cell => { cell.addEventListener('click', () => { S.selDate = cell.dataset.ds; grid.querySelectorAll('.month-cell').forEach(c => c.classList.toggle('sel', c.dataset.ds === S.selDate)); renderHistRecords(S.selDate); }); });
+    col++; 
+    if (col % 7 === 0 && day < days) { html += `</div><div class="month-row">`; }
+  } 
+  html += `</div>`; 
+  grid.innerHTML = html;
+
+  // 標記包含選定日期的該週為 current-week
+  grid.querySelectorAll('.month-row').forEach(row => {
+    if (row.querySelector('.sel')) row.classList.add('current-week');
+  });
+
+  grid.querySelectorAll('.month-cell[data-ds]').forEach(cell => { 
+    cell.addEventListener('click', () => { 
+      S.selDate = cell.dataset.ds; 
+      
+      // 更新格子選中狀態
+      grid.querySelectorAll('.month-cell').forEach(c => c.classList.toggle('sel', c.dataset.ds === S.selDate)); 
+      
+      // 即時更新當前所在週 (確保折疊狀態下如果點擊到相鄰日期，能無縫切換顯示正確的週)
+      grid.querySelectorAll('.month-row').forEach(row => row.classList.remove('current-week'));
+      const newSel = grid.querySelector('.sel');
+      if (newSel) newSel.closest('.month-row').classList.add('current-week');
+
+      renderHistRecords(S.selDate); 
+    }); 
+  });
 }
 
 /* 尋找 renderHistGroupView() 中這段邏輯，將 halfmonth 條件加進去 */
@@ -2426,20 +2482,20 @@ function updateCurrentVehInfoDisplay(id) {
   }
   infoEl.style.display = 'flex';
 
-  const fuelMap = { '92':'92無鉛', '95':'95無鉛', '98':'98無鉛', 'electric':'電動車' };
+  const fuelMap = { '92':'92 無鉛', '95':'95 無鉛', '98':'98 無鉛', 'electric':'電 池' };
   const fName = fuelMap[v.defaultFuel] || v.defaultFuel;
   const isEV = v.defaultFuel === 'electric';
 
   // 根據 油車 / 電車 給予兩種不同的顏色設計
-  const tagBg = isEV ? 'rgba(59,130,246,0.12)' : 'rgba(234,88,12,0.12)';
-  const tagColor = isEV ? '#2563eb' : '#ea580c';
+  const tagBg = isEV ? 'hsl(0, 0%, 100%)' : 'hsl(0, 0%, 100%)';
+  const tagColor = isEV ? 'hsl(221, 100%, 62%)' : 'hsl(21, 100%, 50%)';
   const fuelIcon = isEV ? '🔋' : '⛽';
-  const fuelColor = isEV ? '#059669' : '#64748b'; 
+  const fuelColor = isEV ? '#228B22' : 'rgb(255, 0, 0)'; 
 
-  // 橫向排版： [名稱標籤]  [圖示+油品]
+  // 橫向排版： [名稱標籤]、[圖示+油品]
   infoEl.innerHTML = `
-    <span style="background:${tagBg}; color:${tagColor}; font-size:11px; font-weight:800; padding:2px 6px; border-radius:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100px;" title="${safeText(v.name)}">${safeText(v.name)}</span>
-    <span style="font-size:11px; font-weight:800; color:${fuelColor}; white-space:nowrap;">${fuelIcon} ${fName}</span>
+    <span style="background:${tagBg}; color:${tagColor}; border:1px solid #ff0606; font-size:13px; font-weight:600; padding:5px 6px; border-radius:14px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100px; align-items: center; justify-content:center; text-align:center" title="${safeText(v.name)}">${safeText(v.name)}</span>
+    <span style="font-size:14px; font-weight:700; color:${fuelColor}; white-space:nowrap;">${fuelIcon} ${fName}</span>
   `;
 }
 
