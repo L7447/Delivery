@@ -9,7 +9,7 @@
   --border: #e2e8f0;
   --bg-header: rgba(255, 255, 255, 0.85);
   --overlay-bg: rgba(240, 244, 248, 0.95);
-  --bg-input: #f8fafc;
+  --bg-input: #eaedf0;
 
   --t1:#0f172a;--t2:#475569;--t3:#94a3b8;--t4:#12b63b;--hint-color:#3b82f6;
 
@@ -91,15 +91,18 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .finp:focus, .fsel:focus { border-color: var(--acc); background: var(--sf); box-shadow: 0 0 0 3px var(--acc-d); }
 
 /* 新增頁輸入框專屬顏色 */
-#add-form-regular .finp { border: 1.5px solid var(--acc); background: rgba(255, 107, 53, 0.05); color: var(--acc); }
+#add-form-regular .finp { border: 1.5px solid var(--acc); background: rgba(255, 107, 53, 0.05); color: #007AFF; font-weight: 800; }
 #add-form-regular .finp:focus { background: var(--sf); }
 #veh-rec-add-page .finp, #veh-rec-add-page .fsel { border: 1.5px solid var(--veh-inp-border, #e2e8f0); background: var(--veh-inp-bg, #f8fafc); color: var(--veh-inp-color, #0f172a); }
 #veh-rec-add-page .finp:focus, #veh-rec-add-page .fsel:focus { background: var(--sf); }
-/* 👇 新增這兩行：現金小費表單輸入框專屬綠色 */
-#add-form-cashtip .finp { border: 1.5px solid var(--green); background: rgba(34, 197, 94, 0.05); color: var(--green); font-weight: 700; }
+/* 現金小費表單輸入框專屬顏色 */
+#add-form-cashtip .finp { border: 1.5px solid var(--green); background: rgba(87, 168, 117, 0.05); color: #ff31b4; font-weight: 800; }
 #add-form-cashtip .finp:focus { background: var(--sf); }
+/* 現金小費專屬標籤樣式 */
+.ct-tag { padding: 4px 10px; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: transform 0.2s, filter 0.2s; background: hsl(37, 100%, 91%); color: #1289ff; border: 1.5px solid #008080; }
+.ct-tag:active { transform: scale(0.92); filter: brightness(0.9); }
 
-/* 進度條 */
+/* ══ 進度條 ══ */
 .progress-track { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 6px 0; }
 .progress-fill { height: 100%; border-radius: 4px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
@@ -130,14 +133,14 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .btn-go-offline { background: var(--red); color: #fff; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
 
 /* ══ 8. 記錄卡片與下拉面板 ══ */
-.hist-rec-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; margin-top:1px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
+.hist-rec-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; margin-top:0px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
 /* 上線打卡記錄 */
 .punch-card-compact { display: flex; align-items: center; padding: 4px 12px; cursor: pointer; border-radius: 13px; }
 .hrc-top { padding: 2px 10px; position: relative; cursor: pointer; }
 .hrc-plat-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; }
 .hrc-row1 { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; font-weight: 600; margin-bottom: 1px; }
 .hrc-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.hrc-amt { font-family: var(--mono); font-size: 18px; font-weight: 800; color: #0f172a; }
+.hrc-amt { font-family: var(--mono); font-size: 20px; font-weight: 800; color: #0f172a; }
 .hrc-stat { font-size: 12px; font-weight: 600; color: #475569; }
 .h-div { width: 2px; height: 15px; background: #cbd5e1; }
 .hrc-toggle { position: absolute; right: 10px; top: 2px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 70%); color: #0044cc; font-size: 22px; cursor: pointer; transition: transform 0.3s; }
@@ -269,3 +272,46 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 input:checked + .slider { background-color: var(--green); }
 input:checked + .slider:before { transform: translateX(20px); }
+
+/* ══ 精緻版車輛記錄卡片設計 (緊湊大資訊區版) ══ */
+.v-card { display: flex; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-bottom: 5px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+.v-card:active { transform: scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,0.02); }
+
+/* 左側：圖示區 (固定窄寬度，擠出空間) */
+.vc-left { width: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 4px; background: #f8fafc; border-right: 1px dashed #e2e8f0; }
+.vc-left img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05)); }
+
+/* 中間：資訊區 (自動填滿剩下所有空間，縮小上下內距) */
+.vc-mid { flex: 1; padding: 5px 8px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+.vc-mid-top { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.vc-mid-top::-webkit-scrollbar { display: none; }
+.vc-mid-bot { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+/* 頂部文字與標籤 */
+.vt-time { font-size: 11px; font-weight: 800; color: #475569; font-family: var(--mono); letter-spacing: 0px; }
+.vt-tag { border-radius: 6px; padding: 1px 5px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+
+/* 底部數據藥丸 (稍微縮小字體讓單排能塞更多) */
+.vb-pill { background: #f1f5f9; border-radius: 6px; padding: 2px 5px; font-size: 11px; font-weight: 800; white-space: nowrap; font-family: var(--mono); display: flex; align-items: baseline; gap: 3px; }
+
+/* 右側：金額與里程區 (固定邊距，不浪費多餘寬度) */
+.vc-right { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 10px; border-left: 1px dashed #cbd5e1; background: #ffffff; flex-shrink: 0; }
+.vc-right-val { font-family: var(--mono); font-size: 15px; font-weight: 900; white-space: nowrap; }
+
+/* ══ TOP5 月份切換新版導航列 ══ */
+.btn {
+   display: flex;
+   flex-direction: column;
+   justify-content: center;
+   align-items: center;
+   text-align: center;
+   border-radius: 50%;
+   text-align: center;
+   font-weight: 900;
+   font-size: 32px;
+}
+.btn:active { transform: translateY(4px); background: var(--sf2); }
+.btn1{color:hsl(270, 100%, 64%);background:#e8d1ff;}
+.btn2{color:#5cbdbb;background:#b2e0df;}
+.btn3{color:hsl(330, 100%, 56%);background:hsla(330, 100%, 88%, 0.7);}
+.btn4{color:#84c1ff;background:#b2d8ff;}
