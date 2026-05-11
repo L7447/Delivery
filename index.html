@@ -271,8 +271,7 @@
 
   <section class="page" id="page-history" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
     <div class="fixed-header">
-      <!-- 👇 查看記錄標題放大加粗 -->
-      <div class="pg-title" style="margin:0px;">查看記錄</div>
+      <div class="pg-title">查看記錄</div>
       <div class="slide-tabs tabs-6" style="margin: 0;">
         <div class="slide-bg" id="hist-tab-bg" style="transform: translateX(0%);"></div>
         <button class="slide-btn active" id="btn-hist-day" onclick="switchHistTab('day', 0)">日</button>
@@ -289,12 +288,11 @@
   <!-- ══ 新增外送記錄 (全新模組化排版) ══ -->
   <section class="page" id="page-add" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
     <div class="fixed-header">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
         <button onclick="animateClose(this, () => cancelAddRecord())" class="bar-btn"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
-        <div class="pg-title" id="add-page-title" style="margin:0; font-size:20px;">新增記錄</div>
+        <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>
         <button id="add-save-btn" onclick="confirmAddRecord()" class="bar-btn" style="transition:transform 0.2s;"><img id="add-save-img" src="images/Check1.png" style="width:100%; height:100%; object-fit:contain;"></button>
       </div>
-      <!-- 👇 補回頁籤背景顏色 -->
       <div class="slide-tabs tabs-2" style="margin-bottom:0; background:#e2e8f0; padding:4px;">
         <div class="slide-bg" id="add-tab-bg" style="transform: translateX(0%); background:var(--acc);"></div>
         <button class="slide-btn active" id="btn-add-regular" onclick="switchAddTab('regular', 0)">行程記錄</button>
@@ -434,7 +432,7 @@
 
   <section class="page" id="page-report" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
     <div class="fixed-header">
-      <div class="pg-title" style="margin-bottom:0px;">收入分析</div>
+      <div class="pg-title">收入分析</div>
       <div class="slide-tabs tabs-5" id="rpt-tabs" style="margin-bottom:0;">
         <div class="slide-bg" id="rpt-tab-bg" style="transform: translateX(0%);"></div>
         <button class="slide-btn active" onclick="switchRptTab('overview', 0, this)">總覽</button>
@@ -444,7 +442,7 @@
         <button class="slide-btn" onclick="switchRptTab('top3', 4, this)">TOP5</button>
       </div>
     </div>
-    <div style="flex:1; overflow-y:auto; padding:12px 16px 24px;">
+    <div style="flex:1; overflow-y:auto; padding:12px 16px 4px;">
       <div id="rv-overview"></div>
       <div id="rv-rewards" style="display:none"></div>
       <div id="rv-trend" style="display:none"></div>
@@ -764,23 +762,19 @@
 </div>
 
 <div class="overlay-page" id="about-page" style="z-index:1000;">
-  <div class="top-bar" style="border:none; background:transparent;">
-    <button class="bar-btn" onclick="closeOverlay('about-page')" style="width: 35px; height: 35px; background:transparent; border:1.5px solid var(--dow-color)75; border-radius:50%;">
-      <img src="images/arrow_back.png" style="width:90%; height:90%; object-fit:contain; justify-content:center; align-items:center; display:flex; margin-left:2px;">
+  <!-- 👇 更新為標準子頁面頂部樣式 (與每日記錄提醒一致) -->
+  <div class="top-bar">
+    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('about-page'))">
+      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
     </button>
-    <h2 style="font-size:16px; font-weight:700;">關於我們</h2>
-    <div style="width:36px"></div>
+    <h2>關於我們</h2>
+    <div style="min-width:36px; text-align:right;"></div>
   </div>
+  
   <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
-    <!--<img src="images/Miyako.webp" alt="Logo" style="width:400px; height:400px; margin:1px; object-fit:contain; pointer-events:none; user-select:none; -webkit-user-drag:none;" oncontextmenu="return false;">-->
-
-    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px;">ej/ao3tjpfu8製作 2026 © v1.5.10.19251</div>
+    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px; margin-top:24px;">ej/ao3tjpfu8製作 2026 © v1.5.10.19251</div>
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
-      <!--<div onclick="openSpecialThanks()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">-->
-        <!--<span style="font-size:15px; font-weight:500; color:var(--t1);">特別感謝 💖</span>-->
-        <!--<span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>-->
-      <!--</div>-->
       <div onclick="openContactUs()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <span style="font-size:15px; font-weight:500; color:var(--t1);">聯絡我們</span>
         <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
@@ -800,11 +794,26 @@
   
 <div class="overlay-page" id="privacy-page" style="z-index:1200;">
   <div class="top-bar">
-    <button class="bar-btn" onclick="closeOverlay('privacy-page')" style="font-size:32px; font-weight:300; color:var(--t1);">‹</button>
-    <h2 style="font-size:16px; font-weight:700;">隱私權政策</h2>
-    <div style="width:36px"></div>
+    <!-- 👇 改綁定 flipCloseOverlay -->
+    <button class="bar-btn" onclick="flipCloseOverlay(this, 'privacy-page')">
+      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+    </button>
+    <h2>隱私權政策</h2>
+    <div style="min-width:36px; text-align:right;"></div>
   </div>
   <div class="overlay-body" id="privacy-body"></div>
+</div>
+
+<!-- 新增：專屬聯絡我們頁面 (支援向右翻頁) -->
+<div class="overlay-page" id="contact-page" style="z-index:1200;">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="flipCloseOverlay(this, 'contact-page')">
+      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+    </button>
+    <h2>聯絡我們</h2>
+    <div style="min-width:36px; text-align:right;"></div>
+  </div>
+  <div class="overlay-body" id="contact-body"></div>
 </div>
 
 </div> <!-- 結尾 #app -->
