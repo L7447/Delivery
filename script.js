@@ -339,7 +339,7 @@ function fmtHours(hVal) {
   return `${mins}m`;
 }
 
-function toast(msg, ms=3000) {
+function toast(msg, ms=3500) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), ms);
@@ -439,6 +439,26 @@ function animateClose(btn, action) {
     img.src = 'images/close1.png'; // 恢復原狀以供下次開啟
     btn.style.pointerEvents = 'auto';
   }, 400);
+}
+
+/* 專屬：向右翻頁並停留 2 秒的關閉動畫 */
+window.flipCloseOverlay = function(btn, overlayId) {
+  const overlay = document.getElementById(overlayId);
+  const img = btn.querySelector('img');
+
+  if (img) img.src = 'images/close2.png';
+  btn.style.pointerEvents = 'none';
+
+  // 套用向右翻頁動畫 Class
+  overlay.classList.add('flip-page-out');
+
+  // 停留 2 秒 (2000ms) 後，才真正移除元素並復原狀態
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    overlay.classList.remove('flip-page-out'); // 清除動畫，確保下次開啟正常
+    if (img) img.src = 'images/close1.png';
+    btn.style.pointerEvents = 'auto';
+  }, 2000);
 }
 
 function toggleSummaryCard(id) {
@@ -777,7 +797,7 @@ function _bindNavEvents() {
   document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
     const pg = el.dataset.pg; 
     if (pg === 'add') {
-      // if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增記錄'); return; }
+      if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增記錄'); return; } // ✅ 恢復登入限制
       if (S.tab !== 'add') openAddPage(); 
     } else {
       goPage(pg); 
@@ -1859,7 +1879,6 @@ async function confirmAddRecord() {
       tempBonus: temp, 
       tips, 
       note: document.getElementById('f-note').value.trim(), 
-      syncStatus: 0, 
       updatedAt: Date.now() 
     };
   }
@@ -1884,49 +1903,6 @@ async function confirmAddRecord() {
     checkBtn.disabled = false; 
     goPage('home');
   });
-}
-
-/* ══ 背景同步功能 (Offline-First 核心) ══ */
-async function backgroundSync() {
-  // 1. 沒登入或沒網路時，直接終止，等下次有網路再說
-  if (!USER.loggedIn || !navigator.onLine) return;
-
-  // 2. 從 LocalStorage 撈出所有「未同步」的記錄
-  const pendingRecords = S.records.filter(r => r.syncStatus === 0);
-  
-  if (pendingRecords.length === 0) return; // 全部都同步過了，沒事做
-
-  console.log(`準備在背景同步 ${pendingRecords.length} 筆資料...`);
-
-  try {
-    // 3. 發送給 Cloudflare Worker API
-    const res = await fetch(`${API_BASE_URL}/sync`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        // 👇 新增這行：把 Token 放在正確的位置送出
-        'Authorization': `Bearer ${USER.token}` 
-      },
-      body: JSON.stringify({
-        records: pendingRecords // email 也不用傳了，後端會從 token 自己抓
-      })
-    });
-    
-    const data = await res.json();
-
-    if (data.success) {
-      // 4. 伺服器回傳成功！把這些資料在手機端標記為「已同步 (syncStatus: 1)」
-      S.records.forEach(r => {
-        if (data.syncedIds.includes(r.id)) {
-          r.syncStatus = 1; // 標記為已同步
-        }
-      });
-      await saveRecords();
-      console.log('✅ 背景同步完成！');
-    }
-  } catch (error) {
-    console.warn('背景同步失敗，將在下次開啟時重試', error);
-  }
 }
 
 function cancelAddRecord() {
@@ -3284,8 +3260,10 @@ window.setMaintCategory = function(cat, idx) {
   document.getElementById('btn-mcat-repair').style.fontWeight = cat === 'repair' ? '800' : '600';
 }
 
-/* ══ 替換：新增車輛記錄 (修復按鈕失效與跨頁籤點擊的隱形報錯) ══ */
+/* ══ 替換：新增車輛記錄 ══ */
 window.openAddVehRec = function(recordId = null) {
+  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增車輛記錄'); return; } // ✅ 新增登入限制
+
   // 🛡️ 防呆機制：若被瀏覽器誤傳 Event 事件物件，強制轉為 null
   if (typeof recordId === 'object' && recordId !== null) recordId = null;
 
@@ -3925,10 +3903,16 @@ function renderSettings() {
   const isLogged = USER.loggedIn;
   const accStr = isLogged ? `👤 帳號：${USER.email}` : `✉️ 登入 / 註冊帳號`;
   
-  // 判斷上次備份時間
+  // 👇 將狀態判斷改寫為「雙色膠囊 (Dual-color Pill)」UI 設計
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<span style="font-size:15px; color:var(--text-blue); font-weight:600; font-family:var(--mono);">&emsp;&emsp;&emsp;上次存檔：${S.settings.lastLocalBackup}</span>` 
-    : `<span style="font-size:15px; color: #ff0000;  font-weight:600; font-family:var(--mono);">&emsp;&emsp;&emsp;🆘 尚未進行本機存檔</span>`;
+    ? `<div style="display:inline-flex; align-items:center; border-radius:8px; border:1.5px solid #bfdbfe; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
+         <span style="padding:3px 6px; background:#eff6ff; font-size:12px; font-weight:800; color:#2563eb; border-right:1.5px solid #bfdbfe;">上次存檔</span>
+         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:700; color:#1e3a8a; font-family:var(--mono);">${S.settings.lastLocalBackup}</span>
+       </div>` 
+    : `<div style="display:inline-flex; align-items:center; border-radius:8px; border:1.5px solid #fecdd3; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
+         <span style="padding:3px 6px; background:#fff1f2; font-size:12px; font-weight:800; color:#e11d48; border-right:1.5px solid #fecdd3;">尚未存檔</span>
+         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:700; color:#be123c;">🆘 建議在「雲端硬碟」備份</span>
+       </div>`;
 
   const html  = `
   <!-- 縮小了區塊的 margin-bottom -->
@@ -3945,9 +3929,8 @@ function renderSettings() {
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 儲存到本機 (.json) ${lastBackupStr}</span><span class="arr">↓</span></div>
-      <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原記錄檔</span><span class="arr">↑</span></div>
-      <div class="set-row" onclick="backupToGoogleDrive()"><span class="sn">☁️ 備份至 Google 雲端硬碟</span><span class="arr">↗</span></div>
+      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 儲存到「本機」或「雲端硬碟」(.json) ${lastBackupStr}</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原「備份檔」</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
@@ -4099,7 +4082,6 @@ function openAuthModal() {
   // 👇 強制覆蓋外層標題字體大小
   const subTitleEl = document.getElementById('sub-title');
   subTitleEl.textContent = '帳號管理';
-  subTitleEl.style.cssText = "font-size: 24px !important; font-weight: 700 !important;";
   // ...
   document.getElementById('sub-top-right').innerHTML = '';
   authMode = 'login'; 
@@ -4172,8 +4154,9 @@ function renderAuthContent() {
         </div>
 
         <div style="font-weight:600; color:#64748b; font-size:11px; margin:-4px 0 16px 4px; line-height:1.5;">
-          密碼需至少12字元，含大小寫、數字與特殊符號。<br>
-          推薦使用 <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; font-weight:700;">1Password 生成器</a>。
+          <span style="color: #000000;">密碼需至少<span style="color: #ff0000;">12位數</span>，<span style="color: #ff0000;">含大小寫</span>、<span style="color: #ff0000;">數字</span>與<span style="color: #ff0000;">特殊符號</span>。</span><br>
+          推薦使用 <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; font-weight:700;">1Password 生成器</a>。<br>
+          <span style="font-size:13px; font-weight:600; color: #16800c;">（密碼生成後，先儲存起來，避免忘記或不見！）</span>
         </div>
 
         <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; cursor:pointer;">
@@ -4663,11 +4646,9 @@ async function checkAccountStatus() {
 }
 
 // 攔截 confirmAddRecord (新增記錄) 加入檢查
-/* ══ 替換：移除煩人的驗證進度條，登入後直接放行 ══ */
 const originalConfirmAddRecord = confirmAddRecord;
 confirmAddRecord = async function() {
-  //if (!USER.loggedIn) { toast('⚠️ 請先登入帳號'); return; }
-  // 取消原本的「驗證權限中...」進度條，直接執行新增動作
+  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號'); return; } // ✅ 恢復登入限制
   originalConfirmAddRecord();
 }
 
@@ -4784,7 +4765,6 @@ function togglePlatform(id, isChecked) {
 function openPlatformEdit(id) {
   const p = S.platforms.find(x=>x.id===id); if (!p) return;
   document.getElementById('sub-title').textContent = p.name; 
-  document.getElementById('sub-title').style.cssText = "font-size: 16px !important; font-weight: 600 !important;"; // 恢復標題大小
   
   // 👇 換成滑動開關 .switch
   document.getElementById('sub-body').innerHTML = `
@@ -4806,7 +4786,7 @@ function openPlatformEdit(id) {
 
 function savePlatformEdit(id) { const p = S.platforms.find(x=>x.id===id); if (!p) return; p.color = document.getElementById('sp-color').value.trim() || p.color; p.active = document.getElementById('sp-active').checked; savePlatforms(); toast('✅ 平台已更新'); if (S.tab === 'home') renderHome(); renderSettings(); openPlatformList(); }
 function openGoalSettings() { 
-  document.getElementById('sub-title').textContent = '目標設定'; 
+  document.getElementById('sub-title').textContent = '收入目標設定'; 
   document.getElementById('sub-top-right').innerHTML = '';
   document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); 
   const g = S.settings.goals || {}; 
@@ -4845,7 +4825,7 @@ function openGoalSettings() {
       </div>
     </div>
     
-    <button onclick="saveGoals()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 儲存目標設定</button>
+    <button onclick="saveGoals()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 儲存收入目標設定</button>
   `; 
   openOverlay('sub-page'); 
 }
@@ -5083,12 +5063,9 @@ async function doReset() {
 
 /* ══ 聯絡我們：信箱與一鍵複製 ══ */
 function openContactUs() {
-  document.getElementById('sub-title').textContent = '聯絡我們';
-  document.getElementById('sub-top-right').innerHTML = '';
+  const email = 'cws38721@gmail.com'; 
   
-  const email = 'cws38721@gmail.com'; // 👈 這裡可以替換成您真實的 Email
-  
-  document.getElementById('sub-body').innerHTML = `
+  document.getElementById('contact-body').innerHTML = `
     <div style="padding:16px; text-align:center;">
       <div style="font-size:54px; margin-bottom:16px;">✉️</div>
       <div style="font-size:15px; font-weight:700; color:var(--t1); margin-bottom:12px; line-height:1.6;">
@@ -5103,8 +5080,7 @@ function openContactUs() {
     </div>
   `;
   
-  document.getElementById('sub-page').style.zIndex = '1100'; // 確保蓋過關於我們頁面
-  openOverlay('sub-page');
+  openOverlay('contact-page');
 }
 
 // 支援各種手機瀏覽器的一鍵複製功能 (Fallback 機制)
@@ -5168,22 +5144,22 @@ function openPrivacyPolicy(fromRegister = false) {
   }
 
   document.getElementById('privacy-body').innerHTML = `
-    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:0px 10px;">
+    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:5px 10px; background: hsl(0, 0%, 100%); border-radius:12px; margin-top:8px;">
       
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
-      <div style="background:var(--sf2); padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
+      <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
+      <div style="background: #ffffff; padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
         • 您的【電子郵件】，僅作為「註冊的帳號」與「收驗證碼」使用。
       </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資料</div>
-      <div style="background:var(--sf2); padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
+      <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資料</div>
+      <div style="background: #ffffff; padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
         • 僅用於統計「總使用人數」，不做任何商業或其它用途。
       </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background: rgba(140, 255, 167, 0.3); padding:3px 6px 10px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
+      <div style="background: rgba(140, 255, 167, 0.3); padding:10px 6px 10px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         
-        <div style="display:flex; align-items:center; gap:6px; color:var(--text-blue); font-weight:800; font-size:12px; margin-bottom:6px;">
+        <div style="display:flex; align-items:center; gap:6px; color: #c300ff; font-weight:700; font-size:14px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
         </div>
         <div style="padding-left:4px; margin-bottom:12px;">
@@ -5191,20 +5167,20 @@ function openPrivacyPolicy(fromRegister = false) {
           • 您的外送記錄與資料，<b>僅儲存於「您的個人裝置」上</b>，絕不會上傳至任何雲端伺服器。
         </div>
 
-        <div style="display:flex; align-items:center; gap:6px; color:var(--red); font-weight:800; font-size:12px; margin-top:16px; margin-bottom:6px;">
+        <div style="display:flex; align-items:center; gap:6px; color:var(--red); font-weight:700; font-size:14px; margin-top:16px; margin-bottom:6px;">
           <span>🔐</span> 軍規級密碼安全 (PBKDF2) </div>
         <div style="padding-left:4px;">
           • 我們採用美國國家標準技術研究所 (NIST) 認可的 <b>PBKDF2</b> 安全演算法。<br>
-          <div style="margin-top:8px; padding:10px; border-left:3px solid var(--acc); background:var(--sf); border-radius:4px 8px 8px 4px;">
-            <span style="color:var(--acc); font-weight:800;">優勢一：</span>每次產生獨立隨機鹽值（Salting），徹底無效化彩虹表（Rainbow Table）攻擊。<br>
-            <span style="color:var(--acc); font-weight:800;">優勢二：</span>超高強度迭代運算（高達 10 萬次），大幅增加暴力破解所需的時間與成本。<br>
-            <span style="color:var(--acc); font-weight:800;">優勢三：</span>強制嚴格的「12 位數密碼長度與複雜度」要求，從源頭阻斷字典攻擊。
+          <div style="margin-top:8px; padding:10px; border-left:3px solid var(--acc); background: #ffffff; border-radius:4px 8px 8px 4px;">
+            <span style="color:var(--acc); font-weight:700;">優勢一：</span>每次產生獨立隨機鹽值（Salting），徹底無效化彩虹表（Rainbow Table）攻擊。<br>
+            <span style="color:var(--acc); font-weight:700;">優勢二：</span>超高強度迭代運算（高達 10 萬次），大幅增加暴力破解所需的時間與成本。<br>
+            <span style="color:var(--acc); font-weight:700;">優勢三：</span>強制嚴格的「12 位數密碼長度與複雜度」要求，從源頭阻斷字典攻擊。
           </div>
         </div>
       </div>
 
-      <div style="color:var(--acc); font-size:16px; font-weight:700; margin-bottom:3px;">4. 您的權利與聯絡方式</div>
-      <div style="background:var(--sf2); padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:16px;">
+      <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">4. 您的權利與聯絡方式</div>
+      <div style="background: #ffffff; padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:16px;">
         • 您可隨時聯繫我們，要求永久刪除您的註冊帳號。<br>
         • 如有任何問題，請透過【設定】→「關於我們」→『聯絡我們』與我們聯繫。
       </div>
@@ -5349,7 +5325,7 @@ function applyBackground() {
 
 /* ══ 真正儲存為實體檔案至本機資料夾 (File System API 或 下載) ══ */
 async function confirmBackupToFile() {
-  const ok = await customConfirm('是否要儲存記錄檔到本機？');
+  const ok = await customConfirm('是否要儲存「備份檔」到本機？');
   if (ok) {
     await doBackupToFile();
   }
@@ -5395,7 +5371,7 @@ async function doBackupToFile() {
       
       // ⚠️ 備註：傳統下載模式無法偵測使用者是否點擊取消，所以只要點了就會更新時間
       updateLocalBackupTime();
-      toast('✅ 備份檔已下載');
+      toast('✅ 「備份檔」已下載');
     }
   } catch (err) {
     // 如果使用者按了「取消」，瀏覽器會拋出 AbortError，此時什麼都不做 (也不會更新時間)
@@ -5414,71 +5390,6 @@ function updateLocalBackupTime() {
   S.settings.lastLocalBackup = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   saveSettings();
   renderSettings(); // 重新渲染設定頁面，更新顯示的時間
-}
-
-/* ══ 替換：備份至 Google Drive 引導 ══ */
-function backupToGoogleDrive() {
-  customConfirm(`
-    <div style="text-align:center;">
-      <div style="font-size:40px; margin-bottom:12px;">☁️</div>
-      <h3 style="margin-bottom:8px; color:var(--t1);">備份至 Google 雲端硬碟</h3>
-      <p style="font-size:13px; color:var(--t2); line-height:1.6; text-align:left;">
-        請先下載「Google雲端硬碟APP」，並登入您的帳號。<br><br>
-        依照下方指示：<br>
-        1. 點擊「確定」後，會跳出【下載視窗】，請點擊「<b>儲存位置</b>」按鈕。<br>
-        2. 請您選擇「Google雲端硬碟」，然後按「<b>儲存！</b>」即可完成備份。<br>
-      </p>
-    </div>
-  `).then(ok => {
-    if (ok) {
-      doBackupToFile(); // 僅觸發下載，不開啟新網頁
-    }
-  });
-}
-
-/* ══ 從雲端還原資料 ══ */
-async function restoreFromCloud(email) {
-  showProgress('正在從雲端還原資料...');
-  try {
-    const res = await fetch(`${API_BASE_URL}/download`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
-      body: JSON.stringify({ email: email })
-    });
-    const result = await res.json();
-    
-    finishProgress(() => {
-      if (result.success && result.data) {
-        // 如果雲端有資料，就覆蓋掉手機本機的資料
-        if (result.data.records.length > 0) S.records = result.data.records;
-        if (result.data.vehicles.length > 0) S.vehicles = result.data.vehicles;
-        if (result.data.vehicleRecs.length > 0) S.vehicleRecs = result.data.vehicleRecs;
-        
-        // 若雲端有設定，與預設值合併
-        if (Object.keys(result.data.settings).length > 0) {
-          S.settings = { ...S.settings, ...result.data.settings };
-          if (result.data.settings.platforms && result.data.settings.platforms.length > 0) {
-            S.platforms = result.data.settings.platforms;
-          }
-        }
-        
-        // 儲存到 LocalStorage
-        saveRecords();
-        saveVehicles();
-        saveVehicleRecs();
-        saveSettings();
-        savePlatforms();
-
-        toast('☁️ 雲端資料還原成功！');
-        
-        // 重新整理畫面
-        renderHome();
-        renderSettings();
-      }
-    });
-  } catch (e) {
-    finishProgress(() => toast('⚠️ 雲端還原失敗，請檢查網路'));
-  }
 }
 
 /* ══ 初次使用平台懸浮設定 ══ */
