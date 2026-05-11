@@ -1380,7 +1380,7 @@ function renderHistDayView() {
     <div id="hist-day-summary" style="margin:6px 0 4px;"></div>
     <div class="sec-title" id="hist-day-label" style="margin-bottom:4px; padding:0 4px; color: #000000;">指定日記錄</div>
   </div>
-  <div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:3px;"></div>`;
+  <div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:7px;"></div>`;
   
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
@@ -1474,7 +1474,7 @@ function renderHistGroupView(mode) {
       <select class="fsel" style="width:auto; padding:6px 14px; font-size:13px; font-weight:800; border-radius:14px; background: #f1f5f9; border: 1.5px solid #cbd5e1; color: var(--t2);" onchange="changeHistFilter(this.value)">${platOpts}</select>
     </div>
   </div>
-  <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:3px;">`;
+  <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:7px;">`;
   
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
     const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
