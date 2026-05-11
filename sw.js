@@ -1,8 +1,8 @@
-/* ══ 外送記帳 Service Worker ══
+/* ══ 外送記錄 Service Worker ══
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v256';
+const CACHE_NAME = 'delivery-app-v257';
 
 // 需要快取的靜態資源清單
 const ASSETS = [
@@ -30,9 +30,6 @@ const ASSETS = [
   '/images/close1.png',
   '/images/close2.png',
   '/images/close3.png',  
-  '/images/Battery.png',  
-  '/images/Gas_station.png',
-  '/images/arrow_back.png',
   '/scooter/s1.png',
   '/scooter/s2.png',
   '/scooter/s3.png',
@@ -49,12 +46,26 @@ const ASSETS = [
   '/figure/5.webp',
   '/figure/6.webp',
   '/figure/7.webp',
-  '/figure/8.webp',  
+  '/figure/12.webp',
+  '/figure/13.webp',
+  '/figure/14.webp',
+  '/figure/15.webp',
+  '/figure/16.webp',
+  '/figure/17.webp',
+  '/figure/18.webp',
+  '/figure/19.webp',
+  '/figure/20.webp',
+  '/figure/21.webp',
+  '/figure/22.webp',
   '/background/bg1.webp',
   '/background/bg2.webp',
   '/background/bg3.webp',
   '/background/bg4.webp',
   '/background/bg5.webp',
+  '/Vehicle/ve1.png',
+  '/Vehicle/ve2.png',
+  '/Vehicle/ve3.png',
+  '/Vehicle/ve4.png',
   'https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
 ];
