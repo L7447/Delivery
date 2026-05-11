@@ -67,14 +67,41 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 /* ══ 3. 彈出視窗與毛玻璃頂部 ══ */
 .overlay-page { position: fixed; inset: 0; background: var(--overlay-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 200; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow: hidden; pointer-events: none; }
 .overlay-page.show { transform: translateY(0); pointer-events: auto; }
-.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--sf); }
-.top-bar h2 { font-size: 16px; font-weight: 600; font-family: var(--title); }
+.top-bar { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  padding: 16px 16px 7px; /* 統一內外距，與下方內容距離 7px */
+  border-bottom: 1px solid var(--border); 
+  flex-shrink: 0; 
+  background: #ffffff; /* 統一白色背景 */
+}
+.top-bar h2 { 
+  font-size: 24px; 
+  font-weight: 700; 
+  font-family: var(--title); 
+  color: #2563eb; /* 統一為藍色 */
+  margin: 0;
+}
 .bar-btn { width: 32px; height: 32px; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; padding: 0; outline: none; }
 .overlay-body { flex: 1; overflow-y: auto; padding: 5px; -webkit-overflow-scrolling: touch; }
-.fixed-header { padding: 16px 16px 12px; flex-shrink: 0; background: var(--bg-header); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 20; border-bottom: 1px solid rgba(0, 0, 0, 0.05); }
+.fixed-header { 
+  padding: 16px 16px 7px; /* 頂部 16px、左右 16px、與下方內容距離 7px */
+  flex-shrink: 0; 
+  background: #ffffff; /* 統一白色背景 */
+  z-index: 20; 
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05); 
+}
 
 /* ══ 4. 共用 UI 元件 ══ */
-.pg-title { font-family: var(--title); font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 16px; }
+.pg-title { 
+  font-family: var(--title); 
+  font-size: 24px; 
+  font-weight: 700; 
+  text-align: center; 
+  margin: 0 0 5px 0; /* 標題與下方切換按鈕距離 5px */
+  color: var(--t1); 
+}
 .sec-title { font-size: 11px; font-weight: 600; color: var(--t3); letter-spacing: .8px; margin-bottom: 6px; }
 .mbtn { width: 36px; height: 36px; border-radius: 12px; background: var(--sf); border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--acc); font-weight: 900; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
 .mbtn:active { transform: translateY(2px); background: var(--sf2); }
@@ -212,13 +239,75 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .auth-switch-btn { background: none; border: none; color: #2563eb; font-weight: 800; font-size: 14px; cursor: pointer; padding: 8px 12px; margin-left: 4px; border-radius: 8px; transition: 0.2s; }
 .auth-switch-btn:active { background: #eff6ff; }
 
-/* ══ 14. Toast 提示與遮罩 ══ */
-#toast { position: fixed; top: 36% !important; left: 50%; transform: translate(-50%, -20px) !important; background: rgba(35, 74, 137, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 16px 28px; border-radius: 99px; font-size: 22px; font-weight: 700; opacity: 0; transition: all 0.5s; z-index: 999999; pointer-events: none; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.25); min-width: 300px; letter-spacing: 0.5px; }
-#toast.show { opacity: 1; transform: translate(-50%, 0) !important; }
+/* ══ 14. 現代化 Toast 提示與 3D 彈跳毛玻璃微光效果 ══ */
+#toast { 
+  position: fixed; 
+  top: 35% !important; 
+  left: 50%; 
+  
+  /* 初始狀態：縮小 0.7 倍、往下掉 40px、並帶有 3D 往後仰的角度 */
+  transform: translate(-50%, 40px) scale(0.7) perspective(400px) rotateX(-30deg) !important; 
+  transform-origin: center bottom; /* 以底部為 3D 翻轉的軸心 */
+  
+  /* 質感毛玻璃背景 */
+  background: rgba(19, 31, 200, 0.85); 
+  backdrop-filter: blur(16px); 
+  -webkit-backdrop-filter: blur(16px); 
+  
+  /* 邊框與初始陰影 */
+  border: 1px solid rgba(255, 255, 255, 0.25); 
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0px rgba(59, 130, 246, 0); 
+  
+  color: #ffffff; 
+  padding: 14px 28px; 
+  border-radius: 99px; 
+  font-size: 24px; 
+  font-weight: 700; 
+  letter-spacing: 0.5px;
+  
+  /* 👇 修復超出螢幕的核心設定 */
+  white-space: pre-wrap;     /* 允許自動換行並保留程式碼中的 \n */
+  word-break: break-word;    /* 英文或長數字也能強制斷行 */
+  min-width: 280px;
+  line-height: 1.5;          /* 增加行高，多行閱讀更舒適 */
+
+  /* 排版設定 */
+  text-align: center; 
+  z-index: 999999; 
+  pointer-events: none; 
+  opacity: 0; 
+  
+  /* 核心動畫：使用更誇張的阻尼參數 (1.5) 來製造明顯的「Q彈」感，時間拉長至 0.6s */
+  transition: 
+    opacity 0.3s ease, 
+    transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.5), 
+    box-shadow 0.6s ease; 
+}
+/* 顯示時的狀態：翻正、放大、觸發呼吸燈 */
+#toast.show { 
+  opacity: 1; 
+  /* 恢復正常大小與 3D 角度，達成往前撲向使用者的錯覺 */
+  transform: translate(-50%, 0) scale(1) perspective(400px) rotateX(0deg) !important; 
+  
+  /* 觸發連續呼吸光暈動畫 */
+  animation: toastGlowPulse 3.5s infinite alternate ease-in-out;
+}
+/* 🌟 新增：連續呼吸光暈動畫 (Breathing Glow) */
+@keyframes toastGlowPulse {
+  0% {
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 15px rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    /* 達到頂點時：光暈放大、顏色變亮，內部還加上微弱的內陰影反光 */
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 35px rgba(96, 165, 250, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.15);
+  }
+}
 #confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
 #confirm-overlay.show { display: flex; }
 #confirm-box { background: var(--sf); border-radius: 24px; padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,.15); }
 #confirm-msg { font-size: 16px; font-weight: 700; color: var(--t1); line-height: 1.6; margin-bottom: 24px; text-align: center; }
+
+
 
 /* 其他輔助類 */
 .platform-chip { padding: 8px 14px; border-radius: 20px; border: 2px solid var(--border); background: var(--sf2); color: var(--t2); font-size: 13px; font-weight: 500; cursor: pointer; transition: .15s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
@@ -299,19 +388,32 @@ input:checked + .slider:before { transform: translateX(20px); }
 .vc-right-val { font-family: var(--mono); font-size: 15px; font-weight: 900; white-space: nowrap; }
 
 /* ══ TOP5 月份切換新版導航列 ══ */
-.btn {
-   display: flex;
-   flex-direction: column;
-   justify-content: center;
-   align-items: center;
-   text-align: center;
-   border-radius: 50%;
-   text-align: center;
-   font-weight: 900;
-   font-size: 32px;
-}
+.btn{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:50%;text-align:center;font-weight:900;font-size:32px;}
 .btn:active { transform: translateY(4px); background: var(--sf2); }
 .btn1{color:hsl(270, 100%, 64%);background:#e8d1ff;}
 .btn2{color:#5cbdbb;background:#b2e0df;}
 .btn3{color:hsl(330, 100%, 56%);background:hsla(330, 100%, 88%, 0.7);}
 .btn4{color:#84c1ff;background:#b2d8ff;}
+
+/* ══ 專屬：向右翻頁關閉動畫 ══ */
+.flip-page-out {
+  transform-origin: right center; /* 以右側為翻頁軸心 */
+  /* 強制覆蓋原本的滑動效果，執行長達 2 秒的翻頁動畫 */
+  animation: pageFlipRight 2s forwards cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+@keyframes pageFlipRight {
+  0% { 
+    transform: perspective(1200px) rotateY(0deg) translateX(0); 
+    opacity: 1; 
+  }
+  15% { 
+    /* 前段製造「提起來停留」的感覺 */
+    transform: perspective(1200px) rotateY(-5deg) translateX(2%); 
+    opacity: 1; 
+  }
+  100% { 
+    /* 後段向右翻轉並滑出畫面 */
+    transform: perspective(1200px) rotateY(-70deg) translateX(120%); 
+    opacity: 0; 
+  }
+}
