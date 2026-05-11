@@ -901,7 +901,7 @@ function renderHome() {
             <div class="hero-plat-row" style="display:flex; align-items:center; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}25); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
               <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span><span style="font-size:14px; font-weight:800;"> 收入：</span></span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
-              <span class="hp-ord" style="font-weight:800; width:20%; font-size:14px; text-align:right; color: #ff4d00;">${p.orders} <span style="font-weight:500; font-size:11px;">單</span></span>
+              <span class="hp-ord" style="font-weight:800; width:20%; font-size:14px; text-align:right; color: #00e5ff;">${p.orders} <span style="font-weight:500; font-size:11px;">單</span></span>
               <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; color: var(--text-blue); opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
             </div>`;
         });
