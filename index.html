@@ -293,10 +293,11 @@
         <div class="pg-title" id="add-page-title" style="margin:0;">新增記錄</div>
         <button id="add-save-btn" onclick="confirmAddRecord()" class="bar-btn" style="transition:transform 0.2s;"><img id="add-save-img" src="images/Check1.png" style="width:100%; height:100%; object-fit:contain;"></button>
       </div>
-      <div class="slide-tabs tabs-2" style="margin-bottom:0; background:#e2e8f0; padding:4px;">
+      <div class="slide-tabs tabs-3" style="margin-bottom:0; background:#e2e8f0; padding:4px;">
         <div class="slide-bg" id="add-tab-bg" style="transform: translateX(0%); background:var(--acc);"></div>
         <button class="slide-btn active" id="btn-add-regular" onclick="switchAddTab('regular', 0)">行程記錄</button>
         <button class="slide-btn" id="btn-add-cashtip" onclick="switchAddTab('cashtip', 1)">現金小費</button>
+        <button class="slide-btn" id="btn-add-punch" onclick="switchAddTab('punch', 2)">打卡工時</button>
       </div>
     </div>
 
@@ -426,6 +427,36 @@
           </div>
         </div>
       </div>
+
+      <!-- 3. 打卡工時表單 -->
+      <div id="add-form-punch" style="display:none;">
+        <div style="color:#0f766e; font-size:13px; font-weight:800; text-align:center; margin-bottom:12px; background:#ccfbf1; padding:8px; border-radius:12px;">🕒 記錄您的純工時 (系統優先採計)</div>
+        
+        <div class="card" style="padding:12px 16px; margin-bottom:10px;">
+          <div class="fg" style="margin-bottom:12px;"><label>📆 日期</label><input type="date" class="finp finp-pu" id="f-pu-date"></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="fg" style="margin-bottom:0;"><label>▶ 上線時間</label><input type="time" class="finp finp-pu" id="f-pu-in" oninput="calcPunchHours()"></div>
+            <div class="fg" style="margin-bottom:0;"><label>⏹ 下線時間</label><input type="time" class="finp finp-pu" id="f-pu-out" oninput="calcPunchHours()"></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px 16px;">
+          <div class="fg" style="margin-bottom:0;">
+            <label style="font-size:14px; font-weight:700; color:#475569;">⏱ 總工時 (自動計算，也可手動修改)</label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;">
+              <div style="position:relative;">
+                <input type="number" class="finp finp-pu" id="f-pu-hrs" placeholder="0" inputmode="numeric" style="font-size:20px; font-family:var(--mono);">
+                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:700; color:var(--t3); pointer-events:none;">時</span>
+              </div>
+              <div style="position:relative;">
+                <input type="number" class="finp finp-pu" id="f-pu-min" placeholder="0" inputmode="numeric" style="font-size:20px; font-family:var(--mono);">
+                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:700; color:var(--t3); pointer-events:none;">分</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style="height:40px;"></div>
     </div>
   </section>
