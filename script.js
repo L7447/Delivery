@@ -330,6 +330,35 @@ const getDayRecs = date => S.records.filter(r=>r.date===date);
 const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
 const recTotal = r => r.isCashTip ? 0 : (pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips));
 
+// 👇 新增：智慧工時計算函數 (以日為單位運算)
+function calcTotalHours(recs) {
+  const byDate = {};
+  recs.forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r);
+  });
+  
+  let totalHours = 0;
+  for (let date in byDate) {
+    const dayRecs = byDate[date];
+    const punchRecs = dayRecs.filter(r => r.isPunchOnly);
+    if (punchRecs.length > 0) {
+      // 1. 若有打卡紀錄，以打卡紀錄的時間加總為主
+      totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
+    } else {
+      // 2. 若沒打卡紀錄，判斷這天是否「只有一個平台」
+      const regularRecs = dayRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
+      const uniquePlats = new Set(regularRecs.map(r => r.platformId).filter(Boolean));
+      if (uniquePlats.size <= 1) {
+        // 單一平台，允許使用一般行程輸入的時間
+        totalHours += regularRecs.reduce((s, r) => s + pf(r.hours), 0);
+      }
+      // 若多平台且無打卡，當日總工時不盲目計入
+    }
+  }
+  return totalHours;
+}
+
 function fmtHours(hVal) {
   const h = pf(hVal); if (h <= 0) return '0';
   const totalMins = Math.round(h * 60);
@@ -854,7 +883,7 @@ function renderHome() {
     
     const total   = dayRecs.reduce((s, r) => s + recTotal(r), 0);
     const orders  = dayRecs.reduce((s, r) => s + pf(r.orders), 0);
-    const hours   = dayRecs.filter(r => !r.isPunchOnly).reduce((s, r) => s + pf(r.hours), 0);
+    const hours = calcTotalHours(dayRecs);
     
     const dateObj = new Date(today + 'T00:00:00');
     const dow     = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
@@ -1477,7 +1506,7 @@ function renderHistGroupView(mode) {
   <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:7px;">`;
   
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
-    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = recs.reduce((s,r) => s + pf(r.hours), 0); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
+    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = calcTotalHours(recs); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
     html += buildSummaryCard('區間總計', tInc, tOrd, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
     html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
   } html += `</div>`; content.innerHTML = html;
@@ -1521,7 +1550,7 @@ function renderHistRecords(ds) {
   const sumEl = document.getElementById('hist-day-summary');
   
   if (total > 0 || cashTips > 0) {
-    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = recs.reduce((s,r)=>s+pf(r.hours), 0); const dayBonus = recs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = recs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = recs.reduce((s,r)=>s+pf(r.tips), 0);
+    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = calcTotalHours(recs); const dayBonus = recs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = recs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = recs.reduce((s,r)=>s+pf(r.tips), 0);
     
     // 👇 產生精確的日期標籤
     const dStr = `${d.getFullYear()}年 ${d.getMonth()+1}月 ${d.getDate()}日`;
@@ -1568,10 +1597,22 @@ function resetSearch() {
 
 /* ══ 4. 新增記錄 開始 ════════════════════════════════════ */
 function openAddPage(record=null, prefill={}) {
-  S.editingId = record ? record.id : null; S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
+  S.editingId = record ? record.id : null; 
+  S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
   
-  if (record && record.isCashTip) {
+  if (record && record.isPunchOnly) {
+    switchAddTab('punch', 2);
+    document.getElementById('f-pu-date').value = record.date || todayStr();
+    document.getElementById('f-pu-in').value = record.punchIn || '';
+    document.getElementById('f-pu-out').value = record.punchOut || '';
+    let totalHours = pf(record.hours || 0); 
+    let h = Math.floor(totalHours); 
+    let m = Math.round((totalHours - h) * 60);
+    document.getElementById('f-pu-hrs').value = h > 0 ? h : '0'; 
+    document.getElementById('f-pu-min').value = m > 0 ? m : '0';
+  } else if (record && record.isCashTip) {
+    // ... 保持原有 cashtip 邏輯 ...
     switchAddTab('cashtip', 1);
     document.getElementById('f-ct-date').value = record.date || todayStr();
     document.getElementById('f-ct-time').value = record.time || nowTime();
@@ -1580,26 +1621,21 @@ function openAddPage(record=null, prefill={}) {
     document.getElementById('f-ct-amount').value = record.cashTipAmt || '';
     document.getElementById('f-ct-note').value = record.note || '';
   } else {
+    // ... 保持原有 regular 邏輯 ...
     switchAddTab('regular', 0);
     document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
     document.getElementById('f-time').value = record?.time || nowTime();
-    
     let totalHours = pf(record?.hours || prefill.hours || 0); let h = Math.floor(totalHours); let m = Math.round((totalHours - h) * 60);
     document.getElementById('f-hrs-val').value = h > 0 ? h : ''; document.getElementById('f-min-val').value = m > 0 ? m : '';
-    
-    // 👇 新增：綁定初始、結束與行駛里程
     document.getElementById('f-start-km').value = record?.startKm !== undefined ? record.startKm : ''; 
     document.getElementById('f-end-km').value = record?.endKm !== undefined ? record.endKm : ''; 
     document.getElementById('f-mileage').value = record?.mileage || ''; 
-    
     document.getElementById('f-orders').value = record?.orders || ''; 
     document.getElementById('f-income').value = record?.income || '';
     document.getElementById('f-bonus').value = record?.bonus || ''; 
     document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
     document.getElementById('f-tips').value = record?.tips || ''; 
     document.getElementById('f-note').value = record?.note || '';
-    
-    // 初始化時檢查里程顏色與警告狀態
     if (window.checkManualMileage) window.checkManualMileage();
   }
   
@@ -1656,23 +1692,28 @@ window.clearMileage = function() {
 function switchAddTab(tab, idx) {
   S.addTab = tab;
   document.getElementById('add-tab-bg').style.transform = `translateX(${idx * 100}%)`;
-  document.getElementById('add-tab-bg').style.background = tab === 'cashtip' ? 'var(--green)' : 'var(--acc)';
+  
+  if (tab === 'cashtip') {
+    document.getElementById('add-tab-bg').style.background = 'var(--green)';
+  } else if (tab === 'punch') {
+    document.getElementById('add-tab-bg').style.background = '#0f766e'; // 墨綠色
+  } else {
+    document.getElementById('add-tab-bg').style.background = 'var(--acc)';
+  }
+  
   document.getElementById('btn-add-regular').classList.toggle('active', tab === 'regular');
   document.getElementById('btn-add-cashtip').classList.toggle('active', tab === 'cashtip');
+  document.getElementById('btn-add-punch').classList.toggle('active', tab === 'punch');
+  
   document.getElementById('add-form-regular').style.display = tab === 'regular' ? 'block' : 'none';
   document.getElementById('add-form-cashtip').style.display = tab === 'cashtip' ? 'block' : 'none';
+  document.getElementById('add-form-punch').style.display = tab === 'punch' ? 'block' : 'none';
   
-  /* 替換 switchAddTab 內的小費時間邏輯 */
-  if(tab === 'cashtip') {
-    if (!S.editingId) {
-      // 新增模式下，每次切換都強制刷新為現在時間
-      document.getElementById('f-ct-date').value = todayStr();
-      document.getElementById('f-ct-time').value = nowTime();
-    } else {
-      // 編輯模式下，若沒有值才帶入預設值
-      document.getElementById('f-ct-date').value = document.getElementById('f-ct-date').value || todayStr();
-      document.getElementById('f-ct-time').value = document.getElementById('f-ct-time').value || nowTime();
-    }
+  if(tab === 'cashtip' && !S.editingId) {
+    document.getElementById('f-ct-date').value = todayStr();
+    document.getElementById('f-ct-time').value = nowTime();
+  } else if (tab === 'punch' && !S.editingId) {
+    document.getElementById('f-pu-date').value = todayStr();
   }
 }
 
@@ -1692,6 +1733,20 @@ function calcCashTip() {
     document.getElementById('f-ct-amount').value = given - cost;
   } else {
     document.getElementById('f-ct-amount').value = '';
+  }
+}
+
+window.calcPunchHours = function() {
+  const inTime = document.getElementById('f-pu-in').value;
+  const outTime = document.getElementById('f-pu-out').value;
+  if (inTime && outTime) {
+    const [h1, m1] = inTime.split(':').map(Number);
+    const [h2, m2] = outTime.split(':').map(Number);
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (diff < 0) diff += 24 * 60; // 跨夜處理
+    
+    document.getElementById('f-pu-hrs').value = Math.floor(diff / 60);
+    document.getElementById('f-pu-min').value = diff % 60;
   }
 }
 
@@ -1724,6 +1779,12 @@ function resetAddForm() {
   document.getElementById('f-ct-cost').value = '';
   document.getElementById('f-ct-amount').value = '';
   document.getElementById('f-ct-note').value = '';
+
+  document.getElementById('f-pu-date').value = todayStr();
+  document.getElementById('f-pu-in').value = '';
+  document.getElementById('f-pu-out').value = '';
+  document.getElementById('f-pu-hrs').value = '';
+  document.getElementById('f-pu-min').value = '';  
   
   S.editingId = null;
   switchAddTab('regular', 0); 
@@ -1846,11 +1907,27 @@ function addCashTipTag(tag) {
 
 async function confirmAddRecord() {
   const checkImg = document.getElementById('add-save-img'); const checkBtn = document.getElementById('add-save-btn');
-  if (checkBtn.disabled) return; if (!S.selPlatformId) { toast('請先選擇平台'); return; }
+  if (checkBtn.disabled) return; 
+  if (!S.selPlatformId && S.addTab !== 'punch') { toast('請先選擇平台'); return; }
   
-  let rec = { id: S.editingId || newId(), platformId: S.selPlatformId };
+  let rec = { id: S.editingId || newId(), platformId: S.addTab === 'punch' ? '' : S.selPlatformId };
 
-  if (S.addTab === 'cashtip') {
+  if (S.addTab === 'punch') {
+    const ph = pf(document.getElementById('f-pu-hrs').value);
+    const pm = pf(document.getElementById('f-pu-min').value);
+    const totalHours = ph + (pm / 60);
+    if (totalHours <= 0) { toast('總工時必須大於 0'); return; }
+    
+    rec = { 
+      ...rec, isPunchOnly: true, isCashTip: false,
+      date: document.getElementById('f-pu-date').value || todayStr(),
+      time: document.getElementById('f-pu-in').value || nowTime(), 
+      punchIn: document.getElementById('f-pu-in').value,
+      punchOut: document.getElementById('f-pu-out').value,
+      hours: totalHours, orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
+    };
+  } else if (S.addTab === 'cashtip') {
+    // ... 原本的 cashtip 儲存邏輯 ...
     const amt = pf(document.getElementById('f-ct-amount').value);
     if (amt <= 0) { toast('請輸入現金小費金額'); return; }
     rec = { ...rec, isCashTip: true, date: document.getElementById('f-ct-date').value, time: document.getElementById('f-ct-time').value, givenAmt: pf(document.getElementById('f-ct-given').value), costAmt: pf(document.getElementById('f-ct-cost').value), cashTipAmt: amt, note: document.getElementById('f-ct-note').value.trim() };
@@ -2089,7 +2166,7 @@ function renderRptOverview() {
   const bonus = recs.reduce((s,r) => s+pf(r.bonus)+pf(r.tempBonus), 0); 
   const tips = recs.reduce((s,r) => s+pf(r.tips), 0);
   const orders = recs.reduce((s,r) => s+pf(r.orders), 0); 
-  const hours = recs.reduce((s,r) => s+pf(r.hours), 0);
+  const hours = calcTotalHours(recs);
   const cashTipTotal = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
 
   const activePlats = S.platforms.filter(p=>p.active);
@@ -2705,7 +2782,7 @@ function renderRptTop3() {
   } else {
     // 👈 改成 slice(0,5)
     sorted.slice(0,5).forEach(([date,total],i) => {
-      const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = recs.reduce((s,r)=>s+pf(r.hours),0);
+      const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = calcTotalHours(recs);
       html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:28px">${medals[i]||'▶'}</span><div style="flex:1"><div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${orders>0?`${orders}單 `:''}${hours>0?`${fmtHours(hours)} `:''}</div></div><div style="font-family:var(--mono);font-size:18px;font-weight:800;color:var(--green)">$${fmt(total)}</div></div>`;
     });
   }
