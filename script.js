@@ -901,7 +901,7 @@ function renderHome() {
             <div class="hero-plat-row" style="display:flex; align-items:center; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}25); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
               <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span><span style="font-size:14px; font-weight:800;"> 收入：</span></span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
-              <span class="hp-ord" style="font-weight:800; width:20%; font-size:14px; text-align:right; color: #00e5ff;">${p.orders} <span style="font-weight:500; font-size:11px;">單</span></span>
+              <span class="hp-ord" style="font-weight:800; width:20%; font-size:14px; text-align:right; color: #1b585f;">${p.orders} <span style="font-weight:500; font-size:11px;">單</span></span>
               <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; color: var(--text-blue); opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
             </div>`;
         });
@@ -1150,7 +1150,7 @@ function buildRecItem(r) {
   if (r.isCashTip) {
     const plat = getPlatform(r.platformId);
     return `
-      <div class="hist-rec-card cashtip-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')">
+      <div class="hist-rec-card cashtip-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="border-color: ${plat.color}; box-shadow: 0 2px 8px ${plat.color}15;">
         <div class="hrc-top" style="padding:6px 10px; display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; flex-direction:column; gap:6px;">
             <div style="display:flex; align-items:center; gap:6px;">
@@ -1238,7 +1238,7 @@ function buildRecItem(r) {
     const noteLabel = r.note ? `<span class="veh-label veh-label-note">備註：${safeTextWithBr(r.note)}</span>` : '';
 
     return `
-      <div class="hist-rec-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')">
+      <div class="hist-rec-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="border-color: #8b5cf6; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);">
         <div class="hrc-top">
           <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
           <div class="hrc-row1" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -1264,7 +1264,7 @@ function buildRecItem(r) {
 
   // === 一般行程記錄 ===
   return `
-    <div class="hist-rec-card" data-id="${safeText(r.id)}">
+    <div class="hist-rec-card" data-id="${safeText(r.id)}" style="border-color: ${plat.color}; box-shadow: 0 2px 8px ${plat.color}15;">
       <div class="hrc-top" onclick="openDetailOverlay('${safeText(r.id)}')">
         <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
         <div class="hrc-row1" style="gap:8px; margin: 0px 0 2px 0;">
@@ -5371,7 +5371,7 @@ async function doBackupToFile() {
       
       // ⚠️ 備註：傳統下載模式無法偵測使用者是否點擊取消，所以只要點了就會更新時間
       updateLocalBackupTime();
-      toast('✅ 「備份檔」已下載');
+      toast('✅「備份檔」已下載');
     }
   } catch (err) {
     // 如果使用者按了「取消」，瀏覽器會拋出 AbortError，此時什麼都不做 (也不會更新時間)
