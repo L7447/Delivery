@@ -1285,28 +1285,42 @@ function buildRecItem(r) {
   const bonPct = total > 0 ? Math.round((totalBonus / total) * 100) : 0;
   const tipPct = total > 0 ? Math.round((pf(r.tips) / total) * 100) : 0;
   
-  // 👇 全新設計：彩色數據藥丸 (Data Pills) - 單數、里程、工時
-  let tagsHtml = '';
+  // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
+  let tagsParts = [];
+  
   if (_orders > 0) {
-    tagsHtml += `
-      <div style="background:#fff7ed; border:1px solid hsl(34, 100%, 82%); padding:1.5px 8px; border-radius:8px; display:flex; align-items:baseline; gap:3px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+    tagsParts.push(`
+      <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
         <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${_orders}</span>
         <span style="font-size:11px; font-weight:600; color:#f97316;">單</span>
-      </div>`;
+      </div>
+    `);
   }
   if (r.mileage > 0) {
-    tagsHtml += `
-      <div style="background:#f0fdf4; border:1px solid hsl(141, 84%, 83%); padding:2px 8px; border-radius:8px; display:flex; align-items:baseline; gap:3px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+    tagsParts.push(`
+      <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
         <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${r.mileage}</span>
         <span style="font-size:11px; font-weight:800; color:#22c55e;">km</span>
-      </div>`;
+      </div>
+    `);
   }
   if (_hours > 0) {
-    tagsHtml += `
-      <div style="background:#eff6ff; border:1px solid #dbeafe; padding:2px 8px; border-radius:8px; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+    tagsParts.push(`
+      <div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;">
         <span style="font-size:11px;">⏱️</span>
         <span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(_hours)}</span>
-      </div>`;
+      </div>
+    `);
+  }
+
+  let tagsHtml = '';
+  if (tagsParts.length > 0) {
+    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果
+    tagsHtml = `
+      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.02); background:#e2e8f0; gap:2px;">
+        ${tagsParts.join('')}
+      </div>
+    `;
   }
 
   // 基本工資分析
@@ -4844,13 +4858,12 @@ async function checkAccountStatus() {
 // 攔截 confirmAddRecord (新增記錄) 加入檢查
 const originalConfirmAddRecord = confirmAddRecord;
 confirmAddRecord = async function() {
-  // 攔截 confirmAddRecord (新增記錄) 加入檢查
-const originalConfirmAddRecord = confirmAddRecord;
-confirmAddRecord = async function() {
-  if (GLOBAL_REQUIRE_LOGIN && !USER.loggedIn) { showLoginRequiredWarning(); return; }
-  originalConfirmAddRecord();
-}
-  originalConfirmAddRecord();
+  if (GLOBAL_REQUIRE_LOGIN && !USER.loggedIn) { 
+    showLoginRequiredWarning(); 
+    return; 
+  }
+  // 呼叫原本的儲存函式
+  await originalConfirmAddRecord();
 }
 
 /* ══ 登出清空權限 ══ */
