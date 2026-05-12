@@ -212,6 +212,23 @@ function safeTextWithBr(value) {
   return escapeHtmlWithBr(value);
 }
 
+// 👇 新增：限制每行 9 個字元（2組天氣標籤約8-9字）並換行的備註格式化
+function formatNoteWithLimit(note) {
+  if (!note) return '';
+  let lines = note.split('\n');
+  let newLines = lines.map(line => {
+    // 使用 Array.from 正確處理包含 Emoji 標籤的真實字元長度
+    let chars = Array.from(line); 
+    let res = [];
+    for (let i = 0; i < chars.length; i += 9) {
+      res.push(chars.slice(i, i + 9).join(''));
+    }
+    return res.join('\n'); // 將長字串用換行符拼接
+  });
+  // 最後統一做 XSS 逃脫並將換行符轉換為 <br>
+  return escapeHtmlWithBr(newLines.join('\n'));
+}
+
 /* ====================== IndexedDB 儲存協助函式 ====================== */
 const DB_NAME = 'delivery_records_db';
 const DB_VERSION = 1;
@@ -303,6 +320,40 @@ function saveDbUsers() { localStorage.setItem('delivery_db_users', JSON.stringif
 
 // 暫存驗證碼
 let tempAuthCode = '';
+
+// 👇 全域權限控制變數 (預設必須登入)
+let GLOBAL_REQUIRE_LOGIN = true; 
+
+// 👇 獲取雲端權限設定
+async function fetchSystemSettings() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/settings/system`);
+    const data = await res.json();
+    if (data.success && data.settings) {
+      GLOBAL_REQUIRE_LOGIN = data.settings.requireLoginToAdd !== false; // 確保預設 true
+    }
+  } catch(e) { console.log('無法取得系統設定', e); }
+}
+
+// 👇 專屬權限警告視窗
+function showLoginRequiredWarning() {
+  customConfirm(`
+    <div style="font-size:48px; margin-bottom:12px; text-align:center;">🔒</div>
+    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">權限不足</div>
+    <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
+      管理員已設定系統限制：<br>
+      <b>必須登入帳號</b> 才能新增或修改記錄。<br>
+    </div>
+    <div style="font-size:13px; color:var(--blue); font-weight:700; text-align:center;">
+      是否立即前往登入畫面？
+    </div>
+  `).then(ok => {
+    if (ok) {
+      goPage('settings');
+      setTimeout(() => openAuthModal(), 300);
+    }
+  });
+}
 
 const S = {
   tab: 'home', rptY: new Date().getFullYear(), rptM: new Date().getMonth()+1, rptView: 'overview',
@@ -826,7 +877,11 @@ function _bindNavEvents() {
   document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
     const pg = el.dataset.pg; 
     if (pg === 'add') {
-      if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增記錄'); return; } // ✅ 恢復登入限制
+      // 👇 檢查雲端權限是否要求登入
+      if (GLOBAL_REQUIRE_LOGIN && !USER.loggedIn) { 
+        showLoginRequiredWarning(); 
+        return; 
+      }
       if (S.tab !== 'add') openAddPage(); 
     } else {
       goPage(pg); 
@@ -1296,14 +1351,17 @@ function buildRecItem(r) {
     <div class="hist-rec-card" data-id="${safeText(r.id)}" style="border-color: ${plat.color}; box-shadow: 0 2px 8px ${plat.color}15;">
       <div class="hrc-top" onclick="openDetailOverlay('${safeText(r.id)}')">
         <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
-        <div class="hrc-row1" style="gap:8px; margin: 0px 0 2px 0;">
-          <span class="hrc-plat-tag" style="background:${plat.color};">${safeText(plat.name)}</span>
-          <!-- 👇 藍色系雙色時間膠囊 -->
-          <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
-            <span style="padding:2px 6px; background: #f1f5f9; font-size:12px; font-weight:800; color: hsl(330, 100%, 56%); font-family:var(--mono); border-right:2px solid #e2e8f0;">${dStr}</span>
-            <span style="padding:2px 6px; background: #ffffff; font-size:11px; font-weight:900; color: #2563eb; font-family:var(--mono);">${tStr}</span>
+        <!-- 👇 修改為 flex-start，並獨立包裹左側元素 (flex-shrink:0) 防止備註擠壓 -->
+        <div class="hrc-row1" style="gap:8px; margin: 0px 0 2px 0; align-items: flex-start;">
+          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            <span class="hrc-plat-tag" style="background:${plat.color};">${safeText(plat.name)}</span>
+            <!-- 👇 藍色系雙色時間膠囊 -->
+            <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+              <span style="padding:2px 6px; background: #f1f5f9; font-size:12px; font-weight:800; color: hsl(330, 100%, 56%); font-family:var(--mono); border-right:2px solid #e2e8f0;">${dStr}</span>
+              <span style="padding:2px 6px; background: #ffffff; font-size:11px; font-weight:900; color: #2563eb; font-family:var(--mono);">${tStr}</span>
+            </div>
           </div>
-          ${r.note ? `<span style="color: #2563eb; font-weight:800; font-size:12px;"> ${safeTextWithBr(r.note)}</span>` : ''}
+          ${r.note ? `<div style="color: #2563eb; font-weight:800; font-size:12px; line-height:1.4; padding-top:1px;"> ${formatNoteWithLimit(r.note)}</div>` : ''}
         </div>
         <div class="hrc-row2">
           <span class="hrc-amt">$ ${fmt(total)}</span>
@@ -3339,7 +3397,8 @@ window.setMaintCategory = function(cat, idx) {
 
 /* ══ 替換：新增車輛記錄 ══ */
 window.openAddVehRec = function(recordId = null) {
-  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號，才能新增車輛記錄'); return; } // ✅ 新增登入限制
+  // 👇 檢查雲端權限
+  if (GLOBAL_REQUIRE_LOGIN && !USER.loggedIn) { showLoginRequiredWarning(); return; }
 
   // 🛡️ 防呆機制：若被瀏覽器誤傳 Event 事件物件，強制轉為 null
   if (typeof recordId === 'object' && recordId !== null) recordId = null;
@@ -4522,6 +4581,10 @@ async function openAccountStats() {
         ${adminHtml}
       </div>
 
+      <button onclick="openAdminSystemSettings()" style="width:100%; padding:14px; border-radius:var(--rs); background:#8b5cf6; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(139,92,246,0.3); cursor:pointer;">
+        🔒 編輯系統存取權限
+      </button>
+
       <button onclick="openAdminGasPriceEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--blue); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(59,130,246,0.3); cursor:pointer;">
         ⛽ 編輯全域油價設定
       </button>      
@@ -4539,6 +4602,62 @@ async function openAccountStats() {
       <div style="text-align:center; color:var(--red); margin-bottom:16px;">介面載入發生錯誤</div>
       <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
     </div>`;
+  }
+}
+
+/* ✨ 新增：管理員編輯系統存取權限 */
+function openAdminSystemSettings() {
+  document.getElementById('sub-title').textContent = '系統權限設定';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div class="card" style="padding:16px;">
+      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700; margin-bottom:16px;">
+        💡 在此控制 APP 的開放程度。若開啟，訪客必須註冊登入才能新增資料；若關閉，則所有人皆可隨意新增記錄 (資料僅存於他們的本機)。
+      </div>
+      <div style="border-top:1px dashed var(--border); margin-bottom:16px;"></div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:15px; font-weight:800; color:var(--t1);">🔒 必須登入才能新增記錄</span>
+        <label class="switch">
+          <input type="checkbox" id="adm-req-login" ${GLOBAL_REQUIRE_LOGIN ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    
+    <button onclick="saveAdminSystemSettings()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 儲存並同步至雲端</button>
+  `;
+  document.getElementById('sub-page').style.zIndex = '1100'; 
+}
+/* ✨ 新增：同步系統權限至雲端 */
+async function saveAdminSystemSettings() {
+  const reqLogin = document.getElementById('adm-req-login').checked;
+  showProgress('同步設定至伺服器...');
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/system`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({
+        adminEmail: USER.email,
+        requireLoginToAdd: reqLogin
+      })
+    });
+    const data = await res.json();
+
+    finishProgress(() => {
+      if (data.success) {
+        GLOBAL_REQUIRE_LOGIN = reqLogin; // 同步本地變數
+        toast('✅ 系統存取權限已更新');
+        document.getElementById('sub-page').style.zIndex = '200';
+        openAccountStats(); 
+      } else {
+        toast('⚠️ 同步失敗：' + data.message);
+      }
+    });
+  } catch(err) {
+    finishProgress(() => toast('連線失敗，無法同步設定'));
   }
 }
 
@@ -4725,7 +4844,12 @@ async function checkAccountStatus() {
 // 攔截 confirmAddRecord (新增記錄) 加入檢查
 const originalConfirmAddRecord = confirmAddRecord;
 confirmAddRecord = async function() {
-  if (!USER.loggedIn) { toast('⚠️ 請先登入帳號'); return; } // ✅ 恢復登入限制
+  // 攔截 confirmAddRecord (新增記錄) 加入檢查
+const originalConfirmAddRecord = confirmAddRecord;
+confirmAddRecord = async function() {
+  if (GLOBAL_REQUIRE_LOGIN && !USER.loggedIn) { showLoginRequiredWarning(); return; }
+  originalConfirmAddRecord();
+}
   originalConfirmAddRecord();
 }
 
@@ -5545,7 +5669,8 @@ async function init() {
   try { await loadAll(); } catch (e) { console.error(e); }
   
   applyBackground();
-  fetchGlobalGasPrice();
+  fetchSystemSettings(); // 👈 啟動時向伺服器拉取權限設定
+  if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
   initReminderCheck();
 
   if (!S.platforms || S.platforms.length === 0) {
