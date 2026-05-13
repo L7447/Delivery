@@ -4490,8 +4490,8 @@ async function requestLogin() {
           `;
         }
       } else {
-        // ❌ 密碼錯誤等訊息
-        toast('⚠️ ' + data.message);
+        // 💡 直接 Toast 顯示後端傳來的錯誤訊息 (不會出現驗證畫面)
+        toast(data.message);
       }
     });
   } catch (err) {
@@ -5654,11 +5654,15 @@ window.applyGlobalGasPrice = function() {
   }
 };
 
-/* ══ Service Worker 正式註冊 ══ */
+/* ══ Service Worker 正式註冊與強制更新 (破除快取) ══ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(r => console.log('SW 已註冊', r.scope))
+      .then(r => {
+        console.log('SW 已註冊', r.scope);
+        // 💡 強制觸發更新檢查，確保手機不會死咬著舊代碼
+        r.update(); 
+      })
       .catch(e => console.warn('SW 註冊失敗', e));
   });
 }
