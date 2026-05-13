@@ -44,7 +44,7 @@
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <!-- [修復4] 移除 ios-pwa-splash CDN（被內容阻擋器封鎖時會卡住）-->
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?v=1.6.0">
 
 <!-- 啟動畫面 (Splash Screen) 專屬樣式 -->
   <style>
@@ -803,7 +803,7 @@
   </div>
   
   <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
-    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px; margin-top:24px;">ej/ao3tjpfu8製作 2026 © v1.5.10.19251</div>
+    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px; margin-top:24px;">ej/ao3tjpfu8製作 2026 © v1.5.14.1001</div>
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
       <div onclick="openContactUs()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
@@ -851,7 +851,7 @@
 
 <!-- [修復5] script.js 加 defer：讓 #splash 先繪製，init() 在背景執行
      沒有 defer 時瀏覽器遇到此行就停住，3783 行全執行完才繪製任何畫面 -->
-<script src="/script.js" defer></script>
+<script src="/script.js?v=1.6.0" defer></script>
 
 <!-- 🛵 故事型動畫專用 Script (已加入精準轉場交接) -->
 <script>
