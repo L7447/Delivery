@@ -4443,16 +4443,15 @@ async function requestLogin() {
     return;
   }
 
-  showProgress('登入連線中...');
-  // ... (下方程式碼保持不變)
+  showProgress(authMode === 'login' ? '登入連線中...' : '註冊連線中...');
   
   try {
-    // 呼叫更新後的 /auth/login API
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    // 💡 根據 authMode 動態切換要呼叫的 API 路徑
+    const apiPath = authMode === 'login' ? '/auth/login' : '/auth/register';
+    
+    const res = await fetch(`${API_BASE_URL}${apiPath}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-
-      // 👇 將 turnstileToken 一併送給後端
       body: JSON.stringify({ email, password: pwd, turnstileToken }) 
     });
     const data = await res.json();
