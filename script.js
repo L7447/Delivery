@@ -913,38 +913,28 @@ function _bindNavEvents() {
 function switchHomeTab(tab, index) { S.homeSubTab = tab; document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); renderHome(); }
 function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
 function switchRptTab(tab, index, btnEl) { S.rptView = tab; document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); btnEl.classList.add('active');['overview','rewards','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; }); renderReport(); }
-/* ══ 替換：車輛頁籤切換 (維持漸層風格，並讓搜尋頁籤也有漸層) ══ */
+/* ══ 替換：車輛頁籤切換 (四色強化漸層風格) ══ */
 function switchVehicleTab(tab, index) { 
   S.vehicleTab = tab; 
   const tabBg = document.getElementById('veh-tab-bg');
   tabBg.style.transform = `translateX(${index * 100}%)`; 
   
-  // 👉 1. 動態判斷目前選擇的車輛是不是「電動車」，以決定燃料頁籤的顏色
   const currentVeh = S.vehicles.find(x => x.id === S.selVehicleId);
   const isEV = currentVeh && currentVeh.defaultFuel === 'electric';
   
-  // 👉 2. 設定四個頁籤對應的漸層與陰影顏色
+  // 👉 採用四色漸層，讓顏色變化在小範圍內也能極度明顯
   const colors = {
-    // 燃料頁籤：若是電動車就用藍色漸層，油車就用紅色漸層
     fuel: isEV 
-      ? { bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', shadow: 'rgba(59,130,246,0.4)', textId: 'btn-veh-fuel' }
-      : { bg: 'linear-gradient(135deg, #ef4444, #dc2626)', shadow: 'rgba(239,68,68,0.4)', textId: 'btn-veh-fuel' },
-    
-    // 保養頁籤：綠色漸層
-    maintenance: { bg: 'linear-gradient(135deg, #10b981, #059669)', shadow: 'rgba(16,185,129,0.4)', textId: 'btn-veh-maint' },
-    
-    // 年總覽頁籤：橘色漸層
-    yearly: { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', shadow: 'rgba(245,158,11,0.4)', textId: 'btn-veh-yearly' },
-    
-    // 記錄搜尋頁籤：紫色漸層 (維持一致的顏色)
-    search: { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', shadow: 'rgba(139,92,246,0.4)', textId: 'btn-veh-search' }
+      ? { bg: 'linear-gradient(135deg, #1e3a8a, #3b82f6, #60a5fa, #93c5fd)', shadow: 'rgba(59,130,246,0.4)', textId: 'btn-veh-fuel' }
+      : { bg: 'linear-gradient(135deg, #991b1b, #ef4444, #f87171, #fca5a5)', shadow: 'rgba(239,68,68,0.4)', textId: 'btn-veh-fuel' },
+    maintenance: { bg: 'linear-gradient(135deg, #064e3b, #10b981, #34d399, #6ee7b7)', shadow: 'rgba(16,185,129,0.4)', textId: 'btn-veh-maint' },
+    yearly: { bg: 'linear-gradient(135deg, #92400e, #f59e0b, #fbbf24, #fcd34d)', shadow: 'rgba(245,158,11,0.4)', textId: 'btn-veh-yearly' },
+    search: { bg: 'linear-gradient(135deg, #4c1d95, #8b5cf6, #a78bfa, #c4b5fd)', shadow: 'rgba(139,92,246,0.4)', textId: 'btn-veh-search' }
   };
 
-  // 👉 3. 賦予背景顏色與陰影
   tabBg.style.background = colors[tab].bg; 
   tabBg.style.boxShadow = `0 4px 10px ${colors[tab].shadow}`;
 
-  // 👉 4. 切換文字顏色狀態
   ['fuel', 'maintenance', 'yearly', 'search'].forEach(t => {
     document.getElementById(colors[t].textId).style.color = (t === tab) ? '#fff' : 'var(--t2)';
     document.getElementById(colors[t].textId).classList.toggle('active', t === tab);
@@ -2717,7 +2707,7 @@ function _initCmpPeriods() {
   }
 }
 
-/* ══ 替換：比較頁面 (全新大數據前月比較，含膠囊增減設計) ══ */
+/* ══ 替換：比較頁面 (全新大數據前月比較，含自訂比較對象) ══ */
 function renderRptCompare() {
   const el = document.getElementById('rv-compare');
   _initCmpPeriods();
@@ -2728,11 +2718,33 @@ function renderRptCompare() {
   let navLabel = '';
   if (isMonth) navLabel = `${S.cmpBaseYear} 年 ${S.cmpBaseMonth} 月`;
   else if (isPrevMonth) {
-    let pY = S.cmpBaseYear, pM = S.cmpBaseMonth - 1;
-    if (pM < 1) { pM = 12; pY--; }
-    navLabel = `${S.cmpBaseMonth} 月 與 ${pM} 月`;
+    navLabel = `${S.cmpBaseYear} 年 ${S.cmpBaseMonth} 月 (基準)`;
   }
   else navLabel = `${S.cmpBaseYear} 年`;
+
+  // 產生可選的年月份下拉選單 (大數據模式專用)
+  let prevMonthOptions = '';
+  if (isPrevMonth) {
+    // 預設為上個月
+    if (!S.cmpTargetYM) {
+      let pY = S.cmpBaseYear, pM = S.cmpBaseMonth - 1;
+      if (pM < 1) { pM = 12; pY--; }
+      S.cmpTargetYM = `${pY}-${pad(pM)}`;
+    }
+    
+    // 抓出有資料的所有月份
+    let yms = new Set();
+    S.records.forEach(r => { if(r.date) yms.add(r.date.substring(0,7)); });
+    let ymArr = Array.from(yms).sort((a,b) => b.localeCompare(a)); // 由大到小
+    
+    // 如果沒有資料，至少塞一個當前月份
+    if (ymArr.length === 0) ymArr = [`${S.cmpBaseYear}-${pad(S.cmpBaseMonth)}`];
+
+    ymArr.forEach(ym => {
+      const isSel = S.cmpTargetYM === ym ? 'selected' : '';
+      prevMonthOptions += `<option value="${ym}" ${isSel}>${ym.replace('-', ' 年 ')} 月</option>`;
+    });
+  }
 
   let html = `
     <div class="card" style="padding: 14px; margin-bottom: 12px; background: linear-gradient(135deg, var(--sf), var(--sf2)); box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
@@ -2740,19 +2752,22 @@ function renderRptCompare() {
         <div style="display:flex; flex-direction:column; gap:4px; width:48%;">
           <label style="font-size:11px; color:var(--t3); font-weight:800; letter-spacing:0.5px;">📊 比較類型</label>
           <select class="fsel" style="padding:6px; font-weight:800; border-color:transparent; background:var(--bg-input); color:var(--t1); font-size:13px;" onchange="S.cmpType=this.value; _initCmpPeriods(); renderReport();">
-            <option value="prev_month" ${isPrevMonth ? 'selected' : ''}>大數據前月比較</option>
+            <option value="prev_month" ${isPrevMonth ? 'selected' : ''}>大數據月份比較</option>
             <option value="month" ${isMonth ? 'selected' : ''}>歷史同月比較</option>
             <option value="year" ${!isMonth && !isPrevMonth ? 'selected' : ''}>歷史全年比較</option>
           </select>
         </div>
         
-        <div style="display:flex; flex-direction:column; gap:4px; width:48%; ${isPrevMonth ? 'opacity:0.3; pointer-events:none;' : ''}">
+        <div style="display:flex; flex-direction:column; gap:4px; width:48%;">
           <label style="font-size:11px; color:var(--t3); font-weight:800; letter-spacing:0.5px;">⏳ 比較對象</label>
-          <select class="fsel" style="padding:6px; font-weight:800; border-color:transparent; background:var(--bg-input); color:var(--t1); font-size:13px;" onchange="S.cmpOffset=parseInt(this.value); _initCmpPeriods(); renderReport();">
-            <option value="1" ${S.cmpOffset===1 ? 'selected' : ''}>與 前 1 年</option>
-            <option value="3" ${S.cmpOffset===3 ? 'selected' : ''}>與 前 3 年</option>
-            <option value="5" ${S.cmpOffset===5 ? 'selected' : ''}>與 前 5 年</option>
-          </select>
+          ${isPrevMonth 
+            ? `<select class="fsel" style="padding:6px; font-weight:800; border-color:transparent; background:var(--bg-input); color:var(--text-blue); font-size:13px;" onchange="S.cmpTargetYM=this.value; renderReport();">${prevMonthOptions}</select>`
+            : `<select class="fsel" style="padding:6px; font-weight:800; border-color:transparent; background:var(--bg-input); color:var(--t1); font-size:13px;" onchange="S.cmpOffset=parseInt(this.value); _initCmpPeriods(); renderReport();">
+                <option value="1" ${S.cmpOffset===1 ? 'selected' : ''}>與 前 1 年</option>
+                <option value="3" ${S.cmpOffset===3 ? 'selected' : ''}>與 前 3 年</option>
+                <option value="5" ${S.cmpOffset===5 ? 'selected' : ''}>與 前 5 年</option>
+              </select>`
+          }
         </div>
       </div>
       
@@ -2769,8 +2784,8 @@ function renderRptCompare() {
     if (!S.rptCmpFilter) S.rptCmpFilter = 'all';
     const activePlats = S.platforms.filter(p=>p.active);
     
-    // 平台切換器 (加入「全部平台」)
-    html += `<div style="display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
+    // 平台切換器
+    html += `<div style="display:flex; gap:8px; margin-bottom:8px; overflow-x:auto; padding-bottom:4px;">
       <button onclick="S.rptCmpFilter='all'; renderReport()" style="flex-shrink:0; padding:6px 14px; border-radius:18px; font-size:13px; font-weight:800; border:none; cursor:pointer; transition:0.2s; ${S.rptCmpFilter === 'all' ? 'background:var(--acc); color:#fff; box-shadow:0 2px 6px rgba(255,107,53,0.3);' : 'background:var(--sf); color:var(--t2); border:1px solid var(--border);'}">全部平台</button>`;
     
     activePlats.forEach(p => {
@@ -2779,12 +2794,23 @@ function renderRptCompare() {
     });
     html += `</div>`;
 
-    // 取得 本月(A) 與 前月(B) 資料
-    let pY = S.cmpBaseYear, pM = S.cmpBaseMonth - 1;
-    if (pM < 1) { pM = 12; pY--; }
+    // 狀態膠囊 (顯示 比較對象 VS 基準月)
+    const targetYMStr = S.cmpTargetYM.replace('-', '/');
+    const baseYMStr = `${S.cmpBaseYear}/${pad(S.cmpBaseMonth)}`;
     
+    html += `
+      <div style="display:flex; justify-content:center; margin-bottom:16px;">
+        <div style="display:inline-flex; align-items:center; background:#f1f5f9; border-radius:20px; padding:4px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+          <span style="background:#fff; color:var(--text-blue); padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); box-shadow:0 1px 3px rgba(0,0,0,0.05);">${baseYMStr}</span>
+          <span style="font-size:11px; font-weight:900; color:var(--t3); margin:0 8px;">VS</span>
+          <span style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); border:1px solid #c7d2fe;">${targetYMStr}</span>
+        </div>
+      </div>
+    `;
+
+    // 取得 本月(基準A) 與 比較月(B) 資料
     let recsA = getMonthRecs(S.cmpBaseYear, S.cmpBaseMonth);
-    let recsB = getMonthRecs(pY, pM);
+    let recsB = S.records.filter(r => r.date && r.date.startsWith(S.cmpTargetYM));
     
     if (S.rptCmpFilter !== 'all') {
       recsA = recsA.filter(r => r.platformId === S.rptCmpFilter);
@@ -2797,7 +2823,6 @@ function renderRptCompare() {
       const orders = recs.reduce((s,r) => s+pf(r.orders), 0);
       const hours = calcTotalHours(recs);
       const mileage = recs.reduce((s,r) => s+pf(r.mileage), 0);
-      // 算出實際有跑的天數 (不重複日期)
       const workDays = new Set(recs.map(r => r.date)).size;
       return { total, orders, hours, mileage, workDays };
     };
@@ -2806,26 +2831,28 @@ function renderRptCompare() {
     const dB = calcData(recsB);
 
     // 輔助函式：產生帶有 ↑綠色 / ↓紅色的 比較膠囊
+    // 💡 修正了小數點與空格的格式
     const getDiffBadge = (valA, valB, formatType) => {
       const diff = valA - valB;
       if (diff === 0 || valB === 0) return `<span style="font-size:11px; color:var(--t3); font-weight:600;">—</span>`;
       
       const isUp = diff > 0;
-      const color = isUp ? '#16a34a' : '#dc2626'; // 綠 : 紅
+      const color = isUp ? '#16a34a' : '#dc2626'; 
       const bg = isUp ? '#dcfce7' : '#fee2e2';
       const icon = isUp ? '▲' : '▼';
       
       let diffStr = '';
       if (formatType === '$') diffStr = `$${fmt(Math.abs(diff))}`;
-      else if (formatType === '%') diffStr = `${(Math.abs(diff/valB)*100).toFixed(1)}%`;
-      else if (formatType === 'hr') diffStr = `${Math.abs(diff).toFixed(1)}hr`;
-      else if (formatType === '單') diffStr = `${fmt(Math.abs(diff))}單`;
-      else if (formatType === 'km') diffStr = `${fmt(Math.abs(diff))}km`;
-      else diffStr = Math.abs(diff).toFixed(1);
+      else if (formatType === '%') diffStr = `${(Math.abs(diff/valB)*100).toFixed(2)} %`;
+      else if (formatType === 'hr') diffStr = `${Math.abs(diff).toFixed(2)} hr`;
+      else if (formatType === '單') diffStr = `${fmt(Math.abs(diff))} 單`;
+      else if (formatType === 'km') diffStr = `${fmt(Math.abs(diff))} km`;
+      else diffStr = Math.abs(diff).toFixed(2);
 
+      // 把 vs 上月 移除
       return `
         <span style="background:${bg}; color:${color}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:900; font-family:var(--mono); letter-spacing:0.5px; border:1px solid ${color}30; white-space:nowrap; display:inline-flex; align-items:center; gap:2px;">
-          <span style="font-size:8px;">${icon}</span> ${diffStr} vs 前月
+          <span style="font-size:8px;">${icon}</span> ${diffStr}
         </span>
       `;
     };
@@ -2849,16 +2876,16 @@ function renderRptCompare() {
     // 建立 3x3 網格
     const cards = [
       { t: '月收入', v: `$${fmt(dA.total)}`, c: '#ea580c', diff: getDiffBadge(dA.total, dB.total, '%') },
-      { t: '總工時', v: `${dA.hours.toFixed(1)}<span style="font-size:12px">hr</span>`, c: '#475569', diff: getDiffBadge(dA.hours, dB.hours, 'hr') },
+      { t: '總單量', v: `${fmt(dA.orders)} <span style="font-size:12px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
+      { t: '均單價', v: `$${avgOrdPriceA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$') },
+
+      { t: '總工時', v: `${dA.hours.toFixed(2)} <span style="font-size:12px">hr</span>`, c: '#475569', diff: getDiffBadge(dA.hours, dB.hours, 'hr') },
       { t: '時薪', v: `$${fmt(avgHrA)}`, c: '#2563eb', diff: getDiffBadge(avgHrA, avgHrB, '$') },
-      
+      { t: '均單量 (單/hr)', v: `${avgOrdHrA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdHrA, avgOrdHrB, '') },
+
       { t: '日均收入', v: `$${fmt(avgIncomeA)}`, c: '#0f172a', diff: getDiffBadge(avgIncomeA, avgIncomeB, '$') },
-      { t: '總單量', v: `${fmt(dA.orders)}<span style="font-size:12px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
-      { t: '里程', v: `${fmt(dA.mileage)}<span style="font-size:12px">km</span>`, c: '#0f172a', diff: getDiffBadge(dA.mileage, dB.mileage, 'km') },
-      
-      { t: '每公里均價', v: `$${avgOrdKmA.toFixed(1)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$') },
-      { t: '均單量 (單/hr)', v: `${avgOrdHrA.toFixed(1)}`, c: '#0f172a', diff: getDiffBadge(avgOrdHrA, avgOrdHrB, '') },
-      { t: '均單價', v: `$${avgOrdPriceA.toFixed(1)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$') }
+      { t: '里程', v: `${fmt(dA.mileage)} <span style="font-size:12px">km</span>`, c: '#0f172a', diff: getDiffBadge(dA.mileage, dB.mileage, 'km') },
+      { t: '每公里均價', v: `$${avgOrdKmA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$') }
     ];
 
     html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:16px;">`;
