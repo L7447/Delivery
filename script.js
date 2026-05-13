@@ -4585,115 +4585,184 @@ async function openAccountStats() {
   }
 
   // 管理員專區
-  try {
-    let usersData = [];
-    
-    // 先嘗試呼叫後端 API
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminEmail: USER.email, token: USER.token })
-      });
-      const data = await res.json();
-      if (data.success) {
-        usersData = data.users;
-      } else {
-        throw new Error("後端回傳失敗");
-      }
-    } catch (apiErr) {
-      // ⚠️ 如果 API 連線失敗 (無後端伺服器)，降級使用純前端 localStorage 模擬資料
-      console.log('API 連線失敗，切換為本地模擬模式');
-      const dbUsers = JSON.parse(localStorage.getItem('delivery_db_users') || '[]');
+  document.getElementById('sub-body').innerHTML = baseHtml + `
+    <h4 style="font-size:13px; color:var(--text-red); margin-bottom:8px;">⚙️ 系統管理 (管理員專區)</h4>
+
+    <button onclick="openAdminUserList()" style="width:100%; padding:14px; border-radius:var(--rs); background:#10b981; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(16,185,129,0.3); cursor:pointer;">
+      👥 管理註冊會員名單 (含搜尋)
+    </button>
+
+    <button onclick="openAdminSystemSettings()" style="width:100%; padding:14px; border-radius:var(--rs); background:#8b5cf6; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(139,92,246,0.3); cursor:pointer;">
+      🔒 編輯系統存取權限
+    </button>
+
+    <button onclick="openAdminGasPriceEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--blue); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(59,130,246,0.3); cursor:pointer;">
+      ⛽ 編輯全域油價設定
+    </button>      
+
+    <button onclick="openAnnouncementEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--gold); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:24px; box-shadow:0 4px 12px rgba(245,158,11,0.3); cursor:pointer;">
+      📢 編輯首頁系統公告
+    </button>
+
+    <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
+  </div>`;
+}
+
+/* =========================================================
+   管理員專區：會員名單、搜尋、刪除與手動建立
+   ========================================================= */
+
+// 暫存會員名單，供即時搜尋使用
+let adminCachedUsers = [];
+
+/* 1. 開啟獨立的會員名單與搜尋頁面 */
+window.openAdminUserList = async function() {
+  document.getElementById('sub-title').textContent = '註冊會員名單';
+  // 加入返回上一頁(帳號資訊)的按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回</button>
+  `;
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px; display:flex; flex-direction:column; height:100%;">
       
-      // 確保至少有你自己的帳號顯示在列表
-      if (dbUsers.length === 0) {
-        usersData = [{ email: USER.email, role: 'admin', verified: true, createdAt: new Date().toISOString() }];
-      } else {
-        usersData = dbUsers;
-      }
-    }
+      <button onclick="openAdminCreateUser()" style="width:100%; padding:14px; border-radius:var(--rs); background:#10b981; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:16px; box-shadow:0 4px 12px rgba(16,185,129,0.3); cursor:pointer; flex-shrink:0;">
+        ➕ 手動建立新帳號 (免驗證)
+      </button>
 
-    let adminHtml = '';
-    usersData.forEach(u => {
-      const vTag = u.verified ? '<span style="color:green;font-weight:700;">已驗證</span>' : '<span style="color:gray;">未驗證</span>';
-      const roleTag = u.role === 'admin' ? '👑 ' : '';
-      adminHtml += `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:13px; font-weight:600; color:var(--t1);">${roleTag}${u.email}</div>
-            <div style="font-size:11px; color:var(--t3);">${vTag} | ${new Date(u.createdAt).toLocaleDateString()}</div>
-          </div>
-          <button onclick="adminDeleteUser('${u.email}')" style="background:var(--red-d); color:var(--red); border:none; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">刪除</button>
-        </div>
-      `;
-    });
-
-    document.getElementById('sub-body').innerHTML = baseHtml + `
-      <h4 style="font-size:13px; color:var(--text-red); margin-bottom:8px;">⚙️ 會員權限管理 (管理員權限)</h4>
-      <div class="card" style="max-height:200px; overflow-y:auto; padding:8px 12px; margin-bottom:16px;">
-        ${adminHtml}
+      <div class="fg" style="margin-bottom:16px; flex-shrink:0;">
+        <input type="text" id="adm-search-user" class="finp" placeholder="🔍 輸入信箱關鍵字搜尋..." oninput="renderAdminUserList(this.value)" style="border:2px solid var(--text-blue); font-weight:800; color:var(--text-blue); background:#eff6ff;">
       </div>
 
-      <button onclick="openAdminCreateUser()" style="width:100%; padding:14px; border-radius:var(--rs); background:#10b981; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(16,185,129,0.3); cursor:pointer;">
-        ➕ 手動建立使用者帳號 (免驗證)
-      </button>
-
-      <button onclick="openAdminSystemSettings()" style="width:100%; padding:14px; border-radius:var(--rs); background:#8b5cf6; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(139,92,246,0.3); cursor:pointer;">
-        🔒 編輯系統存取權限
-      </button>
-
-      <button onclick="openAdminGasPriceEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--blue); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(59,130,246,0.3); cursor:pointer;">
-        ⛽ 編輯全域油價設定
-      </button>      
-
-      <button onclick="openAnnouncementEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--gold); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:24px; box-shadow:0 4px 12px rgba(245,158,11,0.3); cursor:pointer;">
-        📢 編輯首頁系統公告
-      </button>
-
-      <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
-    </div>`;
-
-  } catch (err) {
-    // 只有在非常嚴重的渲染錯誤時才會顯示這段
-    document.getElementById('sub-body').innerHTML = baseHtml + `
-      <div style="text-align:center; color:var(--red); margin-bottom:16px;">介面載入發生錯誤</div>
-      <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
-    </div>`;
+      <div class="card" style="padding:0; flex:1; overflow-y:auto; border:1px solid var(--border);" id="adm-user-list-container">
+        <div style="text-align:center; color:var(--t3); padding:30px; font-weight:700;">📡 載入會員資料中...</div>
+      </div>
+    </div>
+  `;
+  
+  // 向後端請求完整名單
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminEmail: USER.email, token: USER.token })
+    });
+    const data = await res.json();
+    if (data.success) {
+      adminCachedUsers = data.users;
+      renderAdminUserList('');
+    } else {
+      document.getElementById('adm-user-list-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 載入失敗：${data.message}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('adm-user-list-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 連線失敗，無法取得資料</div>`;
   }
 }
 
-/* ✨ 新增：管理員手動建立帳號介面 (免信箱驗證) */
+/* 2. 渲染搜尋結果列表 */
+window.renderAdminUserList = function(keyword) {
+  const container = document.getElementById('adm-user-list-container');
+  if (!container) return;
+
+  const kw = (keyword || '').toLowerCase().trim();
+  const filtered = adminCachedUsers.filter(u => u.email.toLowerCase().includes(kw));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color:var(--t3); padding:30px; font-weight:700;">沒有找到相符的帳號 📭</div>`;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(u => {
+    const vTag = u.verified 
+      ? '<span style="color:var(--green); font-weight:900; background:var(--green-d); padding:3px 8px; border-radius:6px; font-size:10px; border:1px solid #bbf7d0;">已開通</span>' 
+      : '<span style="color:var(--t3); font-weight:900; background:var(--bg-input); padding:3px 8px; border-radius:6px; font-size:10px; border:1px solid #e2e8f0;">未驗證</span>';
+    const roleTag = u.role === 'admin' ? '👑 ' : '';
+    
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 12px; border-bottom:1px solid var(--border);">
+        <div style="flex:1; overflow:hidden; padding-right:10px;">
+          <div style="font-size:15px; font-weight:900; color:var(--t1); margin-bottom:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${roleTag}${u.email}</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            ${vTag}
+            <span style="font-size:12px; color:var(--t3); font-family:var(--mono); font-weight:600;">${new Date(u.createdAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+        <button onclick="adminDeleteUser('${u.email}')" style="background:var(--red-d); color:var(--red); border:1px solid #fecdd3; padding:8px 14px; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; flex-shrink:0; box-shadow:0 2px 4px rgba(225,29,72,0.1); transition:0.2s;">刪除</button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+/* 3. 刪除會員 (改為重新整理名單，而非跳回帳號頁) */
+window.adminDeleteUser = async function(targetEmail) {
+  const ok = await customConfirm(`確定要強制刪除並封鎖 <b>${targetEmail}</b> 嗎？<br>此動作無法復原！`);
+  if(!ok) return;
+  
+  showProgress('刪除帳號中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/delete`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ adminEmail: USER.email, targetEmail: targetEmail })
+    });
+    const data = await res.json();
+    
+    finishProgress(() => {
+      if(data.success) {
+        toast('✅ 帳號已徹底刪除');
+        if (targetEmail === USER.email) {
+          logoutAccount(); 
+        } else {
+          // 在本地端過濾掉被刪除的帳號，保留目前的搜尋關鍵字重新渲染！
+          adminCachedUsers = adminCachedUsers.filter(u => u.email !== targetEmail);
+          const kw = document.getElementById('adm-search-user')?.value || '';
+          renderAdminUserList(kw);
+        }
+      } else {
+        toast('⚠️ 刪除失敗：' + data.message);
+      }
+    });
+  } catch(err) {
+    finishProgress(() => toast('連線失敗'));
+  }
+}
+
+/* 4. 手動建立新帳號介面 */
 window.openAdminCreateUser = function() {
   document.getElementById('sub-title').textContent = '手動建立帳號';
-  document.getElementById('sub-top-right').innerHTML = '';
+  
+  // 改為返回「會員名單」
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="openAdminUserList()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回清單</button>
+  `;
   
   document.getElementById('sub-body').innerHTML = `
-    <div class="card" style="padding:16px;">
-      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700; margin-bottom:16px;">
-        💡 在此建立的帳號將會直接跳過 Email 驗證並自動開通，權限為一般使用者 (無法進入管理員介面)。<br>
-        ⚠️ 管理員手動建置的密碼不受強度限制，可自由設定簡單密碼。
+    <div class="card" style="padding:16px; border:2px solid #10b981; box-shadow:0 4px 16px rgba(16,185,129,0.15);">
+      <div style="font-size:12px; color:#065f46; line-height:1.6; font-weight:700; margin-bottom:16px; background:#dcfce7; padding:10px; border-radius:8px;">
+        💡 在此建立的帳號將直接跳過 Email 驗證並自動開通，可直接登入！<br>
+        ⚠️ 密碼不受強度限制，可自由設定如 1234 等初始密碼。
       </div>
-      <div style="border-top:1px dashed var(--border); margin-bottom:16px;"></div>
 
       <div class="fg">
-        <label style="font-weight:700; color:var(--t1);">電子郵件 (作為登入帳號)</label>
-        <input type="email" id="adm-new-email" class="finp" placeholder="例如：test@gmail.com" style="font-family:var(--mono); color:var(--text-blue); font-weight:800;">
+        <label style="font-weight:900; color:#047857;">電子郵件 (登入帳號)</label>
+        <input type="email" id="adm-new-email" class="finp" placeholder="例如：test@gmail.com" style="font-family:var(--mono); color:var(--text-blue); font-weight:800; border-color:#6ee7b7;">
       </div>
       
-      <div class="fg" style="margin-top:12px;">
-        <label style="font-weight:700; color:var(--t1);">設定登入密碼</label>
-        <!-- 這裡使用 text 讓管理員可以直接看到輸入的密碼，避免打錯 -->
-        <input type="text" id="adm-new-pwd" class="finp" placeholder="請設定一組密碼" style="font-family:var(--mono); color:var(--red); font-weight:800;">
+      <div class="fg" style="margin-top:16px;">
+        <label style="font-weight:900; color:#047857;">設定初始登入密碼</label>
+        <input type="text" id="adm-new-pwd" class="finp" placeholder="例如：1234" style="font-family:var(--mono); color:var(--red); font-weight:900; border-color:#6ee7b7;">
       </div>
     </div>
     
-    <button onclick="adminCreateUserSubmit()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); background:#10b981; box-shadow:0 4px 12px rgba(16,185,129,0.3); margin-top:8px;">✅ 立即建立並開通帳號</button>
+    <button onclick="adminCreateUserSubmit()" class="btn-acc" style="width:100%; padding:14px; font-size:16px; font-weight:900; border-radius:var(--rs); background:#059669; box-shadow:0 6px 16px rgba(16,185,129,0.35); margin-top:12px; transition:0.2s;">
+      ✅ 立即建立並開通帳號
+    </button>
   `;
-  document.getElementById('sub-page').style.zIndex = '1100'; 
 }
 
-/* 傳送手動建立帳號請求 */
+/* 5. 送出建立請求 */
 window.adminCreateUserSubmit = async function() {
   const email = document.getElementById('adm-new-email').value.trim();
   const pwd = document.getElementById('adm-new-pwd').value.trim();
@@ -4716,8 +4785,8 @@ window.adminCreateUserSubmit = async function() {
     finishProgress(() => {
       if (data.success) {
         toast('✅ 帳號已成功建立並開通！');
-        document.getElementById('sub-page').style.zIndex = '200';
-        openAccountStats(); // 重新整理外層的會員清單
+        // 自動導回會員名單，並重拉最新資料
+        openAdminUserList(); 
       } else {
         toast('⚠️ 建立失敗：' + data.message);
       }
@@ -4905,34 +4974,6 @@ function saveAnnouncement() {
   document.getElementById('sub-page').style.zIndex = '200';
   openAccountStats(); 
   if (S.tab === 'home') renderHome();
-}
-
-/* ══ 管理員刪除 API 呼叫 (帶上憑證) ══ */
-async function adminDeleteUser(targetEmail) {
-  const ok = await customConfirm(`確定要強制刪除並封鎖 <b>${targetEmail}</b> 嗎？`);
-  if(!ok) return;
-  
-  showProgress('刪除帳號中...');
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/delete`, { 
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
-      body: JSON.stringify({ adminEmail: USER.email, targetEmail: targetEmail })
-    });
-    const data = await res.json();
-    
-    finishProgress(() => {
-      if(data.success) {
-        toast('帳號已刪除');
-        if (targetEmail === USER.email) logoutAccount(); 
-        else openAccountStats(); 
-      } else {
-        toast('刪除失敗：' + data.message);
-      }
-    });
-  } catch(err) {
-    finishProgress(() => toast('連線失敗'));
-  }
 }
 
 /* ══ 踢下線檢查 (顯示共用時間) ══ */
