@@ -4426,10 +4426,15 @@ async function requestLogin() {
 
   if(!email.includes('@')) { toast('請輸入有效的 E-mail 格式（您的帳號@gmail.com）'); return; }
   
-  // 統一登入與註冊的嚴格密碼驗證 (無舊用戶，一律採用最高標準)
   const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9\s])\S{12,}$/;
-  if (!pwdRegex.test(pwd)) {
-    toast('密碼錯誤或強度不足：需至少12字元，並包含大小寫英文、數字及特殊符號');
+  
+  // 💡 修正：只有「註冊」時才在送出前嚴格阻擋。「登入」時先放行，讓後端核對密碼是否正確
+  if (authMode === 'register' && !pwdRegex.test(pwd)) {
+    toast('⚠️ 密碼強度不足：需至少12字元，並包含大小寫英文、數字及特殊符號');
+    return;
+  }
+  if (authMode === 'login' && pwd === '') {
+    toast('⚠️ 請輸入密碼');
     return;
   }
 
@@ -4459,9 +4464,9 @@ async function requestLogin() {
           USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
           saveUser();
           
-          // 👇 攔截 1234 初始密碼
-          if (pwd === '1234') {
-            toast('⚠️ 偵測到您使用初始密碼登入，請立即更改密碼！');
+          // 👇 修正：只要登入的密碼「不符合最高安全強度」（涵蓋管理員建立的 1234 或其它簡單密碼），就強制要求更改！
+          if (!pwdRegex.test(pwd)) {
+            toast('⚠️ 您的密碼強度過低或為初始密碼，請立即更改！');
             showForcePasswordChange();
             return;
           }
@@ -5651,14 +5656,20 @@ window.showForcePasswordChange = function() {
   
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <div style="background:#fff1f2; border:1px solid #fecdd3; padding:12px; border-radius:12px; margin-bottom:16px;">
-        <div style="color:#e11d48; font-weight:800; font-size:14px; margin-bottom:6px;">⚠️ 密碼安全規則</div>
-        <div style="color:#be123c; font-size:12px; line-height:1.6; font-weight:600;">
-          為了您的帳號安全，密碼必須：<br>
-          1. 至少 <span style="color:#9f1239; font-weight:900;">12 位數</span><br>
-          2. 包含 <span style="color:#9f1239; font-weight:900;">大寫與小寫英文字母</span><br>
-          3. 包含 <span style="color:#9f1239; font-weight:900;">數字</span> 與 <span style="color:#9f1239; font-weight:900;">特殊符號</span><br>
-          💡 推薦使用：<a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; text-decoration:underline;">1Password 密碼生成器</a>
+      
+      <!-- 👇 全新鮮明高對比配色的密碼規則警告框 -->
+      <div style="background:#fffbeb; border:2px solid #f59e0b; padding:14px; border-radius:16px; margin-bottom:24px; box-shadow:0 6px 16px rgba(245,158,11,0.15);">
+        <div style="display:flex; align-items:center; gap:6px; color:#d97706; font-weight:900; font-size:16px; margin-bottom:12px;">
+          <span style="font-size:22px;">🛡️</span> 必須符合以下密碼規則
+        </div>
+        <div style="color:#451a03; font-size:13px; line-height:2.2; font-weight:700;">
+          1. 長度至少 <span style="background:#fee2e2; color:#dc2626; padding:3px 8px; border-radius:8px; font-family:var(--mono); font-weight:900; border:1px solid #fecdd3;">12 位數</span><br>
+          2. 包含 <span style="background:#e0e7ff; color:#2563eb; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #bfdbfe;">大寫</span> 與 <span style="background:#e0e7ff; color:#2563eb; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #bfdbfe;">小寫</span> 英文字母<br>
+          3. 包含 <span style="background:#dcfce7; color:#16a34a; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #bbf7d0;">數字</span> 與 <span style="background:#f3e8ff; color:#9333ea; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #e9d5ff;">特殊符號</span><br>
+          
+          <div style="margin-top:12px; padding-top:12px; border-top:1.5px dashed #fcd34d; font-size:12px; display:flex; align-items:center; gap:6px;">
+            💡 推薦使用：<a href="https://1password.com/zh-tw/password-generator" target="_blank" style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:8px; text-decoration:none; font-weight:900; box-shadow:0 2px 4px rgba(234,88,12,0.3);">1Password 密碼生成器 ➔</a>
+          </div>
         </div>
       </div>
 
