@@ -4644,8 +4644,11 @@ window.openAdminUserList = async function() {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adminEmail: USER.email, token: USER.token })
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${USER.token}` // 👈 就是少了這一行！
+      },
+      body: JSON.stringify({ adminEmail: USER.email }) 
     });
     const data = await res.json();
     if (data.success) {
