@@ -2676,7 +2676,8 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
 
 // 全域比較頁面時間與設定控制
 window.navCmpTime = function(dir) {
-  if (S.cmpType === 'month') {
+  // 👉 修正：讓 "month" 與 "prev_month" (大數據) 都能正常切換「月份」
+  if (S.cmpType === 'month' || S.cmpType === 'prev_month') {
     S.cmpBaseMonth += dir;
     if(S.cmpBaseMonth < 1) { S.cmpBaseMonth = 12; S.cmpBaseYear--; }
     if(S.cmpBaseMonth > 12) { S.cmpBaseMonth = 1; S.cmpBaseYear++; }
@@ -2794,16 +2795,16 @@ function renderRptCompare() {
     });
     html += `</div>`;
 
-    // 狀態膠囊 (顯示 比較對象 VS 基準月)
+    // 狀態膠囊 (👉 修正：基準月 在左邊，比較對象 在右邊)
     const targetYMStr = S.cmpTargetYM.replace('-', '/');
     const baseYMStr = `${S.cmpBaseYear}/${pad(S.cmpBaseMonth)}`;
     
     html += `
       <div style="display:flex; justify-content:center; margin-bottom:16px;">
         <div style="display:inline-flex; align-items:center; background:#f1f5f9; border-radius:20px; padding:4px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-          <span style="background:#fff; color:var(--text-blue); padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); box-shadow:0 1px 3px rgba(0,0,0,0.05);">${baseYMStr}</span>
+          <span style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); border:1px solid #c7d2fe;">${baseYMStr}</span>
           <span style="font-size:11px; font-weight:900; color:var(--t3); margin:0 8px;">VS</span>
-          <span style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); border:1px solid #c7d2fe;">${targetYMStr}</span>
+          <span style="background:#fff; color:var(--text-blue); padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); box-shadow:0 1px 3px rgba(0,0,0,0.05);">${targetYMStr}</span>
         </div>
       </div>
     `;
@@ -2831,7 +2832,6 @@ function renderRptCompare() {
     const dB = calcData(recsB);
 
     // 輔助函式：產生帶有 ↑綠色 / ↓紅色的 比較膠囊
-    // 💡 修正了小數點與空格的格式
     const getDiffBadge = (valA, valB, formatType) => {
       const diff = valA - valB;
       if (diff === 0 || valB === 0) return `<span style="font-size:11px; color:var(--t3); font-weight:600;">—</span>`;
@@ -2842,14 +2842,14 @@ function renderRptCompare() {
       const icon = isUp ? '▲' : '▼';
       
       let diffStr = '';
-      if (formatType === '$') diffStr = `$${fmt(Math.abs(diff))}`;
+      if (formatType === '$') diffStr = `$ ${fmt(Math.abs(diff))}`; // 👉 修正：金額符號空一格
+      else if (formatType === '$2') diffStr = `$ ${Math.abs(diff).toFixed(2)}`; // 👉 修正：處理小數點兩位的金額
       else if (formatType === '%') diffStr = `${(Math.abs(diff/valB)*100).toFixed(2)} %`;
       else if (formatType === 'hr') diffStr = `${Math.abs(diff).toFixed(2)} hr`;
       else if (formatType === '單') diffStr = `${fmt(Math.abs(diff))} 單`;
       else if (formatType === 'km') diffStr = `${fmt(Math.abs(diff))} km`;
-      else diffStr = Math.abs(diff).toFixed(2);
+      else diffStr = Math.abs(diff).toFixed(2); // 預設留2位小數 (如單量比)
 
-      // 把 vs 上月 移除
       return `
         <span style="background:${bg}; color:${color}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:900; font-family:var(--mono); letter-spacing:0.5px; border:1px solid ${color}30; white-space:nowrap; display:inline-flex; align-items:center; gap:2px;">
           <span style="font-size:8px;">${icon}</span> ${diffStr}
@@ -2857,7 +2857,7 @@ function renderRptCompare() {
       `;
     };
 
-    // 計算均值
+    // 計算均值 (👉 修正：全數採用 2 位小數處理邏輯)
     const avgIncomeA = dA.workDays > 0 ? (dA.total / dA.workDays) : 0;
     const avgIncomeB = dB.workDays > 0 ? (dB.total / dB.workDays) : 0;
     
@@ -2875,17 +2875,17 @@ function renderRptCompare() {
 
     // 建立 3x3 網格
     const cards = [
-      { t: '月收入', v: `$${fmt(dA.total)}`, c: '#ea580c', diff: getDiffBadge(dA.total, dB.total, '%') },
-      { t: '總單量', v: `${fmt(dA.orders)} <span style="font-size:12px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
-      { t: '均單價', v: `$${avgOrdPriceA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$') },
-
+      { t: '月收入', v: `$ ${fmt(dA.total)}`, c: '#ea580c', diff: getDiffBadge(dA.total, dB.total, '%') },
       { t: '總工時', v: `${dA.hours.toFixed(2)} <span style="font-size:12px">hr</span>`, c: '#475569', diff: getDiffBadge(dA.hours, dB.hours, 'hr') },
-      { t: '時薪', v: `$${fmt(avgHrA)}`, c: '#2563eb', diff: getDiffBadge(avgHrA, avgHrB, '$') },
-      { t: '均單量 (單/hr)', v: `${avgOrdHrA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdHrA, avgOrdHrB, '') },
-
-      { t: '日均收入', v: `$${fmt(avgIncomeA)}`, c: '#0f172a', diff: getDiffBadge(avgIncomeA, avgIncomeB, '$') },
+      { t: '時薪', v: `$ ${avgHrA.toFixed(2)}`, c: '#2563eb', diff: getDiffBadge(avgHrA, avgHrB, '$2') }, // 👉 修正：時薪帶小數
+      
+      { t: '日均收入', v: `$ ${fmt(avgIncomeA)}`, c: '#0f172a', diff: getDiffBadge(avgIncomeA, avgIncomeB, '$') },
+      { t: '總單量', v: `${fmt(dA.orders)} <span style="font-size:12px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
       { t: '里程', v: `${fmt(dA.mileage)} <span style="font-size:12px">km</span>`, c: '#0f172a', diff: getDiffBadge(dA.mileage, dB.mileage, 'km') },
-      { t: '每公里均價', v: `$${avgOrdKmA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$') }
+      
+      { t: '每公里均價', v: `$ ${avgOrdKmA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$2') }, // 👉 修正：金額帶小數
+      { t: '均單量', v: `${avgOrdHrA.toFixed(2)} <span style="font-size:12px">單/hr</span>`, c: '#0f172a', diff: getDiffBadge(avgOrdHrA, avgOrdHrB, '') }, // 👉 修正：標題與單位
+      { t: '均單價', v: `$ ${avgOrdPriceA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$2') } // 👉 修正：金額帶小數
     ];
 
     html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:16px;">`;
