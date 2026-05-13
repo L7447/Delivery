@@ -554,7 +554,7 @@ function toggleSummaryCard(id) {
 }
 
 /* ══ 替換：產生總結卡片 (統一版面、加入淨行程佔比、以及基本工資判斷、支援日期標籤) ══ */
-function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, cardId, dateStr = '') {
+function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus, tips, cardId, dateStr = '') {
   if (total <= 0) return '';
   const totalBonus = bonus + tempBonus; 
   const income = total - totalBonus - tips; // 算出淨行程
@@ -564,21 +564,42 @@ function buildSummaryCard(title, total, orders, hours, bonus, tempBonus, tips, c
   const bonPct = total > 0 ? Math.round((totalBonus / total) * 100) : 0;
   const tipPct = total > 0 ? Math.round((tips / total) * 100) : 0;
 
-  // 👇 全新設計：彩色數據藥丸 (Data Pills)
-  let tagsHtml = '';
+  // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
+  let tagsParts = [];
+  
   if (orders > 0) {
-    tagsHtml += `
-      <div style="background:#fff7ed; border:1px solid hsl(34, 100%, 82%); padding:2px 8px; border-radius:8px; display:flex; align-items:baseline; gap:3px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
-        <span style="font-size:14px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span>
+    tagsParts.push(`
+      <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${fmt(orders)}</span>
         <span style="font-size:11px; font-weight:600; color:#f97316;">單</span>
-      </div>`;
+      </div>
+    `);
+  }
+  if (mileage > 0) {
+    tagsParts.push(`
+      <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${fmt(mileage)}</span>
+        <span style="font-size:11px; font-weight:800; color:#22c55e;">km</span>
+      </div>
+    `);
   }
   if (hours > 0) {
-    tagsHtml += `
-      <div style="background:#eff6ff; border:1px solid #dbeafe; padding:2px 8px; border-radius:8px; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+    tagsParts.push(`
+      <div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;">
         <span style="font-size:11px;">⏱️</span>
         <span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(hours)}</span>
-      </div>`;
+      </div>
+    `);
+  }
+
+  let tagsHtml = '';
+  if (tagsParts.length > 0) {
+    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果
+    tagsHtml = `
+      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.02); background:#e2e8f0; gap:2px;">
+        ${tagsParts.join('')}
+      </div>
+    `;
   }
 
   const avgOrd = orders > 0 ? Math.round(total / orders) : 0;
@@ -938,6 +959,7 @@ function renderHome() {
     
     const total   = dayRecs.reduce((s, r) => s + recTotal(r), 0);
     const orders  = dayRecs.reduce((s, r) => s + pf(r.orders), 0);
+    const mileage = dayRecs.reduce((s, r) => s + pf(r.mileage), 0); // 👈 新增這行計算里程
     const hours = calcTotalHours(dayRecs);
     
     const dateObj = new Date(today + 'T00:00:00');
@@ -982,8 +1004,8 @@ function renderHome() {
         topHtml += `<div style="background:var(--sf); padding:4px 5px; border-radius:25px; border:1.5px solid var(--border); display:flex; flex-direction:column; gap:1px; margin:3px 0;">`;
         platStats.forEach(p => {
           topHtml += `
-            <div class="hero-plat-row" style="display:flex; align-items:center; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}25); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
-              <span class="hp-name" style="width:35%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span><span style="font-size:14px; font-weight:800;"> 收入：</span></span>
+            <div class="hero-plat-row" style="display:flex; align-items:center; padding:4px 14px; border-radius:20px; font-size:14px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}25); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
+              <span class="hp-name" style="width:32%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60; padding:3px 7px; font-size:14px;">${safeText(p.name)}</span><span style="font-size:14px; font-weight:800;"> 收入：</span></span>
               <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
               <span class="hp-ord" style="font-weight:800; width:20%; font-size:14px; text-align:right; color: #1b585f;">${p.orders} <span style="font-weight:500; font-size:11px;">單</span></span>
               <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; color: var(--text-blue); opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
@@ -1001,7 +1023,7 @@ function renderHome() {
     const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0);
     const dayTemp  = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0);
     const dayTips  = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
-    topHtml += buildSummaryCard('總計', total, orders, hours, dayBonus, dayTemp, dayTips, 'home-summary-card');
+    topHtml += buildSummaryCard('總計', total, orders, mileage, hours, dayBonus, dayTemp, dayTips, 'home-summary-card');
     topHtml += `</div>`;
 
     // 打卡模組
@@ -1578,8 +1600,8 @@ function renderHistGroupView(mode) {
   <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:7px;">`;
   
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
-    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tHrs = calcTotalHours(recs); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
-    html += buildSummaryCard('區間總計', tInc, tOrd, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
+    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tMil = recs.reduce((s,r) => s + pf(r.mileage), 0); const tHrs = calcTotalHours(recs); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
+    html += buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
     html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
   } html += `</div>`; content.innerHTML = html;
 }
@@ -1622,12 +1644,12 @@ function renderHistRecords(ds) {
   const sumEl = document.getElementById('hist-day-summary');
   
   if (total > 0 || cashTips > 0) {
-    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const hours = calcTotalHours(recs); const dayBonus = recs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = recs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = recs.reduce((s,r)=>s+pf(r.tips), 0);
+    const orders = recs.reduce((s,r)=>s+pf(r.orders), 0); const mileage = recs.reduce((s,r)=>s+pf(r.mileage), 0); const hours = calcTotalHours(recs); const dayBonus = recs.reduce((s,r)=>s+pf(r.bonus), 0); const dayTemp = recs.reduce((s,r)=>s+pf(r.tempBonus), 0); const dayTips = recs.reduce((s,r)=>s+pf(r.tips), 0);
     
     // 👇 產生精確的日期標籤
     const dStr = `${d.getFullYear()}年 ${d.getMonth()+1}月 ${d.getDate()}日`;
     
-    let sumHtml = total > 0 ? buildSummaryCard('當日', total, orders, hours, dayBonus, dayTemp, dayTips, 'hist-day-card', dStr) : '';
+    let sumHtml = total > 0 ? buildSummaryCard('當日', total, orders, mileage, hours, dayBonus, dayTemp, dayTips, 'hist-day-card', dStr) : '';
     if (cashTips > 0) {
       sumHtml += `<div style="background:#f0fdf4; border:1.5px solid #708090; border-radius:12px; padding:5px 16px; margin:2px 0px; display:flex; justify-content:space-between; align-items:center;">
         <span style="font-size:13px; font-weight:700; color:#15803d;">💵 當日現金小費 (不計入總收入)</span>
@@ -4262,6 +4284,10 @@ function renderAuthContent() {
           <label class="auth-input-label">密碼</label>
           <input type="password" class="auth-input" id="auth-pwd" placeholder="請輸入密碼">
         </div>
+        
+        <div style="text-align:right; margin-top:-6px; margin-bottom:12px;">
+          <span onclick="openForgotPassword()" style="color:#2563eb; font-size:12px; font-weight:700; cursor:pointer;">忘記密碼？</span>
+        </div>
 
         <div id="turnstile-widget" style="margin-bottom:16px; min-height:65px;"></div>
 
@@ -4432,6 +4458,14 @@ async function requestLogin() {
           // ✅ 舊用戶，密碼正確，直接瞬間登入
           USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
           saveUser();
+          
+          // 👇 攔截 1234 初始密碼
+          if (pwd === '1234') {
+            toast('⚠️ 偵測到您使用初始密碼登入，請立即更改密碼！');
+            showForcePasswordChange();
+            return;
+          }
+
           toast('✅ 登入成功');
           closeOverlay('sub-page');
           renderSettings();
@@ -4534,6 +4568,7 @@ async function openAccountStats() {
       <div class="set-list" style="margin-bottom:20px;">
         <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${USER.joinDate || '未知'}</span></div>
         <div class="set-row"><span class="sn">個人總記錄數</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${S.records.length} 筆</span></div>
+        <div class="set-row" onclick="showForcePasswordChange()"><span class="sn" style="color:var(--acc); font-weight:700;">🔑 更改密碼</span><span class="arr">›</span></div>
       </div>
       ${statsHtml}
   `;
@@ -4595,6 +4630,10 @@ async function openAccountStats() {
         ${adminHtml}
       </div>
 
+      <button onclick="openAdminCreateUser()" style="width:100%; padding:14px; border-radius:var(--rs); background:#10b981; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(16,185,129,0.3); cursor:pointer;">
+        ➕ 手動建立使用者帳號 (免驗證)
+      </button>
+
       <button onclick="openAdminSystemSettings()" style="width:100%; padding:14px; border-radius:var(--rs); background:#8b5cf6; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(139,92,246,0.3); cursor:pointer;">
         🔒 編輯系統存取權限
       </button>
@@ -4616,6 +4655,70 @@ async function openAccountStats() {
       <div style="text-align:center; color:var(--red); margin-bottom:16px;">介面載入發生錯誤</div>
       <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
     </div>`;
+  }
+}
+
+/* ✨ 新增：管理員手動建立帳號介面 (免信箱驗證) */
+window.openAdminCreateUser = function() {
+  document.getElementById('sub-title').textContent = '手動建立帳號';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div class="card" style="padding:16px;">
+      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700; margin-bottom:16px;">
+        💡 在此建立的帳號將會直接跳過 Email 驗證並自動開通，權限為一般使用者 (無法進入管理員介面)。<br>
+        ⚠️ 管理員手動建置的密碼不受強度限制，可自由設定簡單密碼。
+      </div>
+      <div style="border-top:1px dashed var(--border); margin-bottom:16px;"></div>
+
+      <div class="fg">
+        <label style="font-weight:700; color:var(--t1);">電子郵件 (作為登入帳號)</label>
+        <input type="email" id="adm-new-email" class="finp" placeholder="例如：test@gmail.com" style="font-family:var(--mono); color:var(--text-blue); font-weight:800;">
+      </div>
+      
+      <div class="fg" style="margin-top:12px;">
+        <label style="font-weight:700; color:var(--t1);">設定登入密碼</label>
+        <!-- 這裡使用 text 讓管理員可以直接看到輸入的密碼，避免打錯 -->
+        <input type="text" id="adm-new-pwd" class="finp" placeholder="請設定一組密碼" style="font-family:var(--mono); color:var(--red); font-weight:800;">
+      </div>
+    </div>
+    
+    <button onclick="adminCreateUserSubmit()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); background:#10b981; box-shadow:0 4px 12px rgba(16,185,129,0.3); margin-top:8px;">✅ 立即建立並開通帳號</button>
+  `;
+  document.getElementById('sub-page').style.zIndex = '1100'; 
+}
+
+/* 傳送手動建立帳號請求 */
+window.adminCreateUserSubmit = async function() {
+  const email = document.getElementById('adm-new-email').value.trim();
+  const pwd = document.getElementById('adm-new-pwd').value.trim();
+
+  if (!email || !pwd) { toast('⚠️ 信箱與密碼不可為空'); return; }
+
+  showProgress('建立帳號中...');
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/create-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({
+        targetEmail: email,
+        targetPassword: pwd
+      })
+    });
+    const data = await res.json();
+
+    finishProgress(() => {
+      if (data.success) {
+        toast('✅ 帳號已成功建立並開通！');
+        document.getElementById('sub-page').style.zIndex = '200';
+        openAccountStats(); // 重新整理外層的會員清單
+      } else {
+        toast('⚠️ 建立失敗：' + data.message);
+      }
+    });
+  } catch(err) {
+    finishProgress(() => toast('連線失敗，無法建立帳號'));
   }
 }
 
@@ -5535,6 +5638,170 @@ function applyBackground() {
     root.style.setProperty('--bg-header', 'rgba(240, 244, 248, 0.85)');
     root.style.setProperty('--overlay-bg', '#f0f4f8');
   }
+}
+
+/* =========================================================
+   密碼管理專區 (更改密碼 / 忘記密碼)
+   ========================================================= */
+
+/* --- 1. 更改密碼 (包含 1234 強制更改) --- */
+window.showForcePasswordChange = function() {
+  document.getElementById('sub-title').textContent = '安全設定：更改密碼';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div style="background:#fff1f2; border:1px solid #fecdd3; padding:12px; border-radius:12px; margin-bottom:16px;">
+        <div style="color:#e11d48; font-weight:800; font-size:14px; margin-bottom:6px;">⚠️ 密碼安全規則</div>
+        <div style="color:#be123c; font-size:12px; line-height:1.6; font-weight:600;">
+          為了您的帳號安全，密碼必須：<br>
+          1. 至少 <span style="color:#9f1239; font-weight:900;">12 位數</span><br>
+          2. 包含 <span style="color:#9f1239; font-weight:900;">大寫與小寫英文字母</span><br>
+          3. 包含 <span style="color:#9f1239; font-weight:900;">數字</span> 與 <span style="color:#9f1239; font-weight:900;">特殊符號</span><br>
+          💡 推薦使用：<a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; text-decoration:underline;">1Password 密碼生成器</a>
+        </div>
+      </div>
+
+      <div class="fg" style="margin-bottom:16px;">
+        <label style="font-weight:700; color:var(--t1);">輸入新密碼</label>
+        <input type="password" class="finp" id="cp-new1" placeholder="請符合上方規則">
+      </div>
+      <div class="fg" style="margin-bottom:24px;">
+        <label style="font-weight:700; color:var(--t1);">再次確認新密碼</label>
+        <input type="password" class="finp" id="cp-new2" placeholder="請再次輸入新密碼">
+      </div>
+
+      <button onclick="submitChangePassword()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">✅ 確認更改密碼</button>
+    </div>
+  `;
+  document.getElementById('sub-page').style.zIndex = '1100';
+  openOverlay('sub-page');
+}
+
+window.submitChangePassword = async function() {
+  const p1 = document.getElementById('cp-new1').value;
+  const p2 = document.getElementById('cp-new2').value;
+
+  if (p1 !== p2) { toast('⚠️ 兩次密碼輸入不一致'); return; }
+  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9\s])\S{12,}$/;
+  if (!pwdRegex.test(p1)) { toast('⚠️ 密碼強度不足，請確認是否符合所有規則'); return; }
+
+  showProgress('密碼更新中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ newPassword: p1 })
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) {
+        toast('✅ 密碼已成功更改！');
+        document.getElementById('sub-page').style.zIndex = '200';
+        closeOverlay('sub-page');
+        renderSettings();
+      } else {
+        toast('⚠️ ' + data.message);
+      }
+    });
+  } catch(e) {
+    finishProgress(() => toast('連線失敗'));
+  }
+}
+
+/* --- 2. 忘記密碼 --- */
+window.openForgotPassword = function() {
+  document.getElementById('sub-title').textContent = '忘記密碼';
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <p style="font-size:13px; color:var(--t2); margin-bottom:20px; font-weight:600; line-height:1.6;">
+        請輸入您註冊時的電子郵件，我們將發送一組 6 位數驗證碼給您以重設密碼。<br><br>
+        <span style="color:var(--red);">⚠️ 安全限制：1小時僅限1次，單日2次，7天內最多3次。</span>
+      </p>
+      
+      <div class="fg" style="margin-bottom:24px;">
+        <label style="font-weight:700; color:var(--t1);">註冊信箱</label>
+        <input type="email" class="finp" id="fp-email" placeholder="您的帳號@gmail.com">
+      </div>
+
+      <button onclick="requestForgotPassword()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">寄送驗證碼</button>
+    </div>
+  `;
+}
+
+window.requestForgotPassword = async function() {
+  const email = document.getElementById('fp-email').value.trim();
+  if(!email.includes('@')) { toast('請輸入有效的 E-mail'); return; }
+
+  showProgress('發送請求中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) {
+        toast('✅ 驗證碼已寄出！');
+        showResetPasswordUI(email);
+      } else {
+        toast('⚠️ ' + data.message);
+      }
+    });
+  } catch(e) { finishProgress(() => toast('連線失敗')); }
+}
+
+function showResetPasswordUI(email) {
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <p style="font-size:13px; color:var(--green); font-weight:700; background:var(--green-d); padding:12px; border-radius:12px; margin-bottom:16px;">
+        驗證碼已發送至 ${email}<br><span style="font-size:11px; color:var(--t2);">請於 10 分鐘內輸入</span>
+      </p>
+
+      <div class="fg" style="margin-bottom:16px;">
+        <label style="font-weight:700; color:var(--t1);">6 位數驗證碼</label>
+        <input type="number" class="finp" id="rp-code" style="font-size:20px; letter-spacing:4px; text-align:center; font-family:var(--mono);">
+      </div>
+
+      <div class="fg" style="margin-bottom:16px;">
+        <label style="font-weight:700; color:var(--t1);">設定新密碼</label>
+        <input type="password" class="finp" id="rp-new" placeholder="12位含大小寫、數字與特殊符號">
+      </div>
+
+      <div style="font-size:11px; color:var(--t3); margin-bottom:24px; line-height:1.5;">
+        需要密碼靈感？ <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:var(--text-blue);">1Password 密碼生成器</a>
+      </div>
+
+      <button onclick="submitResetPassword('${email}')" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">✅ 驗證並重設密碼</button>
+    </div>
+  `;
+}
+
+window.submitResetPassword = async function(email) {
+  const code = document.getElementById('rp-code').value.trim();
+  const pwd = document.getElementById('rp-new').value;
+
+  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9\s])\S{12,}$/;
+  if (!pwdRegex.test(pwd)) { toast('⚠️ 密碼強度不足，請確認是否符合規則'); return; }
+
+  showProgress('驗證與重設中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code, newPassword: pwd })
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) {
+        toast('✅ ' + data.message);
+        openAuthModal(); // 回到登入畫面
+      } else {
+        toast('⚠️ ' + data.message);
+      }
+    });
+  } catch(e) { finishProgress(() => toast('連線失敗')); }
 }
 
 /* ══ 真正儲存為實體檔案至本機資料夾 (File System API 或 下載) ══ */
