@@ -2802,9 +2802,9 @@ function renderRptCompare() {
     html += `
       <div style="display:flex; justify-content:center; margin-bottom:16px;">
         <div style="display:inline-flex; align-items:center; background:#f1f5f9; border-radius:20px; padding:4px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-          <span style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); border:1px solid #c7d2fe;">${baseYMStr}</span>
-          <span style="font-size:11px; font-weight:900; color:var(--t3); margin:0 8px;">VS</span>
           <span style="background:#fff; color:var(--text-blue); padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); box-shadow:0 1px 3px rgba(0,0,0,0.05);">${targetYMStr}</span>
+          <span style="font-size:11px; font-weight:900; color: #000000; margin:0 8px;">VS</span>
+          <span style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); border:1px solid #c7d2fe;">${baseYMStr}</span>
         </div>
       </div>
     `;
@@ -2876,16 +2876,16 @@ function renderRptCompare() {
     // 建立 3x3 網格
     const cards = [
       { t: '月收入', v: `$ ${fmt(dA.total)}`, c: '#ea580c', diff: getDiffBadge(dA.total, dB.total, '%') },
+      { t: '總單量', v: `${fmt(dA.orders)} <span style="font-size:12px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
+      { t: '均單價', v: `$ ${avgOrdPriceA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$2') }, // 👉 修正：金額帶小數
+
       { t: '總工時', v: `${dA.hours.toFixed(2)} <span style="font-size:12px">hr</span>`, c: '#475569', diff: getDiffBadge(dA.hours, dB.hours, 'hr') },
       { t: '時薪', v: `$ ${avgHrA.toFixed(2)}`, c: '#2563eb', diff: getDiffBadge(avgHrA, avgHrB, '$2') }, // 👉 修正：時薪帶小數
-      
-      { t: '日均收入', v: `$ ${fmt(avgIncomeA)}`, c: '#0f172a', diff: getDiffBadge(avgIncomeA, avgIncomeB, '$') },
-      { t: '總單量', v: `${fmt(dA.orders)} <span style="font-size:12px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
-      { t: '里程', v: `${fmt(dA.mileage)} <span style="font-size:12px">km</span>`, c: '#0f172a', diff: getDiffBadge(dA.mileage, dB.mileage, 'km') },
-      
-      { t: '每公里均價', v: `$ ${avgOrdKmA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$2') }, // 👉 修正：金額帶小數
       { t: '均單量', v: `${avgOrdHrA.toFixed(2)} <span style="font-size:12px">單/hr</span>`, c: '#0f172a', diff: getDiffBadge(avgOrdHrA, avgOrdHrB, '') }, // 👉 修正：標題與單位
-      { t: '均單價', v: `$ ${avgOrdPriceA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$2') } // 👉 修正：金額帶小數
+
+      { t: '日均收入', v: `$ ${fmt(avgIncomeA)}`, c: '#0f172a', diff: getDiffBadge(avgIncomeA, avgIncomeB, '$') },
+      { t: '里程', v: `${fmt(dA.mileage)} <span style="font-size:12px">km</span>`, c: '#0f172a', diff: getDiffBadge(dA.mileage, dB.mileage, 'km') },
+      { t: '每公里均價', v: `$ ${avgOrdKmA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$2') } // 👉 修正：金額帶小數
     ];
 
     html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:16px;">`;
