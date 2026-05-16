@@ -1045,17 +1045,28 @@ function renderHome() {
 
     let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
 
-    // 公告系統
+    // 公告系統 (全新現代微玻璃質感設計)
     try {
       const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
       const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
       if (ann.active && ann.text && ann.text !== dismissedAnn) {
         const safeText = encodeURIComponent(ann.text); 
         topHtml += `
-          <div id="home-announcement-card" style="position:relative; background:linear-gradient(135deg, var(--acc), var(--acc2)); color:#fff; padding:12px 16px; border-radius:16px; margin-bottom:16px; box-shadow:0 4px 12px rgba(255,107,53,0.3); display:flex; gap:10px; align-items:flex-start; transition:0.3s;">
-            <button onclick="dismissAnnouncement('${safeText}')" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.15); border:none; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; transition:0.2s;">✕</button>
-            <span style="font-size:20px;">📢</span>
-            <div style="font-size:13px; font-weight:600; line-height:1.5; padding-right:18px;">${safeTextWithBr(ann.text)}</div>
+          <div id="home-announcement-card" style="position:relative; background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border-left: 4px solid #f97316; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); padding: 16px; transition: 0.3s; overflow: hidden; border-top: 1px solid #ffedd5; border-right: 1px solid #ffedd5; border-bottom: 1px solid #ffedd5;">
+            <!-- 裝飾背景圈 -->
+            <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:#ffedd5; border-radius:50%; z-index:0; opacity:0.6;"></div>
+            
+            <button onclick="dismissAnnouncement('${safeText}')" style="position:absolute; top:12px; right:12px; background:#f8fafc; border:none; color:#94a3b8; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:900; z-index:2; transition:0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);">✕</button>
+            
+            <div style="position:relative; z-index:1; display:flex; gap:12px; align-items:flex-start;">
+              <div style="background: linear-gradient(135deg, #f97316, #f59e0b); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(249,115,22,0.25);">
+                <span style="font-size:18px;">🔔</span>
+              </div>
+              <div style="padding-right: 24px; padding-top: 2px;">
+                <div style="font-size:14px; font-weight:900; color:#c2410c; margin-bottom:4px; letter-spacing:0.5px;">系統公告</div>
+                <div style="font-size:13px; font-weight:700; color:#475569; line-height:1.6;">${safeTextWithBr(ann.text)}</div>
+              </div>
+            </div>
           </div>`;
       }
     } catch(e) {}
@@ -1149,7 +1160,7 @@ function renderHome() {
           
           /* 👇 卡片外層加上 position:relative, overflow:hidden，並將 padding-top 加大給標籤空間 */
           bottomHtml += `
-            <div style="position: relative; overflow: hidden; border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 25px; padding: 42px 10px 12px 10px;">
+            <div style="position: relative; overflow: hidden; border: 2px solid ${p.color}; background: ${p.color}10; border-radius: 25px; padding: 42px 10px 12px 10px;">
               
               <!-- 👇 3D 立體按鈕標籤 (使用絕對定位貼死 top:0 left:0，不佔用內部空間) -->
               <div style="position: absolute; top: -1px; left: -1px; display:inline-flex; background: ${p.color}10; padding: 0px; border-radius: 30px; border: 4px solid ${p.color};">
@@ -1163,7 +1174,7 @@ function renderHome() {
                 ${events.map(ev => {
                   // 1. 標題顏色判斷 (改用 Hex 色碼，方便串接透明度)
                   let titleColor = '#475569'; // 預設深灰
-                  if (ev.name.includes('結算') || ev.name.includes('取單')) titleColor = '#ef4444'; // 紅色
+                  if (ev.name.includes('結算') || ev.name.includes('取單')) titleColor = '#e61f1f'; // 紅色
                   else if (ev.name.includes('明細')) titleColor = '#ea580c'; // 橘色
                   else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; // 藍色
                   
@@ -1193,8 +1204,8 @@ function renderHome() {
                     <div style="flex:1; background:#ffffff; border-radius:12px; text-align:center; border:1.5px solid #ffffff; display:flex; flex-direction:column; overflow:hidden; margin-top:10px;">
                       
                       <!-- 上半部：標題區 (帶有特定顏色的 15% 透明背景與虛線底邊) -->
-                      <div style="background:${titleColor}15; padding:6px 2px; border-bottom:1px dashed ${titleColor}30;">
-                        <span style="font-size:15px; color:${titleColor}; font-weight:750; letter-spacing:1.1px;">${safeText(ev.name)}</span>
+                      <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30;">
+                        <span style="font-size:16px; color:${titleColor}; font-weight:750; letter-spacing:1.5px;">${safeText(ev.name)}</span>
                       </div>
                       
                       <!-- 下半部：日期與天數標籤 (維持白底) -->
@@ -5066,10 +5077,12 @@ window.renderAdminUserList = function(keyword) {
       : '<span style="color:var(--t3); font-weight:900; background:var(--bg-input); padding:3px 8px; border-radius:6px; font-size:10px; border:1px solid #e2e8f0;">未驗證</span>';
     const roleTag = u.role === 'admin' ? '👑 ' : '';
     
-    // 👇 將最後活動時間格式化
+    // 👇 智慧判斷最後活動時間：如果有 lastActiveAt 就用，沒有就拿 createdAt (註冊時間) 墊檔
     let lastActiveStr = '尚未登入';
-    if (u.lastActiveAt) {
-      const d = new Date(u.lastActiveAt);
+    const activeTimeMs = u.lastActiveAt || u.createdAt; 
+    
+    if (activeTimeMs) {
+      const d = new Date(activeTimeMs);
       const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
       let diffStr = diffDays === 0 ? '今天' : `${diffDays}天前`;
       lastActiveStr = `${d.getMonth()+1}/${d.getDate()} (${diffStr})`;
