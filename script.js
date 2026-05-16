@@ -594,9 +594,9 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
 
   let tagsHtml = '';
   if (tagsParts.length > 0) {
-    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果
+    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果（當日、區間總計卡片）
     tagsHtml = `
-      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.02); background:#e2e8f0; gap:2px;">
+      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px; background: #e2e8f0; gap:2px;">
         ${tagsParts.join('')}
       </div>
     `;
@@ -662,7 +662,7 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
     </div>`;
 }
 
-// 修復：計算平台日程表的函式
+// 修復：計算平台日程表的函式 (擴大預測範圍至35天，解決Foodomo月底結算超過14天不顯示的問題)
 function calcNextDates(id) {
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -671,40 +671,40 @@ function calcNextDates(id) {
   function addEv(name, targetDate) {
     const d = new Date(targetDate); d.setHours(0,0,0,0);
     const diff = Math.round((d - today) / 86400000);
-    if (diff >= 0 && diff <= 14) {
+    // 👇 將過濾條件從 14 天放寬到 35 天
+    if (diff >= 0 && diff <= 35) {
       events.push({
         name, 
-        dateStr: `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`, 
+        dateStr: `${d.getMonth() + 1}/${d.getDate()}`, 
         diff, 
-        diffStr: diff === 0 ? '今天' : diff === 1 ? '明天' : `${diff}天後`,
+        diffStr: diff === 0 ? '今天' : diff === 1 ? '明天' : `${diff} 天後`,
         ts: d.getTime()
       });
     }
   }
 
   if (id === 'uber') {
-    for(let i=0; i<=14; i++) {
+    // 👇 迴圈檢查天數拉長到 35 天
+    for(let i=0; i<=35; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let dw = d.getDay();
       if (dw === 1) addEv('結算', d);
       if (dw === 4) { addEv('結算', d); addEv('發薪', d); }
     }
   } else if (id === 'foodpanda') {
-    // 根據最新班表，以 2023年12月24日 (雙週循環的週日結算日) 為絕對基準日
     const anchor = new Date(2023, 11, 24); 
-    for(let i=0; i<=14; i++) {
+    // 👇 迴圈檢查天數拉長到 35 天
+    for(let i=0; i<=35; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let diffDays = Math.round((d - anchor) / 86400000);
       
-      // 結算日：每 14 天的週期結尾 (週日)
       if (diffDays % 14 === 0) addEv('取單率結算', d);
-      // 明細寄發日：結算後 3 天 (週三)
       if ((diffDays - 3) % 14 === 0) addEv('明細寄發', d);
-      // 報酬發放日：結算後 10 天 (下週三)
       if ((diffDays - 10) % 14 === 0) addEv('發薪', d);
     }
   } else if (id === 'foodomo') {
-    for(let i=0; i<=31; i++) {
+    // 👇 迴圈檢查天數統一拉長到 35 天
+    for(let i=0; i<=35; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let dt = d.getDate();
       let isLastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() === dt;
@@ -715,11 +715,12 @@ function calcNextDates(id) {
 
   const uniqueEvents = [];
   const seen = new Set();
+  // 依時間先後排序，過濾掉同一天重複的同名標籤，最後只取前 3 個顯示
   events.sort((a,b) => a.ts - b.ts).forEach(e => {
     const key = `${e.name}-${e.dateStr}`;
     if(!seen.has(key)) { seen.add(key); uniqueEvents.push(e); }
   });
-  return uniqueEvents.slice(0, 3);
+  return uniqueEvents.slice(0, 3); 
 }
 
 /* ══ 加密版 loadAll() ═══════════════════════════════════════════════ */
@@ -910,7 +911,26 @@ function _bindNavEvents() {
   }));
 }
 
-function switchHomeTab(tab, index) { S.homeSubTab = tab; document.getElementById('home-tab-bg').style.transform = `translateX(${index * 100}%)`; document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); renderHome(); }
+function switchHomeTab(tab, index) { 
+  S.homeSubTab = tab; 
+  const tabBg = document.getElementById('home-tab-bg');
+  tabBg.style.transform = `translateX(${index * 100}%)`; 
+  
+  // 判斷套用不同的四色漸層與陰影
+  if (tab === 'schedule') {
+    // 平台日程表：日出橘紅金
+    tabBg.style.background = 'linear-gradient(135deg, #f43f5e 0%, #f97316 40%, #fbbf24 75%, #fcd34d 100%)';
+    tabBg.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.4)';
+  } else {
+    // 目標進度：極光藍綠靛
+    tabBg.style.background = 'linear-gradient(135deg, #6366f1 0%, #3b82f6 40%, #06b6d4 75%, #10b981 100%)';
+    tabBg.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+  }
+
+  document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); 
+  document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); 
+  renderHome(); 
+}
 function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
 function switchRptTab(tab, index, btnEl) { S.rptView = tab; document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); btnEl.classList.add('active');['overview','rewards','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; }); renderReport(); }
 /* ══ 替換：車輛頁籤切換 (四色強化漸層風格) ══ */
@@ -925,11 +945,11 @@ function switchVehicleTab(tab, index) {
   // 👉 採用四色漸層，讓顏色變化在小範圍內也能極度明顯
   const colors = {
     fuel: isEV 
-      ? { bg: 'linear-gradient(135deg, #1e3a8a, #3b82f6, #60a5fa, #93c5fd)', shadow: 'rgba(59,130,246,0.4)', textId: 'btn-veh-fuel' }
-      : { bg: 'linear-gradient(135deg, #991b1b, #ef4444, #f87171, #fca5a5)', shadow: 'rgba(239,68,68,0.4)', textId: 'btn-veh-fuel' },
-    maintenance: { bg: 'linear-gradient(135deg, #064e3b, #10b981, #34d399, #6ee7b7)', shadow: 'rgba(16,185,129,0.4)', textId: 'btn-veh-maint' },
-    yearly: { bg: 'linear-gradient(135deg, #92400e, #f59e0b, #fbbf24, #fcd34d)', shadow: 'rgba(245,158,11,0.4)', textId: 'btn-veh-yearly' },
-    search: { bg: 'linear-gradient(135deg, #4c1d95, #8b5cf6, #a78bfa, #c4b5fd)', shadow: 'rgba(139,92,246,0.4)', textId: 'btn-veh-search' }
+      ? { bg: 'linear-gradient(135deg, #4f46e5 20%, #2563eb 60%, #93c5fd 88%, #ffffff 99%)', shadow: 'rgba(59,130,246,0.4)', textId: 'btn-veh-fuel' }
+      : { bg: 'linear-gradient(135deg, #be123c 20%, #dc2626 60%, #fca5a5 88%, #ffffff 99%)', shadow: 'rgba(239,68,68,0.4)', textId: 'btn-veh-fuel' },
+    maintenance: { bg: 'linear-gradient(135deg, #047857 20%, #059669 60%, #6ee7b7 88%, #ffffff 99%)', shadow: 'rgba(16,185,129,0.4)', textId: 'btn-veh-maint' },
+    yearly: { bg: 'linear-gradient(135deg, #be6017 20%, #d97706 60%, #fcd34d 88%, #ffffff 99%)', shadow: 'rgba(245,158,11,0.4)', textId: 'btn-veh-yearly' },
+    search: { bg: 'linear-gradient(135deg, #4c1d95 20%, #7c3aed 60%, #c4b5fd 88%, #ffffff 99%)', shadow: 'rgba(139,92,246,0.4)', textId: 'btn-veh-search' }
   };
 
   tabBg.style.background = colors[tab].bg; 
@@ -1059,90 +1079,180 @@ function renderHome() {
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
-        bottomHtml += `<div style="background:var(--sf); padding:5px; border-radius:25px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:2px;">`;
+        bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
+        
+        // 👇 新增：置頂的標籤圖例說明區塊
+        bottomHtml += `
+          <div style="background:#ffffff; border-radius:12px; padding:10px; margin-bottom:-4px; border:1px solid #e2e8f0; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <div style="font-size:11px; font-weight:800; color:var(--t3); width:100%; text-align:center; margin-bottom:2px; letter-spacing:0.5px;">💡 狀態標籤圖例</div>
+            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#dcfce7; color:#16a34a; border:1px solid #16a34a30;">🔥 今天</span>
+            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#ffedd5; color:#ea580c; border:1px solid #ea580c30;">⚡ 明天</span>
+            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#e0f2fe; color:#0284c7; border:1px solid #0284c730;">🔜 近 3 天</span>
+            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#f1f5f9; color:#475569; border:1px solid #47556930;">⏳ 4 天以上</span>
+          </div>`;
+
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
-          if (!events) return;
+          if (!events || events.length === 0) return;
+          
+          /* 👇 卡片外層加上 position:relative, overflow:hidden，並將 padding-top 加大給標籤空間 */
           bottomHtml += `
-            <div style="border: 1.5px solid ${p.color}; background: ${p.color}15; border-radius: 20px; padding: 12px 10px; margin-bottom: 2px;">
-              <div style="display:flex; align-items:center; margin-bottom: 10px;">
-                <span style="background:${p.color}; color:#fff; font-size:12px; font-weight:800; padding:4px 12px; border-radius:12px; letter-spacing:0.5px; box-shadow:0 2px 6px ${p.color}60;">${safeText(p.name)}</span>
+            <div style="position: relative; overflow: hidden; border: 2px solid ${p.color}; background: ${p.color}15; border-radius: 25px; padding: 42px 10px 12px 10px;">
+              
+              <!-- 👇 3D 立體按鈕標籤 (使用絕對定位貼死 top:0 left:0，不佔用內部空間) -->
+              <div style="position: absolute; top: -1px; left: -1px; display:inline-flex; background: ${p.color}10; padding: 0px; border-radius: 30px; border: 4px solid ${p.color};">
+                <div style="background: linear-gradient(180deg, ${p.color}10 0%, transparent 50%, ${p.color}10 100%), ${p.color}95; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 30px; padding: 0px 13px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #ffffff; font-size: 18px; font-weight: 900; letter-spacing: 1.1px; line-height: 1.7;">${safeText(p.name)}</span>
+                </div>
               </div>
-              <div style="display:flex; gap:6px;">${events.map(ev => {
-                const isToday = ev.diff === 0;
-                let diffColor = isToday ? 'var(--green)' : 'var(--t2)';
-                let nameColor = 'var(--t3)'; let borderColor = 'var(--border)';
-                if (ev.name.includes('結算') || ev.name.includes('取單')) { nameColor = 'var(--red)'; borderColor = 'var(--red)'; }
-                else if (ev.name.includes('明細')) { nameColor = 'var(--acc)'; borderColor = 'var(--acc)'; }
-                else if (ev.name.includes('發薪')) { nameColor = '#00BFFF'; borderColor = '#00BFFF'; }
-                if (!isToday && (ev.name.includes('結算') || ev.name.includes('發薪') || ev.name.includes('明細') || ev.name.includes('取單'))) diffColor = '#22C55E';
-                return `
-                  <div class="schedule-event-card" style="flex:1; background: var(--schedule-bg); border: 2.5px solid ${borderColor}; border-radius: 16px; padding: 8px 4px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <span style="font-size:13px; color:${nameColor}; font-weight:500; margin-bottom:4px; letter-spacing:0.5px;">${safeText(ev.name)}</span>
-                    <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--chart-text);">${safeText(ev.dateStr)} <span style="font-size:11px; font-weight:700; color:${diffColor};">(${safeText(ev.diffStr)})</span></span>
-                  </div>`;
-              }).join('')}</div>
+              
+              <!-- 下方的日期方塊不變 -->
+              <div style="display:flex; gap:8px;">
+                ${events.map(ev => {
+                  // 1. 標題顏色判斷 (改用 Hex 色碼，方便串接透明度)
+                  let titleColor = '#475569'; // 預設深灰
+                  if (ev.name.includes('結算') || ev.name.includes('取單')) titleColor = '#ef4444'; // 紅色
+                  else if (ev.name.includes('明細')) titleColor = '#ea580c'; // 橘色
+                  else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; // 藍色
+                  
+                  // 2. 距離天數漸進顏色判斷
+                  let diffBg = '#f1f5f9';     
+                  let diffColor = '#475569';  
+                  let diffIcon = '⏳';
+                  let diffText = safeText(ev.diffStr);
+
+                  if (ev.diff === 0) {
+                    diffBg = '#dcfce7';       
+                    diffColor = '#16a34a';    
+                    diffIcon = '🔥';
+                    diffText = '今天';
+                  } else if (ev.diff === 1) {
+                    diffBg = '#ffedd5';       
+                    diffColor = '#ea580c';    
+                    diffIcon = '⚡';
+                  } else if (ev.diff <= 3) {
+                    diffBg = '#e0f2fe';       
+                    diffColor = '#0284c7';    
+                    diffIcon = '🔜';
+                  }
+
+                  // 3. 雙拼卡片結構 (上：該字的透明背景，下：白色背景)
+                  return `
+                    <div style="flex:1; background:#ffffff; border-radius:12px; text-align:center; border:1.5px solid #ffffff; display:flex; flex-direction:column; overflow:hidden; margin-top:10px;">
+                      
+                      <!-- 上半部：標題區 (帶有特定顏色的 15% 透明背景與虛線底邊) -->
+                      <div style="background:${titleColor}15; padding:6px 2px; border-bottom:1px dashed ${titleColor}30;">
+                        <span style="font-size:15px; color:${titleColor}; font-weight:750; letter-spacing:1.1px;">${safeText(ev.name)}</span>
+                      </div>
+                      
+                      <!-- 下半部：日期與天數標籤 (維持白底) -->
+                      <div style="padding:10px 2px; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
+                        <span style="font-family:var(--mono); font-size:17px; font-weight:900; color:var(--t1); line-height:1;">${safeText(ev.dateStr)}</span>
+                        <div style="margin-top:8px;">
+                          <span style="display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:900; padding:4px 6px; border-radius:8px; background:${diffBg}; color:${diffColor}; border:1px solid ${diffColor}30;">
+                            <span style="font-size:10px;">${diffIcon}</span> ${diffText}
+                          </span>
+                        </div>
+                      </div>
+
+                    </div>`;
+                }).join('')}
+              </div>
             </div>`;
         });
         bottomHtml += `</div>`;
       }
-    } else if (S.homeSubTab === 'goal') {
+    } 
+      else if (S.homeSubTab === 'goal') {
       const goals = S.settings.goals || {};
       const weekly = pf(goals.weekly); const monthly = pf(goals.monthly); const yearly = pf(goals.yearly);
       if (weekly > 0 || monthly > 0 || yearly > 0) {
-        bottomHtml += `<div class="card" style="border: 1px solid var(--border); display:flex; flex-direction:column; gap:16px;">`;
+        
+        // 取消原本共用外框的 card，改用 Flex 垂直排列獨立卡片
+        bottomHtml += `<div style="display:flex; flex-direction:column; gap:12px;">`; 
+        
         if (weekly > 0) {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
           for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
-          const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); const wColor = wPct >= 100 ? 'var(--green)' : wPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          // 👇 已經修正好的排版
+          const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); 
+          const wColor = wPct >= 100 ? '#10b981' : '#3b82f6'; // 達標變綠，未達標藍
+          
           bottomHtml += `
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-                <span style="font-size:13px;font-weight:800;color:var(--t2)">📊 本週目標進度 <span style="font-size:11px;color:var(--t3);font-weight:600;">(剩 ${7 - wDay} 天)</span></span>
-                <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:${wColor}">${wPct}%</span>
+            <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 2px solid #bfdbfe; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(37,99,235,0.08); position: relative; overflow: hidden;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="width:32px; height:32px; border-radius:10px; background:#dbeafe; display:flex; align-items:center; justify-content:center; font-size:16px;">🏃</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:900;color:#1e3a8a; letter-spacing:0.5px;">本週目標</div>
+                    <div style="font-size:11px;color:#60a5fa;font-weight:800;">剩餘 ${7 - wDay} 天</div>
+                  </div>
+                </div>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${wColor}; text-shadow:0 1px 2px rgba(0,0,0,0.1);">${wPct}<span style="font-size:14px;"> %</span></span>
               </div>
-              <div class="progress-track"><div class="progress-fill" style="width:${wPct}%;background:${wColor}"></div></div>
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-top:6px;font-weight:600;">
-                <span style="font-family:var(--mono);">已達 $ ${fmt(weekTotal)} / ${fmt(weekly)}</span>
-                <span style="color:${wRemain > 0 ? 'var(--t3)' : 'var(--green)'};">${wRemain>0 ? `還差 $ ${fmt(wRemain)}` : '🎉 已達標！'}</span>
+              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="height:100%; width:${wPct}%; background:${wColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
+                <span style="font-family:var(--mono); color:#3b82f6;">$ ${fmt(weekTotal)} / ${fmt(weekly)}</span>
+                <span style="color:${wRemain > 0 ? '#64748b' : '#10b981'};">${wRemain>0 ? `還差 $ ${fmt(wRemain)}` : '🎉 已達標！'}</span>
               </div>
             </div>`;
         }
+        
         if (monthly > 0) {
           const monthRecs = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
-          const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); const mColor = mPct >= 100 ? 'var(--green)' : mPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          // 👇 已經修正好的排版
+          const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); 
+          const mColor = mPct >= 100 ? '#10b981' : '#a855f7'; // 達標變綠，未達標紫
+          
           bottomHtml += `
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-                <span style="font-size:13px;font-weight:800;color:var(--t2)">📈 本月目標進度 <span style="font-size:11px;color:var(--t3);font-weight:600;">(剩 ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} 天)</span></span>
-                <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:${mColor}">${mPct}%</span>
+            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%); border: 2px solid #e9d5ff; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(168,85,247,0.08); position: relative; overflow: hidden;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="width:32px; height:32px; border-radius:10px; background:#e9d5ff; display:flex; align-items:center; justify-content:center; font-size:16px;">🔥</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:900;color:#581c87; letter-spacing:0.5px;">本月目標</div>
+                    <div style="font-size:11px;color:#c084fc;font-weight:800;">剩餘 ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} 天</div>
+                  </div>
+                </div>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${mColor}; text-shadow:0 1px 2px rgba(0,0,0,0.1);">${mPct}<span style="font-size:14px;"> %</span></span>
               </div>
-              <div class="progress-track"><div class="progress-fill" style="width:${mPct}%;background:${mColor}"></div></div>
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-top:6px;font-weight:600;">
-                <span style="font-family:var(--mono);">已達 $ ${fmt(monthTotal)} / ${fmt(monthly)}</span>
-                <span style="color:${mRemain > 0 ? 'var(--t3)' : 'var(--green)'};">${mRemain>0 ? `還差 $ ${fmt(mRemain)}` : '🎉 已達標！'}</span>
+              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="height:100%; width:${mPct}%; background:${mColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
+                <span style="font-family:var(--mono); color:#a855f7;">$ ${fmt(monthTotal)} / ${fmt(monthly)}</span>
+                <span style="color:${mRemain > 0 ? '#64748b' : '#10b981'};">${mRemain>0 ? `還差 $ ${fmt(mRemain)}` : '🎉 已達標！'}</span>
               </div>
             </div>`;
         }
+        
         if (yearly > 0) {
           const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
-          const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); const yColor = yPct >= 100 ? 'var(--green)' : yPct >= 70 ? 'var(--blue)' : 'var(--red)';
-          // 👇 已經修正好的排版
+          const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); 
+          const yColor = yPct >= 100 ? '#10b981' : '#0d9488'; // 達標變綠，未達標翡翠青(Teal)
+          
           bottomHtml += `
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-                <span style="font-size:13px;font-weight:800;color:var(--t2)">👑 本年目標進度 <span style="font-size:11px;color:var(--t3);font-weight:600;">(剩 ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} 天)</span></span>
-                <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:${yColor}">${yPct}%</span>
+            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border: 2px solid #99f6e4; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(13,148,136,0.08); position: relative; overflow: hidden;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="width:32px; height:32px; border-radius:10px; background:#ccfbf1; display:flex; align-items:center; justify-content:center; font-size:16px;">👑</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:900;color:#134e4a; letter-spacing:0.5px;">本年目標</div>
+                    <div style="font-size:11px;color:#2dd4bf;font-weight:800;">剩餘 ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} 天</div>
+                  </div>
+                </div>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${yColor}; text-shadow:0 1px 2px rgba(0,0,0,0.1);">${yPct}<span style="font-size:14px;"> %</span></span>
               </div>
-              <div class="progress-track"><div class="progress-fill" style="width:${yPct}%;background:${yColor}"></div></div>
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-top:6px;font-weight:600;">
-                <span style="font-family:var(--mono);">已達 $ ${fmt(yearTotal)} / ${fmt(yearly)}</span>
-                <span style="color:${yRemain > 0 ? 'var(--t3)' : 'var(--green)'};">${yRemain>0 ? `還差 $ ${fmt(yRemain)}` : '🎉 已達標！'}</span>
+              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="height:100%; width:${yPct}%; background:${yColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
+                <span style="font-family:var(--mono); color:#0d9488;">$ ${fmt(yearTotal)} / ${fmt(yearly)}</span>
+                <span style="color:${yRemain > 0 ? '#64748b' : '#10b981'};">${yRemain>0 ? `還差 $ ${fmt(yRemain)}` : '🎉 已達標！'}</span>
               </div>
             </div>`;
         }
+        
         bottomHtml += `</div>`;
       } else {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`;
@@ -1342,9 +1452,9 @@ function buildRecItem(r) {
 
   let tagsHtml = '';
   if (tagsParts.length > 0) {
-    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果
+    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果（平台總結卡片）
     tagsHtml = `
-      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.02); background:#e2e8f0; gap:2px;">
+      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px; background: #e2e8f0; gap:2px;">
         ${tagsParts.join('')}
       </div>
     `;
@@ -1397,7 +1507,7 @@ function buildRecItem(r) {
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
             <span class="hrc-plat-tag" style="background:${plat.color};">${safeText(plat.name)}</span>
             <!-- 👇 藍色系雙色時間膠囊 -->
-            <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px;">
               <span style="padding:2px 6px; background: #f1f5f9; font-size:12px; font-weight:800; color: hsl(330, 100%, 56%); font-family:var(--mono); border-right:2px solid #e2e8f0;">${dStr}</span>
               <span style="padding:2px 6px; background: #ffffff; font-size:11px; font-weight:900; color: #2563eb; font-family:var(--mono);">${tStr}</span>
             </div>
@@ -2299,16 +2409,16 @@ function renderRptOverview() {
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:4px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
-          ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}; box-shadow:0 2px 6px ${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}60; font-size:14px; padding:4px 14px;">${filterName}</span>`}
+          ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}; font-size:14px; padding:4px 14px;">${filterName}</span>`}
           <span style="font-size:18px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
         </div>
-        <div style="font-family:var(--mono); font-size:39px; font-weight:900; color: #1E90FF; line-height:1;">$ ${fmt(total)}</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:800; color: #0db3e6; line-height:1;">$ ${fmt(total)}</div>
         
         <div style="display:flex; justify-content:center; gap:5px; margin-top:8px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
           <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             淨行程<br>
             <span style="color: #1f9c4d; font-size:15px; font-weight:800;">$ ${fmt(income)}</span>
-            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
+            <span style="font-size:11px; font-weight:600;">(${incPct}%)</span>
           </div>
           <div style="flex:1; background: rgba(245,158,11,0.15); color: hsl(25, 100%, 59%); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             獎勵<br>
@@ -2318,7 +2428,7 @@ function renderRptOverview() {
           <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
             小費<br>
             <span style="color: #8A2BE2; font-size:15px; font-weight:800;">$ ${fmt(tips)}</span>
-            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
+            <span style="font-size:11px; font-weight:600;">(${tipPct}%)</span>
           </div>
         </div>
       </div> 
@@ -2377,8 +2487,8 @@ function renderRptOverview() {
       return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
         <div style="width:12px; height:12px; border-radius:4px; background:${p.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(p.name)}</span>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct}%</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$${fmt(p.val)}</span>
+        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct} %</span>
+        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(p.val)}</span>
       </div>`;
     }).join('');
   } else if (!isAll && total > 0) {
@@ -2390,8 +2500,8 @@ function renderRptOverview() {
       return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
         <div style="width:12px; height:12px; border-radius:4px; background:${d.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(d.name)}</span>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct}%</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:80px; text-align:right;">$${fmt(d.val)}</span>
+        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct} %</span>
+        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(d.val)}</span>
       </div>`;
     }).join('');
   }
@@ -2405,14 +2515,38 @@ function renderRptOverview() {
         <div style="display:flex; align-items:center; padding:8px 0; border-bottom:2px solid var(--border);">
           <span style="flex:1; font-size:12px; font-weight:800; color:var(--t3);">項目</span>
           <span style="font-size:12px; font-weight:800; color:var(--t3); width:50px; text-align:right;">佔比</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); width:80px; text-align:right;">金額</span>
+          <span style="font-size:12px; font-weight:800; color:var(--t3); width:100px; text-align:right;">金額</span>
         </div>
         ${listHtml}
-        <div style="display:flex; align-items:center; padding:12px 0 4px;">
-          <span style="flex:1; font-size:14px; font-weight:900; color:var(--acc);">總計</span>
-          <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t3); width:50px; text-align:right;">100%</span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--acc); width:80px; text-align:right;">$${fmt(total)}</span>
-        </div>
+            <div style="position:relative; display:flex; align-items:center; padding:10px 14px; margin: 6px -14px 4px -14px; z-index:1;">
+              <!-- 奢華曜金 SVG 長條六邊形背景 -->
+              <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
+                <defs>
+                  <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#3b3b3f" />
+                    <stop offset="40%" stop-color="#353535" />
+                    <stop offset="50%" stop-color="#282828" />
+                    <stop offset="100%" stop-color="#18181b" />
+                  </linearGradient>
+                  <!-- 黃金質感線條漸層 -->
+                  <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#fbbf24" />
+                    <stop offset="50%" stop-color="#fef08a" />
+                    <stop offset="100%" stop-color="#d97706" />
+                  </linearGradient>
+                </defs>
+                <!-- 黑曜石漸層底板 -->
+                <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
+                <!-- 內嵌發亮金線 -->
+                <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
+                <!-- 最內圈的輔助透白暗線 (增加立體溝槽感) -->
+                <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+              </svg>
+              <!-- 內容區塊 -->
+              <span style="flex:1; font-size:18px; font-weight:500; color: #00eeff; letter-spacing:1px;">🔷 總計</span>
+              <span style="font-family:var(--mono); font-size:13px; font-weight:700; color: #FFD700; width:50px; text-align:right;">100 %</span>
+              <span style="font-family:var(--mono); font-size:15px; font-weight:900; color: #ffffff; width:100px; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5);">$ ${fmt(total)}</span>
+            </div>
       </div>`;
   } else {
     html += `<div class="empty-tip" style="padding:16px 0;">所選平台本區間無記錄</div>`;
@@ -2937,7 +3071,7 @@ function renderRptCompare() {
           diffStr = '—';
           diffColor = 'var(--t3)';
       } else if (diff > 0) {
-          diffStr = `+NT$ ${fmt(diff)}`;
+          diffStr = `+$ ${fmt(diff)}`;
           diffColor = 'var(--green)';
       } else {
           diffStr = `-NT$ ${fmt(Math.abs(diff))}`;
@@ -3261,21 +3395,21 @@ function renderVehicleContent() {
 
     // 總支出卡片
     html += `
-      <div style="background: linear-gradient(to right, #be6017 0%, #d97706 20%, #f59e0b 40%, #f7c853 60%, #fade82 80%, #f8f3df 100%); border-radius:16px; padding:10px 12px; margin-bottom:12px; box-shadow:0 4px 12px rgba(245, 158, 11, 0.25); border: 1.5px solid #fde68a;">
+      <div style="background: linear-gradient(to right, #be6017 0%, #d97706 20%, #f59e0b 40%, #f7c853 60%, #fade82 80%, #f8f3df 100%); border-radius:16px; padding:8px 12px; margin-bottom:12px; box-shadow:0 4px 12px rgba(245, 158, 11, 0.25); border: 1.5px solid #fde68a;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">👑 ${S.vehY}年 總支出</span>
           
-          <div style="background: rgba(255,255,255,0.9); padding: 4px 14px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
+          <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
             <span style="font-size:14px; font-weight:800; color:#b45309; margin-right: 4px;">$</span>
-            <span style="font-family:var(--mono); font-size:28px; font-weight:900; color:#d97706;">${fmt(totalExp)}</span>
+            <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#d97706;">${fmt(totalExp)}</span>
           </div>
         </div>
       </div>
     `;
 
     // 燃料與里程統計
-    html += `<div class="card" style="border:1px solid #3b82f650;">
-      <h3 style="font-size:13px; color:var(--blue); margin-bottom:12px; border-bottom:1px dashed var(--border); padding-bottom:8px;">${isEV ? '🔋 年度換電與里程' : '⛽ 年度油資與里程'}</h3>
+    html += `<div class="card" style="border:1px solid #3b82f650; padding:5px 12px;">
+      <h3 style="font-size:13px; color:var(--blue); margin-bottom:5px; border-bottom:1px dashed var(--border); padding-bottom:4px;">${isEV ? '🔋 年度換電與里程' : '⛽ 年度油資與里程'}</h3>
       <div style="display:flex; justify-content:space-around; text-align:center;">
         ${!isEV ? `
         <div><div style="font-size:11px; color:var(--t3); margin-bottom:4px;">總加油金額</div><div style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--t1);">$${fmt(yFuelAmt)}</div></div>
@@ -3325,15 +3459,36 @@ let totalEVFee = 0;
     fuelRecs.forEach(r => { if(r.fuelType === 'electric') totalEVFee += pf(r.amount); });
 
     if (isEV) {
+      const evSwapCount = fuelRecs.filter(r => r.fuelType === 'electric').length;
+      const avgCostPerKm = (totalDistance > 0 && totalEVFee > 0) ? (totalEVFee / totalDistance).toFixed(2) : 0;
+      
+      const evStatsHtml = `
+        <div style="display:flex; justify-content:space-between; text-align:center; margin-top: 5px;">
+          <div style="flex:1;">
+            <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">換電次數</div>
+            <div style="font-weight:900; font-size:16px; color:#8b5cf6; font-family:var(--mono);">${evSwapCount} <span style="font-size:12px; color:#64748b;">次</span></div>
+          </div>
+          <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">總里程</div>
+            <div style="font-weight:900; font-size:16px; color:#ea580c; font-family:var(--mono);">${fmt(totalDistance)} <span style="font-size:12px; color:#64748b;">km</span></div>
+          </div>
+          <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">每公里成本</div>
+            <div style="font-weight:900; font-size:16px; color:#0d9488; font-family:var(--mono);">${avgCostPerKm} <span style="font-size:12px; color:#64748b;">元/km</span></div>
+          </div>
+        </div>`;
+
       html += `
         <div style="background: linear-gradient(to right, #4f46e5 0%, #3b82f6 40%, #93c5fd 75%, #e0f2fe 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25); border: 1.5px solid #bfdbfe;">
           <div onclick="toggleSummaryCard('veh-ev-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🔋 本月「電池總里程」與「月租費」</span>
+            <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🔋 本月「電池（月租費）」</span>
             
             <div style="display:flex; align-items:center; gap:8px;">
-              <div style="background: rgba(255,255,255,0.7); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
-                <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#ea580c;">${fmt(totalDistance)}</span>
-                <span style="font-size:14px; font-weight:800; color:#2563eb; margin-left: 4px;">km</span>
+              <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
+                <span style="font-size:14px; font-weight:800; color:#4f46e5; margin-right: 4px;">$</span>
+                <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#3b82f6;">${fmt(totalEVFee)}</span>
               </div>
               <div style="background:rgba(255,255,255,0.6); color:#3b82f6; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                 <div id="veh-ev-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
@@ -3341,9 +3496,8 @@ let totalEVFee = 0;
             </div>
           </div>
           <div id="veh-ev-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
-            <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:10px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1); display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:13px; font-weight:700; color:#475569;">💰 月租費：</span>
-              <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:#8b5cf6;">$${fmt(totalEVFee)}</span>
+            <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:8px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1);">
+              ${evStatsHtml}
             </div>
           </div>
         </div>`;
@@ -3369,7 +3523,7 @@ let totalEVFee = 0;
       html += `
         <div style="background: linear-gradient(to right, #be123c 0%, #e11d48 20%, #f43f5e 40%, #fb7185 60%, #fda4af 80%, #fff1f2 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.25); border: 1.5px solid #fecdd3;">
           <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">⛽ 本月汽油總花費</span>
+            <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">⛽ 本月「汽油總花費」</span>
             
             <div style="display:flex; align-items:center; gap:8px;">
               <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
@@ -3392,7 +3546,7 @@ let totalEVFee = 0;
     html += `
       <div style="background: linear-gradient(to right, #047857 0%, #059669 20%, #10b981 40%, #56d4a6 60%, #8ce6c2 80%, #ecfdf5 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); border: 1.5px solid #a7f3d0;">
         <div onclick="toggleSummaryCard('veh-maint-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🔧 本月保養與維修</span>
+          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🔧 本月「保養與維修」</span>
           
           <div style="display:flex; align-items:center; gap:8px;">
             <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
