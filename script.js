@@ -5066,13 +5066,24 @@ window.renderAdminUserList = function(keyword) {
       : '<span style="color:var(--t3); font-weight:900; background:var(--bg-input); padding:3px 8px; border-radius:6px; font-size:10px; border:1px solid #e2e8f0;">未驗證</span>';
     const roleTag = u.role === 'admin' ? '👑 ' : '';
     
+    // 👇 將最後活動時間格式化
+    let lastActiveStr = '尚未登入';
+    if (u.lastActiveAt) {
+      const d = new Date(u.lastActiveAt);
+      const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
+      let diffStr = diffDays === 0 ? '今天' : `${diffDays}天前`;
+      lastActiveStr = `${d.getMonth()+1}/${d.getDate()} (${diffStr})`;
+    }
+
     html += `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 12px; border-bottom:1px solid var(--border);">
         <div style="flex:1; overflow:hidden; padding-right:10px;">
           <div style="font-size:15px; font-weight:900; color:var(--t1); margin-bottom:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${roleTag}${u.email}</div>
-          <div style="display:flex; align-items:center; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             ${vTag}
-            <span style="font-size:12px; color:var(--t3); font-family:var(--mono); font-weight:600;">${new Date(u.createdAt).toLocaleDateString()}</span>
+            <span style="font-size:11px; color:var(--t3); font-family:var(--mono); font-weight:600;">註冊:${new Date(u.createdAt).toLocaleDateString()}</span>
+            <!-- 👇 新增：顯示最後上線時間 -->
+            <span style="font-size:11px; color:#2563eb; background:#eff6ff; padding:2px 6px; border-radius:6px; font-weight:800; border:1px solid #bfdbfe;">上線: ${lastActiveStr}</span>
           </div>
         </div>
         <button onclick="adminDeleteUser('${u.email}')" style="background:var(--red-d); color:var(--red); border:1px solid #fecdd3; padding:8px 14px; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; flex-shrink:0; box-shadow:0 2px 4px rgba(225,29,72,0.1); transition:0.2s;">刪除</button>
@@ -5363,7 +5374,7 @@ function saveAnnouncement() {
   if (S.tab === 'home') renderHome();
 }
 
-/* ══ 踢下線檢查 (顯示共用時間) ══ */
+/* ══ 踢下線檢查 (處理強制登出與 31 天未活動) ══ */
 async function checkAccountStatus() {
   if (!USER.loggedIn) return false;
   try {
@@ -5376,11 +5387,19 @@ async function checkAccountStatus() {
     
     if (!data.active) {
       if (data.reason === 'kicked') {
-        // 👈 將後端傳來的踢人時間格式化顯示
         const kickTime = new Date(data.kickedAt).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
         toast(`⚠️ 此帳號已於 [${kickTime}] 在其他裝置登入，您已被強制登出`, 5000);
+      } else if (data.reason === 'inactive_31_days') {
+        // 👇 處理 31 天未登入的專屬警告
+        customConfirm(`
+          <div style="font-size:48px; margin-bottom:12px; text-align:center;">💤</div>
+          <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">登入逾期</div>
+          <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
+            您已超過 31 天未使用 APP，<br>為保護帳號安全，系統已自動將您登出。
+          </div>
+        `);
       } else {
-        toast('⚠️ 您的帳號已被停權或刪除');
+        toast('⚠️ 您的登入憑證已失效，請重新登入');
       }
       logoutAccount(); 
       return false;
@@ -6437,9 +6456,12 @@ window.onSplashFinished = function() {
   }, 500);
 };
 
-/* ══ APP 被滑回背景再點開時的「強制重新排版」 ══ */
+/* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
+     // 從背景喚醒時，順便在背景檢查一次帳號是否超過 31 天未登入
+     checkAccountStatus();
+     
      // 當手機把 APP 從背景叫回來時，延遲 300 毫秒等畫面恢復
      setTimeout(() => {
        // 強迫系統重新計算當前分頁的所有內容高度，避免空白破圖！
