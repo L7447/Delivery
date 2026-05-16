@@ -381,7 +381,31 @@ const getDayRecs = date => S.records.filter(r=>r.date===date);
 const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
 const recTotal = r => r.isCashTip ? 0 : (pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips));
 
-// 👇 新增：智慧工時計算函數 (以日為單位運算)
+/* 👇 新增：計算精確佔比 (最大餘數法)，保證加總絕對等於 100.0% */
+function getExactPercentages(values, precision = 1) {
+  const sum = values.reduce((a, b) => a + b, 0);
+  if (sum <= 0) return values.map(() => (0).toFixed(precision));
+
+  const pow = Math.pow(10, precision); // 算出 10 (小數點後1位)
+  const exacts = values.map(v => (v / sum) * 100);
+  
+  // 取得整數部分與小數點餘數
+  let floors = exacts.map(v => Math.floor(v * pow));
+  let remainders = exacts.map((v, i) => ({ rem: (v * pow) - floors[i], idx: i }));
+  
+  // 計算差了多少單位才能湊滿 100.0
+  let diff = (100 * pow) - floors.reduce((a, b) => a + b, 0);
+  
+  // 將餘數由大到小排序，優先補給小數點最大的人
+  remainders.sort((a, b) => b.rem - a.rem);
+  for (let i = 0; i < diff; i++) {
+    floors[remainders[i].idx] += 1;
+  }
+  
+  return floors.map(v => (v / pow).toFixed(precision));
+}
+
+// 👇 新增：智慧工時計算函數 (依據單/多平台與打卡記錄聰明判斷)
 function calcTotalHours(recs) {
   const byDate = {};
   recs.forEach(r => {
@@ -393,18 +417,45 @@ function calcTotalHours(recs) {
   for (let date in byDate) {
     const dayRecs = byDate[date];
     const punchRecs = dayRecs.filter(r => r.isPunchOnly);
-    if (punchRecs.length > 0) {
-      // 1. 若有打卡紀錄，以打卡紀錄的時間加總為主
-      totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
-    } else {
-      // 2. 若沒打卡紀錄，判斷這天是否「只有一個平台」
-      const regularRecs = dayRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
-      const uniquePlats = new Set(regularRecs.map(r => r.platformId).filter(Boolean));
-      if (uniquePlats.size <= 1) {
-        // 單一平台，允許使用一般行程輸入的時間
-        totalHours += regularRecs.reduce((s, r) => s + pf(r.hours), 0);
+    const regularRecs = dayRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
+    
+    // 計算當天各平台的行程工時總和
+    const plats = {};
+    regularRecs.forEach(r => {
+      if (r.platformId) {
+        plats[r.platformId] = (plats[r.platformId] || 0) + pf(r.hours);
       }
-      // 若多平台且無打卡，當日總工時不盲目計入
+    });
+    const platIds = Object.keys(plats);
+
+    if (platIds.length === 0) {
+      // 情境 A：只有純打卡或現金小費，直接加總打卡時間
+      totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
+    } 
+    else if (platIds.length === 1) {
+      // 情境 B：當天只有 1 個平台
+      let platTime = plats[platIds[0]];
+      // 防呆：如果平台行程時間忘記填(為0)，但有打卡，就拿打卡時間來墊檔
+      if (platTime === 0 && punchRecs.length > 0) {
+        totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
+      } else {
+        // 依照規則，以該平台時間記錄當天總工時
+        totalHours += platTime;
+      }
+    } 
+    else {
+      // 情境 C：當天記錄大於 1 個平台 (雙開或多開)
+      if (punchRecs.length > 0) {
+        // 1. 有打卡記錄：以打卡時間為主 (多段打卡會相加)
+        totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
+      } else {
+        // 2. 沒有打卡記錄：各平台可能會重疊，取時間最長的那個平台
+        let maxPlatHour = 0;
+        for (let pid in plats) {
+          if (plats[pid] > maxPlatHour) maxPlatHour = plats[pid];
+        }
+        totalHours += maxPlatHour;
+      }
     }
   }
   return totalHours;
@@ -559,10 +610,11 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
   const totalBonus = bonus + tempBonus; 
   const income = total - totalBonus - tips; // 算出淨行程
   
-  // 計算佔比
-  const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
-  const bonPct = total > 0 ? Math.round((totalBonus / total) * 100) : 0;
-  const tipPct = total > 0 ? Math.round((tips / total) * 100) : 0;
+  // 計算佔比 (精確到小數點後1位並保證加總100.0%)
+  const pcts = getExactPercentages([income, totalBonus, tips]);
+  const incPct = pcts[0];
+  const bonPct = pcts[1];
+  const tipPct = pcts[2];
 
   // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
   let tagsParts = [];
@@ -1418,9 +1470,11 @@ function buildRecItem(r) {
   const ordHr = _hours > 0 ? (_orders / _hours).toFixed(1) : 0;
   const avgHr = _hours > 0 ? Math.round(total / _hours) : 0;
 
-  const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
-  const bonPct = total > 0 ? Math.round((totalBonus / total) * 100) : 0;
-  const tipPct = total > 0 ? Math.round((pf(r.tips) / total) * 100) : 0;
+  // 計算佔比 (精確到小數點後1位並保證加總100.0%)
+  const pcts = getExactPercentages([income, totalBonus, pf(r.tips)]);
+  const incPct = pcts[0];
+  const bonPct = pcts[1];
+  const tipPct = pcts[2];
   
   // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
   let tagsParts = [];
@@ -1717,6 +1771,10 @@ function renderHistGroupView(mode) {
   if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
     const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tMil = recs.reduce((s,r) => s + pf(r.mileage), 0); const tHrs = calcTotalHours(recs); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
     html += buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
+    
+    // 👇 新增：深灰色的質感分隔線 (加入上下間距與圓角)
+    html += `<div style="height:3px; background: #475569; margin: 0px 0px 4px 0px; border-radius:2px; opacity:0.8;"></div>`;
+    
     html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
   } html += `</div>`; content.innerHTML = html;
 }
@@ -2397,9 +2455,10 @@ function renderRptOverview() {
     </div>`;
 
   // 計算佔比 (將邏輯移到字串外面，修復錯誤)
-  const incPct = total > 0 ? Math.round((income / total) * 100) : 0;
-  const bonPct = total > 0 ? Math.round((bonus / total) * 100) : 0;
-  const tipPct = total > 0 ? Math.round((tips / total) * 100) : 0;
+  const pcts = getExactPercentages([income, bonus, tips]);
+  const incPct = pcts[0];
+  const bonPct = pcts[1];
+  const tipPct = pcts[2];
 
   // 收入分析，本月總收入框
   html += `
@@ -2482,8 +2541,11 @@ function renderRptOverview() {
     const platData = activePlats.map(p => ({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
     pieLabels = platData.map(p=>p.name); pieData = platData.map(p=>p.val); pieColors = platData.map(p=>p.color);
     
-    listHtml = platData.map(p => {
-      const pct = Math.round(p.val / total * 100);
+    // 👇 計算所有平台的精確佔比 (支援陣列無限數量)
+    const platPcts = getExactPercentages(pieData);
+    
+    listHtml = platData.map((p, idx) => {
+      const pct = platPcts[idx]; // 直接取用精確佔比字串
       return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
         <div style="width:12px; height:12px; border-radius:4px; background:${p.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(p.name)}</span>
@@ -2493,14 +2555,19 @@ function renderRptOverview() {
     }).join('');
   } else if (!isAll && total > 0) {
     pieLabels = ['行程', '獎勵', '小費']; pieData = [income, bonus, tips]; pieColors = ['#22c55e', '#f59e0b', '#3b82f6'];
-    const details = [{ name: '行程收入', val: income, color: '#22c55e' }, { name: '獎勵金額', val: bonus, color: '#f59e0b' }, { name: 'APP小費', val: tips, color: '#3b82f6' }].filter(d => d.val > 0);
+    
+    // 👇 直接綁定剛剛算好的精確 % 數
+    const details = [
+      { name: '行程收入', val: income, color: '#22c55e', pct: incPct }, 
+      { name: '獎勵金額', val: bonus, color: '#f59e0b', pct: bonPct }, 
+      { name: 'APP小費', val: tips, color: '#3b82f6', pct: tipPct }
+    ].filter(d => d.val > 0);
     
     listHtml = details.map(d => {
-      const pct = Math.round(d.val / total * 100);
       return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
         <div style="width:12px; height:12px; border-radius:4px; background:${d.color}; margin-right:10px;"></div>
         <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(d.name)}</span>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct} %</span>
+        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${d.pct} %</span>
         <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(d.val)}</span>
       </div>`;
     }).join('');
