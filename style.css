@@ -28,7 +28,7 @@
   --acc-d: rgba(255,107,53,0.1);
   --green: #22c55e;
   --green-d: rgba(34,197,94,0.1);
-  --red: #ef4444;
+  --red: #ff2121;
   --red-d: rgba(239,68,68,0.1);
   --blue: #3b82f6;
   --blue-d: rgba(59,130,246,0.1);
@@ -173,8 +173,8 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .hrc-amt { font-family: var(--mono); font-size: 20px; font-weight: 800; color: #0f172a; }
 .hrc-stat { font-size: 12px; font-weight: 600; color: #475569; }
 .h-div { width: 2px; height: 15px; background: #cbd5e1; }
-.hrc-toggle { position: absolute; right: 10px; top: 2px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: hsl(217, 91%, 70%); color: #0044cc; font-size: 22px; cursor: pointer; transition: transform 0.3s; }
-.hrc-collapse { background: #ffffff; border-top: 1.5px dashed #e2e8f0; display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.hrc-toggle { position: absolute; right: 1px; top: 1px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #6da2f8; color: #0044cc; font-size: 28px; cursor: pointer; transition: transform 0.3s; }
+.hrc-collapse { background: #ffffff; border-top: 1.5px dashed #6da2f8; display: flex; text-align: center; font-size: 11px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; margin-bottom:1px; }
 
 /* ══ 9. 現代化小日曆 (極簡縮小版) ══ */
 #hist-calendar { background: #ffffff; border-radius: 18px; padding: 1px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid #f1f5f9; }
