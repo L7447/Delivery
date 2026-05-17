@@ -5218,6 +5218,10 @@ window.renderAdminUserList = function(keyword) {
     return;
   }
 
+  // 取得現在時間並把時分秒歸零，作為「今天」的基準線
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+
   let html = '';
   filtered.forEach(u => {
     const vTag = u.verified 
@@ -5225,15 +5229,27 @@ window.renderAdminUserList = function(keyword) {
       : '<span style="color:var(--t3); font-weight:900; background:var(--bg-input); padding:3px 8px; border-radius:6px; font-size:10px; border:1px solid #e2e8f0;">未驗證</span>';
     const roleTag = u.role === 'admin' ? '👑 ' : '';
     
-    // 👇 智慧判斷最後活動時間：如果有 lastActiveAt 就用，沒有就拿 createdAt (註冊時間) 墊檔
+    // 👇 智慧判斷最後活動時間與日期計算
     let lastActiveStr = '尚未登入';
     const activeTimeMs = u.lastActiveAt || u.createdAt; 
     
     if (activeTimeMs) {
       const d = new Date(activeTimeMs);
-      const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
-      let diffStr = diffDays === 0 ? '今天' : `${diffDays}天前`;
-      lastActiveStr = `${d.getMonth()+1}/${d.getDate()} (${diffStr})`;
+      
+      // 計算該時間的「午夜零點」，藉此與「今天的午夜零點」精準相減，才能正確跨日！
+      const activeMidnight = new Date(d);
+      activeMidnight.setHours(0, 0, 0, 0);
+      
+      const diffDays = Math.round((todayMidnight.getTime() - activeMidnight.getTime()) / 86400000);
+      
+      let diffStr = '';
+      if (diffDays === 0) diffStr = '今天';
+      else if (diffDays === 1) diffStr = '昨天';
+      else diffStr = `${diffDays}天前`;
+      
+      // 格式化為: 5/17 23:45 (今天)
+      const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      lastActiveStr = `${d.getMonth()+1}/${d.getDate()} ${timeStr} (${diffStr})`;
     }
 
     html += `
@@ -5243,7 +5259,7 @@ window.renderAdminUserList = function(keyword) {
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             ${vTag}
             <span style="font-size:11px; color:var(--t3); font-family:var(--mono); font-weight:600;">註冊:${new Date(u.createdAt).toLocaleDateString()}</span>
-            <!-- 👇 新增：顯示最後上線時間 -->
+            <!-- 👇 顯示最後上線時間與狀態 -->
             <span style="font-size:11px; color:#2563eb; background:#eff6ff; padding:2px 6px; border-radius:6px; font-weight:800; border:1px solid #bfdbfe;">上線: ${lastActiveStr}</span>
           </div>
         </div>
