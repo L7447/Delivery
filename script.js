@@ -4621,13 +4621,13 @@ function renderSettings() {
   
   // 👇 將狀態判斷改寫為「雙色膠囊 (Dual-color Pill)」UI 設計
   const lastBackupStr = S.settings.lastLocalBackup 
-    ? `<div style="display:inline-flex; align-items:center; border-radius:8px; border:1.5px solid #bfdbfe; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
-         <span style="padding:3px 6px; background:#eff6ff; font-size:12px; font-weight:800; color:#2563eb; border-right:1.5px solid #bfdbfe;">上次存檔</span>
-         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:700; color:#1e3a8a; font-family:var(--mono);">${S.settings.lastLocalBackup}</span>
+    ? `<div style="display:inline-flex; align-items:center; border-radius:8px; border:2px solid #bfdbfe; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
+         <span style="padding:3px 6px; background:#eff6ff; font-size:12px; font-weight:800; color: #2563eb; border-right:1.5px solid #bfdbfe;">上次存檔</span>
+         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:800; color: #4775f3; font-family:var(--mono);">${S.settings.lastLocalBackup}</span>
        </div>` 
-    : `<div style="display:inline-flex; align-items:center; border-radius:8px; border:1.5px solid #fecdd3; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
-         <span style="padding:3px 6px; background:#fff1f2; font-size:12px; font-weight:800; color:#e11d48; border-right:1.5px solid #fecdd3;">尚未存檔</span>
-         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:700; color:#be123c;">🆘 建議在「雲端硬碟」備份</span>
+    : `<div style="display:inline-flex; align-items:center; border-radius:8px; border:2px solid #fecdd3; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
+         <span style="padding:3px 6px; background:#fff1f2; font-size:12px; font-weight:800; color: #e11d48; border-right:1.5px solid #fecdd3;">尚未存檔</span>
+         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:800; color: #f63a69;">🆘 建議在「雲端硬碟」備份</span>
        </div>`;
 
   const html  = `
@@ -5969,26 +5969,80 @@ function doExportExcel(targetYear) {
   }, 700); 
 }
 
+/* ══ 清除所有記錄與車輛資料 ══ */
 async function doClearData() { 
-  const ok = await customConfirm('⚠️ 確定要<strong>清除所有記錄與車輛資料</strong>嗎？<br>（這將保留您的平台設定與目標）此動作無法復原！'); 
+  const msg = `
+    <div style="font-size:48px; margin-bottom:12px; text-align:center;">🗑️</div>
+    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">清除所有記錄與車輛</div>
+    <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
+      將清空您的「行程記錄」與「車輛保養/加油資料」<br>
+      <span style="color:var(--blue); font-size:12px; font-weight:700;">（但會安全保留您的平台設定與收入目標）</span>
+    </div>
+    <div style="font-size:14px; color:var(--red); font-weight:800; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
+      ⚠️ 此動作無法復原，確定繼續？
+    </div>
+  `;
+  const ok = await customConfirm(msg); 
   if (!ok) return; 
-  S.records=[]; S.vehicles=[]; S.vehicleRecs=[]; 
-  saveRecords(); saveVehicles(); saveVehicleRecs(); 
-  toast('已清除記錄與車輛資料'); 
-  renderHome(); renderSettings(); 
+
+  S.records=[]; 
+  S.vehicles=[]; 
+  S.vehicleRecs=[]; 
+  
+  saveRecords(); 
+  saveVehicles(); 
+  saveVehicleRecs(); 
+  
+  toast('✅ 已清除記錄與車輛資料'); 
+  renderHome(); 
+  renderSettings(); 
 }
 
+/* ══ 重置所有設定和資料 (含重新呼叫進場動畫與彈窗) ══ */
 async function doReset() { 
-  const ok = await customConfirm('⚠️ 確定要<strong>重置所有設定和資料</strong>嗎？<br>App將完全恢復到剛安裝的初始狀態！此動作無法復原！'); 
+  const msg = `
+    <div style="font-size:48px; margin-bottom:12px; text-align:center; animation: waveHand 2s infinite;">🚨</div>
+    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">重置所有設定和資料</div>
+    <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
+      App 將完全恢復到剛安裝的<span style="color:var(--text-blue); font-weight:800;">初始狀態</span>！<br>
+      所有記錄、車輛、目標與平台設定將全數消滅。
+    </div>
+    <div style="font-size:14px; color:var(--red); font-weight:800; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
+      ⚠️ 此動作極度危險且無法復原，確定？
+    </div>
+  `;
+  const ok = await customConfirm(msg); 
   if (!ok) return; 
+
+  // 1. 清空所有資料，恢復至初始狀態
   S.records = []; 
   S.settings = { ...DEFAULT_SETTINGS, shopHistory:[] }; 
-  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
+  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); // 預設所有平台 active 皆為 false
   S.vehicles = []; 
   S.vehicleRecs = []; 
-  saveRecords(); saveSettings(); savePlatforms(); saveVehicles(); saveVehicleRecs(); 
-  toast('已重置所有設定和資料'); 
-  renderHome(); renderSettings(); 
+  S.punch = null;
+
+  // 2. 寫入儲存空間
+  saveRecords(); 
+  saveSettings(); 
+  savePlatforms(); 
+  saveVehicles(); 
+  saveVehicleRecs(); 
+  savePunch();
+
+  // 3. 關閉當前設定彈窗並切換底層至首頁
+  closeOverlay('sub-page'); 
+  S.tab = 'home';
+  document.body.setAttribute('data-tab', 'home');
+
+  // 4. 呼叫進場載入動畫 (營造重新啟動的感覺)
+  window.onSplashFinished();
+
+  // 5. 載入動畫結束後 (onSplashFinished 動畫約耗時 500ms)，觸發平台選擇視窗
+  setTimeout(() => {
+    toast('✅ 已重置所有設定和資料'); 
+    checkAndPromptPlatformSetup();
+  }, 600);
 }
 
 /* ══ 聯絡我們：信箱與一鍵複製 ══ */
@@ -6496,7 +6550,7 @@ function updateLocalBackupTime() {
   renderSettings(); // 重新渲染設定頁面，更新顯示的時間
 }
 
-/* ══ 初次使用平台懸浮設定 ══ */
+/* ══ 初次使用平台懸浮設定 (全新專屬色彩美化版) ══ */
 window.checkAndPromptPlatformSetup = function() {
   const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
   if (!hasActivePlatform) {
@@ -6505,29 +6559,62 @@ window.checkAndPromptPlatformSetup = function() {
     }, 400);
   }
 };
+
+// 獨立出來的點擊切換樣式邏輯
+window.toggleInitPlat = function(row, platId, color) {
+  const chk = row.querySelector('.init-plat-chk');
+  const ring = row.querySelector('.check-ring');
+  chk.checked = !chk.checked;
+
+  if (chk.checked) {
+    row.style.borderColor = color;
+    row.style.backgroundColor = color + '0D'; // 加上約 5% 透明度的背景色
+    ring.style.backgroundColor = color;
+    ring.style.borderColor = color;
+    ring.innerHTML = '<span style="color:#fff; font-size:14px; font-weight:900;">✓</span>';
+  } else {
+    row.style.borderColor = 'var(--border)';
+    row.style.backgroundColor = '#ffffff';
+    ring.style.backgroundColor = 'transparent';
+    ring.style.borderColor = '#cbd5e1';
+    ring.innerHTML = '';
+  }
+}
+
 function showInitialSetupModal() {
   const ov = document.createElement('div');
-  ov.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; transition:0.3s;";
+  // 使用更清新的毛玻璃背景
+  ov.style.cssText = "position:fixed; inset:0; background:rgba(241, 245, 249, 0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; transition:0.4s;";
   
+  // 透過 DEFAULT_PLATFORMS 動態產生帶有平台專屬顏色的卡片
   let platHtml = DEFAULT_PLATFORMS.map(p => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:14px; background:var(--bg-input); border-radius:12px; margin-bottom:8px; border:1px solid var(--border);">
-      <span style="font-weight:700; font-size:15px; color:var(--t1);">${p.name}</span>
-      <!-- 👇 套用滑動開關 (.switch) 結構 -->
-      <label class="switch">
-        <input type="checkbox" class="init-plat-chk" value="${p.id}">
-        <span class="slider"></span>
-      </label>
+    <div onclick="toggleInitPlat(this, '${p.id}', '${p.color}')" style="border: 2px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; background: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+      <div style="display:flex; align-items:center; gap: 12px;">
+         <div style="width: 42px; height: 42px; border-radius: 12px; background: ${p.color}15; color: ${p.color}; display:flex; align-items:center; justify-content:center; font-size: 22px; font-weight:900;">
+           ${p.name.charAt(0)}
+         </div>
+         <span style="font-size: 16px; font-weight: 800; color: var(--t1);">${p.name}</span>
+      </div>
+      <div class="check-ring" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #cbd5e1; display:flex; align-items:center; justify-content:center; transition:0.2s;">
+      </div>
+      <input type="checkbox" class="init-plat-chk" value="${p.id}" style="display:none;">
     </div>
   `).join('');
 
   ov.innerHTML = `
-    <div style="background:#fff; border-radius:24px; padding:24px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.2); transform:translateY(20px); transition:0.3s;" id="init-setup-box">
-      <div style="font-size:44px; text-align:center; margin-bottom:12px;">👋</div>
-      <h3 style="text-align:center; font-size:22px; font-weight:800; color:var(--t1); margin-bottom:8px;">歡迎使用！</h3>
-      <p style="text-align:center; font-size:13px; color:var(--t2); font-weight:600; margin-bottom:24px;">請先勾選您有在跑的外送平台：</p>
+    <div style="background:#fff; border-radius:24px; padding:28px 24px; width:100%; max-width:360px; box-shadow:0 20px 50px rgba(0,0,0,0.15); transform:translateY(30px); transition:0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);" id="init-setup-box">
+      <div style="font-size:48px; text-align:center; margin-bottom:12px; animation: waveHand 2s infinite; transform-origin: bottom center;">👋</div>
+      <h3 style="text-align:center; font-size:24px; font-weight:900; color:var(--t1); margin-bottom:8px;">歡迎使用！</h3>
+      <p style="text-align:center; font-size:14px; color:var(--t2); font-weight:600; margin-bottom:24px; line-height:1.5;">請先勾選您目前有在跑的外送平台<br><span style="font-size:12px; color:var(--hint-color);">(日後可在設定中隨時更改)</span></p>
+      
       ${platHtml}
-      <button id="init-setup-btn" style="width:100%; background:var(--acc); color:#fff; border:none; padding:16px; border-radius:16px; font-size:16px; font-weight:800; margin-top:16px; box-shadow:0 6px 16px rgba(255,107,53,0.3); cursor:pointer; transition:0.2s;">開始記錄 ➔</button>
+      
+      <button id="init-setup-btn" style="width:100%; background:var(--t1); color:#fff; border:none; padding:16px; border-radius:16px; font-size:16px; font-weight:800; margin-top:12px; box-shadow:0 6px 16px rgba(0,0,0,0.2); cursor:pointer; transition:0.2s;">開始記錄 ➔</button>
     </div>
+    <style>
+      @keyframes waveHand { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }
+      #init-setup-btn:active { transform: scale(0.96); }
+    </style>
   `;
   document.body.appendChild(ov);
 
@@ -6549,18 +6636,17 @@ function showInitialSetupModal() {
 
     savePlatforms();
     
-    // 👇 平滑退場，不重新整理網頁
+    // 平滑退場
     ov.style.opacity = '0';
     document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
     setTimeout(() => {
       ov.remove();
-      // 強制寫入狀態並重新渲染
       S.homeSubTab = 'schedule';
       goPage('home');
       renderSettings();
       setTimeout(() => updateNavIndicator('home'), 100);
       toast('✅ 啟用平台，設定完成！');
-    }, 700);
+    }, 400);
   });
 }
 
