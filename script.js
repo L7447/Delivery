@@ -381,84 +381,31 @@ const getDayRecs = date => S.records.filter(r=>r.date===date);
 const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
 const recTotal = r => r.isCashTip ? 0 : (pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips));
 
-/* 👇 新增：計算精確佔比 (最大餘數法)，保證加總絕對等於 100.0% */
+/* 👇 計算精確佔比 (最大餘數法)，保證加總絕對等於 100% (並自動去除 .0) */
 function getExactPercentages(values, precision = 1) {
   const sum = values.reduce((a, b) => a + b, 0);
-  if (sum <= 0) return values.map(() => (0).toFixed(precision));
+  // 如果總和是 0，回傳全部都是 '0'
+  if (sum <= 0) return values.map(() => '0');
 
-  const pow = Math.pow(10, precision); // 算出 10 (小數點後1位)
+  const pow = Math.pow(10, precision); 
   const exacts = values.map(v => (v / sum) * 100);
   
-  // 取得整數部分與小數點餘數
   let floors = exacts.map(v => Math.floor(v * pow));
   let remainders = exacts.map((v, i) => ({ rem: (v * pow) - floors[i], idx: i }));
   
-  // 計算差了多少單位才能湊滿 100.0
   let diff = (100 * pow) - floors.reduce((a, b) => a + b, 0);
   
-  // 將餘數由大到小排序，優先補給小數點最大的人
   remainders.sort((a, b) => b.rem - a.rem);
   for (let i = 0; i < diff; i++) {
     floors[remainders[i].idx] += 1;
   }
   
-  return floors.map(v => (v / pow).toFixed(precision));
-}
-
-// 👇 新增：智慧工時計算函數 (依據單/多平台與打卡記錄聰明判斷)
-function calcTotalHours(recs) {
-  const byDate = {};
-  recs.forEach(r => {
-    if (!byDate[r.date]) byDate[r.date] = [];
-    byDate[r.date].push(r);
+  return floors.map(v => {
+    // 取得帶有小數點的原始字串 (如 '100.0', '95.5')
+    const strVal = (v / pow).toFixed(precision);
+    // 👇 如果結尾是 '.0'，就把它切掉 (變成整數)
+    return strVal.endsWith('.0') ? strVal.slice(0, -2) : strVal;
   });
-  
-  let totalHours = 0;
-  for (let date in byDate) {
-    const dayRecs = byDate[date];
-    const punchRecs = dayRecs.filter(r => r.isPunchOnly);
-    const regularRecs = dayRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
-    
-    // 計算當天各平台的行程工時總和
-    const plats = {};
-    regularRecs.forEach(r => {
-      if (r.platformId) {
-        plats[r.platformId] = (plats[r.platformId] || 0) + pf(r.hours);
-      }
-    });
-    const platIds = Object.keys(plats);
-
-    if (platIds.length === 0) {
-      // 情境 A：只有純打卡或現金小費，直接加總打卡時間
-      totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
-    } 
-    else if (platIds.length === 1) {
-      // 情境 B：當天只有 1 個平台
-      let platTime = plats[platIds[0]];
-      // 防呆：如果平台行程時間忘記填(為0)，但有打卡，就拿打卡時間來墊檔
-      if (platTime === 0 && punchRecs.length > 0) {
-        totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
-      } else {
-        // 依照規則，以該平台時間記錄當天總工時
-        totalHours += platTime;
-      }
-    } 
-    else {
-      // 情境 C：當天記錄大於 1 個平台 (雙開或多開)
-      if (punchRecs.length > 0) {
-        // 1. 有打卡記錄：以打卡時間為主 (多段打卡會相加)
-        totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
-      } else {
-        // 2. 沒有打卡記錄：各平台可能會重疊，取時間最長的那個平台
-        let maxPlatHour = 0;
-        for (let pid in plats) {
-          if (plats[pid] > maxPlatHour) maxPlatHour = plats[pid];
-        }
-        totalHours += maxPlatHour;
-      }
-    }
-  }
-  return totalHours;
 }
 
 function fmtHours(hVal) {
@@ -664,38 +611,59 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
   return `
     <div class="hist-rec-card" style="border: 1.5px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
       <div class="hrc-top" onclick="foldCard('${cardId}', event)" style="padding: 2px 10px;">
-        <div class="hrc-toggle" id="${cardId}-btn" style="top: 2px;">▼</div>
+        <div class="hrc-toggle" id="${cardId}-btn" style="right: 2px; top: 0px; width: 20px; height: 20px; font-size: 14px;">▼</div>
         <div class="hrc-row1">
           <span class="hrc-plat-tag" style="background:var(--t2);">${title}</span>
           ${dateStr ? `<span style="font-size:12px; font-weight:800; color:var(--text-blue); margin-left:6px; letter-spacing:0.5px;">${dateStr}</span>` : ''}
         </div>
         <div class="hrc-row2">
-          <span class="hrc-amt" style="color:var(--text-blue);">$ ${fmt(total)}</span>
+          <span class="hrc-amt" style="color:var(--text-blue);"><span style="font-size:12px;">$ </span>${fmt(total)}</span>
           ${tagsHtml}
         </div>
-        
+        <div style="border:1px solid #83c3ff; margin:3px 0px 0px 0px; border-radius:10px;"></div>
         <!-- 總計、當日卡片。新增：淨行程、獎勵、小費佔比結構 (百分比與金額同排) -->
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:3px; flex-wrap:wrap; text-align:center;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            淨行程<br>
-            <span style="color: #1f9c4d; font-size:15px; font-weight:800;">$ ${fmt(income)}</span>
-            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
+        <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; padding: 0 4px 1px 4px;">
+          
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
+            <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: #1f9c4d; font-size:11px; font-weight:700; font-family:var(--mono);">淨行程</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
+                <span style="color: #1f9c4d; font-size:12px; font-weight:700;">${incPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: #1f9c4d; font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(income)}</span>
+            </div>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: hsl(25, 100%, 59%); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            獎勵<br>
-            <span style="color: #ff7715; font-size:15px; font-weight:800;">$ ${fmt(totalBonus)}</span>
-            <span style="font-size:11px; font-weight:600;">(${bonPct}%)</span>
+
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(245, 158, 11, 0.15); border-radius:12px;">
+            <div style="background: rgba(245, 158, 11, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: hsl(25, 100%, 55%); font-size:11px; font-weight:700; font-family:var(--mono);">獎勵</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
+                <span style="color: hsl(25, 100%, 55%); font-size:12px; font-weight:700;">${bonPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: hsl(25, 100%, 55%); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(totalBonus)}</span>
+            </div>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            小費<br>
-            <span style="color: #8A2BE2; font-size:15px; font-weight:800;">$ ${fmt(tips)}</span>
-            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
+
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(190, 59, 246, 0.15); border-radius:12px;">
+            <div style="background: rgba(190, 59, 246, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:11px; font-weight:700; font-family:var(--mono);">小費</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(190, 59, 246, 0.3);">
+                <span style="color: rgba(137, 43, 226, 0.9); font-size:12px; font-weight:700;">${tipPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(tips)}</span>
+            </div>
           </div>
+
         </div>
 
       </div>
       <div id="${cardId}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:3px dashed #778899; margin-bottom:3px;"></div>
         <div style="padding:12px 3px 8px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
             一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span>
@@ -1564,7 +1532,7 @@ function buildRecItem(r) {
 
   // === 一般行程記錄 ===
   return `
-    <div class="hist-rec-card" data-id="${safeText(r.id)}" style="border-color: ${plat.color}; box-shadow: 0 2px 8px ${plat.color}15;">
+    <div class="hist-rec-card" data-id="${safeText(r.id)}" style="border:2px solid ${plat.color};">
       <div class="hrc-top" onclick="openDetailOverlay('${safeText(r.id)}')">
         <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
         <!-- 👇 修改為 flex-start，並獨立包裹左側元素 (flex-shrink:0) 防止備註擠壓 -->
@@ -1580,31 +1548,52 @@ function buildRecItem(r) {
           ${r.note ? `<div style="color: #2563eb; font-weight:800; font-size:12px; line-height:1.4; padding-top:1px;"> ${formatNoteWithLimit(r.note)}</div>` : ''}
         </div>
         <div class="hrc-row2">
-          <span class="hrc-amt">$ ${fmt(total)}</span>
+          <span class="hrc-amt"><span style="font-size:12px;">$ </span>${fmt(total)}</span>
           ${tagsHtml}
         </div>
-        
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:3px; flex-wrap:wrap; text-align:center;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            淨行程<br>
-            <span style="color: #1f9c4d; font-size:15px; font-weight:800;">$ ${fmt(income)}</span>
-            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${incPct}%)</span>
+        <div style="border:1px solid #83c3ff; margin:3px 0px 0px 0px; border-radius:10px;"></div>
+        <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; padding: 0 4px 1px 4px;">
+          
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
+            <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: #1f9c4d; font-size:11px; font-weight:700; font-family:var(--mono);">淨行程</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
+                <span style="color: #1f9c4d; font-size:12px; font-weight:700;">${incPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: #1f9c4d; font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(income)}</span>
+            </div>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: hsl(25, 100%, 59%); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            獎勵<br>
-            <span style="color: #ff7715; font-size:15px; font-weight:800;">$ ${fmt(totalBonus)}</span>
-            <span style="font-size:11px; font-weight:600;">(${bonPct}%)</span>
+
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(245, 158, 11, 0.15); border-radius:12px;">
+            <div style="background: rgba(245, 158, 11, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: hsl(25, 100%, 55%); font-size:11px; font-weight:700; font-family:var(--mono);">獎勵</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
+                <span style="color: hsl(25, 100%, 55%); font-size:12px; font-weight:700;">${bonPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: hsl(25, 100%, 55%); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(totalBonus)}</span>
+            </div>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            小費<br>
-            <span style="color: #8A2BE2; font-size:15px; font-weight:800;">$ ${fmt(pf(r.tips))}</span>
-            <span style="font-size:11px; opacity:0.75; font-weight:600;">(${tipPct}%)</span>
+
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(190, 59, 246, 0.15); border-radius:12px;">
+            <div style="background: rgba(190, 59, 246, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:11px; font-weight:700; font-family:var(--mono);">小費</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(190, 59, 246, 0.3);">
+                <span style="color: rgba(137, 43, 226, 0.9); font-size:12px; font-weight:700;">${tipPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(pf(r.tips))}</span>
+            </div>
           </div>
+
         </div>
       </div>
 
       <div id="${cid}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="border-top:3px dashed #708090; margin-bottom:3px;"></div>
         <div style="padding:10px 3px 6px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:30px;"></div>
@@ -1733,23 +1722,97 @@ function renderHistCalendarGrid() {
   });
 }
 
+// 👇 智慧工時計算函數 (依據單/多平台與打卡記錄聰明判斷)
+function calcTotalHours(recs) {
+  const byDate = {};
+  recs.forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r);
+  });
+
+  let totalHours = 0;
+  for (let date in byDate) {
+    const dayRecs = byDate[date];
+    const punchRecs = dayRecs.filter(r => r.isPunchOnly);
+    const regularRecs = dayRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
+
+    // 計算當天各平台的行程工時總和
+    const plats = {};
+    regularRecs.forEach(r => {
+      if (r.platformId) {
+        plats[r.platformId] = (plats[r.platformId] || 0) + pf(r.hours);
+      }
+    });
+    const platIds = Object.keys(plats);
+
+    if (platIds.length === 0) {
+      // 情境 A：只有純打卡或現金小費，直接加總打卡時間
+      totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
+    } 
+    else if (platIds.length === 1) {
+      // 情境 B：當天只有 1 個平台
+      let platTime = plats[platIds[0]];
+      // 防呆：如果平台行程時間忘記填(為0)，但有打卡，就拿打卡時間來墊檔
+      if (platTime === 0 && punchRecs.length > 0) {
+        totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
+      } else {
+        totalHours += platTime;
+      }
+    } 
+    else {
+      // 情境 C：當天記錄大於 1 個平台 (雙開或多開)
+      if (punchRecs.length > 0) {
+        // 有打卡記錄：以打卡時間為主 (多段打卡會相加)
+        totalHours += punchRecs.reduce((s, r) => s + pf(r.hours), 0);
+      } else {
+        // 沒有打卡記錄：各平台可能會重疊，取時間最長的那個平台
+        let maxPlatHour = 0;
+        for (let pid in plats) {
+          if (plats[pid] > maxPlatHour) maxPlatHour = plats[pid];
+        }
+        totalHours += maxPlatHour;
+      }
+    }
+  }
+  return totalHours;
+}
+
+// 👇 查看記錄-週到年 群組檢視 (已修復智慧工時傳遞與重複宣告錯誤)
 function renderHistGroupView(mode) {
-  const content = document.getElementById('hist-content'); const nd = new Date(S.histNavDate); let startD, endD, labelStr;
-  if (mode === 'week') { const day = nd.getDay() || 7; startD = new Date(nd); startD.setDate(startD.getDate() - day + 1); endD = new Date(startD); endD.setDate(endD.getDate() + 6); labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`; } 
-  else if (mode === 'biweek') { const anchor = new Date(2025, 10, 10); const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime(); const diffDays = Math.floor(diffTime / 86400000); const cycleOffset = Math.floor(diffDays / 14); startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14); endD = new Date(startD); endD.setDate(endD.getDate() + 13); let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : ''; labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`; } 
-  else if (mode === 'halfmonth') { 
+  const content = document.getElementById('hist-content');
+  const nd = new Date(S.histNavDate);
+  let startD, endD, labelStr;
+
+  if (mode === 'week') {
+    const day = nd.getDay() || 7;
+    startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
+    endD = new Date(startD); endD.setDate(endD.getDate() + 6);
+    labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+  } else if (mode === 'biweek') {
+    const anchor = new Date(2025, 10, 10);
+    const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime();
+    const diffDays = Math.floor(diffTime / 86400000);
+    const cycleOffset = Math.floor(diffDays / 14);
+    startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14);
+    endD = new Date(startD); endD.setDate(endD.getDate() + 13);
+    let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : '';
+    labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+  } else if (mode === 'halfmonth') {
     let isFirstHalf = nd.getDate() <= 15;
     if (isFirstHalf) {
       startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth(), 15); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (上)`;
     } else {
       startD = new Date(nd.getFullYear(), nd.getMonth(), 16); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (下)`;
     }
+  } else if (mode === 'month') {
+    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
+  } else if (mode === 'year') {
+    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()}年`;
   }
-  else if (mode === 'month') { startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`; } 
-  else if (mode === 'year') { startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()}年`; }
 
-  const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`; const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
-  
+  const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
+  const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
+
   let cardDateStr = '';
   if (mode === 'week' || mode === 'biweek') {
       if (startD.getFullYear() === endD.getFullYear()) {
@@ -1758,36 +1821,60 @@ function renderHistGroupView(mode) {
           cardDateStr = `${startD.getFullYear()}年 ${pad(startD.getMonth()+1)}月${pad(startD.getDate())}日 ~ ${endD.getFullYear()}年 ${pad(endD.getMonth()+1)}月${pad(endD.getDate())}日`;
       }
   } else {
-      cardDateStr = labelStr; 
+      cardDateStr = labelStr;
   }
 
-  let recs = S.records.filter(r => !r.isPunchOnly && r.date >= sStr && r.date <= eStr); if (S.histFilter !== 'all') recs = recs.filter(r => r.platformId === S.histFilter);
+  // 1. 取得區間內所有紀錄 (包含純打卡，供智慧工時計算使用)
+  let rawRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
+
+  // 若有選擇特定平台過濾，必須「保留純打卡記錄」，否則智慧工時會抓不到！
+  if (S.histFilter !== 'all') {
+    rawRecs = rawRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
+  }
+
+  // 2. 過濾掉純打卡紀錄，專門用來渲染下方的實體卡片列表
+  let displayRecs = rawRecs.filter(r => !r.isPunchOnly);
+
   let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}" ${S.histFilter===p.id?'selected':''}>${safeText(p.name)}</option>`).join('');
-  
-  // 👇 導入加大加粗的新版導航列
+
   let html = `<div style="padding: 0 16px;">
-    <!-- 時間導航：加大、置中、質感提升 -->
     <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
       <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')" style="width: 42px; height: 42px;">◀</button>
       <span style="font-family:var(--mono); font-size: 22px; font-weight: 900; color: #006eff; letter-spacing: 0px; text-align: center; flex: 1;">${labelStr}</span>
       <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width: 42px; height: 42px;">▶</button>
     </div>
-    <!-- 平台篩選器 -->
     <div style="display:flex; justify-content:flex-end; margin-bottom: 12px;">
       <select class="fsel" style="width:auto; padding:6px 14px; font-size:13px; font-weight:800; border-radius:14px; background: #f1f5f9; border: 1.5px solid #cbd5e1; color: var(--t2);" onchange="changeHistFilter(this.value)">${platOpts}</select>
     </div>
   </div>
   <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:7px;">`;
-  
-  if (recs.length === 0) { html += `<div class="empty-tip">沒有資料</div>`; } else {
-    const tInc = recs.reduce((s,r) => s + recTotal(r), 0); const tOrd = recs.reduce((s,r) => s + pf(r.orders), 0); const tMil = recs.reduce((s,r) => s + pf(r.mileage), 0); const tHrs = calcTotalHours(recs); const tBonus = recs.reduce((s,r) => s + pf(r.bonus), 0); const tTemp = recs.reduce((s,r) => s + pf(r.tempBonus), 0); const tTips = recs.reduce((s,r) => s + pf(r.tips), 0);
+
+  // 3. 判斷是否有實質行程記錄 (若只有打卡沒跑單，就不顯示該平台)
+  if (displayRecs.length === 0) {
+    html += `<div class="empty-tip">沒有資料</div>`;
+  } else {
+    // 💡 餵給它們包含打卡的 rawRecs，智慧工時就能正確發揮作用
+    const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
+    const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
+    const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
+    const tHrs = calcTotalHours(rawRecs);
+    const tBonus = rawRecs.reduce((s,r) => s + pf(r.bonus), 0);
+    const tTemp = rawRecs.reduce((s,r) => s + pf(r.tempBonus), 0);
+    const tTips = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
+
     html += buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
-    
-    // 👇 新增：深灰色的質感分隔線 (加入上下間距與圓角)
-    html += `<div style="height:3px; background: #475569; margin: 0px 0px 4px 0px; border-radius:2px; opacity:0.8;"></div>`;
-    
-    html += recs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
-  } html += `</div>`; content.innerHTML = html;
+
+    // 深灰色的質感分隔線
+    html += `<div style="height:3px; background:#475569; margin: 0px 0px 4px 0px; border-radius:2px; opacity:0.8;"></div>`;
+
+    // 產生下方卡片時，使用濾除掉打卡紀錄的 displayRecs
+    html += displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
+  }
+
+  html += `</div>`;
+  
+  // 👇 已修復：移除這裡原本錯誤多加的 const 宣告，直接塞入 HTML 即可！
+  content.innerHTML = html;
 }
 
 function openFullCalendar() { document.getElementById('full-calendar-overlay').classList.add('show'); renderFullCalendar(); }
@@ -2437,13 +2524,14 @@ function renderRptOverview() {
   
   // 依照選擇的標籤過濾資料
   const isAll = S.rptOverviewFilter === 'all';
-  const recs = isAll ? allMonthRecs : allMonthRecs.filter(r => r.platformId === S.rptOverviewFilter);
+  const recs = isAll ? allMonthRecs : allMonthRecs.filter(r => r.platformId === S.rptOverviewFilter || r.isPunchOnly);
   
   const total = recs.reduce((s,r) => s+recTotal(r), 0); 
   const income = recs.reduce((s,r) => s+pf(r.income), 0); // 這是淨行程
   const bonus = recs.reduce((s,r) => s+pf(r.bonus)+pf(r.tempBonus), 0); 
   const tips = recs.reduce((s,r) => s+pf(r.tips), 0);
   const orders = recs.reduce((s,r) => s+pf(r.orders), 0); 
+  const mileage = recs.reduce((s,r) => s+pf(r.mileage), 0); // 👈 新增計算里程
   const hours = calcTotalHours(recs);
   const cashTipTotal = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
 
@@ -2456,6 +2544,43 @@ function renderRptOverview() {
 
   // 👇 基本工資分析
   const wageHtml = getWageBadge(hours, total);
+
+  // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
+  let tagsParts = [];
+  
+  if (orders > 0) {
+    tagsParts.push(`
+      <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${fmt(orders)}</span>
+        <span style="font-size:11px; font-weight:600; color:#f97316;">單</span>
+      </div>
+    `);
+  }
+  if (mileage > 0) {
+    tagsParts.push(`
+      <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${fmt(mileage)}</span>
+        <span style="font-size:11px; font-weight:800; color:#22c55e;">km</span>
+      </div>
+    `);
+  }
+  if (hours > 0) {
+    tagsParts.push(`
+      <div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;">
+        <span style="font-size:11px;">⏱️</span>
+        <span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(hours)}</span>
+      </div>
+    `);
+  }
+
+  let tagsHtml = '';
+  if (tagsParts.length > 0) {
+    tagsHtml = `
+      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:4px; background: #e2e8f0; gap:2px;">
+        ${tagsParts.join('')}
+      </div>
+    `;
+  }
 
   // 👇 導入加大加粗的新版導航列
   let html = `
@@ -2482,24 +2607,47 @@ function renderRptOverview() {
           ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptOverviewFilter)?.color}; font-size:14px; padding:4px 14px;">${filterName}</span>`}
           <span style="font-size:18px; font-weight:800; color: var(--t2); margin-left:6px;">本月總收入</span>
         </div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:800; color: #0db3e6; line-height:1;">$ ${fmt(total)}</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:800; color: #0db3e6; line-height:1; margin-bottom:8px;"><span style="font-size:18px;">$ </span> ${fmt(total)}</div>
+        ${tagsHtml}
         
-        <div style="display:flex; justify-content:center; gap:5px; margin-top:8px; flex-wrap:wrap; text-align:center; padding: 0 10px;">
-          <div style="flex:1; background: rgba(34, 197, 94, 0.15); color: var(--green); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            淨行程<br>
-            <span style="color: #1f9c4d; font-size:15px; font-weight:800;">$ ${fmt(income)}</span>
-            <span style="font-size:11px; font-weight:600;">(${incPct}%)</span>
+        <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; padding: 0 4px 0px 4px;">
+          
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
+            <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: #1f9c4d; font-size:11px; font-weight:700; font-family:var(--mono);">淨行程</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
+                <span style="color: #1f9c4d; font-size:12px; font-weight:700;">${incPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: #1f9c4d; font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(income)}</span>
+            </div>
           </div>
-          <div style="flex:1; background: rgba(245,158,11,0.15); color: hsl(25, 100%, 59%); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            獎勵<br>
-            <span style="color: #ff7715; font-size:15px; font-weight:800;">$ ${fmt(bonus)}</span>
-            <span style="font-size:11px; font-weight:600;">(${bonPct}%)</span>
+
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(245, 158, 11, 0.15); border-radius:12px;">
+            <div style="background: rgba(245, 158, 11, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: hsl(25, 100%, 55%); font-size:11px; font-weight:700; font-family:var(--mono);">獎勵</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
+                <span style="color: hsl(25, 100%, 55%); font-size:12px; font-weight:700;">${bonPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: hsl(25, 100%, 55%); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(bonus)}</span>
+            </div>
           </div>
-          <div style="flex:1; background: rgba(190, 59, 246, 0.15); color: rgba(137, 43, 226, 0.9); padding:2px 2px; border-radius:8px; font-size:12px; font-weight:500; font-family:var(--mono);">
-            小費<br>
-            <span style="color: #8A2BE2; font-size:15px; font-weight:800;">$ ${fmt(tips)}</span>
-            <span style="font-size:11px; font-weight:600;">(${tipPct}%)</span>
+
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(190, 59, 246, 0.15); border-radius:12px;">
+            <div style="background: rgba(190, 59, 246, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:11px; font-weight:700; font-family:var(--mono);">小費</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(190, 59, 246, 0.3);">
+                <span style="color: rgba(137, 43, 226, 0.9); font-size:12px; font-weight:700;">${tipPct}<span style="font-size:8px;">%</span></span>
+              </span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(tips)}</span>
+            </div>
           </div>
+
         </div>
       </div> 
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
