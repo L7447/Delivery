@@ -7,9 +7,9 @@
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS =[
-  { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一、四結算｜每週四發薪' },
-  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日結算｜結算後週三寄明細｜再隔週三發薪' },
-  { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15及月底結算｜每月5及20發薪' },
+  { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一、四趟獎結算。｜每週四發薪。' },
+  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日報酬結算，｜結算後週三寄明細，｜再隔週三發薪。' },
+  { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15日及月底報酬結算。｜每月5日及20日發薪。' },
 ];
 
 /* ════ 基本工資設定區 (預設值)(範圍設定) 開始════ 
@@ -708,8 +708,8 @@ function calcNextDates(id) {
     for(let i=0; i<=35; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let dw = d.getDay();
-      if (dw === 1) addEv('結算', d);
-      if (dw === 4) { addEv('結算', d); addEv('發薪', d); }
+      if (dw === 1) addEv('平日獎結算', d);
+      if (dw === 4) { addEv('假日獎結算', d); addEv('發薪', d); }
     }
   } else if (id === 'foodpanda') {
     const anchor = new Date(2023, 11, 24); 
@@ -728,7 +728,7 @@ function calcNextDates(id) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let dt = d.getDate();
       let isLastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() === dt;
-      if (dt === 15 || isLastDay) addEv('結算', d);
+      if (dt === 15 || isLastDay) addEv('報酬結算', d);
       if (dt === 5 || dt === 20) addEv('發薪', d);
     }
   }
@@ -5663,74 +5663,87 @@ async function deleteReward(i) {
   toast('✅ 獎勵已刪除'); 
 }
 
-/* 替換 openPlatformList 函式，並加上 togglePlatform 函式 */
+/* ══ 全新美化版：平台列表與規則設定 ══ */
 function openPlatformList() {
-  document.getElementById('sub-title').textContent = '平台列表';
-  document.getElementById('sub-top-right').innerHTML = `<button onclick="closeOverlay('sub-page'); goPage('home');" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">完成</button>`;
+  document.getElementById('sub-title').textContent = '平台列表與規則';
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="closeOverlay('sub-page'); goPage('home');" style="background:var(--t1); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.15);">完成</button>`;
+  
   const platforms = Array.isArray(S.platforms) ? S.platforms : DEFAULT_PLATFORMS.map(p => ({ ...p }));
-  const body = document.getElementById('sub-body');
-  if (!body) {
-    console.warn('sub-body element missing when opening platform list');
-    return;
-  }
-  body.innerHTML = `
-    <div class="set-list">
-      ${platforms.length > 0 ? platforms.map(p => `
-        <div class="set-row" onclick="openPlatformEdit('${safeText(p.id)}')">
-          <div class="plat-color-dot" style="background:${p.color}"></div>
-          <div class="sn">
-            <div style="font-weight:600">${safeText(p.name)}</div>
-            <div class="sn-sub">${p.active ? '✅ 已啟用' : '❌ 已停用'}</div>
-          </div>
-          <!-- 👇 套用滑動開關 (.switch) 結構 -->
-          <label class="switch" onclick="event.stopPropagation()">
-            <input type="checkbox" ${p.active ? 'checked' : ''} onchange="togglePlatform('${safeText(p.id)}', this.checked)">
-            <span class="slider"></span>
-          </label>
+  
+  let listHtml = '';
+  platforms.forEach(p => {
+    // 動態生成每個平台的專屬開關顏色 (開啟時，開關會變成該平台的顏色)
+    const switchStyle = `
+      <style>
+        #switch-${p.id}:checked + .slider { background-color: ${p.color} !important; }
+        #switch-${p.id}:checked + .slider:before { box-shadow: 0 2px 6px ${p.color}80; }
+      </style>
+    `;
+    
+    listHtml += `
+      ${switchStyle}
+      <div style="background:#fff; border: 2px solid ${p.active ? p.color : 'var(--border)'}; border-radius:20px; padding:16px; margin-bottom:16px; box-shadow:0 8px 20px rgba(0,0,0,0.03); display:flex; align-items:flex-start; gap:14px; transition:0.3s; position:relative; overflow:hidden;">
+        
+        <!-- 背景裝飾圓圈 (啟用時顯示) -->
+        <div style="position:absolute; right:-20px; top:-20px; width:100px; height:100px; background:${p.color}; opacity:${p.active ? '0.05' : '0'}; border-radius:50%; z-index:0; transition:0.3s;"></div>
+        
+        <!-- 平台大寫字母圖示 -->
+        <div style="width:50px; height:50px; border-radius:14px; background:${p.active ? p.color+'15' : 'var(--sf2)'}; color:${p.active ? p.color : 'var(--t3)'}; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:900; flex-shrink:0; z-index:1; transition:0.3s; border:1px solid ${p.active ? p.color+'40' : 'transparent'};">
+          ${safeText(p.name).charAt(0).toUpperCase()}
         </div>
-      `).join('') : `<div class="empty-tip" style="padding:20px; text-align:center;">目前沒有可用平台，請稍後重新整理或回到設定頁</div>`}
+        
+        <!-- 平台資訊區 -->
+        <div style="flex:1; z-index:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:18px; font-weight:900; color:${p.active ? 'var(--t1)' : 'var(--t2)'}; transition:0.3s;">${safeText(p.name)}</div>
+            
+            <!-- 專屬顏色的滑動開關 -->
+            <label class="switch">
+              <input type="checkbox" id="switch-${p.id}" ${p.active ? 'checked' : ''} onchange="togglePlatform('${safeText(p.id)}', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <!-- 狀態標籤 -->
+          <div style="margin-bottom:12px;">
+            ${p.active 
+              ? `<span style="background:${p.color}15; color:${p.color}; font-size:11px; padding:4px 10px; border-radius:8px; font-weight:800; border:1px solid ${p.color}30;">✅ 狀態：已啟用</span>` 
+              : `<span style="background:var(--bg-input); color:var(--t3); font-size:11px; padding:4px 10px; border-radius:8px; font-weight:800; border:1px solid var(--border);">❌ 狀態：未啟用</span>`
+            }
+          </div>
+          
+          <!-- 結算與發薪規則 -->
+          <div style="font-size:12px; color:${p.active ? 'var(--t2)' : 'var(--t3)'}; font-weight:600; line-height:1.6; background:${p.active ? '#f8fafc' : 'transparent'}; padding:${p.active ? '10px' : '0'}; border-radius:10px; border:1px dashed ${p.active ? '#cbd5e1' : 'transparent'}; transition:0.3s;">
+            <span style="font-weight:800; color:${p.active ? 'var(--text-blue)' : 'var(--t3)'}; margin-bottom:4px; display:block;">📝 結算與發薪規則：</span>
+            ${p.ruleDesc ? p.ruleDesc.replace(/｜/g, '<br>') : '無特定規則'}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div style="font-size:13px; color:var(--hint-color); line-height:1.6; font-weight:700; margin-bottom:20px; background:var(--blue-d); padding:12px; border-radius:12px;">
+        💡 啟用您有在跑的平台，開啟後即可於首頁與新增記錄中選擇。
+      </div>
+      ${listHtml}
     </div>
-    <div style="margin-top:12px; font-size:11px; color:var(--hint-color); font-weight:700; text-align:center;">
-      💡 點擊平台名稱可進入自訂顏色與詳細設定
-    </div>`;
+  `;
   openOverlay('sub-page');
 }
-
-/* 新增的獨立快速切換函式 */
-function togglePlatform(id, isChecked) {
+/* 快速開關狀態切換函式 */
+window.togglePlatform = function(id, isChecked) {
   const p = S.platforms.find(x => x.id === id);
   if (p) {
     p.active = isChecked;
     savePlatforms();
     if (S.tab === 'home') renderHome();
     renderSettings();
-    openPlatformList(); // 重新渲染列表以更新文字狀態
+    openPlatformList(); // 重新渲染列表以更新卡片狀態與顏色
   }
 }
 
-function openPlatformEdit(id) {
-  const p = S.platforms.find(x=>x.id===id); if (!p) return;
-  document.getElementById('sub-title').textContent = p.name; 
-  
-  // 👇 換成滑動開關 .switch
-  document.getElementById('sub-body').innerHTML = `
-    <div style="margin-bottom:16px; padding:12px; background:var(--sf2); border-radius:var(--rs); font-size:12px; color:var(--t2); line-height:1.6;"><strong>📝 結算與發薪規則：</strong><br>${p.ruleDesc ? p.ruleDesc.replace(/｜/g, '<br>') : ''}</div>
-    <div class="fg" style="margin-bottom:16px"><label>自訂平台顏色</label><div style="display:flex;gap:8px"><input type="color" id="sp-color-pick" value="${safeText(p.color)}" style="width:44px;height:40px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;padding:2px"><input type="text" class="finp" id="sp-color" value="${safeText(p.color)}" style="flex:1"></div></div>
-    
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding:12px;background:var(--sf2);border-radius:var(--rs)">
-      <label style="font-size:14px;font-weight:700;color:var(--t1);">啟用此平台</label>
-      <label class="switch">
-        <input type="checkbox" id="sp-active" ${p.active?'checked':''}>
-        <span class="slider"></span>
-      </label>
-    </div>
-    
-    <div style="display:flex;gap:8px"><button onclick="openPlatformList()" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--sf2);border:1px solid var(--border);color:var(--t2);font-size:14px;font-weight:700;cursor:pointer;">返回</button><button onclick="savePlatformEdit('${id}')" class="btn-acc" style="flex:2;padding:12px;font-size:14px;font-weight:800;border-radius:var(--rs)">儲存設定</button></div>`;
-  
-  document.getElementById('sp-color-pick').addEventListener('input', e => { document.getElementById('sp-color').value = e.target.value; });
-}
-
-function savePlatformEdit(id) { const p = S.platforms.find(x=>x.id===id); if (!p) return; p.color = document.getElementById('sp-color').value.trim() || p.color; p.active = document.getElementById('sp-active').checked; savePlatforms(); toast('✅ 平台已更新'); if (S.tab === 'home') renderHome(); renderSettings(); openPlatformList(); }
 function openGoalSettings() { 
   document.getElementById('sub-title').textContent = '收入目標設定'; 
   document.getElementById('sub-top-right').innerHTML = '';
@@ -6674,9 +6687,14 @@ async function init() {
   try { await loadAll(); } catch (e) { console.error(e); }
   
   applyBackground();
-  fetchSystemSettings(); // 👈 啟動時向伺服器拉取權限設定
+  fetchSystemSettings(); // 啟動時向伺服器拉取權限設定
   if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
   initReminderCheck();
+
+  // 👇 新增這行：無論是冷啟動還是重整網頁，立刻向後端報到並更新「最後上線時間」
+  if (USER && USER.loggedIn) {
+    checkAccountStatus();
+  }
 
   if (!S.platforms || S.platforms.length === 0) {
     S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
