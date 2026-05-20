@@ -1024,7 +1024,7 @@ function renderHome() {
             <!-- 裝飾背景圈 -->
             <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:#ffedd5; border-radius:50%; z-index:0; opacity:0.6;"></div>
             
-            <button onclick="dismissAnnouncement('${safeText}')" style="position:absolute; top:12px; right:12px; background:#f8fafc; border:none; color:#94a3b8; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:900; z-index:2; transition:0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);">✕</button>
+            <button onclick="dismissAnnouncement('${safeText}')" style="position:absolute; top:12px; right:12px; background: #f8fafc; border:none; color:#94a3b8; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:900; z-index:2; transition:0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);">✕</button>
             
             <div style="position:relative; z-index:1; display:flex; gap:12px; align-items:flex-start;">
               <div style="background: linear-gradient(135deg, #f97316, #f59e0b); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(249,115,22,0.25);">
@@ -3580,17 +3580,20 @@ function renderVehicleContent() {
     const maintList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
     
     html += `
-      <div style="background:var(--sf); padding:16px; border-radius:16px; margin-bottom:12px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.02);">
-        <div class="fg" style="margin-bottom:12px;">
-          <label style="font-size:12px; font-weight:700; color:var(--t2);">🔍 搜尋保養/維修項目</label>
-          <input type="text" class="finp" id="veh-search-kw" placeholder="請輸入關鍵字或點擊下方標籤..." oninput="doVehSearch()">
+      <style>
+        .search-quick-tag { font-size:11px; padding:4px 10px; background:var(--sf2); color:var(--t2); border-radius:8px; border:1px solid var(--border); cursor:pointer; transition:0.2s; font-weight:700; }
+        .search-quick-tag:active { transform:scale(0.9); background:var(--blue-d); color:var(--blue); border-color:var(--blue); }
+      </style>
+      <div style="background:var(--sf); padding:12px; border-radius:16px; margin-bottom:12px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+          <input type="text" class="finp" id="veh-search-kw" placeholder="🔍 搜尋項目、店家或備註..." oninput="doVehSearch()" style="flex:1; padding:8px 12px; font-size:14px; border-radius:12px; border:1.5px solid var(--text-blue); background:#f8fafc;">
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          ${maintList.map(item => `<div class="item-chip" style="font-size:11px; padding:4px 10px;" onclick="document.getElementById('veh-search-kw').value='${item}'; doVehSearch();">${item}</div>`).join('')}
+          ${maintList.map(item => `<div class="search-quick-tag" onclick="document.getElementById('veh-search-kw').value='${item}'; doVehSearch();">${item}</div>`).join('')}
         </div>
       </div>
       <div id="veh-search-results" style="display:flex; flex-direction:column; gap:8px;">
-        <div class="empty-tip">請輸入或點選標籤開始搜尋</div>
+        <div class="empty-tip">請輸入或點選上方標籤開始搜尋</div>
       </div>
     `;
     container.innerHTML = html;
@@ -3598,7 +3601,7 @@ function renderVehicleContent() {
     return;
   }
 
-  // ── 2. 年總覽頁籤 ──
+  // ── 2. 年總覽頁籤 (超緊湊高質感玻璃紋路版) ──
   if (S.vehicleTab === 'yearly') {
     const yearRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(S.vehY + '-'));
     const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
@@ -3606,6 +3609,7 @@ function renderVehicleContent() {
     let yDist = 0, yLiters = 0, yFuelAmt = 0, yMaintAmt = 0;
     const itemFreq = {};
 
+    // 1. 燃料與里程計算
     yearRecs.forEach(r => {
       if (r.type === 'fuel') {
         const diff = pf(r.km) - pf(r.prevKm); if (diff > 0) yDist += diff;
@@ -3619,47 +3623,174 @@ function renderVehicleContent() {
     const sortedItems = Object.entries(itemFreq).sort((a,b) => b[1] - a[1]);
     const totalExp = yFuelAmt + yMaintAmt;
 
-    // 總支出卡片
+    // 2. 總支出金條卡片 (極度縮緊)
     html += `
-      <div style="background: linear-gradient(to right, #be6017 0%, #d97706 20%, #f59e0b 40%, #f7c853 60%, #fade82 80%, #f8f3df 100%); border-radius:16px; padding:8px 12px; margin-bottom:12px; box-shadow:0 4px 12px rgba(245, 158, 11, 0.25); border: 1.5px solid #fde68a;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">👑 ${S.vehY}年 總支出</span>
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #fcd34d 40%, #fbbf24 60%, #f59e0b 100%); border-radius:16px; padding:10px 14px; margin-bottom:10px; box-shadow:0 4px 12px rgba(245, 158, 11, 0.3); border: 1.5px solid #fde68a; position:relative; overflow:hidden;">
+        <!-- 閃光線條特效 -->
+        <div style="position:absolute; top:0; left:-100%; width:50%; height:100%; background:linear-gradient(to right, transparent, rgba(255,255,255,0.5), transparent); transform:skewX(-25deg); opacity:0.6;"></div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="width:30px; height:30px; background:#ffffff; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); font-size:16px;">👑</div>
+            <span style="font-size:15px; font-weight:900; color:#78350f; text-shadow:0 1px 0 rgba(255,255,255,0.4);">${S.vehY}年 總支出</span>
+          </div>
           
-          <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
-            <span style="font-size:14px; font-weight:800; color:#b45309; margin-right: 4px;">$</span>
-            <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#d97706;">${fmt(totalExp)}</span>
+          <div style="background: rgba(255,255,255,0.95); padding: 4px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 2px 6px rgba(120,53,15,0.15); display:flex; align-items:baseline;">
+            <span style="font-size:14px; font-weight:900; color:#b45309; margin-right: 4px;">$</span>
+            <span style="font-family:var(--mono); font-size:24px; font-weight:900; color:#b45309; letter-spacing:-0.5px;">${fmt(totalExp)}</span>
           </div>
         </div>
       </div>
     `;
 
-    // 燃料與里程統計
-    html += `<div class="card" style="border:1px solid #3b82f650; padding:5px 12px;">
-      <h3 style="font-size:13px; color:var(--blue); margin-bottom:5px; border-bottom:1px dashed var(--border); padding-bottom:4px;">${isEV ? '🔋 年度換電與里程' : '⛽ 年度油資與里程'}</h3>
-      <div style="display:flex; justify-content:space-around; text-align:center;">
-        ${!isEV ? `
-        <div><div style="font-size:11px; color:var(--t3); margin-bottom:4px;">總加油金額</div><div style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--t1);">$${fmt(yFuelAmt)}</div></div>
-        <div style="width:1px; background:var(--border);"></div>
-        <div><div style="font-size:11px; color:var(--t3); margin-bottom:4px;">總油量</div><div style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--t1);">${yLiters.toFixed(1)} L</div></div>
-        <div style="width:1px; background:var(--border);"></div>
-        ` : ''}
-        <div><div style="font-size:11px; color:var(--t3); margin-bottom:4px;">行駛總里程</div><div style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--t1);">${fmt(yDist)} km</div></div>
-      </div>
-    </div>`;
+    // 3. 燃料與里程卡片 (玻璃反光與科技碳纖維斜紋)
+    const fuelBg = isEV ? 'linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%)' : 'linear-gradient(180deg, #e60000 0%, #ff6666 100%)';
+    const fuelShadow = isEV ? 'rgba(59,130,246,0.25)' : 'rgba(225,29,72,0.25)';
+    const fuelImgSrc = isEV ? 'Vehicle/ve2.png' : 'Vehicle/ve1.png';
+    const fuelTitle = isEV ? '年度換電與里程' : '年度油資與里程';
+    
+    // 計算電動車專屬的每公里成本
+    const evCostPerKm = (yDist > 0 && yFuelAmt > 0) ? (yFuelAmt / yDist).toFixed(2) : 0;
 
-    // 保養頻率與花費
-    html += `<div class="card" style="border:1px solid #10b98150;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border); padding-bottom:8px; margin-bottom:12px;">
-        <h3 style="font-size:13px; color:var(--green); margin:0;">🔧 保養維修總額</h3>
-        <span style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--t1);">$${fmt(yMaintAmt)}</span>
-      </div>
-      <div style="font-size:11px; font-weight:700; color:var(--t3); margin-bottom:8px;">各項目保養次數分析：</div>
-      ${sortedItems.length ? sortedItems.map(it => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--sf2);">
-          <span style="font-size:13px; font-weight:700; color:var(--t2);">${it[0]}</span>
-          <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:var(--acc);">${it[1]} 次</span>
+    html += `
+      <div style="background:${fuelBg}; border-radius:16px; padding:12px 14px; margin-bottom:10px; box-shadow:0 6px 16px ${fuelShadow}; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.2); background-size:101% 101% ;">
+        <!-- 碳纖維科技斜紋背景 -->
+        <div style="position:absolute; inset:0; opacity:0.1; background-image: repeating-linear-gradient(45deg, #ffffff 0px, #ffffff 1px, transparent 1px, transparent 8px);"></div>
+        <!-- 頂部玻璃反光光暈 -->
+        <div style="position:absolute; top:0; left:0; right:0; height:30%; background:linear-gradient(to bottom, rgba(255,255,255,0.15), transparent); pointer-events:none;"></div>
+
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; border-bottom:1px dashed rgba(255,255,255,0.3); padding-bottom:8px; position:relative; z-index:1;">
+          <div style="width:28px; height:28px; background:rgba(255,255,255,0.2); border-radius:6px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(15px); box-shadow:inset 0 1px 2px rgba(255,255,255,0.4);">
+            <img src="${fuelImgSrc}" style="width:20px; height:20px; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.2));">
+          </div>
+          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:1px;">${fuelTitle}</span>
         </div>
-      `).join('') : '<div class="empty-tip" style="padding:4px 0;">本年度尚無保養記錄</div>'}
+        
+        <div style="display:flex; justify-content:space-around; align-items:center; position:relative; z-index:1;">
+          ${!isEV ? `
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
+            <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">總加油金額</span>
+            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yFuelAmt)}</span>
+            </div>
+          </div>
+          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
+            <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">總油量</span>
+            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${yLiters.toFixed(1)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">L</span></span>
+            </div>
+          </div>
+          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
+            <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">行駛總里程</span>
+            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${fmt(yDist)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8); letter-spacing:1px;">km</span></span>
+            </div>
+          </div>
+          ` : `
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
+            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">總月租費</span>
+            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yFuelAmt)}</span>
+            </div>
+          </div>
+          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
+            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">行駛總里程</span>
+            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${fmt(yDist)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8); letter-spacing:1px;">km</span></span>
+            </div>
+          </div>
+          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
+            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">每公里成本</span>
+            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"> ${evCostPerKm} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8); letter-spacing:1px;">元/km</span></span>
+            </div>
+          </div>
+          `}
+        </div>
+      </div>
+    `;
+
+    // 4. 保養維修總額 (曜石綠科技網格背景 + 立體列表)
+    const itemAmount = {};
+    yearRecs.forEach(r => {
+      if (r.type === 'maintenance') {
+        if (r.itemDetails && r.itemDetails.length > 0) {
+          r.itemDetails.forEach(dt => { itemAmount[dt.name] = (itemAmount[dt.name] || 0) + pf(dt.amount); });
+        } else if (r.items && r.items.length > 0) {
+          itemAmount[r.items[0]] = (itemAmount[r.items[0]] || 0) + pf(r.amount);
+        }
+      }
+    });
+
+    html += `
+    <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:16px;">
+      
+      <!-- 頂部翡翠綠玻璃感卡 -->
+      <div style="background:linear-gradient(180deg, #064e3b 0%, #059669 100%); padding:10px 16px; position:relative; overflow:hidden;">
+        <!-- 科技全息方格背景 -->
+        <div style="position:absolute; inset:0; opacity:0.12; background-image: linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px); background-size: 16px 16px;"></div>
+        <!-- 頂部玻璃反光光暈 -->
+        <div style="position:absolute; top:0; left:0; right:0; height:40%; background:linear-gradient(to bottom, rgba(255,255,255,0.12), transparent); pointer-events:none;"></div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
+          <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
+            <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:16px;">🔧</div>
+            保養與維修總額
+          </h3>
+          <div style="background:#ffffff; padding:4px 12px; border-radius:10px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15); border:1px solid #6ee7b7; display:flex; align-items:baseline;">
+            <span style="font-size:14px; font-weight:900; color:#047857; margin-right:4px;">$</span>
+            <span style="font-family:var(--mono); font-size:24px; font-weight:900; background:linear-gradient(180deg, #047857, #10b981); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-0.5px;">${fmt(yMaintAmt)}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 下方緊湊立體清單區 -->
+      <div style="padding:10px 8px; background:#f8fafc;">
+        <!-- 表頭與內容寬度精準對齊 -->
+        <div style="font-size:11px; font-weight:800; color:#64748b; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; padding:0 12px;">
+          <span style="width:35%; text-align:left;">保養項目</span>
+          <span style="width:20%; text-align:center;">次數</span>
+          <span style="width:40%; text-align:right; margin-right:20px;">累計花費</span>
+        </div>
+        
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          ${sortedItems.length ? sortedItems.map(it => `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:#ffffff; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+              
+              <!-- 項目名稱 -->
+              <div style="width:35%; display:flex; align-items:center; gap:6px; overflow:hidden;">
+                <div style="width:6px; height:6px; border-radius:50%; background: #10b981; flex-shrink:0;"></div>
+                <span style="font-size:14px; font-weight:800; color: #334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  ${safeText(it[0])}
+                </span>
+              </div>
+              
+              <!-- 次數膠囊 -->
+              <div style="width:20%; display:flex; justify-content:center;">
+                <span style="font-family:var(--mono); font-size:15px; font-weight:900; color: #ff5900; background: #fff2e2; padding:3px 10px; border-radius:8px; border:1px solid #ffedd5;">
+                  ${it[1]}<span style="font-size:10px; color: #4b4846; margin-left:2px;"> 次</span>
+                </span>
+              </div>
+              
+              <!-- 金額置右 -->
+              <div style="width:40%; text-align:right;">
+                <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#2563eb;">
+                  <span style="font-size:11px; color: #94a3b8; margin-right:2px;">$ </span>${fmt(itemAmount[it[0]] || 0)}
+                </span>
+              </div>
+            </div>
+          `).join('') : `
+            <div style="padding:16px 0; text-align:center; background:#ffffff; border-radius:10px; border:1.5px dashed #cbd5e1;">
+              <div style="font-size:20px; margin-bottom:4px;">📭</div>
+              <div style="font-size:13px; font-weight:800; color:#94a3b8;">本年度尚無保養記錄</div>
+            </div>
+          `}
+        </div>
+      </div>
     </div>`;
 
     container.innerHTML = html;
@@ -3691,8 +3822,8 @@ let totalEVFee = 0;
       const evStatsHtml = `
         <div style="display:flex; justify-content:space-between; text-align:center; margin-top: 5px;">
           <div style="flex:1;">
-            <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">換電次數</div>
-            <div style="font-weight:900; font-size:16px; color:#8b5cf6; font-family:var(--mono);">${evSwapCount} <span style="font-size:12px; color:#64748b;">次</span></div>
+            <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">電池月租費</div>
+            <div style="font-weight:900; font-size:16px; color:#8b5cf6; font-family:var(--mono);">$ ${fmt(totalEVFee)}</div>
           </div>
           <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
           <div style="flex:1;">
@@ -3777,7 +3908,7 @@ let totalEVFee = 0;
           <div style="display:flex; align-items:center; gap:8px;">
             <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
               <span style="font-size:14px; font-weight:800; color:#047857; margin-right: 4px;">$</span>
-              <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#059669;">${fmt(totalMaintPaid)}</span>
+              <span style="font-family:var(--mono); font-size:26px; font-weight:900; color: #059669;">${fmt(totalMaintPaid)}</span>
             </div>
             <div style="background:rgba(255,255,255,0.6); color:#047857; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
               <div id="veh-maint-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
@@ -3800,7 +3931,8 @@ let totalEVFee = 0;
   if (typeRecs.length === 0) { 
     html += `<div class="empty-tip">本月尚未新增資料</div>`; 
   } else {
-    typeRecs.sort((a, b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'')).forEach(r => {
+    // 💡 改為由大到小排序 (最新日期與時間在最上面)
+    typeRecs.sort((a, b) => b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'')).forEach(r => {
       const isFuel = r.type === 'fuel'; 
       const isEV = r.fuelType === 'electric'; 
       const formatTime = r.date.slice(5).replace('-','/') + ' ' + (r.time || '');
@@ -3820,7 +3952,7 @@ let totalEVFee = 0;
 
               htmlContent = `
                 <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
-                  <div class="vc-left"><img src="Vehicle/ve1.png"></div>
+                  <div class="vc-left"><img src="Vehicle/ve1.png" style="width:28px; height:28px;"></div>
                   <div class="vc-mid">
                     <div class="vc-mid-top">
                       <div class="vt-time">${formatTime}</div>
@@ -3839,12 +3971,11 @@ let totalEVFee = 0;
               let pillsHtml = '';
               if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color:#c026d3;">${diff}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
               if (r.prevKm || r.km) pillsHtml += `<div class="vb-pill"><span style="color:#059669;">${r.prevKm||0} → ${r.km||0}</span></div>`;
-              // 👇 新增月租費標籤
               if (r.amount > 0) pillsHtml += `<div class="vb-pill" style="background:#f3e8ff;"><span style="color:#9333ea;">月租費$ ${fmt(r.amount)}</span></div>`;
 
               htmlContent = `
                 <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
-                  <div class="vc-left"><img src="Vehicle/ve2.png"></div>
+                  <div class="vc-left"><img src="Vehicle/ve2.png" style="width:28px; height:28px;"></div>
                   <div class="vc-mid">
                     <div class="vc-mid-top">
                       <div class="vt-time">${formatTime}</div>
@@ -3854,7 +3985,7 @@ let totalEVFee = 0;
                   </div>
                   <div class="vc-right">
                     <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:2px;">行駛</span>
-                    <span class="vc-right-val"><span style="color:#ea580c;">${diff > 0 ? diff : 0}</span> <span style="color:#64748b; font-size:12px;">km</span></span>
+                    <span class="vc-right-val"><span style="color:#ea580c;">${diff > 0 ? diff : 0}</span> <span style="color:#64748b; font-size:12px; letter-spacing:1px;">km</span></span>
                   </div>
                 </div>`;
           }
@@ -3862,23 +3993,29 @@ let totalEVFee = 0;
           // ── 🔧 保養 / 🛠️ 維修紀錄卡片 ──
           const isRepair = r.maintCategory === 'repair';
           const iconSrc = isRepair ? 'Vehicle/ve4.png' : 'Vehicle/ve3.png';
+          const iconSize = isRepair ? '38px' : '28px'; // 💡 維修圖示特別放大
           const rightColor = isRepair ? '#0ea5e9' : '#16a34a';
           const rightBg = isRepair ? '#eff6ff' : '#f0fdf4';
           
           let pillsHtml = '';
-          if (r.km) pillsHtml += `<div class="vb-pill"><span style="color:#ea580c;">${r.km}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
-          
+          if (r.km) pillsHtml += `<div class="vb-pill" style="color: #ea580c; border:1px solid #c8cbce;">${fmt(r.km)}<span style="color: #64748b; font-size:10px; letter-spacing:1px;">km</span></div>`;
+
           (r.items || []).forEach(item => {
-            pillsHtml += `<div class="vb-pill" style="background:#dcfce7; color:#16a34a;">${safeText(item)}</div>`;
+            pillsHtml += `<div class="vb-pill" style="background: #dcfce7; border:1px solid #69d390; color: #16a34a; font-size:10px; font-weight:700;">${safeText(item)}</div>`;
           });
+
+          // 💡 機車行標籤改藍色 & 新增備註細節標籤
+          const shopHtml = r.shop ? `<div class="vt-tag" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;">${safeText(r.shop)}</div>` : '';
+          const noteHtml = r.note ? `<div class="vt-tag" style="background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${safeText(r.note)}</div>` : '';
 
           htmlContent = `
             <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
-              <div class="vc-left"><img src="${iconSrc}"></div>
+              <div class="vc-left"><img src="${iconSrc}" style="width:${iconSize}; height:${iconSize}; transition:0.3s;"></div>
               <div class="vc-mid">
                 <div class="vc-mid-top">
                   <div class="vt-time">${formatTime}</div>
-                  ${r.shop ? `<div class="vt-tag" style="background:#f3f4f6; color:#475569;">${safeText(r.shop)}</div>` : ''}
+                  ${shopHtml}
+                  ${noteHtml}
                 </div>
                 <div class="vc-mid-bot">${pillsHtml}</div>
               </div>
@@ -4369,10 +4506,15 @@ function setShopInput(value) {
   document.getElementById('vm-shop').value = value;
 }
 
+let isEditingShopHistory = false;
+window.toggleShopEdit = function() {
+  isEditingShopHistory = !isEditingShopHistory;
+  renderShopHistory();
+}
+
 function renderShopHistory() {
   const container = document.getElementById('shop-history-container');
-  if (!container) return; // 🛡️ 增加防呆檢查，避免找不到元素時導致視窗打不開
-  
+  if (!container) return; 
   if (!S.settings.shopHistory) S.settings.shopHistory = [];
   
   if (S.settings.shopHistory.length === 0) {
@@ -4380,94 +4522,156 @@ function renderShopHistory() {
     return;
   }
   
-  // 使用新的 .shop-chip 樣式，並支援單引號跳脫防錯
-  container.innerHTML = S.settings.shopHistory.map((shop, i) => {
+  let tagsHtml = S.settings.shopHistory.map((shop, i) => {
     const safeShopStr = safeText(shop).replace(/'/g, "\\'");
     return `
-      <div class="shop-chip">
+      <div class="shop-chip" style="padding-right:${isEditingShopHistory ? '4px' : '12px'};">
         <span style="flex:1;" onclick="setShopInput('${safeShopStr}')">${safeText(shop)}</span>
-        <span class="shop-chip-del" onclick="event.stopPropagation(); deleteShopHistory(${i})">✕</span>
+        ${isEditingShopHistory ? `<span class="shop-chip-del" onclick="event.stopPropagation(); deleteShopHistory(${i})">✕</span>` : ''}
       </div>
     `;
   }).join('');
+
+  const editBtn = `<div onclick="toggleShopEdit()" style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:800; color:var(--text-blue); background:#eff6ff; border:1px solid #bfdbfe; cursor:pointer; margin-left:4px; box-shadow:0 2px 4px rgba(0,0,0,0.02); transition:0.2s;">${isEditingShopHistory ? '✅ 完成' : '✎ 編輯'}</div>`;
+
+  container.innerHTML = tagsHtml + editBtn;
 }
 function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); saveSettings(); renderShopHistory(); }
 
-// 執行車輛保養記錄搜尋與渲染精美時間軸
+// 執行車輛保養記錄搜尋與渲染精美時間軸 (全連接線與標籤設計)
 window.doVehSearch = function() {
   const kw = document.getElementById('veh-search-kw').value.trim().toLowerCase();
   const resEl = document.getElementById('veh-search-results');
   
-  if (!kw) { resEl.innerHTML = '<div class="empty-tip">請輸入或點選標籤開始搜尋</div>'; return; }
+  if (!kw) { resEl.innerHTML = '<div class="empty-tip">請輸入或點選上方標籤開始搜尋</div>'; return; }
   
   // 過濾當前車輛的保養記錄
   let recs = S.vehicleRecs.filter(r => 
     r.vehicleId === S.selVehicleId && 
     r.type === 'maintenance' && 
-    (r.items.some(i => i.toLowerCase().includes(kw)) || (r.note||'').toLowerCase().includes(kw))
+    ((r.items && r.items.some(i => i.toLowerCase().includes(kw))) || 
+     (r.note && r.note.toLowerCase().includes(kw)) ||
+     (r.shop && r.shop.toLowerCase().includes(kw)))
   );
   
-  // 依日期由新到舊排序
-  recs.sort((a,b) => b.date.localeCompare(a.date));
+  // 依日期與時間由新到舊排序 (大到小)
+  recs.sort((a,b) => b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||''));
 
   if (!recs.length) {
-    resEl.innerHTML = '<div class="empty-tip">找不到相符的保養記錄</div>';
+    resEl.innerHTML = '<div class="empty-tip" style="color: #64748b; background:#ffffff; border:2px solid #e2e8f0; border-radius:16px; padding:24px;">找不到相符的保養記錄</div>';
     return;
   }
 
-  // 產生白底卡片與標題
+  // 頂部標題區：追蹤標籤與總筆數 + 虛線
   let html = `
-  <div style="background:var(--sf); border-radius:16px; padding:16px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.03);">
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:15px; font-weight:800; color:var(--t1);">
-      <span style="color:#0f766e;">💧</span> ${kw} 時間軸 <span style="font-size:13px; color:var(--t3); font-weight:600;">${recs.length}</span>
+  <div style="background:#ffffff; border-radius:16px; padding:8px 16px; border:2px solid #e2e8f0;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <div style="display:flex; align-items:center; letter-spacing:1px; gap:8px;">
+        <span style="font-size:16px; font-weight:900; color: #475569;">搜尋</span>
+        <span style="background:#3b82f6; color:#ffffff; padding:2px 14px; border-radius:8px; font-size:16px; font-weight:800;">${safeText(kw)}</span>
+      </div>
+      <div style="font-size:15px; font-weight:800; color:#475569;">
+        共 <span style="font-family:var(--mono); color: #f97316; font-size:20px; margin:0 2px;">${recs.length}</span> 筆
+      </div>
     </div>
-    <div style="position:relative; padding-left:12px;">
-      <!-- 貫穿時間軸的垂直線 -->
-      <div style="position:absolute; left:16.5px; top:12px; bottom:20px; width:2px; background:#e2e8f0;"></div>`;
+    <div style="border-bottom: 2.5px dashed #e2e8f0; margin-bottom: 6px;"></div>
+    
+    <!-- 時間軸主體 -->
+    <div style="position:relative; padding-left:18px;">
+      <!-- 貫穿的左側灰線 -->
+      <div style="position:absolute; left:5px; top:12px; bottom:20px; width:2px; background: #e2e8f0; z-index:1;"></div>`;
       
   recs.forEach((r, idx) => {
     const isLatest = idx === 0;
-    const dotColor = isLatest ? '#0f766e' : '#cbd5e1'; // 最新一筆深綠，其餘淺灰綠
     
-    // 計算與前一次(上一筆較舊的紀錄)的差異
+    // 加粗框線與背景顏色設定
+    const boxBorder = isLatest ? '#10b981' : '#cbd5e1'; // 框線：最新亮綠，其他淡灰
+    const bottomBg = isLatest ? '#ebfcf0' : '#f8fafc'; // 下層背景：最新淡綠，其他淡灰
+    
+    // 雙色膠囊優化配色 (左深右淺，無邊框設計)
+    const capLeftBg = isLatest ? '#059669' : '#3e4f66'; // 項目背景
+    const capRightBg = isLatest ? '#beffde' : '#d7dee7'; // 機車行背景
+    const capRightText = isLatest ? '#059669' : '#3e4f66'; // 機車行文字顏色
+    
+    // 計算與前一次(上一筆較舊的紀錄)的差異，生成置中的白底膠囊並帶有上下連接線
     let diffHtml = '';
     if (idx < recs.length - 1) {
       const olderRec = recs[idx + 1];
       const kmDiff = pf(r.km) - pf(olderRec.km);
       const daysDiff = Math.round((new Date(r.date) - new Date(olderRec.date)) / 86400000);
+      
       diffHtml = `
-        <div style="display:flex; align-items:center; gap:12px; margin-top:6px; font-size:12px; color:var(--t3); font-weight:600;">
-          <span>🛣️ ${fmt(kmDiff)} km</span>
-          <span>🗓️ ${daysDiff} 天</span>
+        <div style="display:flex; flex-direction:column; align-items:center; position:relative; z-index:2;">
+          <div style="width:2px; height:8px; background: #10b981;"></div>
+
+          <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:8px; display:inline-flex; align-items:stretch; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            <div style="padding:1px 10px; display:flex; align-items:center;">
+              <span style="font-size:13px; font-weight:900; color:#3b82f6;">間隔</span>
+            </div>
+            <div style="width:2px; background:#e2e8f0;"></div>
+            <div style="padding:1px 10px; display:flex; align-items:baseline; gap:3px;">
+              <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #10b981;">${fmt(kmDiff)}</span>
+              <span style="font-size:11px; font-weight:900; color: #475569;">km</span>
+            </div>
+            <div style="width:2px; background:#e2e8f0;"></div>
+            <div style="padding:1px 10px; display:flex; align-items:baseline; gap:3px;">
+              <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ea580c;">${daysDiff}</span>
+              <span style="font-size:11px; font-weight:900; color: #475569;">天</span>
+            </div>
+          </div>
+          <div style="width:2px; height:4px; background: #cbd5e1;"></div>
         </div>`;
     }
 
-    // 優先顯示備註，若無備註才顯示保養項目
-    const formatTitle = r.note ? safeTextWithBr(r.note) : (r.items || []).map(i => safeText(i)).join(', ');
-    const shopText = r.shop ? ` @ ${safeText(r.shop)}` : '';
+    // 項目文字萃取
+    let matchedItems = (r.items || []).filter(i => i.toLowerCase().includes(kw));
+    if (matchedItems.length === 0 && r.items && r.items.length > 0) matchedItems = [r.items[0]];
+    const itemText = matchedItems.length > 0 ? safeText(matchedItems.join('、')) : '未填寫';
 
     html += `
-      <div onclick="openAddVehRec('${safeText(r.id)}')" style="position:relative; padding-left:24px; padding-bottom:24px; cursor:pointer;">
-        <!-- 時間軸圓點 -->
-        <div style="position:absolute; left:-1px; top:4px; width:11px; height:11px; border-radius:50%; background:${dotColor}; box-shadow:0 0 0 4px var(--sf);"></div>
+      <!-- 卡片外層，包含圓點與縮排 -->
+      <div style="position:relative; z-index:2; margin-bottom:${diffHtml ? '0' : '10px'};">
+        <!-- 加粗的時間軸圓點 -->
+        <div style="position:absolute; left:-18px; top:12px; width:14px; height:14px; border-radius:50%; background:${boxBorder}; border:2px solid #ffffff; box-shadow:0 0 0 1px ${boxBorder};"></div>
         
-        <!-- 頂部資訊：日期、里程藥丸、最近標籤 -->
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-family:var(--mono); font-size:16px; font-weight:800; color:var(--t1); letter-spacing:0.5px;">${r.date.replace(/-/g, '/')}</span>
-            <span style="background:#f1f5f9; color:#0369a1; padding:2px 8px; border-radius:12px; font-size:12px; font-family:var(--mono); font-weight:700;">${fmt(r.km)} km</span>
+        <!-- 卡片主體 (加粗邊框 2.5px，極小縮排) -->
+        <div onclick="openAddVehRec('${safeText(r.id)}')" style="border:2.5px solid ${boxBorder}; border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:0 4px 8px rgba(0,0,0,0.03); transition:transform 0.1s;">
+          
+          <!-- ★ 上層：淺灰色背景，3 等分均分對齊 -->
+          <div style="background: rgb(236, 241, 244); padding:8px 12px; display:flex; align-items:center; border-bottom:2.5px solid #cbd5e1;">
+            
+            <!-- 左 1/3：日期 -->
+            <div style="flex:1; text-align:left; font-family:var(--mono); font-size:14px; font-weight:900; color: #334155;">
+              ${r.date.replace(/-/g, '/')}
+            </div>
+            
+            <!-- 中 1/3：大字體里程 -->
+            <div style="flex:1; text-align:center; font-family:var(--mono); font-size:18px; font-weight:900; color: #2a69fc; line-height:1; letter-spacing:1px;">
+              ${fmt(r.km)}<span style="font-size:11px; color: #282a2d; margin-left:2px;"> km</span>
+            </div>
+            
+            <!-- 右 1/3：最新標籤 (靠右對齊) -->
+            <div style="flex:1; text-align:right; height:18px;">
+              ${isLatest ? `<span style="background: #10b981; color:#ffffff; padding:2px 8px; border-radius:6px; font-size:14px; font-weight:750; letter-spacing:1px;">最新</span>` : ''}
+            </div>
+
           </div>
-          ${isLatest ? `<span style="background:#ecfdf5; color:#047857; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:800;">最近</span>` : ''}
+          
+          <!-- ★ 下層：背景依最新記錄變換，放置優化配色的雙色膠囊 -->
+          <div style="background:${bottomBg}; padding:7px 12px; display:flex; justify-content:flex-start;">
+            
+            <!-- 無圖示雙色膠囊 (靠色塊區分，無邊框設計更現代) -->
+            <div style="display:inline-flex; border-radius:6px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.06);">
+              <span style="background:${capLeftBg}; color: #ffffff; font-size:14px; font-weight:750; padding:4px 12px; letter-spacing:0.5px;">${itemText}</span>
+              ${r.shop ? `<span style="background:${capRightBg}; color:${capRightText}; font-size:13px; font-weight:800; padding:4px 12px; display:flex; align-items:center; border:1.5px solid ${capLeftBg}; border-radius:0px 6px 6px 0px;">${safeText(r.shop)}</span>` : ''}
+            </div>
+            
+          </div>
+
         </div>
-        
-        <!-- 內容：項目名稱與店家 -->
-        <div style="font-size:14px; font-weight:600; color:var(--t2);">
-          ${formatTitle} <span style="color:var(--t3); font-size:12px;">${shopText}</span>
-        </div>
-        
-        <!-- 里程與天數差異 (如果有上一筆) -->
-        ${diffHtml}
       </div>
+      
+      ${diffHtml}
     `;
   });
 
