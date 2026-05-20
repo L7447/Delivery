@@ -1654,7 +1654,13 @@ function renderHistDayView() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px">
         <button class="mbtn" id="hist-prev">◀</button>
-        <h2 id="hist-label" style="font-size:15px;font-weight:600;min-width:80px;text-align:center">${y} 年 ${m} 月</h2>
+        
+        <!-- 👇 修改這裡：加入透明 input 疊在文字上方 -->
+        <div style="position:relative; display:inline-block; min-width:90px; text-align:center;">
+          <h2 id="hist-label" style="font-size:15px; font-weight:800; margin:0; color:var(--text-blue); cursor:pointer;">${y} 年 ${pad(m)} 月 ▾</h2>
+          <input type="month" id="hist-month-picker" value="${y}-${pad(m)}" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; margin:0; padding:0; border:none;">
+        </div>
+        
         <button class="mbtn" id="hist-next">▶</button>
         <!-- 👇 這裡將箭頭改為預設 ▼ -->
         <button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="background: #bbdaf7; color: #0c72d2; font-size:22px; font-weight:900; width:35px; height:35px; border:1.5px solid #29458b; border-radius:50%;" title="收起/展開日曆">▼</button>
@@ -1676,6 +1682,17 @@ function renderHistDayView() {
   
   document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
   document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
+  // 👇 綁定原生年月選擇器的事件
+  document.getElementById('hist-month-picker').addEventListener('change', (e) => {
+    const val = e.target.value; // 格式如 "2024-05"
+    if (val) {
+      const [newY, newM] = val.split('-');
+      S.calY = parseInt(newY);
+      S.calM = parseInt(newM);
+      S.selDate = `${S.calY}-${pad(S.calM)}-01`; // 切換月份時，預設跳到該月1號
+      renderHistory();
+    }
+  });
   renderHistCalendarGrid(); renderHistRecords(S.selDate);
 }
 
@@ -1881,8 +1898,24 @@ function openFullCalendar() { document.getElementById('full-calendar-overlay').c
 function closeFullCalendar() { document.getElementById('full-calendar-overlay').classList.remove('show'); }
 function changeFullCalMonth(offset) { S.calM += offset; if(S.calM < 1) { S.calM = 12; S.calY--; } if(S.calM > 12) { S.calM = 1; S.calY++; } renderFullCalendar(); S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); }
 
+window.changeFullCalByPicker = function(val) {
+  if (!val) return;
+  const [newY, newM] = val.split('-');
+  S.calY = parseInt(newY);
+  S.calM = parseInt(newM);
+  S.selDate = `${S.calY}-${pad(S.calM)}-01`;
+  renderFullCalendar();
+  renderHistory();
+}
+
 function renderFullCalendar() {
-  const { calY:y, calM:m } = S; document.getElementById('fc-title').textContent = `${y}年 ${m}月`;
+  const { calY:y, calM:m } = S; 
+  // 👇 替換為支援原生下拉選擇的格式
+  document.getElementById('fc-title').innerHTML = `
+    <div style="position:relative; display:inline-block;">
+      <span style="color:var(--text-blue); cursor:pointer;">${y}年 ${pad(m)}月 ▾</span>
+      <input type="month" onchange="changeFullCalByPicker(this.value)" value="${y}-${pad(m)}" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+    </div>`;
   const DOW = ['週日','週一','週二','週三','週四','週五','週六']; document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
   const grid = document.getElementById('fc-grid'); const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
   let html = ``; const prevDays = new Date(y, m-1, 0).getDate();
