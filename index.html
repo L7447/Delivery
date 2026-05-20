@@ -173,85 +173,27 @@
 <body data-tab="home">
 
 <!-- 🛵 故事型啟動動畫 (Splash Screen) -->
-<div id="splash">
-  <div class="splash-card">
+<div id="splash" style="position:fixed; inset:0; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; transition:opacity 0.4s ease; background:linear-gradient(-45deg, #ff2a85, #8a2be2, #4169e1, #00ffff); background-size:400% 400%; animation:aur-bg 4s ease infinite;">
   
-  <button id="skip-splash" style="position:absolute; top:55px; right:3px; background:rgba(11,18,32,0.05); border:4px solid #ff3333; padding:6px 12px; border-radius:20px; font-size:22px; font-weight:700; color:#006aff; cursor:pointer; z-index:999; box-shadow:0 2px 6px rgba(0,0,0,0.05);">跳過動畫 ⏭</button>
-
-  <div class="topbar">
-      <div class="logo">🛵</div>
-      <div>
-        <h1>外送記錄與分析</h1>
-      </div>
+  <!-- 毛玻璃卡片 -->
+  <div style="position: relative; top: -50px; background:rgba(255, 255, 255, 0.1); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.3); border-radius:30px; padding:40px; display:flex; flex-direction:column; align-items:center; box-shadow:0 20px 40px rgba(0,0,0,0.2); animation:aur-float 3s ease-in-out infinite alternate, aur-fadeUp 1s ease-out forwards;">
+    
+    <!-- 發光幾何體 -->
+    <div style="width:60px; height:60px; background:linear-gradient(135deg, #fff, #f0f0f0); border-radius:16px; transform:rotate(45deg); box-shadow:0 0 30px rgba(255,255,255,0.8); display:flex; align-items:center; justify-content:center; animation:aur-spin 4s linear infinite;">
+      <div style="width:20px; height:20px; background:#4169e1; border-radius:50%;"></div>
     </div>
-
-    <div class="scene">
-
-      <!-- ☁️ 天空雲朵 (慢飄) -->
-      <div class="actor scenery" id="sp-s7"  style="font-size:40px; bottom:268px;">☁️</div>
-      <div class="actor scenery" id="sp-s13" style="font-size:34px; bottom:248px;">⛅</div>
-
-      <!-- 🌳 道路景色：樹木 -->
-      <div class="actor scenery" id="sp-s1"  style="font-size:38px;">🌳</div>
-      <div class="actor scenery" id="sp-s6"  style="font-size:36px;">🌲</div>
-      <div class="actor scenery" id="sp-s9"  style="font-size:36px;">🌴</div>
-
-      <!-- 🏢 道路景色：各式建築物 -->
-      <div class="actor scenery" id="sp-s5"  style="font-size:42px;">🏦</div>
-      <div class="actor scenery" id="sp-s8"  style="font-size:44px;">🏬</div>
-      <div class="actor scenery" id="sp-s2"  style="font-size:46px;">🏢</div>
-      <div class="actor scenery" id="sp-s11" style="font-size:44px;">🏫</div>
-      <div class="actor scenery" id="sp-s14" style="font-size:40px;">🏨</div>
-
-      <!-- 🚦 交通號誌 (路邊，稍矮) -->
-      <div class="actor scenery" id="sp-s3"  style="font-size:30px; bottom:150px;">🚦</div>
-
-      <!-- 🚶 人行道行人 -->
-      <div class="actor pedestrian" id="sp-s4"  style="transform:scaleX(-1);">🚶</div>
-      <div class="actor pedestrian" id="sp-s10" style="font-size:20px;">🚶‍♂️</div>
-      <div class="actor pedestrian" id="sp-s12" style="font-size:20px; transform:scaleX(-1);">🧑‍🦯</div>
-      <div class="actor pedestrian" id="sp-s15" style="font-size:18px;">🚶‍♀️</div>
-
-      <!-- 人行道 -->
-      <div class="sidewalk"></div>
-
-      <!-- 馬路 -->
-      <div class="road"><div class="road-dash" id="sp-road-dash"></div></div>
-
-      <!-- 取餐店家 (右側) -->
-      <div class="actor shop-area" id="sp-shop-area">
-        <div class="building">🏪</div>
-        <div class="clerk" id="sp-clerk">🧑‍🍳</div>
-        <div class="shop-bag" id="sp-shop-bag">🥡</div>
-      </div>
-
-      <!-- 送達顧客家 (預先藏在左側) -->
-      <div class="actor home-area" id="sp-home-area">
-        <div class="heart" id="sp-heart">💖</div>
-        <div class="customer" id="sp-customer">🧍‍♂️</div>
-        <div class="customer-bag" id="sp-customer-bag">🥡</div>
-        <div class="building">🏠</div>
-      </div>
-
-      <!-- 移動的外送車與騎士 -->
-      <div class="actor vehicle-group" id="sp-vehicle">
-        <div class="bike-body">
-          <div class="delivery-box" id="sp-delivery-box"></div>
-          <div class="bike">🛵</div>
-        </div>
-        <div class="rider-wrapper" id="sp-rider-wrapper">
-          <div class="rider">🧑‍🚀</div>
-          <div class="rider-bag" id="sp-rider-bag">🥡</div>
-        </div>
-      </div>
-
-      <!-- 解說字幕 -->
-      <div class="status-bubble" id="sp-status">
-        <div class="sp-icon-wrapper" id="sp-icon-wrap"><span id="sp-icon">🔔</span></div>
-        <span id="sp-text" style="font-family:var(--mono);">3公里 45元</span>
-      </div>
-    </div>
+    
+    <div style="margin-top:30px; color:#ffffff; font-family:-apple-system, sans-serif; font-size:22px; font-weight:800; letter-spacing:3px; text-shadow:0 2px 10px rgba(0,0,0,0.2);">外送記錄與分析 APP</div>
   </div>
+
+  <div id="skip-hint" style="position:absolute; bottom:250px; color:#ffffff; font-size:13px; font-weight:700; opacity:0; transition:opacity 0.5s; letter-spacing:1px; background:rgba(0,0,0,0.2); padding:8px 16px; border-radius:20px;">點擊螢幕任意處跳過 ⏭</div>
+
+  <style>
+    @keyframes aur-bg { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    @keyframes aur-float { 0% { transform: translateY(0); } 100% { transform: translateY(-15px); } }
+    @keyframes aur-fadeUp { 0% { opacity:0; transform:translateY(30px) scale(0.9); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes aur-spin { 100% { transform: rotate(405deg); } }
+  </style>
 </div>
 
 <!-- 📱 APP 內容區塊 (保留您原本的 #app 程式碼) -->
@@ -853,241 +795,56 @@
      沒有 defer 時瀏覽器遇到此行就停住，3783 行全執行完才繪製任何畫面 -->
 <script src="/script.js?v=1.6.0" defer></script>
 
-<!-- 🛵 故事型動畫專用 Script (已加入精準轉場交接) -->
+<!-- 動畫控制腳本 (5種風格共用) -->
 <script>
-  async function runStoryAnimation() {
+  function runSplashAnimation() {
     const splash = document.getElementById('splash');
+    const skipHint = document.getElementById('skip-hint');
     if (!splash) {
       if (window.onSplashFinished) window.onSplashFinished();
       return;
     }
 
-    // 負責交接給主程式的函式
+    let isFinished = false;
+    let canSkip = false;
+
+    // 結束動畫並交接給主程式
     const finishSplash = () => {
-      if (window.onSplashFinished) window.onSplashFinished();
-      if (window.checkAndPromptPlatformSetup) {
-        setTimeout(() => window.checkAndPromptPlatformSetup(), 500);
-      }
+      if (isFinished) return;
+      isFinished = true;
+      splash.style.opacity = '0';
+      splash.style.pointerEvents = 'none';
+      setTimeout(() => {
+        splash.remove();
+        if (window.onSplashFinished) window.onSplashFinished();
+        if (window.checkAndPromptPlatformSetup) {
+          setTimeout(() => window.checkAndPromptPlatformSetup(), 400);
+        }
+      }, 400); // 0.4秒平滑淡出
     };
 
-    let isSkipped = false;
-    const skipBtn = document.getElementById('skip-splash');
-    if (skipBtn) {
-      skipBtn.addEventListener('click', () => {
-        isSkipped = true;
-        splash.style.opacity = '0';
-        setTimeout(() => {
-          splash.remove();
-          finishSplash(); // 👈 點擊跳過後呼叫進場
-        }, 300);
-      });
-    }
+    // 1. 設定 2 秒後允許點擊跳過，並浮現提示
+    setTimeout(() => {
+      canSkip = true;
+      if (skipHint) skipHint.style.opacity = '1';
+    }, 2000);
 
-    try {
-      const vehicle       = document.getElementById('sp-vehicle');
-      const riderWrapper  = document.getElementById('sp-rider-wrapper');
-      const shopArea      = document.getElementById('sp-shop-area');
-      const shopBag       = document.getElementById('sp-shop-bag');
-      const deliveryBox   = document.getElementById('sp-delivery-box');
-      const homeArea      = document.getElementById('sp-home-area');
-      const customer      = document.getElementById('sp-customer');
-      const customerBag   = document.getElementById('sp-customer-bag');
-      const heart         = document.getElementById('sp-heart');
-      const roadDash      = document.getElementById('sp-road-dash');
-      const trafficLight  = document.getElementById('sp-s3');
+    // 2. 設定 4.6 秒後自動開始淡出 (確保 5 秒內完全結束)
+    setTimeout(() => {
+      finishSplash();
+    }, 4600);
 
-      const wait = (ms) => new Promise(r => setTimeout(() => { if (!isSkipped) r(); }, ms));
-      
-      const animate = (el, kf, opt) => {
-        if (isSkipped || !el) return Promise.resolve();
-        try {
-          const animation = el.animate(kf, { ...opt, fill: 'forwards' });
-          return animation.finished || new Promise(resolve => { animation.onfinish = resolve; });
-        } catch(e) {
-          return Promise.resolve();
-        }
-      };
-
-      function setStatus(ic, txt, success = false, color = null) {
-        if (isSkipped) return;
-        const icon = document.getElementById('sp-icon');
-        const text = document.getElementById('sp-text');
-        const statusBubble = document.getElementById('sp-status');
-        if (icon) icon.textContent = ic;
-        if (text) text.textContent = txt;
-        if (statusBubble) {
-          const borderColor = success ? '#22C55E' : (color || '#FF6B35');
-          statusBubble.style.borderColor = borderColor;
-          statusBubble.style.boxShadow = success
-            ? '0 8px 28px rgba(34,197,94,0.25), 0 0 0 4px rgba(34,197,94,0.10)'
-            : `0 8px 28px rgba(255,107,53,0.22), 0 0 0 4px rgba(255,107,53,0.08)`;
-        }
-      }
-
-      const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-      await wait(isPWA ? 300 : 100); 
-      if (isSkipped) return;
-
-      if (vehicle) vehicle.style.bottom = '105px';
-      if (trafficLight) trafficLight.style.bottom = '120px';
-      if (customer) customer.style.opacity = '0';
-      if (deliveryBox) deliveryBox.style.right = '-22px';
-      if (riderWrapper) riderWrapper.style.right = '-1px';
-
-      await wait(500);
-      if (isSkipped) return;
-      setStatus('🏪', '接到新訂單，前往店家...');
-      await animate(vehicle, [ { right: '-35%', transform: 'translateY(0)' }, { right: '40%',  transform: 'translateY(0)' } ], { duration: 1000, easing: 'ease-out' });
-
-      await wait(700);
-      if (isSkipped) return;
-      setStatus('🛑', '抵達店家，停車取餐...', false, '#f59e0b');
-      await animate(vehicle, [ { right: '40%', transform: 'translateY(0)' }, { right: '40%', transform: 'translateY(-40px)' } ], { duration: 450, easing: 'ease-out' });
-
-      await wait(700);
-      if (isSkipped) return;
-      setStatus('🤝', '外送員下車，向店員取餐...');
-      await animate(riderWrapper, [ { transform: 'translate(0, 0)' }, { transform: 'translate(15px, 22px)' } ], { duration: 300, easing: 'ease-in' });
-      await animate(riderWrapper, [ { transform: 'translate(15px, 22px)' }, { transform: 'translate(50px, 18px)' },  { transform: 'translate(85px, 22px)' } ], { duration: 600, easing: 'linear' });
-
-      await wait(300);
-      if (isSkipped) return;
-      if (shopBag) {
-        await animate(shopBag, [ { transform: 'translate(0, 0)' }, { transform: 'translate(-25px, 12px)' } ], { duration: 300, easing: 'ease-out' });
-        shopBag.style.opacity = '0'; 
-      }
-      const riderBag = document.getElementById('sp-rider-bag');
-      if (riderBag) riderBag.style.opacity = '1'; 
-      
-      await wait(400);
-      if (isSkipped) return;
-      await animate(riderWrapper, [ { transform: 'translate(85px, 22px)' }, { transform: 'translate(50px, 18px)' }, { transform: 'translate(15px, 22px)' } ], { duration: 600, easing: 'linear' });
-
-      await wait(200);
-      if (isSkipped) return;
-      setStatus('🎒', '將餐點放入保溫箱...');
-      if (riderBag) riderBag.style.opacity = '0'; 
-      if (deliveryBox) deliveryBox.textContent = '🥡'; 
-      
-      await wait(500);
-      if (isSkipped) return;
-      await animate(riderWrapper, [ { transform: 'translate(15px, 22px)' }, { transform: 'translate(0, 0)' } ], { duration: 300, easing: 'ease-out' });
-
-      await wait(300);
-      if (isSkipped) return;
-      await animate(vehicle, [ { right: '40%', transform: 'translateY(-28px)' }, { right: '40%', transform: 'translateY(0)' } ], { duration: 320, easing: 'ease-in' });
-
-      await wait(400);
-      if (isSkipped) return;
-      setStatus('🛵', '外送中，穿梭市區...');
-      animate(shopArea, [{ right: '5%' }, { right: '-55%' }], { duration: 1500, easing: 'ease-in' });
-      animate(vehicle, [{ right: '40%', transform: 'translateY(0)' }, { right: '15%', transform: 'translateY(0)' }], { duration: 1500, easing: 'ease-in-out' });
-
-      let roadAnim = null;
-      if (!isSkipped && roadDash) {
-        try { roadAnim = roadDash.animate([ { transform: 'translateY(-50%) translateX(0)' }, { transform: 'translateY(-50%) translateX(50px)' } ], { duration: 380, iterations: Infinity, easing: 'linear' }); } catch(e) {}
-      }
-
-      const runScenery = async (id, delay, dur) => {
-        await wait(delay);
-        if (isSkipped) return;
-        const el = document.getElementById(id);
-        if (!el) return;
-        return animate(el, [{ right: '120%' }, { right: '-30%' }], { duration: dur, easing: 'linear' });
-      };
-
-      runScenery('sp-s7',  0,    22000); runScenery('sp-s13', 300,  22000); runScenery('sp-s1',  500,  1500); runScenery('sp-s5',  700,  1500); runScenery('sp-s3',  900,  1500); runScenery('sp-s4',  1100, 1500); runScenery('sp-s9',  1300, 1500); runScenery('sp-s8',  1500, 1500); runScenery('sp-s10', 1700, 1500); runScenery('sp-s2',  1900, 1500); runScenery('sp-s3',  2100, 1500); runScenery('sp-s6',  2300, 1500); runScenery('sp-s12', 2500, 1500); runScenery('sp-s11', 2700, 1500); runScenery('sp-s15', 2900, 1500); runScenery('sp-s14', 3100, 1500); 
-
-      await wait(2200); 
-      if (isSkipped) return;
-      setStatus('📍', '即將抵達客人家...');
-
-      await wait(1500);
-      if (isSkipped) return;
-      animate(homeArea, [{ right: '120%' }, { right: '75%' }], { duration: 800, easing: 'linear' });
-
-      await wait(800); 
-      if (isSkipped) return;
-      if (roadAnim) roadAnim.pause();
-
-      await animate(vehicle, [ { right: '15%', transform: 'translateY(0)' }, { right: '35%', transform: 'translateY(0)' } ], { duration: 900, easing: 'ease-out' });
-
-      setStatus('🛑', '抵達客人家，靠邊停車...', false, '#f59e0b');
-      await animate(vehicle, [ { right: '45%', transform: 'translateY(0)' }, { right: '45%', transform: 'translateY(-40px)' } ], { duration: 420, easing: 'ease-out' });
-
-      await wait(350);
-      if (isSkipped) return;
-      setStatus('🚶', '外送員下車...');
-      await animate(riderWrapper, [ { transform: 'translate(0, 0)' }, { transform: 'translate(-15px, 22px)' } ], { duration: 300, easing: 'ease-in' });
-
-      await wait(300);
-      if (isSkipped) return;
-      setStatus('🎒', '從保溫包取出餐點...');
-      if (deliveryBox) deliveryBox.textContent = ''; 
-      if (riderBag) riderBag.style.opacity = '1';    
-
-      await wait(400);
-      if (isSkipped) return;
-      setStatus('📦', '將餐點放置在門口...');
-      await animate(riderWrapper, [ { transform: 'translate(-15px, 22px)' }, { transform: 'translate(-35px, 18px)' }, { transform: 'translate(-55px, 22px)' }, { transform: 'translate(-75px, 18px)' }, { transform: 'translate(-95px, 22px)' } ], { duration: 600, easing: 'linear' });
-
-      await wait(400);
-      if (isSkipped) return;
-      if (riderBag) riderBag.style.opacity = '0'; 
-      await wait(300);
-      if (isSkipped) return;
-      
-      if (customerBag) {
-        customerBag.style.opacity = '1'; 
-        customerBag.style.transform = 'translate(-30px, 9px)'; 
-      }
-
-      await wait(650);
-      if (isSkipped) return;
-      if (heart) {
-        heart.style.opacity = '1';
-        heart.style.transform = 'translate(-19px, 1px) scale(1.45)';
-      }
-
-      setStatus('✅', '送達完成！', true);
-
-      await wait(2400);
-      if (isSkipped) return;
-
-      await splash.animate([ { opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.03)' } ], { duration: 600, easing: 'ease-in-out' }).finished;
-      await splash.animate([ { opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.03)' } ], { duration: 600, easing: 'ease-in-out' }).finished;
-
-      if (!isSkipped) {
-        splash.remove();
-        finishSplash(); // 👈 正常看完動畫後呼叫進場
-      }
-
-    } catch (error) {
-      if (!isSkipped && splash) {
-        splash.style.opacity = '0';
-        setTimeout(() => {
-          splash.remove();
-          finishSplash(); // 👈 發生錯誤也強制呼叫進場
-        }, 300);
-      }
-    }
+    // 3. 點擊螢幕任意處跳過
+    splash.addEventListener('click', () => {
+      if (canSkip) finishSplash();
+    });
   }
 
-  function scheduleSplash() { requestAnimationFrame(function() { requestAnimationFrame(runStoryAnimation); }); }
-  if (document.readyState === 'complete' || document.readyState === 'interactive') { scheduleSplash(); } else { window.addEventListener('DOMContentLoaded', scheduleSplash); }
-  
-  document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'visible') {
-      document.documentElement.style.transform = 'translateZ(0)';
-      requestAnimationFrame(function() { document.documentElement.style.transform = ''; });
-    }
-  });
-  window.addEventListener('pageshow', function(e) {
-    if (e.persisted) {
-      document.documentElement.style.transform = 'translateZ(0)';
-      requestAnimationFrame(function() { document.documentElement.style.transform = ''; });
-    }
-  });
+  if (document.readyState === 'complete' || document.readyState === 'interactive') { 
+    requestAnimationFrame(runSplashAnimation); 
+  } else { 
+    window.addEventListener('DOMContentLoaded', runSplashAnimation); 
+  }
 </script>
 
 </body>
