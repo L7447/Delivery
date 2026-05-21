@@ -3333,7 +3333,7 @@ function renderRptCompare() {
           diffStr = `+$ ${fmt(diff)}`;
           diffColor = 'var(--green)';
       } else {
-          diffStr = `-NT$ ${fmt(Math.abs(diff))}`;
+          diffStr = `-$ ${fmt(Math.abs(diff))}`;
           diffColor = 'var(--red)';
       }
     }
@@ -3343,12 +3343,24 @@ function renderRptCompare() {
     
     html += `
     <div style="margin-bottom:${mBot};">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:6px;">
-        <span style="font-weight:800;color:${c.isCurrent ? 'var(--acc)' : 'var(--t2)'}">${c.label} <span style="font-size:11px; color:var(--t3); font-family:var(--mono);">(${c.periodStr})</span></span>
-        <div style="display:flex;gap:10px;align-items:baseline;">
-          <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:${c.isCurrent ? 'var(--acc)' : 'var(--t1)'}">$ ${fmt(c.total)}</span>
-          <span style="font-size:11px;color:${diffColor};font-weight:800;width:75px;text-align:right;">${diffStr}</span>
+      <!-- 👇 改用 Grid 網格，強制 3 等分 (1fr 1fr 1fr) -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; align-items:baseline; margin-bottom:6px; width:100%;">
+        
+        <!-- 1. 左邊：標題與時間 (靠左對齊) -->
+        <div style="text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          <span style="font-weight:800; font-size:12px; color:${c.isCurrent ? 'var(--acc)' : 'var(--t2)'}">${c.label} <span style="font-size:11px; color:var(--t3); font-family:var(--mono);">(${c.periodStr})</span></span>
         </div>
+        
+        <!-- 2. 中間：總金額 (置中對齊) -->
+        <div style="text-align:center;">
+          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:${c.isCurrent ? 'var(--acc)' : 'var(--t1)'}">$ ${fmt(c.total)}</span>
+        </div>
+        
+        <!-- 3. 右邊：比較差異 (靠右對齊) -->
+        <div style="text-align:right;">
+          <span style="font-size:12px; color:${diffColor}; font-weight:800;">${diffStr}</span>
+        </div>
+        
       </div>
       <div class="progress-track" style="height:10px; background:var(--bg-input);"><div class="progress-fill" style="width:${pct}%;background:${barColor}"></div></div>
     </div>`;
@@ -3407,31 +3419,176 @@ function renderRptCompare() {
   }
 }
 
-/* 替換：將 TOP 3 升級為 TOP 5 */
+/* 替換：TOP 5 競賽排行榜 (雙色膠囊、客製化字距、左右兩等分對齊、獎牌放大、內距微調) */
 function renderRptTop3() {
-  const el = document.getElementById('rv-top3'); const monthRecs = getMonthRecs(S.rptY, S.rptM); const dayMap = {};
-  monthRecs.forEach(r => { dayMap[r.date] = (dayMap[r.date]||0) + recTotal(r); });
-  const sorted = Object.entries(dayMap).sort((a,b)=>b[1]-a[1]); 
-  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣']; 
+  const el = document.getElementById('rv-top3'); 
+  const monthRecs = getMonthRecs(S.rptY, S.rptM); 
+  
+  // 1. 預先整理每日的完整數據 (收入、單數、工時)
+  const dayStats = {};
+  monthRecs.forEach(r => {
+    if (!dayStats[r.date]) {
+      const d = new Date(r.date + 'T00:00:00');
+      dayStats[r.date] = {
+        date: r.date,
+        dateStr: `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
+        dowStr: ['日','一','二','三','四','五','六'][d.getDay()],
+        total: 0,
+        orders: 0,
+        rawRecs: []
+      };
+    }
+    dayStats[r.date].total += recTotal(r);
+    dayStats[r.date].orders += pf(r.orders);
+    dayStats[r.date].rawRecs.push(r);
+  });
 
-  // 👇 導入加大加粗的新版導航列
+  // 計算每日的精準工時
+  Object.values(dayStats).forEach(ds => {
+    ds.hours = calcTotalHours(ds.rawRecs);
+  });
+
+  // 2. 排序邏輯：總收入(降冪) > 總工時(升冪) > 單數(升冪)
+  const sortedDays = Object.values(dayStats).sort((a, b) => {
+    if (b.total !== a.total) return b.total - a.total; // 錢多者勝
+    if (a.hours !== b.hours) return a.hours - b.hours; // 時間短者勝
+    return a.orders - b.orders; // 單數少者勝
+  });
+
+  // 3. 處理「完全平手」的並列邏輯
+  let groupedRanks = [];
+  let currentGroup = [];
+  
+  sortedDays.forEach(day => {
+    if (currentGroup.length === 0) {
+      currentGroup.push(day);
+    } else {
+      const prev = currentGroup[0];
+      // 如果三項數據完全相同，判為平手，放入同一個 Group
+      if (day.total === prev.total && day.hours === prev.hours && day.orders === prev.orders) {
+        currentGroup.push(day);
+      } else {
+        groupedRanks.push(currentGroup);
+        currentGroup = [day];
+      }
+    }
+  });
+  if (currentGroup.length > 0) groupedRanks.push(currentGroup);
+  
+  // 只取前 5 名
+  groupedRanks = groupedRanks.slice(0, 5);
+
+  // 渲染導航列
   let html = `
     <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
       <button class="btn btn1" onclick="navRptMonth(-1)" style="width: 42px; height: 42px;">◀</button>
-      <span style="font-family:var(--mono); font-size: 18px; font-weight: 900; color: #1e293b; letter-spacing: 0px; text-align: center; flex: 1;"><span style="color: #006eff; font-size: 22px;">${S.rptY}</span> 年 <span style="color: #006eff; font-size: 22px;">${S.rptM}</span> 月</span>
+      <span style="font-family:var(--mono); font-size: 18px; font-weight: 900; color: #1e293b; letter-spacing: 0px; text-align: center; flex: 1;">
+        <span style="color: #006eff; font-size: 22px;">${S.rptY}</span> 年 
+        <span style="color: #006eff; font-size: 22px;">${S.rptM}</span> 月
+      </span>
       <button class="btn btn1" onclick="navRptMonth(1)" style="width: 42px; height: 42px;">▶</button>
     </div>`;
 
-  html += `<div class="card"><div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px">🏆 本月收入 TOP 5 日</div>`;
-  if (!sorted.length) { 
-    html += `<div class="empty-tip">本月暫無記錄</div>`; 
-  } else {
-    // 👈 改成 slice(0,5)
-    sorted.slice(0,5).forEach(([date,total],i) => {
-      const d = new Date(date+'T00:00:00'); const recs = getDayRecs(date); const orders = recs.reduce((s,r)=>s+pf(r.orders),0); const hours = calcTotalHours(recs);
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:28px">${medals[i]||'▶'}</span><div style="flex:1"><div style="font-size:14px;font-weight:600">${date} （${['日','一','二','三','四','五','六'][d.getDay()]}）</div><div style="font-size:11px;color:var(--t3);margin-top:2px">${orders>0?`${orders}單 `:''}${hours>0?`${fmtHours(hours)} `:''}</div></div><div style="font-family:var(--mono);font-size:18px;font-weight:800;color:var(--green)">$${fmt(total)}</div></div>`;
-    });
+  if (!groupedRanks.length) { 
+    html += `<div class="empty-tip" style="margin-top:40px;">本月暫無記錄</div>`; 
+    el.innerHTML = html;
+    return;
   }
+
+  html += `
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
+      <span style="font-size:20px;">🏆</span>
+      <span style="font-size:16px; font-weight:900; color:var(--t1); letter-spacing:1px;">本月 TOP5 榜單</span>
+      <span style="font-size:20px;">🏆</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px; padding-bottom:24px;">
+  `;
+
+  // 4. 渲染各名次卡片
+  groupedRanks.forEach((group, i) => {
+    // 取得該名次的共通數據
+    const stats = group[0];
+    const total = stats.total;
+    const orders = stats.orders;
+    const hours = stats.hours;
+
+    // 將所有並列的日期組合成標籤陣列 (改成 <div> 強制換行)
+    const datesHtml = group.map(d => 
+      `<div style="margin-bottom:2px;">${d.dateStr} (週${d.dowStr})</div>`
+    ).join('');
+
+    // 名次視覺樣式設定 (依照名次給予專屬的雙色膠囊配色)
+    let bgStyle, borderLeft, dateColor, valueColor;
+    let medalBox = ''; 
+    let pillBorder, pillLeftBg, pillLeftText, pillRightBg, pillRightText;
+
+    if (i === 0) { // 🥇 冠軍
+      bgStyle = 'linear-gradient(135deg, #fde68a 0%, #fef3c7 100%)';
+      borderLeft = '#f59e0b'; dateColor = '#b45309'; valueColor = '#b45309';
+      medalBox = `<div style="width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,0.9); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(8px); border:1.5px solid rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.06); font-size:36px; flex-shrink:0;">🥇</div>`;
+      pillBorder = '#fde047'; pillLeftBg = '#fff9c9'; pillLeftText = '#c66b03'; pillRightBg = '#ffffff'; pillRightText = '#d97706';
+    } else if (i === 1) { // 🥈 亞軍
+      bgStyle = 'linear-gradient(135deg, #f1f5f9 0%, #f8fafc 100%)';
+      borderLeft = '#94a3b8'; dateColor = '#475569'; valueColor = '#475569';
+      medalBox = `<div style="width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,0.9); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(8px); border:1.5px solid rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.06); font-size:36px; flex-shrink:0;">🥈</div>`;
+      pillBorder = '#e2e8f0'; pillLeftBg = '#f1f5f9'; pillLeftText = '#64748b'; pillRightBg = '#ffffff'; pillRightText = '#475569';
+    } else if (i === 2) { // 🥉 季軍
+      bgStyle = 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)';
+      borderLeft = '#f97316'; dateColor = '#c2410c'; valueColor = '#c2410c';
+      medalBox = `<div style="width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,0.9); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(8px); border:1.5px solid rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.06); font-size:36px; flex-shrink:0;">🥉</div>`;
+      pillBorder = '#fed7aa'; pillLeftBg = '#ffedd5'; pillLeftText = '#ea580c'; pillRightBg = '#ffffff'; pillRightText = '#c2410c';
+    } else { // 4️⃣ & 5️⃣ 第四、第五名 (乾淨白底與圓圈)
+      bgStyle = '#ffffff';
+      borderLeft = '#cbd5e1'; dateColor = '#64748b'; valueColor = '#475569';
+      const numColor = i === 3 ? '#64748b' : '#94a3b8';
+      medalBox = `<div style="width:40px; height:40px; border-radius:50%; background:#f8fafc; border:2px solid ${numColor}; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:18px; font-weight:900; color:${numColor}; flex-shrink:0;">${i + 1}</div>`;
+      pillBorder = '#e2e8f0'; pillLeftBg = '#f8fafc'; pillLeftText = '#64748b'; pillRightBg = '#ffffff'; pillRightText = '#475569';
+    }
+
+    // 判斷是否兩項都有值，如果有才渲染膠囊
+    let pillsHtml = '';
+    if (orders > 0 || hours > 0) {
+      // 雙色膠囊 HTML (加入客製化字距)
+      pillsHtml = `
+        <div style="display:inline-flex; align-items:stretch; border-radius:6px; border:2px solid ${pillBorder}; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.03); margin-top:2px;">
+          ${orders > 0 ? `<span style="padding:2px 8px; background:${pillLeftBg}; font-size:11px; font-weight:800; color:${pillLeftText}; font-family:var(--mono); border-right:2px solid ${pillBorder}; letter-spacing:0.7px;">${orders}<span style="font-size:9px; font-weight:600;"> 單</span></span>` : ''}
+          ${hours > 0 ? `<span style="padding:2px 8px; background:${pillRightBg}; font-size:11px; font-weight:800; color:${pillRightText}; font-family:var(--mono); letter-spacing:1px;">${fmtHours(hours)}</span>` : ''}
+        </div>
+      `;
+    }
+
+    // 卡片結構：左側 flex:1 佔滿空間 (獎牌+日期)，右側 flex-shrink:0 (金額)
+    html += `
+      <div style="background: ${bgStyle}; border-radius:20px; padding:8px 13px; display:flex; align-items:center; justify-content:space-between; border:3px solid ${pillBorder}; position:relative; overflow:hidden;">
+        
+        <!-- 左側粗色條 -->
+        <div style="position:absolute; left:0; top:0; bottom:0; width:8px; background:${borderLeft};"></div>
+        
+        <!-- 左半部 (2等分之左，靠左對齊) -->
+        <div style="display:flex; align-items:center; gap:12px; padding-left:6px; flex:1;">
+          ${medalBox}
+          
+          <div style="display:flex; flex-direction:column; justify-content:center;">
+            <!-- 日期顯示 (平手強制換行) -->
+            <div style="font-size:14px; font-weight:900; color:${dateColor}; line-height:1.4; margin-bottom:2px;">
+              ${datesHtml}
+            </div>
+            <!-- 雙色膠囊 -->
+            <div>
+              ${pillsHtml}
+            </div>
+          </div>
+        </div>
+        
+        <!-- 右半部 (2等分之右，金額調小並空一格) -->
+        <div style="font-family:var(--mono); font-size:22px; font-weight:800; color:${valueColor}; text-align:right; flex-shrink:0; padding-left:10px;">
+          <span style="font-size:11px; opacity:0.85;">$ </span>${fmt(total)}
+        </div>
+
+      </div>
+    `;
+  });
+
   html += `</div>`;
   el.innerHTML = html;
 }
