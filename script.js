@@ -609,20 +609,24 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
   const wageHtml = getWageBadge(hours, total);
 
   return `
-    <div class="hist-rec-card" style="border: 1.5px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-      <div class="hrc-top" onclick="foldCard('${cardId}', event)" style="padding: 2px 10px;">
+    <div class="hist-rec-card" style="border: 2px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+      <div class="hrc-top" onclick="foldCard('${cardId}', event)" style="padding: 2px 10px; margin:0px 0 4px 0px;">
         <div class="hrc-toggle" id="${cardId}-btn" style="right: 2px; top: 0px; width: 20px; height: 20px; font-size: 14px;">▼</div>
         <div class="hrc-row1">
-          <span class="hrc-plat-tag" style="background:var(--t2);">${title}</span>
-          ${dateStr ? `<span style="font-size:12px; font-weight:800; color:var(--text-blue); margin-left:6px; letter-spacing:0.5px;">${dateStr}</span>` : ''}
+          <span style="position:absolute; top:0; left:0; background:#64748b; color:#ffffff; padding:4px 14px; border-radius:0 0 16px 0; font-size:12px; font-weight:800; letter-spacing:1px;">${title}</span>
+          ${dateStr ? `<span style="font-size:12px; font-weight:800; color:var(--text-blue); margin: 3px 0 6px 80px; letter-spacing:0.5px;">${dateStr}</span>` : ''}
         </div>
         <div class="hrc-row2">
-          <span class="hrc-amt" style="color:var(--text-blue);"><span style="font-size:12px;">$ </span>${fmt(total)}</span>
+          <span class="hrc-amt" style="color:var(--text-blue);"><span style="font-size:12px;">$ </span><span style="margin-right:10px;">${fmt(total)}</span></span>
           ${tagsHtml}
         </div>
-        <div style="border:1px solid #83c3ff; margin:3px 0px 0px 0px; border-radius:10px;"></div>
-        <!-- 總計、當日卡片。新增：淨行程、獎勵、小費佔比結構 (百分比與金額同排) -->
-        <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; padding: 0 4px 1px 4px;">
+      </div>
+
+      <div id="${cardId}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="padding: 10px 8px 1px 8px; width: 100%; box-sizing: border-box;">
+          
+          <!-- 淨行程、獎勵、小費方塊區 (強制 3 等分網格) -->
+          <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px;">
           
           <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
             <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
@@ -659,11 +663,11 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
               <span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(tips)}</span>
             </div>
           </div>
-
         </div>
+        
 
-      </div>
-      <div id="${cardId}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="border:1px solid #83c3ff; border-radius:10px; margin: 7px 0px -10px 0px;"></div>
+
         <div style="padding:12px 3px 8px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
             一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span>
@@ -678,6 +682,7 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
             ${wageHtml}
           </div>
         </div>
+      </div>
       </div>
     </div>`;
 }
@@ -941,18 +946,33 @@ function switchHomeTab(tab, index) {
     // 平台日程表：日出橘紅金
     tabBg.style.background = 'linear-gradient(135deg, #f43f5e 0%, #f97316 40%, #fbbf24 75%, #fcd34d 100%)';
     tabBg.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.4)';
-  } else {
+  } else if (tab === 'goal') {
     // 目標進度：極光藍綠靛
     tabBg.style.background = 'linear-gradient(135deg, #6366f1 0%, #3b82f6 40%, #06b6d4 75%, #10b981 100%)';
     tabBg.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+  } else if (tab === 'reward') {
+    // 獎勵進度：電競紫粉紅 (配合獎勵的興奮感)
+    tabBg.style.background = 'linear-gradient(135deg, #a855f7 0%, #d946ef 40%, #ec4899 75%, #f43f5e 100%)';
+    tabBg.style.boxShadow = '0 4px 12px rgba(217, 70, 239, 0.4)';
   }
 
   document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); 
   document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); 
+  document.getElementById('btn-home-reward')?.classList.toggle('active', tab==='reward'); 
   renderHome(); 
 }
 function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
-function switchRptTab(tab, index, btnEl) { S.rptView = tab; document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); btnEl.classList.add('active');['overview','rewards','trend','compare','top3'].forEach(v => { document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; }); renderReport(); }
+function switchRptTab(tab, index, btnEl) { 
+  S.rptView = tab; 
+  document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; 
+  document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); 
+  btnEl.classList.add('active');
+  ['overview','trend','compare','top3'].forEach(v => { 
+    document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; 
+  }); 
+  renderReport(); 
+}
+
 /* ══ 替換：車輛頁籤切換 (四色強化漸層風格) ══ */
 function switchVehicleTab(tab, index) { 
   S.vehicleTab = tab; 
@@ -987,52 +1007,43 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 首頁渲染 (終極防錯亂保護版) ══ */
+/* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
   const botEl = document.getElementById('home-bottom-content');
   const tabBg = document.getElementById('home-tab-bg');
   
-  // 1. 防護：確保 DOM 元素存在才執行
   if (!topEl || !botEl) return;
   if (!S.homeSubTab) S.homeSubTab = 'schedule';
-  if (tabBg) tabBg.style.transform = S.homeSubTab === 'schedule' ? 'translateX(0%)' : 'translateX(100%)';
+  
+  // 更新背景滑塊位置 (支援 3 個按鈕)
+  if (tabBg) {
+    if (S.homeSubTab === 'schedule') tabBg.style.transform = 'translateX(0%)';
+    else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(100%)';
+    else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
+  }
 
   try {
     const today = todayStr();
-    const dayRecs = getDayRecs(today) || [];
-    
-    const total   = dayRecs.reduce((s, r) => s + recTotal(r), 0);
-    const orders  = dayRecs.reduce((s, r) => s + pf(r.orders), 0);
-    const mileage = dayRecs.reduce((s, r) => s + pf(r.mileage), 0); // 👈 新增這行計算里程
-    const hours = calcTotalHours(dayRecs);
-    
     const dateObj = new Date(today + 'T00:00:00');
-    const dow     = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
-    const activePlatforms = (S.platforms || []).filter(p => p.active);
+    const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
 
     let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
 
-    // 公告系統 (全新現代微玻璃質感設計)
+    // 公告系統
     try {
       const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
       const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
       if (ann.active && ann.text && ann.text !== dismissedAnn) {
-        const safeText = encodeURIComponent(ann.text); 
+        const safeTextUrl = encodeURIComponent(ann.text); 
         topHtml += `
-          <div id="home-announcement-card" style="position:relative; background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border-left: 4px solid #f97316; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); padding: 16px; transition: 0.3s; overflow: hidden; border-top: 1px solid #ffedd5; border-right: 1px solid #ffedd5; border-bottom: 1px solid #ffedd5;">
-            <!-- 裝飾背景圈 -->
-            <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:#ffedd5; border-radius:50%; z-index:0; opacity:0.6;"></div>
-            
-            <button onclick="dismissAnnouncement('${safeText}')" style="position:absolute; top:12px; right:12px; background: #f8fafc; border:none; color:#94a3b8; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:900; z-index:2; transition:0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);">✕</button>
-            
+          <div id="home-announcement-card" style="position:relative; background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border-left: 4px solid #f97316; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); padding: 16px; overflow: hidden;">
+            <button onclick="dismissAnnouncement('${safeTextUrl}')" style="position:absolute; top:12px; right:12px; background: #f8fafc; border:none; color:#94a3b8; width:28px; height:28px; border-radius:50%; font-size:12px; font-weight:900;">✕</button>
             <div style="position:relative; z-index:1; display:flex; gap:12px; align-items:flex-start;">
-              <div style="background: linear-gradient(135deg, #f97316, #f59e0b); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(249,115,22,0.25);">
-                <span style="font-size:18px;">🔔</span>
-              </div>
-              <div style="padding-right: 24px; padding-top: 2px;">
-                <div style="font-size:14px; font-weight:900; color:#c2410c; margin-bottom:4px; letter-spacing:0.5px;">系統公告</div>
-                <div style="font-size:13px; font-weight:700; color:#475569; line-height:1.6;">${safeTextWithBr(ann.text)}</div>
+              <div style="background: linear-gradient(135deg, #f97316, #f59e0b); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size:18px;">🔔</div>
+              <div>
+                <div style="font-size:14px; font-weight:900; color:#c2410c; margin-bottom:4px;">系統公告</div>
+                <div style="font-size:13px; font-weight:700; color:#475569;">${safeTextWithBr(ann.text)}</div>
               </div>
             </div>
           </div>`;
@@ -1041,48 +1052,14 @@ function renderHome() {
 
     // 今日概況標題
     topHtml += `
-      <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:3px;">
+      <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
         <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1); line-height:1.2;">今日概況</div>
         <div class="home-pg-date" style="font-size:14px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
           <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getFullYear()}</b> 年 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getMonth()+1}</b> 月 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getDate()}</b> 日（星期 <b style="font-size:16px; font-weight:700; color: #ff4400;">${dow}</b>）
         </div>
-      </div>
-      <div class="today-hero">`;
+      </div>`;
 
-    // 平台各別統計
-    if (activePlatforms.length > 0) {
-      const platStats = activePlatforms.map(p => {
-        const recs = dayRecs.filter(r => r.platformId === p.id);
-        return { ...p, sum: recs.reduce((s, r) => s + recTotal(r), 0), orders: recs.reduce((s, r) => s + pf(r.orders), 0), hours: recs.reduce((s, r) => s + pf(r.hours), 0) };
-      }).filter(p => p.sum > 0 || p.orders > 0 || p.hours > 0);
-
-      if (platStats.length > 0) {
-        topHtml += `<div style="background:var(--sf); padding:4px 5px; border-radius:25px; border:1.5px solid var(--border); display:flex; flex-direction:column; gap:1px; margin:3px 0;">`;
-        platStats.forEach(p => {
-          topHtml += `
-            <div class="hero-plat-row" style="display:flex; align-items:center; padding:4px 14px; border-radius:20px; font-size:14px; font-weight:600; background:linear-gradient(135deg, ${p.color}15, ${p.color}25); border: 1px solid ${p.color}60; color: var(--t1); margin-bottom:2px;">
-              <span class="hp-name" style="width:32%; white-space:nowrap;"><span class="plat-badge" style="background:${p.color}; box-shadow:0 2px 6px ${p.color}60; padding:3px 7px; font-size:14px;">${safeText(p.name)}</span><span style="font-size:14px; font-weight:800;"> 收入：</span></span>
-              <span class="hp-sum" style="font-family:var(--mono); font-weight:800; width:25%; text-align:right; color:${p.color};">$ ${fmt(p.sum)}</span>
-              <span class="hp-ord" style="font-weight:800; width:20%; font-size:14px; text-align:right; color: #1b585f;">${p.orders} <span style="font-weight:500; font-size:11px;">單</span></span>
-              <span class="hp-hrs" style="font-weight:600; width:20%; text-align:right; color: var(--text-blue); opacity:0.8;">${p.hours > 0 ? fmtHours(p.hours) : 0}</span>
-            </div>`;
-        });
-        topHtml += `</div>`;
-      } else {
-        topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">今日尚未有收入資料</div>`;
-      }
-    } else {
-      topHtml += `<div style="text-align:center; font-size:13px; color:var(--t3); margin:12px 0;">尚未啟用平台</div>`;
-    }
-
-    // 總計卡片
-    const dayBonus = dayRecs.reduce((s,r)=>s+pf(r.bonus), 0);
-    const dayTemp  = dayRecs.reduce((s,r)=>s+pf(r.tempBonus), 0);
-    const dayTips  = dayRecs.reduce((s,r)=>s+pf(r.tips), 0);
-    topHtml += buildSummaryCard('總計', total, orders, mileage, hours, dayBonus, dayTemp, dayTips, 'home-summary-card');
-    topHtml += `</div>`;
-
-    // 打卡模組
+    // 打卡模組 (緊接在標題下方)
     const isPunched = S.punch && S.punch.date === todayStr();
     let punchStatusStr = '離線';
     if (isPunched && S.punch && typeof S.punch.startTime === 'string') {
@@ -1094,7 +1071,7 @@ function renderHome() {
       }
     }
     topHtml += `
-      <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; margin:4px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
+      <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
         <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
           <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
           <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span>
@@ -1104,79 +1081,51 @@ function renderHome() {
         </button>
       </div></div>`;
 
-    // 底部內容 (平台排程 / 目標進度)
+    // 底部內容 (平台排程 / 目標進度 / 獎勵進度)
     let bottomHtml = '';
+    const activePlatforms = (S.platforms || []).filter(p => p.active);
+
     if (S.homeSubTab === 'schedule') {
       if (activePlatforms.length === 0) {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
       } else {
         bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
-        
-        // 👇 新增：置頂的標籤圖例說明區塊
         bottomHtml += `
           <div style="background:#ffffff; border-radius:12px; padding:10px; margin-bottom:-4px; border:1px solid #e2e8f0; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-            <div style="font-size:11px; font-weight:800; color:var(--t3); width:100%; text-align:center; margin-bottom:2px; letter-spacing:0.5px;">💡 狀態標籤圖例</div>
-            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#dcfce7; color:#16a34a; border:1px solid #16a34a30;">🔥 今天</span>
-            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#ffedd5; color:#ea580c; border:1px solid #ea580c30;">⚡ 明天</span>
-            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#e0f2fe; color:#0284c7; border:1px solid #0284c730;">🔜 近 3 天</span>
-            <span style="display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#f1f5f9; color:#475569; border:1px solid #47556930;">⏳ 4 天以上</span>
+            <div style="font-size:11px; font-weight:800; color:var(--t3); width:100%; text-align:center; margin-bottom:2px;">💡 狀態標籤圖例</div>
+            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#dcfce7; color:#16a34a; border:1px solid #16a34a30;">🔥 今天</span>
+            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#ffedd5; color:#ea580c; border:1px solid #ea580c30;">⚡ 明天</span>
+            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#e0f2fe; color:#0284c7; border:1px solid #0284c730;">🔜 近 3 天</span>
+            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#f1f5f9; color:#475569; border:1px solid #47556930;">⏳ 4 天以上</span>
           </div>`;
 
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
           if (!events || events.length === 0) return;
-          
-          /* 👇 卡片外層加上 position:relative, overflow:hidden，並將 padding-top 加大給標籤空間 */
           bottomHtml += `
             <div style="position: relative; overflow: hidden; border: 2px solid ${p.color}; background: ${p.color}10; border-radius: 25px; padding: 42px 10px 12px 10px;">
-              
-              <!-- 👇 3D 立體按鈕標籤 (使用絕對定位貼死 top:0 left:0，不佔用內部空間) -->
               <div style="position: absolute; top: -1px; left: -1px; display:inline-flex; background: ${p.color}10; padding: 0px; border-radius: 30px; border: 4px solid ${p.color};">
                 <div style="background: linear-gradient(180deg, ${p.color}10 0%, transparent 50%, ${p.color}10 100%), ${p.color}95; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 30px; padding: 0px 13px; display: flex; align-items: center; justify-content: center;">
-                  <span style="color: #ffffff; font-size: 18px; font-weight: 900; letter-spacing: 1.1px; line-height: 1.7;">${safeText(p.name)}</span>
+                  <span style="color: #ffffff; font-size: 18px; font-weight: 900;">${safeText(p.name)}</span>
                 </div>
               </div>
-              
-              <!-- 下方的日期方塊不變 -->
               <div style="display:flex; gap:8px;">
                 ${events.map(ev => {
-                  // 1. 標題顏色判斷 (改用 Hex 色碼，方便串接透明度)
-                  let titleColor = '#475569'; // 預設深灰
-                  if (ev.name.includes('結算') || ev.name.includes('取單')) titleColor = '#e61f1f'; // 紅色
-                  else if (ev.name.includes('明細')) titleColor = '#ea580c'; // 橘色
-                  else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; // 藍色
+                  let titleColor = '#475569'; 
+                  if (ev.name.includes('結算') || ev.name.includes('取單')) titleColor = '#e61f1f'; 
+                  else if (ev.name.includes('明細')) titleColor = '#ea580c'; 
+                  else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; 
                   
-                  // 2. 距離天數漸進顏色判斷
-                  let diffBg = '#f1f5f9';     
-                  let diffColor = '#475569';  
-                  let diffIcon = '⏳';
-                  let diffText = safeText(ev.diffStr);
+                  let diffBg = '#f1f5f9', diffColor = '#475569', diffIcon = '⏳', diffText = safeText(ev.diffStr);
+                  if (ev.diff === 0) { diffBg = '#dcfce7'; diffColor = '#16a34a'; diffIcon = '🔥'; diffText = '今天'; } 
+                  else if (ev.diff === 1) { diffBg = '#ffedd5'; diffColor = '#ea580c'; diffIcon = '⚡'; } 
+                  else if (ev.diff <= 3) { diffBg = '#e0f2fe'; diffColor = '#0284c7'; diffIcon = '🔜'; }
 
-                  if (ev.diff === 0) {
-                    diffBg = '#dcfce7';       
-                    diffColor = '#16a34a';    
-                    diffIcon = '🔥';
-                    diffText = '今天';
-                  } else if (ev.diff === 1) {
-                    diffBg = '#ffedd5';       
-                    diffColor = '#ea580c';    
-                    diffIcon = '⚡';
-                  } else if (ev.diff <= 3) {
-                    diffBg = '#e0f2fe';       
-                    diffColor = '#0284c7';    
-                    diffIcon = '🔜';
-                  }
-
-                  // 3. 雙拼卡片結構 (上：該字的透明背景，下：白色背景)
                   return `
                     <div style="flex:1; background:#ffffff; border-radius:12px; text-align:center; border:1.5px solid #ffffff; display:flex; flex-direction:column; overflow:hidden; margin-top:10px;">
-                      
-                      <!-- 上半部：標題區 (帶有特定顏色的 15% 透明背景與虛線底邊) -->
                       <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30;">
-                        <span style="font-size:16px; color:${titleColor}; font-weight:750; letter-spacing:1.5px;">${safeText(ev.name)}</span>
+                        <span style="font-size:16px; color:${titleColor}; font-weight:750;">${safeText(ev.name)}</span>
                       </div>
-                      
-                      <!-- 下半部：日期與天數標籤 (維持白底) -->
                       <div style="padding:10px 2px; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
                         <span style="font-family:var(--mono); font-size:17px; font-weight:900; color:var(--t1); line-height:1;">${safeText(ev.dateStr)}</span>
                         <div style="margin-top:8px;">
@@ -1185,7 +1134,6 @@ function renderHome() {
                           </span>
                         </div>
                       </div>
-
                     </div>`;
                 }).join('')}
               </div>
@@ -1193,20 +1141,17 @@ function renderHome() {
         });
         bottomHtml += `</div>`;
       }
-    } 
-      else if (S.homeSubTab === 'goal') {
+    } else if (S.homeSubTab === 'goal') {
       const goals = S.settings.goals || {};
       const weekly = pf(goals.weekly); const monthly = pf(goals.monthly); const yearly = pf(goals.yearly);
       if (weekly > 0 || monthly > 0 || yearly > 0) {
-        
-        // 取消原本共用外框的 card，改用 Flex 垂直排列獨立卡片
         bottomHtml += `<div style="display:flex; flex-direction:column; gap:12px;">`; 
         
         if (weekly > 0) {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
           for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
           const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); 
-          const wColor = wPct >= 100 ? '#10b981' : '#3b82f6'; // 達標變綠，未達標藍
+          const wColor = wPct >= 100 ? '#10b981' : '#3b82f6';
           
           bottomHtml += `
             <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 2px solid #bfdbfe; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(37,99,235,0.08); position: relative; overflow: hidden;">
@@ -1214,13 +1159,13 @@ function renderHome() {
                 <div style="display:flex; align-items:center; gap:8px;">
                   <div style="width:32px; height:32px; border-radius:10px; background:#dbeafe; display:flex; align-items:center; justify-content:center; font-size:16px;">🏃</div>
                   <div>
-                    <div style="font-size:14px;font-weight:900;color:#1e3a8a; letter-spacing:0.5px;">本週目標</div>
+                    <div style="font-size:14px;font-weight:900;color:#1e3a8a;">本週目標</div>
                     <div style="font-size:11px;color:#60a5fa;font-weight:800;">剩餘 ${7 - wDay} 天</div>
                   </div>
                 </div>
-                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${wColor}; text-shadow:0 1px 2px rgba(0,0,0,0.1);">${wPct}<span style="font-size:14px;"> %</span></span>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${wColor};">${wPct}<span style="font-size:14px;"> %</span></span>
               </div>
-              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
                 <div style="height:100%; width:${wPct}%; background:${wColor}; border-radius:6px; transition:width 0.4s ease;"></div>
               </div>
               <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
@@ -1233,7 +1178,7 @@ function renderHome() {
         if (monthly > 0) {
           const monthRecs = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
           const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); 
-          const mColor = mPct >= 100 ? '#10b981' : '#a855f7'; // 達標變綠，未達標紫
+          const mColor = mPct >= 100 ? '#10b981' : '#a855f7';
           
           bottomHtml += `
             <div style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%); border: 2px solid #e9d5ff; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(168,85,247,0.08); position: relative; overflow: hidden;">
@@ -1241,13 +1186,13 @@ function renderHome() {
                 <div style="display:flex; align-items:center; gap:8px;">
                   <div style="width:32px; height:32px; border-radius:10px; background:#e9d5ff; display:flex; align-items:center; justify-content:center; font-size:16px;">🔥</div>
                   <div>
-                    <div style="font-size:14px;font-weight:900;color:#581c87; letter-spacing:0.5px;">本月目標</div>
+                    <div style="font-size:14px;font-weight:900;color:#581c87;">本月目標</div>
                     <div style="font-size:11px;color:#c084fc;font-weight:800;">剩餘 ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} 天</div>
                   </div>
                 </div>
-                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${mColor}; text-shadow:0 1px 2px rgba(0,0,0,0.1);">${mPct}<span style="font-size:14px;"> %</span></span>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${mColor};">${mPct}<span style="font-size:14px;"> %</span></span>
               </div>
-              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
                 <div style="height:100%; width:${mPct}%; background:${mColor}; border-radius:6px; transition:width 0.4s ease;"></div>
               </div>
               <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
@@ -1260,7 +1205,7 @@ function renderHome() {
         if (yearly > 0) {
           const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
           const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); 
-          const yColor = yPct >= 100 ? '#10b981' : '#0d9488'; // 達標變綠，未達標翡翠青(Teal)
+          const yColor = yPct >= 100 ? '#10b981' : '#0d9488';
           
           bottomHtml += `
             <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border: 2px solid #99f6e4; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(13,148,136,0.08); position: relative; overflow: hidden;">
@@ -1268,13 +1213,13 @@ function renderHome() {
                 <div style="display:flex; align-items:center; gap:8px;">
                   <div style="width:32px; height:32px; border-radius:10px; background:#ccfbf1; display:flex; align-items:center; justify-content:center; font-size:16px;">👑</div>
                   <div>
-                    <div style="font-size:14px;font-weight:900;color:#134e4a; letter-spacing:0.5px;">本年目標</div>
+                    <div style="font-size:14px;font-weight:900;color:#134e4a;">本年目標</div>
                     <div style="font-size:11px;color:#2dd4bf;font-weight:800;">剩餘 ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} 天</div>
                   </div>
                 </div>
-                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${yColor}; text-shadow:0 1px 2px rgba(0,0,0,0.1);">${yPct}<span style="font-size:14px;"> %</span></span>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${yColor};">${yPct}<span style="font-size:14px;"> %</span></span>
               </div>
-              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
                 <div style="height:100%; width:${yPct}%; background:${yColor}; border-radius:6px; transition:width 0.4s ease;"></div>
               </div>
               <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
@@ -1283,20 +1228,21 @@ function renderHome() {
               </div>
             </div>`;
         }
-        
         bottomHtml += `</div>`;
       } else {
         bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`;
       }
+    } else if (S.homeSubTab === 'reward') {
+      // 👇 呼叫取得獎勵的 HTML
+      bottomHtml = getRewardsHtml();
     }
 
-    // 2. 確定安全後才賦值
     topEl.innerHTML = topHtml;
     botEl.innerHTML = bottomHtml;
 
   } catch (error) {
-    console.error("首頁渲染發生嚴重錯誤：", error);
-    botEl.innerHTML = `<div class="empty-tip" style="color:var(--red);">系統發生例外錯誤，請往下拉動重新整理</div>`;
+    console.error("首頁渲染發生錯誤：", error);
+    botEl.innerHTML = `<div class="empty-tip" style="color:var(--red);">系統發生例外錯誤</div>`;
   }
 }
 
@@ -1372,8 +1318,14 @@ async function punchOut() {
 function foldCard(id, e) {
   e.stopPropagation();
   const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { el.style.maxHeight = '70px'; btn.style.transform = 'rotate(180deg)'; } 
-  else { el.style.maxHeight = '0px'; btn.style.transform = 'rotate(0deg)'; }
+  // 👇 將原本寫死的 70px 改為 el.scrollHeight，讓它自動適應三大區塊的高度
+  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { 
+    el.style.maxHeight = el.scrollHeight + 'px'; 
+    btn.style.transform = 'rotate(180deg)'; 
+  } else { 
+    el.style.maxHeight = '0px'; 
+    btn.style.transform = 'rotate(0deg)'; 
+  }
 }
 
 function toggleCalendarGrid() {
@@ -1535,24 +1487,30 @@ function buildRecItem(r) {
     <div class="hist-rec-card" data-id="${safeText(r.id)}" style="border:2px solid ${plat.color};">
       <div class="hrc-top" onclick="openDetailOverlay('${safeText(r.id)}')">
         <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
-        <!-- 👇 修改為 flex-start，並獨立包裹左側元素 (flex-shrink:0) 防止備註擠壓 -->
-        <div class="hrc-row1" style="gap:8px; margin: 0px 0 2px 0; align-items: flex-start;">
-          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-            <span class="hrc-plat-tag" style="background:${plat.color};">${safeText(plat.name)}</span>
+        <!-- 👇 將平台標籤改為絕對定位，對齊區間總計卡片風格 -->
+        <div class="hrc-row1" style="margin: 0px 0 2px 0; display:block;">
+          <span style="position:absolute; top:0; left:0; background:${plat.color}; color:#ffffff; padding:4px 14px; border-radius:0 0 16px 0; font-size:13px; font-weight:800; letter-spacing:0.7px; line-height:18px;">${safeText(plat.name)}</span>
+          
+          <div style="display:flex; align-items:flex-start; gap:8px; margin: 3px 0 6px 100px;">
             <!-- 👇 藍色系雙色時間膠囊 -->
-            <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px;">
+            <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px; flex-shrink:0;">
               <span style="padding:2px 6px; background: #f1f5f9; font-size:12px; font-weight:800; color: hsl(330, 100%, 56%); font-family:var(--mono); border-right:2px solid #e2e8f0;">${dStr}</span>
               <span style="padding:2px 6px; background: #ffffff; font-size:11px; font-weight:900; color: #2563eb; font-family:var(--mono);">${tStr}</span>
             </div>
+            ${r.note ? `<div style="color: #2563eb; font-weight:800; font-size:12px; line-height:1.4; padding-top:1px;"> ${formatNoteWithLimit(r.note)}</div>` : ''}
           </div>
-          ${r.note ? `<div style="color: #2563eb; font-weight:800; font-size:12px; line-height:1.4; padding-top:1px;"> ${formatNoteWithLimit(r.note)}</div>` : ''}
         </div>
+        
         <div class="hrc-row2">
-          <span class="hrc-amt"><span style="font-size:12px;">$ </span>${fmt(total)}</span>
+          <span class="hrc-amt"><span style="font-size:12px;">$ </span><span style="margin-right:10px;">${fmt(total)}</span></span>
           ${tagsHtml}
         </div>
-        <div style="border:1px solid #83c3ff; margin:3px 0px 0px 0px; border-radius:10px;"></div>
-        <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; padding: 0 4px 1px 4px;">
+      </div>
+
+      <div id="${cid}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease; margin:4px 0 1px 0px;">
+        <div style="padding: 10px 8px 1px 8px; width: 100%; box-sizing: border-box;">
+          <!-- 淨行程、獎勵、小費方塊區 (強制 3 等分網格) -->
+          <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px;">
           
           <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
             <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
@@ -1589,11 +1547,10 @@ function buildRecItem(r) {
               <span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(pf(r.tips))}</span>
             </div>
           </div>
-
         </div>
-      </div>
 
-      <div id="${cid}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="border:1px solid #83c3ff; border-radius:10px; margin: 7px 0px 0px 0px;"></div>
+      
         <div style="padding:10px 3px 6px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
           <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span></div>
           <div class="h-div" style="height:30px;"></div>
@@ -1603,6 +1560,7 @@ function buildRecItem(r) {
             ${recWageHtml}
           </div>
         </div>
+      </div>
       </div>
     </div>`;
 }
@@ -2389,33 +2347,29 @@ function cancelAddRecord() {
 function renderReport() {
   if (!S.trendDate) S.trendDate = new Date();
   if (S.rptView === 'overview') renderRptOverview(); 
-  if (S.rptView === 'rewards') renderRptRewards(); // 👈 加入這行
   if (S.rptView === 'trend') renderRptTrend();
   if (S.rptView === 'compare') renderRptCompare(); 
   if (S.rptView === 'top3') renderRptTop3();
 }
 
-/* ══ 替換：獎勵分析 (今日/即將到來 精準推算與排序) ══ */
-function renderRptRewards() {
-  const el = document.getElementById('rv-rewards');
+/* ══ 替換：獎勵進度 (改移至首頁，並回傳 HTML 字串) ══ */
+function getRewardsHtml() {
   if (!S.rewardSubTab) S.rewardSubTab = 'current';
 
   let html = `
     <div class="slide-tabs tabs-2" style="margin-bottom:12px;">
       <div class="slide-bg" style="transform: translateX(${S.rewardSubTab === 'current' ? '0%' : '100%'}); background:var(--acc);"></div>
-      <button class="slide-btn ${S.rewardSubTab === 'current' ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderRptRewards()">今日進度</button>
-      <button class="slide-btn ${S.rewardSubTab === 'upcoming' ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderRptRewards()">即將到來</button>
+      <button class="slide-btn ${S.rewardSubTab === 'current' ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderHome()">今日進度</button>
+      <button class="slide-btn ${S.rewardSubTab === 'upcoming' ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderHome()">即將到來</button>
     </div>
     <div style="font-size:12px; color:var(--hint-color); margin-bottom:12px; text-align:center; font-weight:700;">
       ${S.rewardSubTab === 'current' ? '顯示「包含今日」生效中之獎勵進度' : '顯示「下一個獎勵起，至下週日」之即將到來獎勵'}
     </div>`;
 
-  // ✅ 每次切換都重新取得當下最新時間，跨日不漏接
   const today = new Date(); today.setHours(0,0,0,0);
   const dayOfWeek = today.getDay() || 7;
   const dStrToday = todayStr(today);
   
-  // 推算本週一與下週日
   const currentMon = new Date(today); currentMon.setDate(today.getDate() - dayOfWeek + 1);
   const nextSunday = new Date(today); nextSunday.setDate(today.getDate() + (7 - dayOfWeek) + 7);
   const dStrNextSun = todayStr(nextSunday);
@@ -2425,7 +2379,6 @@ function renderRptRewards() {
   (S.settings.rewards ||[]).forEach(r => {
     let windowsToCheck =[];
     if (r.recurring) {
-        // 推算本週與下週的該獎勵區間
         windowsToCheck.push(getRewardWindow(todayStr(currentMon), r));
         let nextWeekD = new Date(currentMon); nextWeekD.setDate(currentMon.getDate() + 7);
         windowsToCheck.push(getRewardWindow(todayStr(nextWeekD), r));
@@ -2440,12 +2393,9 @@ function renderRptRewards() {
 
     uniqueWindows.forEach(w => {
         let isValid = false;
-        
         if (S.rewardSubTab === 'current') {
-            // 👉 今日進度邏輯：區間「包含今天」
             if (w.start <= dStrToday && w.end >= dStrToday) isValid = true;
         } else {
-            // 👉 即將到來邏輯：區間的「開始日」必須「大於今天」，且「<= 下週日」
             if (w.start > dStrToday && w.start <= dStrNextSun) isValid = true;
         }
 
@@ -2460,15 +2410,12 @@ function renderRptRewards() {
     });
   });
 
-  // 👉 依照區間的開始日 (由早到晚) 排序
   activeRewards.sort((a,b) => a.window.start.localeCompare(b.window.start));
 
   if (activeRewards.length === 0) {
-    el.innerHTML = html + `<div class="empty-tip">本區間無相符的獎勵設定</div>`;
-    return;
+    return html + `<div class="empty-tip">本區間無相符的獎勵設定</div>`;
   }
 
-  // 渲染獎勵卡片迴圈
   activeRewards.forEach(r => {
     const plat = getPlatform(r.platformId);
     let nextTierOrders = null; let prevTierOrders = 0; let achievedBonus = 0;
@@ -2499,7 +2446,7 @@ function renderRptRewards() {
       : `<span style="color:var(--green);">🎉 已達成最高階！</span>`;
 
     html += `
-      <div class="card" style="border: 2px solid ${plat.color}40;">
+      <div class="card" style="border: 2px solid ${plat.color}40; margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
           <div>
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
@@ -2527,7 +2474,8 @@ function renderRptRewards() {
       </div>
     `;
   });
-  el.innerHTML = html;
+  
+  return html;
 }
 
 window.navRptMonth = function(dir) {
