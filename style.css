@@ -154,9 +154,24 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 /* ══ 7. 首頁專區 (打卡按鈕) ══ */
 .punch-card-new { background: var(--sf); border: 1px solid var(--border); border-radius: 20px; padding: 1px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
 .punch-status-left { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--t2); }
-@keyframes blinkEffect { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
-.punch-dot-new { width: 12px; height: 12px; border-radius: 50%; background: #e2e8f0; }
-.punch-dot-new.online { background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); animation: blinkEffect 1.5s infinite; }
+
+/* 👇 選項 B 特效：科技能量旋轉環 */
+@keyframes spinRing {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+/* 稍微放大一點點讓軌道看得更清楚 */
+.punch-dot-new { width: 16px; height: 16px; border-radius: 50%; background: #e2e8f0; }
+.punch-dot-new.online { 
+  background: transparent; 
+  /* 產生圓環軌道 */
+  border: 3px solid rgba(16, 185, 129, 0.2); 
+  border-top-color: #10b981; 
+  border-right-color: #10b981; 
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  /* 均速持續旋轉 */
+  animation: spinRing 0.8s linear infinite; 
+}
 .punch-btn-right { padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
 .punch-btn-right:active { transform: scale(0.95); }
 .btn-go-online { background: var(--green); color: #fff; box-shadow: 0 4px 12px rgba(34,197,94,0.25); }
