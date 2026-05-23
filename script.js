@@ -1068,7 +1068,7 @@ function renderHome() {
       // 利用 timestamp 計算經過的分鐘數，確保跨日也能精準計算
       const startMs = activePunchRec.timestamp || new Date(`${activePunchRec.date}T${activePunchRec.punchIn}:00`).getTime();
       const diffMin = Math.floor((Date.now() - startMs) / 60000);
-      punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`;
+      punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h ${diffMin%60}m)`;
     }
     
     topHtml += `
@@ -1313,7 +1313,7 @@ async function punchOut() {
   const activeRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
   if (!activeRec) return;
 
-  const ok = await customConfirm('確定要下線並結算這筆打卡工時嗎？');
+  const ok = await customConfirm('確定要下線，並結算這筆打卡工時嗎？');
   if (!ok) return;
 
   const now = new Date();
@@ -5646,7 +5646,7 @@ window.renderAdminUserList = function(keyword) {
 
 /* 3. 刪除會員 (改為重新整理名單，而非跳回帳號頁) */
 window.adminDeleteUser = async function(targetEmail) {
-  const ok = await customConfirm(`確定要強制刪除並封鎖 <b>${targetEmail}</b> 嗎？<br>此動作無法復原！`);
+  const ok = await customConfirm(`確定要強制刪除，並封鎖【 <b>${targetEmail}</b> 】嗎？<br>此動作無法復原！`);
   if(!ok) return;
   
   showProgress('刪除帳號中...');
@@ -6381,8 +6381,8 @@ async function doClearData() {
       將清空您的「行程記錄」與「車輛保養/加油資料」<br>
       <span style="color:var(--blue); font-size:12px; font-weight:700;">（但會安全保留您的平台設定與收入目標）</span>
     </div>
-    <div style="font-size:14px; color:var(--red); font-weight:800; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
-      ⚠️ 此動作無法復原，確定繼續？
+    <div style="font-size:14px; color:var(--red); font-weight:700; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
+      ⚠️ 此動作《 無法復原 》，【 確定 】繼續？
     </div>
   `;
   const ok = await customConfirm(msg); 
@@ -6407,11 +6407,11 @@ async function doReset() {
     <div style="font-size:48px; margin-bottom:12px; text-align:center; animation: waveHand 2s infinite;">🚨</div>
     <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">重置所有設定和資料</div>
     <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
-      App 將完全恢復到剛安裝的<span style="color:var(--text-blue); font-weight:800;">初始狀態</span>！<br>
+      App 將完全恢復到剛安裝的<span style="color:var(--text-blue); font-weight:800;"> 初始狀態 </span>！<br>
       所有記錄、車輛、目標與平台設定將全數消滅。
     </div>
-    <div style="font-size:14px; color:var(--red); font-weight:800; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
-      ⚠️ 此動作極度危險且無法復原，確定？
+    <div style="font-size:14px; color:var(--red); font-weight:700; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
+      ⚠️ 此動作極度危險且《 無法復原 》，<br>【 確定 】要重置？
     </div>
   `;
   const ok = await customConfirm(msg); 
