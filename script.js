@@ -1059,17 +1059,18 @@ function renderHome() {
         </div>
       </div>`;
 
-    // 打卡模組 (緊接在標題下方)
-    const isPunched = S.punch && S.punch.date === todayStr();
+    // 👇 打卡模組：動態從紀錄尋找是否有一筆「尚未下線」的紀錄
+    const activePunchRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
+    const isPunched = !!activePunchRec;
     let punchStatusStr = '離線';
-    if (isPunched && S.punch && typeof S.punch.startTime === 'string') {
-      const startParts = S.punch.startTime.split(':');
-      if (startParts.length >= 2) {
-        const startMs = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), parseInt(startParts[0]||0), parseInt(startParts[1]||0)).getTime();
-        const diffMin = Math.floor((Date.now() - startMs) / 60000);
-        punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`;
-      }
+    
+    if (isPunched) {
+      // 利用 timestamp 計算經過的分鐘數，確保跨日也能精準計算
+      const startMs = activePunchRec.timestamp || new Date(`${activePunchRec.date}T${activePunchRec.punchIn}:00`).getTime();
+      const diffMin = Math.floor((Date.now() - startMs) / 60000);
+      punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h${diffMin%60}m)`;
     }
+    
     topHtml += `
       <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
         <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
@@ -1262,55 +1263,62 @@ window.dismissAnnouncement = function(encodedText) {
   }
 }
 
-/* === 打卡功能 === */
+/* === 👇 打卡功能 (即時資料庫寫入版) === */
 function punchIn() {
+  // 檢查是否已有未下線的紀錄
+  const active = S.records.find(r => r.isPunchOnly && r.punchOut === '');
+  if (active) {
+    toast('⚠️ 已經在打卡上線中囉！');
+    return;
+  }
+
   const d = new Date();
-  S.punch = {
-    date: todayStr(),
-    startTime: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-    timestamp: d.getTime()
+  const rec = {
+    id: newId(),
+    date: todayStr(d),
+    time: nowTime(),
+    platformId: '', 
+    isPunchOnly: true,
+    punchIn: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    punchOut: '', // 空字串代表尚未下線
+    hours: 0,
+    timestamp: d.getTime(), // 存下絕對時間，避免跨日算錯
+    orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
   };
-  savePunch();
-  toast('▶ 已上線打卡');
+
+  // 一按上線，立刻存入正式紀錄
+  S.records.push(rec);
+  saveRecords();
+  
+  toast('▶ 已上線打卡 (記錄已建立)');
   renderHome();
 }
 
 async function punchOut() {
-  if (!S.punch) return;
-  const ok = await customConfirm('確定要下線並將工時存入記錄嗎？');
+  // 反向尋找尚未下線的那筆紀錄
+  const activeRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
+  if (!activeRec) return;
+
+  const ok = await customConfirm('確定要下線並結算這筆打卡工時嗎？');
   if (!ok) return;
 
   const now = new Date();
-  // 取得上線時間戳，若沒有則從日期與字串還原
-  const startMs = S.punch.timestamp || new Date(`${S.punch.date}T${S.punch.startTime}:00`).getTime();
+  // 取出原本的上線時間
+  const startMs = activeRec.timestamp || new Date(`${activeRec.date}T${activeRec.punchIn}:00`).getTime();
   const endMs = now.getTime();
   
-  // 計算經過了幾個小時
   let hoursVal = (endMs - startMs) / 3600000;
   if (hoursVal < 0) hoursVal = 0;
 
-  // 建立一筆專屬的「純打卡紀錄」
-  const rec = {
-    id: newId(),
-    date: S.punch.date,
-    time: nowTime(),
-    platformId: '', 
-    isPunchOnly: true,
-    punchIn: S.punch.startTime,
-    punchOut: nowTime(),
-    hours: hoursVal,
-    orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
-  };
+  // 更新那筆未完成紀錄的下線時間與時數
+  activeRec.punchOut = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  activeRec.hours = hoursVal;
 
-  S.records.push(rec);
   saveRecords();
   
-  // 清除打卡狀態
-  S.punch = null;
-  savePunch();
-  
-  toast('⏹ 已下線，工時已記錄');
+  toast('⏹ 已下線，工時已結算');
   renderHome();
+  if (S.tab === 'history') renderHistory();
 }
 /* ══ 2. 首頁 結束 ══════════════════════════════════════════ */
 
@@ -1375,17 +1383,21 @@ function buildRecItem(r) {
   
   // 2. 純打卡紀錄
   if (r.isPunchOnly) {
+    const isOnline = r.punchOut === '';
+    const outTimeStr = isOnline ? '<span style="color:var(--green); font-weight:900;">上線中</span>' : safeText(r.punchOut);
+    const hoursStr = isOnline ? '<span style="color:var(--green); font-size:11px;">進行中</span>' : fmtHours(r.hours);
+
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')">
-        <span style="background:var(--t2); color:#fff; font-size:10px; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.5px;">🕒 上線打卡</span>
+        <span style="background:${isOnline ? 'var(--green)' : 'var(--t2)'}; color:#fff; font-size:10px; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.5px;">🕒 上線打卡</span>
         <div class="h-div" style="margin:0 12px;"></div>
         <span style="font-family:var(--mono); color:var(--t1); font-size:12px; font-weight:700; flex:1; text-align:center; display:flex; align-items:center; justify-content:center;">
           <!-- 👇 灰色系獨立日期標籤 -->
           <span style="padding:2px 6px; background:#e2e8f0; border-radius:6px; font-size:11px; font-weight:800; color:#475569; margin-right:6px;">${dStr}</span> 
-          ${safeText(r.punchIn)} <span style="color:var(--t3);font-size:11px; margin:0 4px;">→</span> ${safeText(r.punchOut)}
+          ${safeText(r.punchIn)} <span style="color:var(--t3);font-size:11px; margin:0 4px;">→</span> ${outTimeStr}
         </span>
         <div class="h-div" style="margin:0 12px;"></div>
-        <span style="font-size:13px; font-weight:800; color:var(--t2); font-family:var(--mono);">${fmtHours(r.hours)}</span>
+        <span style="font-size:13px; font-weight:800; color:var(--t2); font-family:var(--mono);">${hoursStr}</span>
       </div>`;
   }
 
@@ -1929,7 +1941,13 @@ function renderHistRecords(ds) {
 function openDetailOverlay(id) {
   const r = S.records.find(r=>r.id===id); if (!r) return;
   const plat = getPlatform(r.platformId); const total = recTotal(r);
-  const rows = [ ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${safeText(plat.name)}</span>`], ['📆 日期', safeText(r.date)], ['⏱ 打卡', r.punchIn&&r.punchOut?`${safeText(r.punchIn)} → ${safeText(r.punchOut)}`:(r.punchIn?safeText(r.punchIn):'—')], ['🕐 工時', r.hours>0?fmtHours(r.hours):'—'], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'], ['🛣️ 行駛里程', r.mileage>0?`${r.mileage} km`:'—'], ['💰 行程收入',`NT$ ${fmt(r.income)}`], ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'], ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'], ['🤑 小費', r.tips>0?`NT$ ${fmt(r.tips)}`:'—'], ['📝 備註', r.note ? safeTextWithBr(r.note) : '—'] ];
+  
+  // 判斷是否為正在打卡中
+  const isOnline = r.isPunchOnly && r.punchOut === '';
+  const punchDisplay = r.punchIn ? (r.punchOut ? `${safeText(r.punchIn)} → ${safeText(r.punchOut)}` : `${safeText(r.punchIn)} → <span style="color:var(--green); font-weight:800;">上線中</span>`) : '—';
+  const hourDisplay = isOnline ? '<span style="color:var(--green); font-weight:800;">計時中...</span>' : (r.hours>0 ? fmtHours(r.hours) : '—');
+
+  const rows = [ ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${safeText(plat.name)}</span>`], ['📆 日期', safeText(r.date)], ['⏱ 打卡', punchDisplay], ['🕐 工時', hourDisplay], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'], ['🛣️ 行駛里程', r.mileage>0?`${r.mileage} km`:'—'], ['💰 行程收入',`NT$ ${fmt(r.income)}`], ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'], ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'], ['🤑 小費', r.tips>0?`NT$ ${fmt(r.tips)}`:'—'], ['📝 備註', r.note ? safeTextWithBr(r.note) : '—'] ];
   document.getElementById('detail-body').innerHTML = `<div style="text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--border)"><div style="font-size:13px;color:var(--t3);margin-bottom:4px">本筆總收入</div><div style="font-family:var(--mono);font-size:38px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div></div><div style="margin-top:12px">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--t3)">${l}</span><span style="font-size:13px;font-weight:500">${v}</span></div>`).join('')}</div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="closeDetailOverlay();openAddPage(${JSON.stringify(r).replace(/"/g,'&quot;')})" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--acc-d);color:var(--acc);border:1px solid rgba(255,107,53,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">✎ 編輯</button><button onclick="deleteRecord('${safeText(r.id)}')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">🗑 刪除</button></div>`;
   document.getElementById('detail-overlay').classList.add('show');
 }
