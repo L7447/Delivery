@@ -1092,22 +1092,36 @@ function renderHome() {
       } else {
         bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
         bottomHtml += `
-          <div style="background:#ffffff; border-radius:12px; padding:10px; margin-bottom:-4px; border:1px solid #e2e8f0; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-            <div style="font-size:11px; font-weight:800; color:var(--t3); width:100%; text-align:center; margin-bottom:2px;">💡 狀態標籤圖例</div>
-            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#dcfce7; color:#16a34a; border:1px solid #16a34a30;">🔥 今天</span>
-            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#ffedd5; color:#ea580c; border:1px solid #ea580c30;">⚡ 明天</span>
-            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#e0f2fe; color:#0284c7; border:1px solid #0284c730;">🔜 近 3 天</span>
-            <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:900; padding:3px 6px; border-radius:6px; background:#f1f5f9; color:#475569; border:1px solid #47556930;">⏳ 4 天以上</span>
+          <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 12px 10px; margin-bottom: -2px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+            <!-- 頂部四色漸層飾條 -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #16a34a, #ea580c, #0284c7, #475569);"></div>
+            
+            <div style="font-size: 13px; font-weight: 900; color: #334155; margin-bottom: 10px; letter-spacing: 1px;">💡 狀態標籤圖例</div>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; box-shadow: 0 2px 6px rgba(22,163,74,0.15);">
+                <span style="font-size: 13px;">🔥</span> 今天
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #ffedd5; color: #c2410c; border: 1.5px solid #fdba74; box-shadow: 0 2px 6px rgba(234,88,12,0.15);">
+                <span style="font-size: 13px;">⚡</span> 明天
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc; box-shadow: 0 2px 6px rgba(2,132,199,0.15);">
+                <span style="font-size: 13px;">🔜</span> 近 3 天
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 6px rgba(71,85,105,0.15);">
+                <span style="font-size: 13px;">⏳</span> 4 天以上
+              </span>
+            </div>
           </div>`;
 
         activePlatforms.forEach(p => {
           const events = calcNextDates(p.id); 
           if (!events || events.length === 0) return;
           bottomHtml += `
-            <div style="position: relative; overflow: hidden; border: 2px solid ${p.color}; background: ${p.color}10; border-radius: 25px; padding: 42px 10px 12px 10px;">
-              <div style="position: absolute; top: -1px; left: -1px; display:inline-flex; background: ${p.color}10; padding: 0px; border-radius: 30px; border: 4px solid ${p.color};">
-                <div style="background: linear-gradient(180deg, ${p.color}10 0%, transparent 50%, ${p.color}10 100%), ${p.color}95; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 30px; padding: 0px 13px; display: flex; align-items: center; justify-content: center;">
-                  <span style="color: #ffffff; font-size: 18px; font-weight: 900;">${safeText(p.name)}</span>
+            <div style="position: relative; overflow: hidden; border: 3px solid ${p.color}; background: ${p.color}10; border-radius: 25px; padding: 42px 10px 12px 10px;">
+              <div style="position: absolute; top: -2px; left: -2px; display:inline-flex; background: ${p.color}10; padding: 0px; border-radius: 30px; border: 4px solid ${p.color};">
+                <div style="background: linear-gradient(180deg, ${p.color}40 0%, transparent 50%, ${p.color}40 100%), ${p.color}95; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 30px; padding: 0px 13px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #ffffff; font-size: 20px; font-weight: 700; line-height: 30px; letter-spacing: 1px;">${safeText(p.name)}</span>
                 </div>
               </div>
               <div style="display:flex; gap:8px;">
