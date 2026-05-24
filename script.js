@@ -6350,7 +6350,7 @@ function renderRewardForm() {
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div style="background:${bBg}; color:${bColor}; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:flex; align-items:center; gap:4px; border:1px solid ${bColor}40;">
-            <span style="font-size:13px;">${idx === 0 ? '🥉' : idx === 1 ? '🥈' : idx === 2 ? '🥇' : '🏅'}</span> 第 ${idx+1} 階
+            <span style="font-size:13px;">${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅'}</span> 第 ${idx+1} 階
           </div>
           ${tempTiers.length > 1 ? `<button onclick="removeRewardTier(${idx})" style="background:var(--red-d); color:var(--red); border:none; width:26px; height:26px; border-radius:6px; font-size:14px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>` : ''}
         </div>
