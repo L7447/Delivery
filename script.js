@@ -5265,10 +5265,10 @@ function renderAuthContent() {
           <input type="password" class="auth-input" id="auth-pwd" placeholder="請設定密碼">
         </div>
 
-        <div style="font-weight:600; color:#64748b; font-size:11px; margin:-4px 0 16px 4px; line-height:1.5;">
-          <span style="color: #000000;">密碼需至少<span style="color: #ff0000;">12位數</span>，<span style="color: #ff0000;">含大小寫</span>、<span style="color: #ff0000;">數字</span>與<span style="color: #ff0000;">特殊符號</span>。</span><br>
-          推薦使用 <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; font-weight:700;">1Password 生成器</a>。<br>
-          <span style="font-size:13px; font-weight:600; color: #16800c;">（密碼生成後，先儲存起來，避免忘記或不見！）</span>
+        <div style="display:block; font-weight:600; color:#64748b; font-size:11px; margin:-4px 0 16px 4px; line-height:1.8;">
+          <div style="color: #000000;">密碼需至少<span style="color: #ff0000;">12位數</span>，<span style="color: #ff0000;">含大小寫</span>、<span style="color: #ff0000;">數字</span>與<span style="color: #ff0000;">特殊符號</span>。</div>
+          <div style="color: #000000;">推薦使用 <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; font-weight:700;">1Password 生成器</a>。</div>
+          <div style="font-size:12px; font-weight:700; color: #ff6600; border:1.5px solid #2eaf34; border-radius:6px; padding:1px 4px; margin-top:5px; width:275px;">（密碼生成後，先儲存起來，避免忘記或不見！）</div>
         </div>
 
         <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; cursor:pointer;">
@@ -5507,7 +5507,14 @@ async function openAccountStats() {
       <h4 style="font-size:13px; color:var(--hint-color); margin-bottom:8px;">個人資料</h4>
       <div class="set-list" style="margin-bottom:20px;">
         <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${USER.joinDate || '未知'}</span></div>
-        <div class="set-row"><span class="sn">個人總記錄數</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${S.records.length} 筆</span></div>
+        
+        <!-- 👇 修改這裡：排除打卡紀錄，並加入點擊事件與箭頭 -->
+        <div class="set-row" onclick="openRecordStats()">
+          <span class="sn">個人總記錄數</span>
+          <span style="font-family:var(--mono);color:var(--text-blue);font-weight:800; margin-right:4px;">${S.records.filter(r => !r.isPunchOnly).length} 筆</span>
+          <span class="arr">›</span>
+        </div>
+        
         <div class="set-row" onclick="showForcePasswordChange()"><span class="sn" style="color:var(--acc); font-weight:700;">🔑 更改密碼</span><span class="arr">›</span></div>
       </div>
       ${statsHtml}
@@ -5541,6 +5548,91 @@ async function openAccountStats() {
 
     <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
   </div>`;
+}
+
+/* ══ 新增：個人記錄統計 (點擊總記錄數開啟) ══ */
+window.openRecordStats = function() {
+  document.getElementById('sub-title').textContent = '個人記錄統計';
+  
+  // 右上角返回按鈕 (回到帳號資訊)
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回</button>
+  `;
+
+  // 1. 過濾掉純打卡紀錄
+  const validRecs = S.records.filter(r => !r.isPunchOnly);
+  
+  // 2. 準備統計資料結構
+  const platCounts = {}; // 總平台計數
+  const yearStats = {};  // 每年計數與其平台細分
+
+  validRecs.forEach(r => {
+    const pId = r.platformId || 'unknown';
+    const y = (r.date && r.date.substring(0,4)) || '未知';
+    
+    // 總計累加
+    platCounts[pId] = (platCounts[pId] || 0) + 1;
+    
+    // 歷年累加
+    if (!yearStats[y]) yearStats[y] = { total: 0, plats: {} };
+    yearStats[y].total++;
+    yearStats[y].plats[pId] = (yearStats[y].plats[pId] || 0) + 1;
+  });
+
+  const sortedYears = Object.keys(yearStats).sort((a,b) => b.localeCompare(a));
+
+  // 輔助函式：渲染平台清單 (依照數量由大到小排序)
+  const renderPlatRows = (platsObj) => {
+    const sortedPlats = Object.entries(platsObj).sort((a,b) => b[1] - a[1]);
+    if (sortedPlats.length === 0) return '';
+    
+    return sortedPlats.map(([pid, count], idx) => {
+      const pInfo = getPlatform(pid);
+      const isLast = idx === sortedPlats.length - 1;
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:${isLast ? 'none' : '1px dashed var(--border)'};">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="width:12px; height:12px; border-radius:4px; background:${pInfo.color}; box-shadow:0 2px 4px ${pInfo.color}40;"></span>
+            <span style="font-size:14px; font-weight:800; color:var(--t1);">${safeText(pInfo.name)}</span>
+          </div>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--text-blue);">${fmt(count)} <span style="font-size:11px; color:var(--t3);">筆</span></span>
+        </div>
+      `;
+    }).join('');
+  };
+
+  let html = `<div style="padding:16px;">`;
+
+  // 生涯總計卡片
+  html += `
+    <div class="card" style="box-shadow:0 8px 20px rgba(0,0,0,0.03); border:2px solid var(--border); padding-bottom:8px;">
+      <div style="text-align:center; margin-bottom:12px; padding-bottom:12px; border-bottom:2px solid var(--border);">
+        <div style="font-size:13px; color:var(--t3); font-weight:800; margin-bottom:6px; letter-spacing:1px;">🏆 生涯累積總記錄數</div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color:var(--acc); line-height:1;">${fmt(validRecs.length)} <span style="font-size:16px; color:var(--t2);">筆</span></div>
+      </div>
+      ${renderPlatRows(platCounts)}
+    </div>
+  `;
+
+  // 歷年分佈卡片
+  if (sortedYears.length > 0) {
+    html += `<h3 style="font-size:13px; color:var(--hint-color); margin:20px 0 12px 0; font-weight:800; padding-left:4px;">📅 歷年記錄分佈</h3>`;
+    sortedYears.forEach(y => {
+      html += `
+        <div class="card" style="margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:2px solid var(--border); padding-bottom:10px;">
+            <span style="font-size:16px; font-weight:900; color:var(--t1); background:var(--sf2); padding:4px 10px; border-radius:8px;">${y} 年</span>
+            <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:var(--text-cyan);">${fmt(yearStats[y].total)} <span style="font-size:12px; color:var(--t3);">筆</span></span>
+          </div>
+          ${renderPlatRows(yearStats[y].plats)}
+        </div>
+      `;
+    });
+  }
+
+  html += `</div>`;
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
 }
 
 /* =========================================================
