@@ -2501,7 +2501,7 @@ function getRewardsHtml() {
       const textColor = isPassed ? '#fff' : 'var(--t3)';
       const arrowColor = isPassed ? plat.color : 'var(--t3)';
       
-      tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:2px 4px; border-radius:6px; font-size:10px; font-weight:800; font-family:var(--mono); transition:0.3s; letter-spacing:-0.3px;">${t.orders}單 $${t.amount}</span>`;
+      tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:2px 4px; border-radius:6px; font-size:12px; font-weight:800; font-family:var(--mono); transition:0.3s; letter-spacing:0.4px;">${t.orders}<span style="font-size:8px;font-weight:600;">單 $</span>${t.amount}</span>`;
       if (i < sortedTiers.length - 1) tiersHtml += `<span style="color:${arrowColor}; font-size:10px; font-weight:900; margin: 0 -1px;">➔</span>`;
     });
     tiersHtml += `</div>`;
@@ -6324,33 +6324,112 @@ window.addRewardTier = function() {
   renderRewardForm();
 }
 
+// 👇 額外新增：用來移除特定一階獎勵的函式
+window.removeRewardTier = function(idx) {
+  if (tempTiers.length <= 1) {
+    toast('⚠️ 至少需要保留一階獎勵');
+    return;
+  }
+  tempTiers.splice(idx, 1);
+  renderRewardForm();
+}
+
 function renderRewardForm() {
   const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}">${safeText(p.name)}</option>`).join(''); 
   let tiersHtml = '';
+  
+  // 美化每一階的獎勵區塊
   tempTiers.forEach((t, idx) => {
-    tiersHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;background:var(--bg-input);padding:8px;border-radius:8px;">
-      <div class="fg"><label>第 ${idx+1} 階 (單數)</label><input type="number" class="finp" value="${t.orders}" onchange="tempTiers[${idx}].orders=this.value"></div>
-      <div class="fg"><label>獎金 (NT$)</label><input type="number" class="finp" value="${t.amount}" onchange="tempTiers[${idx}].amount=this.value"></div>
-    </div>`;
+    // 依據階級給予不同的徽章顏色 (前三階特殊顏色，後面統一灰藍色)
+    const badgeColors = ['#f59e0b', '#94a3b8', '#d97706'];
+    const bColor = badgeColors[idx] || '#64748b';
+    const bBg = badgeColors[idx] ? badgeColors[idx] + '20' : '#f1f5f9';
+
+    tiersHtml += `
+      <div style="background:#ffffff; border:1.5px solid #cbd5e1; padding:12px; border-radius:12px; margin-bottom:10px; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="background:${bBg}; color:${bColor}; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:flex; align-items:center; gap:4px; border:1px solid ${bColor}40;">
+            <span style="font-size:13px;">${idx === 0 ? '🥉' : idx === 1 ? '🥈' : idx === 2 ? '🥇' : '🏅'}</span> 第 ${idx+1} 階
+          </div>
+          ${tempTiers.length > 1 ? `<button onclick="removeRewardTier(${idx})" style="background:var(--red-d); color:var(--red); border:none; width:26px; height:26px; border-radius:6px; font-size:14px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>` : ''}
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <div class="fg" style="flex:1; margin-bottom:0;">
+            <label style="font-size:10px; color:var(--t3); letter-spacing:0.5px;">📦 滿幾單</label>
+            <div style="position:relative;">
+              <input type="number" class="finp" value="${t.orders}" inputmode="numeric" onchange="tempTiers[${idx}].orders=this.value" style="font-family:var(--mono); font-weight:800; color:var(--text-blue); padding-right:30px;">
+              <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--t3); font-weight:700;">單</span>
+            </div>
+          </div>
+          <div class="fg" style="flex:1; margin-bottom:0;">
+            <label style="font-size:10px; color:var(--t3); letter-spacing:0.5px;">💰 獎金</label>
+            <div style="position:relative;">
+              <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--acc); font-weight:900; font-family:var(--mono);">$</span>
+              <input type="number" class="finp" value="${t.amount}" inputmode="numeric" onchange="tempTiers[${idx}].amount=this.value" style="font-family:var(--mono); font-weight:800; color:var(--acc); padding-left:26px;">
+            </div>
+          </div>
+        </div>
+      </div>`;
   });
 
   document.getElementById('sub-body').innerHTML = `
-    <div class="fg" style="margin-bottom:10px"><label>獎勵名稱</label><input type="text" class="finp" id="rw-name" placeholder="例：週末衝單獎勵"></div>
-    <div class="fg" style="margin-bottom:10px"><label>適用平台</label><select class="fsel" id="rw-plat">${platOpts}</select></div>
-    <div style="display:flex; gap:8px; margin-bottom:10px;">
-      <div class="fg" style="flex:1;"><label>開始日期</label><input type="date" class="finp" id="rw-start" value="${todayStr()}"></div>
-      <div class="fg" style="flex:1;"><label>結束日期</label><input type="date" class="finp" id="rw-end" value="${todayStr()}"></div>
+    <div style="padding:16px;">
+      
+      <!-- 區塊 1：基本資訊 -->
+      <div class="card" style="padding:16px; border:1px solid #bfdbfe; box-shadow:0 4px 12px rgba(59,130,246,0.08);">
+        <div style="font-size:13px; font-weight:800; color:var(--blue); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+          <span style="font-size:16px;">🏷️</span> 獎勵基本設定
+        </div>
+        
+        <div class="fg" style="margin-bottom:12px">
+          <label style="color:var(--t1);">獎勵名稱</label>
+          <input type="text" class="finp" id="rw-name" placeholder="例如：週末衝單獎勵、雨天加碼" style="font-weight:700;">
+        </div>
+        
+        <div class="fg" style="margin-bottom:4px">
+          <label style="color:var(--t1);">適用平台</label>
+          <select class="fsel" id="rw-plat" style="font-weight:800; color:var(--t1);">${platOpts}</select>
+        </div>
+      </div>
+
+      <!-- 區塊 2：日期與循環 -->
+      <div class="card" style="padding:16px; border:1px solid #e9d5ff; box-shadow:0 4px 12px rgba(168,85,247,0.08);">
+        <div style="font-size:13px; font-weight:800; color:#9333ea; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+          <span style="font-size:16px;">⏳</span> 期間與循環規則
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-bottom:14px;">
+          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">開始日期</label><input type="date" class="finp" id="rw-start" value="${todayStr()}" style="font-family:var(--mono); font-weight:700; color:var(--text-blue);"></div>
+          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">結束日期</label><input type="date" class="finp" id="rw-end" value="${todayStr()}" style="font-family:var(--mono); font-weight:700; color:var(--text-red);"></div>
+        </div>
+        
+        <div style="background:#fdf4ff; border:1px solid #f3e8ff; border-radius:12px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <span style="font-size:13px; font-weight:800; color:#7e22ce;">🔄 依週期固定循環</span>
+            <span style="font-size:10px; color:#a855f7; font-weight:600;">開啟後將無視上方日期，每週自動套用</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="rw-recurring"><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <!-- 區塊 3：階距設定 -->
+      <div class="card" style="padding:16px; background:var(--sf2); border:1px solid var(--border);">
+        <div style="font-size:13px; font-weight:800; color:var(--t1); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+          <span style="font-size:16px;">📈</span> 設定達標階距
+        </div>
+        
+        ${tiersHtml}
+        
+        <button onclick="addRewardTier()" style="width:100%; padding:12px; border:2px dashed #94a3b8; background:transparent; color:#475569; border-radius:12px; cursor:pointer; font-weight:800; font-size:13px; margin-top:4px; transition:0.2s;">➕ 再新增一階獎勵</button>
+      </div>
+
+      <button onclick="saveNewReward()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:14px; box-shadow:0 8px 24px rgba(255,107,53,0.35); margin-top:8px;">
+        💾 儲存並發布獎勵
+      </button>
+      
     </div>
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding:10px; background:var(--bg-input); border-radius:8px;">
-      <span style="font-size:13px; font-weight:700; color:var(--t1);">🔄 固定循環 (每週自動套用)</span>
-      <label class="switch"><input type="checkbox" id="rw-recurring"><span class="slider"></span></label>
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="font-size:12px; color:var(--t3); font-weight:700;">設定獎勵階距</label>
-      ${tiersHtml}
-      <button onclick="addRewardTier()" style="width:100%; padding:8px; border:1px dashed var(--acc); background:transparent; color:var(--acc); border-radius:8px; cursor:pointer; font-weight:700; margin-top:4px;">+ 再新增一階獎勵</button>
-    </div>
-    <button onclick="saveNewReward()" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); margin-top:8px;">✅ 儲存獎勵</button>
   `; 
   openOverlay('sub-page'); 
 }
