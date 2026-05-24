@@ -1845,6 +1845,9 @@ function renderHistGroupView(mode) {
 
   // 2. 過濾掉純打卡紀錄，專門用來渲染下方的實體卡片列表
   let displayRecs = rawRecs.filter(r => !r.isPunchOnly);
+  
+  // 計算實際要顯示的卡片數量
+  const recCount = displayRecs.length;
 
   let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}" ${S.histFilter===p.id?'selected':''}>${safeText(p.name)}</option>`).join('');
 
@@ -1854,7 +1857,12 @@ function renderHistGroupView(mode) {
       <span style="font-family:var(--mono); font-size: 22px; font-weight: 900; color: #006eff; letter-spacing: 0px; text-align: center; flex: 1;">${labelStr}</span>
       <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width: 42px; height: 42px;">▶</button>
     </div>
-    <div style="display:flex; justify-content:flex-end; margin-bottom: 12px;">
+    
+    <!-- 👇 修改這裡：左邊顯示筆數，右邊放下拉選單 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; padding: 0 4px;">
+      <div style="font-size:13px; font-weight:800; color:var(--t2);">
+        共 <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ea580c; margin:0 2px;">${recCount}</span> 筆記錄
+      </div>
       <select class="fsel" style="width:auto; padding:6px 14px; font-size:13px; font-weight:800; border-radius:14px; background: #f1f5f9; border: 1.5px solid #cbd5e1; color: var(--t2);" onchange="changeHistFilter(this.value)">${platOpts}</select>
     </div>
   </div>
