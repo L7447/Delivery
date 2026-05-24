@@ -1398,20 +1398,30 @@ function buildRecItem(r) {
   // 2. 純打卡紀錄
   if (r.isPunchOnly) {
     const isOnline = r.punchOut === '';
-    const outTimeStr = isOnline ? '<span style="color:var(--green); font-weight:900;">上線中</span>' : safeText(r.punchOut);
-    const hoursStr = isOnline ? '<span style="color:var(--green); font-size:11px;">進行中</span>' : fmtHours(r.hours);
+    
+    // 👇 針對「上線中」與「已下線」給予完全不同的色彩配置
+    const tagBg = isOnline ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155';
+    const tagShadow = isOnline ? '0 2px 6px rgba(16,185,129,0.3)' : 'none';
+    const outTimeStr = isOnline ? '<span style="color:#10b981; font-weight:900; background:#ecfdf5; padding:2px 6px; border-radius:6px; border:1px solid #a7f3d0;">上線中</span>' : safeText(r.punchOut);
+    const hoursStr = isOnline ? '<span style="color:#10b981; font-size:12px; font-weight:900;">進行中</span>' : fmtHours(r.hours);
+    const cardBorder = isOnline ? 'border: 2px solid #10b981;' : 'border: 1.5px solid #cbd5e1;';
+    const timeColor = isOnline ? '#0f172a' : '#475569';
 
     return `
-      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')">
-        <span style="background:${isOnline ? 'var(--green)' : 'var(--t2)'}; color:#fff; font-size:10px; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.5px;">🕒 上線打卡</span>
-        <div class="h-div" style="margin:0 12px;"></div>
-        <span style="font-family:var(--mono); color:var(--t1); font-size:12px; font-weight:700; flex:1; text-align:center; display:flex; align-items:center; justify-content:center;">
-          <!-- 👇 灰色系獨立日期標籤 -->
-          <span style="padding:2px 6px; background:#e2e8f0; border-radius:6px; font-size:11px; font-weight:800; color:#475569; margin-right:6px;">${dStr}</span> 
-          ${safeText(r.punchIn)} <span style="color:var(--t3);font-size:11px; margin:0 4px;">→</span> ${outTimeStr}
-        </span>
-        <div class="h-div" style="margin:0 12px;"></div>
-        <span style="font-size:13px; font-weight:800; color:var(--t2); font-family:var(--mono);">${hoursStr}</span>
+      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 8px 10px; margin-bottom: 5px;">
+        <span style="background:${tagBg}; box-shadow:${tagShadow}; color:#fff; font-size:13px; padding:4px 6px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:66px; height:30px; align-content:center;">🕒 打卡</span>
+        
+        <div class="h-div" style="margin:0 10px; height: 24px;"></div>
+        
+        <div style="font-family:var(--mono); font-size:14px; font-weight:800; color:${timeColor}; flex:1; display:flex; align-items:center; justify-content:center; gap:6px;">
+          <!-- 獨立日期標籤 -->
+          <span style="padding:3px 7px; background:#f1f5f9; border-radius:6px; font-size:11px; font-weight:800; color: #546174; border:1.5px solid #18acbd; margin-right:3px;">${dStr}</span> 
+          ${safeText(r.punchIn)} <span style="color: #ff8c00; font-size:17px; font-weight:800;">→</span> ${outTimeStr}
+        </div>
+        
+        <div class="h-div" style="margin:0 10px; height: 24px;"></div>
+        
+        <span style="font-size:14px; font-weight:900; color:var(--text-blue); font-family:var(--mono); flex-shrink:0; min-width: 45px; text-align:right;">${hoursStr}</span>
       </div>`;
   }
 
@@ -6248,7 +6258,34 @@ function saveNewReward() {
 }
 
 function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
-function doRestore() { const fi = document.getElementById('restore-file'); fi.onchange = async () => { const file = fi.files[0]; if(!file) return; try { const text = await file.text(); const data = JSON.parse(text); const ok = await customConfirm('確定用此備份<strong>覆蓋</strong>現有資料？'); if (!ok) return; if (data.records) { S.records=data.records; saveRecords(); } if (data.platforms) { S.platforms=data.platforms; savePlatforms(); } if (data.settings) { S.settings=data.settings; saveSettings(); } if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } toast('✅ 還原成功'); renderSettings(); renderHome(); } catch { toast('❌ 檔案格式錯誤'); } fi.value=''; }; fi.click(); }
+function doRestore() { 
+  const fi = document.getElementById('restore-file'); 
+  fi.onchange = async () => { 
+    const file = fi.files[0]; 
+    if(!file) return; 
+    try { 
+      const text = await file.text(); 
+      const data = JSON.parse(text); 
+      // 👇 將檔案名稱安全地顯示在確認視窗中
+      const ok = await customConfirm(`確定使用「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><strong>覆蓋</strong>現有資料？`); 
+      if (!ok) return; 
+      
+      if (data.records) { S.records=data.records; saveRecords(); } 
+      if (data.platforms) { S.platforms=data.platforms; savePlatforms(); } 
+      if (data.settings) { S.settings=data.settings; saveSettings(); } 
+      if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } 
+      if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } 
+      
+      toast('✅ 還原成功'); 
+      renderSettings(); 
+      renderHome(); 
+    } catch { 
+      toast('❌ 檔案格式錯誤'); 
+    } 
+    fi.value=''; 
+  }; 
+  fi.click(); 
+}
 /* ══ 匯出 Excel：彈出年份選擇 ══ */
 function openExportModal() {
   document.getElementById('sub-title').textContent = '匯出 Excel';
