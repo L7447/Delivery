@@ -2421,14 +2421,19 @@ function renderReport() {
 function getRewardsHtml() {
   if (!S.rewardSubTab) S.rewardSubTab = 'current';
 
+  // 👇 判斷目前選中的頁籤，給予專屬的背景色與陰影
+  const isCurrent = S.rewardSubTab === 'current';
+  const slideBgColor = isCurrent ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
+  const slideShadow = isCurrent ? 'rgba(16, 185, 129, 0.4)' : 'rgba(139, 92, 246, 0.4)';
+
   let html = `
     <div class="slide-tabs tabs-2" style="margin-bottom:12px;">
-      <div class="slide-bg" style="transform: translateX(${S.rewardSubTab === 'current' ? '0%' : '100%'}); background:var(--acc);"></div>
-      <button class="slide-btn ${S.rewardSubTab === 'current' ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderHome()">今日進度</button>
-      <button class="slide-btn ${S.rewardSubTab === 'upcoming' ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderHome()">即將到來</button>
+      <div class="slide-bg" style="transform: translateX(${isCurrent ? '0%' : '100%'}); background: ${slideBgColor}; box-shadow: 0 4px 12px ${slideShadow};"></div>
+      <button class="slide-btn ${isCurrent ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderHome()">今日進度</button>
+      <button class="slide-btn ${!isCurrent ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderHome()">即將到來</button>
     </div>
-    <div style="font-size:12px; color:var(--hint-color); margin-bottom:12px; text-align:center; font-weight:700;">
-      ${S.rewardSubTab === 'current' ? '顯示「包含今日」生效中之獎勵進度' : '顯示「下一個獎勵起，至下週日」之即將到來獎勵'}
+    <div style="font-size:13px; color:var(--hint-color); margin-bottom:12px; text-align:center; font-weight:700;">
+      ${isCurrent ? '「今日」生效中之獎勵進度' : '「 下一個獎勵起，至下週日止 」之即將到來獎勵'}
     </div>`;
 
   const today = new Date(); today.setHours(0,0,0,0);
@@ -2518,7 +2523,7 @@ function getRewardsHtml() {
               <span style="background:${plat.color}; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">${safeText(plat.name)}</span>
               <span style="font-size:14px; font-weight:800; color:var(--t1);">${safeText(r.name)}</span>
             </div>
-            <div style="font-size:11px; color:var(--t3); font-family:var(--mono);">📅 ${r.window.start} ~ ${r.window.end}</div>
+            <div style="font-size:13px;color: #30a553;font-family:var(--mono);font-weight:750;">📅 ${r.window.start} <span style="color:#000000;font-weight:900;">~</span> ${r.window.end}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:11px; color:var(--t3); font-weight:700;">目前累積獎金</div>
