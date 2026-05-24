@@ -1160,7 +1160,14 @@ function renderHome() {
       const goals = S.settings.goals || {};
       const weekly = pf(goals.weekly); const monthly = pf(goals.monthly); const yearly = pf(goals.yearly);
       if (weekly > 0 || monthly > 0 || yearly > 0) {
-        bottomHtml += `<div style="display:flex; flex-direction:column; gap:12px;">`; 
+        // 👇 將三大目標包裝進一個大白框，加上標題與陰影
+        bottomHtml += `
+          <div style="background:#ffffff; border-radius:24px; padding:16px 14px; border:2px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.03);">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; padding:0 4px;">
+              <span style="font-size:18px;">🎯</span>
+              <span style="font-size:15px; font-weight:900; color:var(--t1); letter-spacing:0.5px;">收入目標進度</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:12px;">`; 
         
         if (weekly > 0) {
           const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
@@ -1168,24 +1175,25 @@ function renderHome() {
           const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); 
           const wColor = wPct >= 100 ? '#10b981' : '#3b82f6';
           
+          // 內部卡片稍微調整圓角與外框，使其嵌在大框中更好看
           bottomHtml += `
-            <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 2px solid #bfdbfe; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(37,99,235,0.08); position: relative; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <div style="width:32px; height:32px; border-radius:10px; background:#dbeafe; display:flex; align-items:center; justify-content:center; font-size:16px;">🏃</div>
                   <div>
                     <div style="font-size:14px;font-weight:900;color:#1e3a8a;">本週目標</div>
-                    <div style="font-size:11px;color:#60a5fa;font-weight:800;">剩餘 ${7 - wDay} 天</div>
-                  </div>
+                    <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#60a5fa;font-size:17px;"> ${7 - wDay} </span>天</div>
+                  </div> 
                 </div>
                 <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${wColor};">${wPct}<span style="font-size:14px;"> %</span></span>
               </div>
               <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
-                <div style="height:100%; width:${wPct}%; background:${wColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+                <div style="height:100%; width:${wPct}%; background:linear-gradient(90deg, ${wColor}10 0%, ${wColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
-                <span style="font-family:var(--mono); color:#3b82f6;">$ ${fmt(weekTotal)} / ${fmt(weekly)}</span>
-                <span style="color:${wRemain > 0 ? '#64748b' : '#10b981'};">${wRemain>0 ? `還差 $ ${fmt(wRemain)}` : '🎉 已達標！'}</span>
+              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
+                <span style="color:#3b82f6;">$ <span style="color:#000000;font-size:12px;">${fmt(weekTotal)}</span><span style="color:#3b82f6;font-weight:800;font-size:14px;"> / ${fmt(weekly)}</span></span>
+                <span style="color:${wRemain > 0 ? '#64748b' : '#10b981'};">${wRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(wRemain)}</span>` : '🎉 已達標！'}</span>
               </div>
             </div>`;
         }
@@ -1196,23 +1204,23 @@ function renderHome() {
           const mColor = mPct >= 100 ? '#10b981' : '#a855f7';
           
           bottomHtml += `
-            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%); border: 2px solid #e9d5ff; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(168,85,247,0.08); position: relative; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%); border: 1.5px solid #e9d5ff; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <div style="width:32px; height:32px; border-radius:10px; background:#e9d5ff; display:flex; align-items:center; justify-content:center; font-size:16px;">🔥</div>
                   <div>
                     <div style="font-size:14px;font-weight:900;color:#581c87;">本月目標</div>
-                    <div style="font-size:11px;color:#c084fc;font-weight:800;">剩餘 ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} 天</div>
-                  </div>
+                    <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#c084fc;font-size:17px;"> ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} </span>天</div>
+                  </div> 
                 </div>
                 <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${mColor};">${mPct}<span style="font-size:14px;"> %</span></span>
               </div>
               <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
-                <div style="height:100%; width:${mPct}%; background:${mColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+                <div style="height:100%; width:${mPct}%; background:linear-gradient(90deg, ${mColor}10 0%, ${mColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
-                <span style="font-family:var(--mono); color:#a855f7;">$ ${fmt(monthTotal)} / ${fmt(monthly)}</span>
-                <span style="color:${mRemain > 0 ? '#64748b' : '#10b981'};">${mRemain>0 ? `還差 $ ${fmt(mRemain)}` : '🎉 已達標！'}</span>
+              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
+                <span style="color:#a855f7;">$ <span style="color:#000000;font-size:12px;">${fmt(monthTotal)}</span><span style="color:#a855f7;font-weight:800;font-size:14px;"> / ${fmt(monthly)}</span></span>
+                <span style="color:${mRemain > 0 ? '#64748b' : '#10b981'};">${mRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(mRemain)}</span>` : '🎉 已達標！'}</span>
               </div>
             </div>`;
         }
@@ -1223,29 +1231,36 @@ function renderHome() {
           const yColor = yPct >= 100 ? '#10b981' : '#0d9488';
           
           bottomHtml += `
-            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border: 2px solid #99f6e4; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(13,148,136,0.08); position: relative; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border: 1.5px solid #99f6e4; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <div style="width:32px; height:32px; border-radius:10px; background:#ccfbf1; display:flex; align-items:center; justify-content:center; font-size:16px;">👑</div>
                   <div>
                     <div style="font-size:14px;font-weight:900;color:#134e4a;">本年目標</div>
-                    <div style="font-size:11px;color:#2dd4bf;font-weight:800;">剩餘 ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} 天</div>
+                    <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#2dd4bf;font-size:17px;"> ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} </span>天</div>
                   </div>
                 </div>
                 <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${yColor};">${yPct}<span style="font-size:14px;"> %</span></span>
               </div>
               <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
-                <div style="height:100%; width:${yPct}%; background:${yColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+                <div style="height:100%; width:${yPct}%; background:linear-gradient(90deg, ${yColor}10 0%, ${yColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;">
-                <span style="font-family:var(--mono); color:#0d9488;">$ ${fmt(yearTotal)} / ${fmt(yearly)}</span>
-                <span style="color:${yRemain > 0 ? '#64748b' : '#10b981'};">${yRemain>0 ? `還差 $ ${fmt(yRemain)}` : '🎉 已達標！'}</span>
+              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
+                <span style="color:#0d9488;">$ <span style="color:#000000;font-size:12px;">${fmt(yearTotal)}</span><span style="color:#0d9488;font-weight:800;font-size:14px;"> / ${fmt(yearly)}</span></span>
+                <span style="color:${yRemain > 0 ? '#64748b' : '#10b981'};">${yRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(yRemain)}</span>` : '🎉 已達標！'}</span>
               </div>
             </div>`;
         }
-        bottomHtml += `</div>`;
+        bottomHtml += `</div></div>`; // 結束大白框
       } else {
-        bottomHtml += `<div class="empty-tip">請先至「設定」頁，設定目標</div>`;
+        bottomHtml += `
+          <div style="background:#ffffff; border-radius:24px; padding:32px 20px; border:2px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.03); text-align:center;">
+            <div style="font-size:32px; margin-bottom:12px;">🎯</div>
+            <div style="font-size:15px; font-weight:800; color:var(--t1); margin-bottom:6px;">尚未設定收入目標</div>
+            <div style="font-size:13px; color:var(--t3); font-weight:600; margin-bottom:16px;">設定目標，能幫助您更專注於跑單進度</div>
+            <button onclick="goPage('settings'); setTimeout(openGoalSettings, 300);" style="background:var(--acc); color:#fff; border:none; border-radius:12px; padding:10px 20px; font-size:14px; font-weight:800; box-shadow:0 4px 12px rgba(255,107,53,0.3); cursor:pointer;">前往設定</button>
+          </div>
+        `;
       }
     } else if (S.homeSubTab === 'reward') {
       // 👇 呼叫取得獎勵的 HTML
