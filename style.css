@@ -325,8 +325,6 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 #confirm-box { background: var(--sf); border-radius: 24px; padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,.15); }
 #confirm-msg { font-size: 16px; font-weight: 700; color: var(--t1); line-height: 1.6; margin-bottom: 24px; text-align: center; }
 
-
-
 /* 其他輔助類 */
 .platform-chip { padding: 8px 14px; border-radius: 20px; border: 2px solid var(--border); background: var(--sf2); color: var(--t2); font-size: 13px; font-weight: 500; cursor: pointer; transition: .15s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
 .platform-chip.on { color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
@@ -434,4 +432,30 @@ input:checked + .slider:before { transform: translateX(20px); }
     transform: perspective(1200px) rotateY(-70deg) translateX(120%); 
     opacity: 0; 
   }
+}
+
+/* ══ 1. 霓虹微光呼吸感 (Neon Glow) ══ */
+.item-chip { 
+  padding: 6px 12px; 
+  border-radius: 12px; 
+  border: 1.5px solid #334155; 
+  background: #1e293b; 
+  color: #94a3b8; 
+  font-size: 13px; 
+  font-weight: 700; 
+  cursor: pointer; 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+  white-space: nowrap; 
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+/* 點擊加入時的動態效果 */
+.item-chip:active { 
+  transform: scale(0.92); 
+}
+/* 被選中/高亮狀態 */
+.item-chip.on { 
+  color: #ec4899; 
+  background: #fdf2f8; 
+  border: 1.5px solid #f472b6; 
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.4), inset 0 0 8px rgba(255,255,255,0.8); 
 }
