@@ -3963,7 +3963,7 @@ function renderVehicleContent() {
         <div style="position:absolute; top:0; left:0; right:0; height:30%; background:linear-gradient(to bottom, rgba(255,255,255,0.15), transparent); pointer-events:none;"></div>
 
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; border-bottom:1px dashed rgba(255,255,255,0.3); padding-bottom:8px; position:relative; z-index:1;">
-          <div style="width:38px; height:38px; background:rgba(255,255,255,0.2); border-radius:6px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(15px); box-shadow:inset 0 1px 2px rgba(255,255,255,0.4);">
+          <div style="width:40px; height:40px; background:rgba(255,255,255,0.2); border-radius:6px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(15px); box-shadow:inset 0 1px 2px rgba(255,255,255,0.4);">
             <img src="${fuelImgSrc}" style="width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.2));">
           </div>
           <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:1px;">${fuelTitle}</span>
