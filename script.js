@@ -3964,7 +3964,7 @@ function renderVehicleContent() {
 
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; border-bottom:1px dashed rgba(255,255,255,0.3); padding-bottom:8px; position:relative; z-index:1;">
           <div style="width:28px; height:28px; background:rgba(255,255,255,0.2); border-radius:6px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(15px); box-shadow:inset 0 1px 2px rgba(255,255,255,0.4);">
-            <img src="${fuelImgSrc}" style="width:20px; height:20px; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.2));">
+            <img src="${fuelImgSrc}" style="width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.2));">
           </div>
           <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:1px;">${fuelTitle}</span>
         </div>
@@ -4296,7 +4296,7 @@ let totalEVFee = 0;
           // ── 🔧 保養 / 🛠️ 維修紀錄卡片 ──
           const isRepair = r.maintCategory === 'repair';
           const iconSrc = isRepair ? 'Vehicle/ve4.png' : 'Vehicle/ve3.png';
-          const iconSize = isRepair ? '38px' : '28px'; // 💡 維修圖示特別放大
+          const iconSize = isRepair ? '38px' : '38px'; // 💡 維修圖示特別放大
           const rightColor = isRepair ? '#0ea5e9' : '#16a34a';
           const rightBg = isRepair ? '#eff6ff' : '#f0fdf4';
           
