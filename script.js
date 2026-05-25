@@ -7,7 +7,7 @@
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS =[
-  { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一、四趟獎結算。｜每週四發薪。' },
+  { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一及週四趟獎結算。｜每週四發薪。' },
   { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日報酬結算，｜結算後週三寄明細，｜再隔週三發薪。' },
   { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15日及月底報酬結算。｜每月5日及20日發薪。' },
 ];
@@ -28,12 +28,15 @@ function getActiveWageRules() {
 }
 /* === 全域：基本工資標籤產生器 === */
 function getWageBadge(hours, total) {
+  // 如果使用者手動關閉此功能，直接回傳空字串不顯示標籤
+  if (S.settings && S.settings.wageRulesEnabled === false) return '';
+  
   if (hours <= 0 || total <= 0) return '';
   const avg = Math.round(total / hours); // 計算時薪
   const rules = getActiveWageRules();
-  // 自動比對目前時薪落在哪個設定的區間內
+  
   const rule = rules.find(r => avg >= r.min && avg <= r.max);
-  if (!rule) return ''; // 找不到對應規則時防呆
+  if (!rule) return ''; 
   return `<div style="margin-top:6px;"><span style="background:${rule.bg}; color:${rule.color}; font-size:11px; padding:4px 6px; border-radius:5px; font-weight:800; white-space:nowrap; display:inline-block; line-height:1;">${rule.text}</span></div>`;
 }
 /* ══ ✨ 新增：基本工資分析設定 ══ */
@@ -51,76 +54,137 @@ function openWageSettings() {
   const l2 = rules[1].max;
   const l3 = rules[2].max;
 
-  // 產生 4 個不同顏色的背景區塊 (順序：由最高階至最低階)
+  // 檢查是否已手動關閉此功能 (預設為 true 開啟)
+  const isEnabled = S.settings.wageRulesEnabled !== false;
+
   document.getElementById('sub-body').innerHTML = `
-    <div style="background:var(--sf2); padding:16px; border-radius:12px; margin-bottom:16px;">
-      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
-        💡 請設定各階層的「最高時薪界線」，系統會依據此數值自動計算銜接區間。<br>例如：設定 165，則 0~165 元會被判定為嚴重低於基本工資。
-      </div>
-    </div>
-
-    <div style="display:flex; flex-direction:column; gap:12px;">
+    <div style="padding:16px; padding-bottom:32px;">
       
-      <!-- 第 4 階 (綠) -->
-      <div style="background:var(--green-d); border:1.5px solid var(--green); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:14px; font-weight:800; color:var(--green); margin-bottom:4px;">🎉 符合基本工資</div>
-          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 <span id="lbl-l4-min" style="color:var(--green); font-weight:800;">${l3+1}</span> 元 以上</div>
+      <!-- 頂部總開關區塊 -->
+      <div style="background:#ffffff; border-radius:16px; padding:16px; border:2px solid ${isEnabled ? '#10b981' : '#e2e8f0'}; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; box-shadow:0 4px 12px rgba(0,0,0,0.03); transition:0.3s;" id="wage-toggle-box">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:15px; font-weight:900; color:var(--t1);">啟動基本工資分析</span>
+          <span style="font-size:11px; font-weight:700; color:var(--t3);">開啟後，歷史記錄將自動計算時薪標籤</span>
         </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
-          <input type="text" class="finp" value="無限" disabled style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--green); font-weight:800; background:#fff; opacity:0.8;">
-        </div>
+        <label class="switch">
+          <input type="checkbox" id="wage-enabled" ${isEnabled ? 'checked' : ''} onchange="toggleWageUI(this)">
+          <span class="slider"></span>
+        </label>
       </div>
 
-      <!-- 第 3 階 (藍) -->
-      <div style="background:var(--blue-d); border:1.5px solid var(--blue); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:14px; font-weight:800; color:var(--blue); margin-bottom:4px;">🥲 略低於基本工資</div>
-          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 <span id="lbl-l3-min">${l2+1}</span> ~ <span id="lbl-l3-max" style="color:var(--t1); font-weight:800;">${l3}</span> 元</div>
-        </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
-          <input type="number" id="w-l3" class="finp" value="${l3}" oninput="updateWageLabels()" style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--blue); font-weight:800; background:#fff;">
-        </div>
+      <div style="font-size:13px; color:var(--hint-color); line-height:1.6; font-weight:700; margin-bottom:20px; background:var(--blue-d); padding:12px 16px; border-radius:12px; border:1px solid #bfdbfe;">
+        💡 請設定各階層的「最高時薪界線」，系統會依據此數值自動計算銜接區間。
       </div>
 
-      <!-- 第 2 階 (橘) -->
-      <div style="background:var(--acc-d); border:1.5px solid var(--acc); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:14px; font-weight:800; color:var(--acc); margin-bottom:4px;">😭 低於基本工資</div>
-          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 <span id="lbl-l2-min">${l1+1}</span> ~ <span id="lbl-l2-max" style="color:var(--t1); font-weight:800;">${l2}</span> 元</div>
-        </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
-          <input type="number" id="w-l2" class="finp" value="${l2}" oninput="updateWageLabels()" style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--acc); font-weight:800; background:#fff;">
+      <!-- 👇 統一的大白框，受上方總開關控制透明度 -->
+      <div id="wage-rules-container" style="background:#ffffff; border-radius:24px; padding:14px; border:2px solid #e2e8f0; box-shadow:0 8px 20px rgba(0,0,0,0.02); opacity:${isEnabled ? '1' : '0.4'}; pointer-events:${isEnabled ? 'auto' : 'none'}; transition:0.3s;">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          
+          <!-- 第 4 階 (綠) -->
+          <div style="display:flex; border-radius:16px; overflow:hidden; border: 1.5px solid #10b981;">
+            <div style="flex:1; background:#ecfdf5; padding:8px 16px 12px 16px; display:flex; flex-direction:column; justify-content:center;">
+              <div style="margin-bottom:25px;">
+                <span style="background:#10b981; color:#fff; font-size:13px; font-weight:750; padding:4px 10px; border-radius:8px; letter-spacing:0.5px;">🎉 符合基本工資</span>
+              </div>
+              <div style="font-size:12px;color:#059669;font-weight:700;display:flex;align-items:flex-end;gap:6px;"> 時薪
+                <!-- 👇 時薪數字毛玻璃區塊 -->
+                <div style="background:rgba(16,185,129,0.1); backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(40px); padding:4px 10px; border-radius:8px; border:1.5px solid rgba(16,185,129,0.2);">
+                  <span style="font-family:var(--mono); font-size:18px; color:#059669; font-weight:800;"><span id="lbl-l4-min">${l3+1}</span> ~ <span id="lbl-l4-max">${rules[3]?.max === Infinity ? 1000 : rules[3].max}</span></span>
+                </div> 元
+              </div>
+            </div>
+            <div style="width:90px; background:#10b981; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px;">
+              <span style="font-size:10px; color:#ecfdf5; font-weight:700; margin-bottom:4px;">上限</span>
+              <input type="number" id="w-l4" value="${rules[3]?.max === Infinity ? 1000 : rules[3].max}" oninput="updateWageLabels()" style="width:100%; text-align:center; padding:6px; font-size:18px; color:#059669; font-weight:900; background:#fff; border:none; border-radius:8px; outline:none;">
+            </div>
+          </div>
+
+          <!-- 第 3 階 (藍) -->
+          <div style="display:flex; border-radius:16px; overflow:hidden; border: 1.5px solid #3b82f6;">
+            <div style="flex:1; background:#eff6ff; padding:8px 16px 12px 16px; display:flex; flex-direction:column; justify-content:center;">
+              <div style="margin-bottom:25px;">
+                <span style="background:#3b82f6; color:#fff; font-size:13px; font-weight:750; padding:4px 10px; border-radius:8px; letter-spacing:0.5px;">🥲 略低於基本工資</span>
+              </div>
+              <div style="font-size:12px;color:#1d4ed8;font-weight:700;display:flex;align-items:flex-end;gap:6px;"> 時薪
+                <!-- 👇 時薪數字毛玻璃區塊 -->
+                <div style="background:rgba(59,130,246,0.1); backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(40px); padding:4px 10px; border-radius:8px; border:1.5px solid rgba(59,130,246,0.2);">
+                  <span style="font-family:var(--mono); font-size:18px; color:#1d4ed8; font-weight:800;"><span id="lbl-l3-min">${l2+1}</span> ~ <span id="lbl-l3-max">${l3}</span></span>
+                </div> 元
+              </div>
+            </div>
+            <div style="width:90px; background:#3b82f6; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px;">
+              <span style="font-size:10px; color:#eff6ff; font-weight:700; margin-bottom:4px;">上限</span>
+              <input type="number" id="w-l3" value="${l3}" oninput="updateWageLabels()" style="width:100%; text-align:center; padding:6px; font-size:18px; color:#1d4ed8; font-weight:900; background:#fff; border:none; border-radius:8px; outline:none;">
+            </div>
+          </div>
+
+          <!-- 第 2 階 (橘) -->
+          <div style="display:flex; border-radius:16px; overflow:hidden; border: 1.5px solid #f97316;">
+            <div style="flex:1; background:#fff7ed; padding:8px 16px 12px 16px; display:flex; flex-direction:column; justify-content:center;">
+              <div style="margin-bottom:25px;">
+                <span style="background:#f97316; color:#fff; font-size:13px; font-weight:750; padding:4px 10px; border-radius:8px; letter-spacing:0.5px;">😭 低於基本工資</span>
+              </div>
+              <div style="font-size:12px;color:#fa5413;font-weight:700;display:flex;align-items:flex-end;gap:6px;"> 時薪
+                <!-- 👇 時薪數字毛玻璃區塊 -->
+                <div style="background:rgba(249,115,22,0.1); backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(40px); padding:4px 10px; border-radius:8px; border:1.5px solid rgba(249,115,22,0.2);">
+                  <span style="font-family:var(--mono); font-size:18px; color:#fa5413; font-weight:800;"><span id="lbl-l2-min">${l1+1}</span> ~ <span id="lbl-l2-max">${l2}</span></span>
+                </div> 元
+              </div>
+            </div>
+            <div style="width:90px; background:#f97316; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px;">
+              <span style="font-size:10px; color:#fff7ed; font-weight:700; margin-bottom:4px;">上限</span>
+              <input type="number" id="w-l2" value="${l2}" oninput="updateWageLabels()" style="width:100%; text-align:center; padding:6px; font-size:18px; color:#fa5413; font-weight:900; background:#fff; border:none; border-radius:8px; outline:none;">
+            </div>
+          </div>
+
+          <!-- 第 1 階 (紅) -->
+          <div style="display:flex; border-radius:16px; overflow:hidden; border: 1.5px solid #ef4444;">
+            <div style="flex:1; background:#fef2f2; padding:8px 16px 12px 16px; display:flex; flex-direction:column; justify-content:center;">
+              <div style="margin-bottom:25px;">
+                <span style="background:#ef4444; color:#fff; font-size:13px; font-weight:750; padding:4px 10px; border-radius:8px; letter-spacing:0.5px;">🚑 嚴重低於基本工資</span>
+              </div>
+                <div style="font-size:12px;color:#f01717;font-weight:700;display:flex;align-items:flex-end;gap:6px;"> 時薪
+                  <!-- 👇 時薪數字毛玻璃區塊 -->
+                  <div style="background:rgba(239,68,68,0.1); backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(40px); padding:4px 10px; border-radius:8px; border:1.5px solid rgba(239,68,68,0.2);">
+                    <span style="font-family:var(--mono); font-size:18px; color: #f01717; font-weight:800;">0 ~ <span id="lbl-l1">${l1}</span></span>
+                  </div> 元
+              </div>
+            </div>
+            <div style="width:90px; background:#ef4444; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px;">
+              <span style="font-size:10px; color:#fef2f2; font-weight:700; margin-bottom:4px;">上限</span>
+              <input type="number" id="w-l1" value="${l1}" oninput="updateWageLabels()" style="width:100%; text-align:center; padding:6px; font-size:18px; color:#f01717; font-weight:900; background:#fff; border:none; border-radius:8px; outline:none;">
+            </div>
+          </div>
+
         </div>
       </div>
-
-      <!-- 第 1 階 (紅) -->
-      <div style="background:var(--red-d); border:1.5px solid var(--red); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:14px; font-weight:800; color:var(--red); margin-bottom:4px;">🚑 嚴重低於基本工資</div>
-          <div style="font-size:12px; color:var(--t2); font-family:var(--mono); font-weight:600;">時薪 0 ~ <span id="lbl-l1" style="color:var(--t1); font-weight:800;">${l1}</span> 元</div>
-        </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-size:12px; font-weight:700; color:var(--t2);">上限</span>
-          <input type="number" id="w-l1" class="finp" value="${l1}" oninput="updateWageLabels()" style="width:70px; text-align:center; padding:6px; font-size:16px; color:var(--red); font-weight:800; background:#fff;">
-        </div>
-      </div>
-
+      
+      <button onclick="saveWageSettings()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; box-shadow:0 8px 24px rgba(255,107,53,0.3); margin-top:24px;">✅ 儲存工資設定</button>
     </div>
-
-    <button onclick="saveWageSettings()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:24px;">✅ 儲存工資設定</button>
   `;
 
   openOverlay('sub-page');
+}
+// 👇 即時切換開關的視覺效果
+window.toggleWageUI = function(checkbox) {
+  const box = document.getElementById('wage-toggle-box');
+  const container = document.getElementById('wage-rules-container');
+  if (checkbox.checked) {
+    box.style.borderColor = '#10b981';
+    container.style.opacity = '1';
+    container.style.pointerEvents = 'auto';
+  } else {
+    box.style.borderColor = '#e2e8f0';
+    container.style.opacity = '0.4';
+    container.style.pointerEvents = 'none';
+  }
 }
 // 使用者輸入時，即時更新下方的關聯數字預覽
 window.updateWageLabels = function() {
   const l1 = parseInt(document.getElementById('w-l1').value) || 0;
   const l2 = parseInt(document.getElementById('w-l2').value) || 0;
   const l3 = parseInt(document.getElementById('w-l3').value) || 0;
+  const l4 = parseInt(document.getElementById('w-l4').value) || 0;
 
   document.getElementById('lbl-l1').textContent = l1;
   document.getElementById('lbl-l2-min').textContent = l1 + 1;
@@ -128,30 +192,36 @@ window.updateWageLabels = function() {
   document.getElementById('lbl-l3-min').textContent = l2 + 1;
   document.getElementById('lbl-l3-max').textContent = l3;
   document.getElementById('lbl-l4-min').textContent = l3 + 1;
+  document.getElementById('lbl-l4-max').textContent = l4;
 }
-// 儲存設定
+
 function saveWageSettings() {
+  const isEnabled = document.getElementById('wage-enabled').checked;
   const l1 = parseInt(document.getElementById('w-l1').value) || 0;
   const l2 = parseInt(document.getElementById('w-l2').value) || 0;
   const l3 = parseInt(document.getElementById('w-l3').value) || 0;
-  // 防呆：確保數字是遞增的，否則邏輯會壞掉
-  if (l1 >= l2 || l2 >= l3) {
-    toast('⚠️ 設定錯誤：金額必須依序遞增 (第一階 < 第二階 < 第三階)');
+  const l4 = parseInt(document.getElementById('w-l4').value) || 0;
+  
+  if (isEnabled && (l1 >= l2 || l2 >= l3 || l3 >= l4)) {
+    toast('⚠️ 設定錯誤：金額必須依序遞增 (第一階 < 第二階 < 第三階 < 第四階)');
     return;
   }
 
+  // 儲存開關狀態
+  S.settings.wageRulesEnabled = isEnabled;
+
+  // 儲存規則
   S.settings.wageRules = [
-    { max: l1,       min: 0,      text: '🚑 嚴重低於基本工資', color: 'var(--red)',   bg: 'var(--red-d)' },
-    { max: l2,       min: l1 + 1, text: '😭 低於基本工資',     color: 'var(--acc)',   bg: 'var(--acc-d)' },
-    { max: l3,       min: l2 + 1, text: '🥲 略低於基本工資',   color: 'var(--blue)',  bg: 'var(--blue-d)' },
-    { max: Infinity, min: l3 + 1, text: '🎉 符合基本工資',     color: 'var(--green)', bg: 'var(--green-d)' }
+    { max: l1, min: 0,    text: '🚑 嚴重低於基本工資', color: 'var(--red)',   bg: 'var(--red-d)' },
+    { max: l2, min: l1+1, text: '😭 低於基本工資',     color: 'var(--acc)',   bg: 'var(--acc-d)' },
+    { max: l3, min: l2+1, text: '🥲 略低於基本工資',   color: 'var(--blue)',  bg: 'var(--blue-d)' },
+    { max: l4, min: l3+1, text: '🎉 符合基本工資',     color: 'var(--green)', bg: 'var(--green-d)' }
   ];
 
   saveSettings();
   closeOverlay('sub-page');
   toast('✅ 基本工資設定已儲存');
   
-  // 儲存後自動重繪目前所在畫面，讓新設定立即生效
   if (S.tab === 'history') renderHistory();
   if (S.tab === 'home') renderHome();
   if (S.tab === 'report') renderReport();
@@ -299,8 +369,8 @@ const DEFAULT_SETTINGS = {
   goals: { weekly: 0, monthly: 0, yearly: 0 }, 
   rewards:[
     // 內建熊貓預設獎勵 (加入 recurringDays 陣列判斷星期幾)
-    { id: 'fp_m_w', name: '週一至三獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [1,2,3], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
-    { id: 'fp_t_s', name: '週四至六獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [4,5,6], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
+    { id: 'fp_m_w', name: '週一～週三獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [1,2,3], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
+    { id: 'fp_t_s', name: '週四～週六獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [4,5,6], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
     { id: 'fp_sun', name: '週日獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [0], tiers:[{orders:15, amount:75}, {orders:24, amount:150}, {orders:35, amount:350}, {orders:45, amount:500}] }
   ], 
   shopHistory:[],
@@ -2230,9 +2300,16 @@ function calcAddTotal() {
   document.getElementById('add-total-val').textContent = fmt(total); 
 }
 
-// 取得獎勵判斷的起迄日期 (修復星期日檢查漏洞)
+// 取得獎勵判斷的起迄日期與時間
 function getRewardWindow(dStr, r) {
-  if (!r.recurring) return { start: r.startDate, end: r.endDate };
+  if (!r.recurring) {
+    // 若有設定時間，則回傳時分
+    return { 
+      start: r.startDate, end: r.endDate,
+      startTime: r.startTime || '00:00', endTime: r.endTime || '23:59'
+    };
+  }
+  
   const d = new Date(dStr);
   const day = d.getDay();
   const dWeekDay = day === 0 ? 7 : day;
@@ -2243,29 +2320,47 @@ function getRewardWindow(dStr, r) {
       r.recurringDays.forEach(dw => { let w = dw === 0 ? 7 : dw; if(w < minDay) minDay = w; if(w > maxDay) maxDay = w; });
       const startD = new Date(d); startD.setDate(d.getDate() - (dWeekDay - minDay));
       const endD = new Date(d); endD.setDate(d.getDate() + (maxDay - dWeekDay));
-      return { start: todayStr(startD), end: todayStr(endD) };
+      return { start: todayStr(startD), end: todayStr(endD), startTime: '00:00', endTime: '23:59' };
   }
   // 傳統整週循環
   const startD = new Date(d); startD.setDate(d.getDate() - dWeekDay + 1);
   const endD = new Date(startD); endD.setDate(startD.getDate() + 6);
-  return { start: todayStr(startD), end: todayStr(endD) };
+  return { start: todayStr(startD), end: todayStr(endD), startTime: '00:00', endTime: '23:59' };
 }
 
-/* ══ 自動計算獎勵 (單數為0清除、防抖不狂彈 Toast) ══ */
+// 輔助函式：判斷日期+時間是否在範圍內
+function isWithinWindow(testDate, testTime, w) {
+  const tD = testDate;
+  const tT = testTime || '00:00';
+  
+  const wStart = w.start;
+  const wEnd = w.end;
+  const wStartT = w.startTime || '00:00';
+  const wEndT = w.endTime || '23:59';
+  
+  // 組合成 YYYY-MM-DD HH:MM 字串來比對大小最安全
+  const testVal = `${tD} ${tT}`;
+  const startVal = `${wStart} ${wStartT}`;
+  const endVal = `${wEnd} ${wEndT}`;
+  
+  return testVal >= startVal && testVal <= endVal;
+}
+
+/* ══ 自動計算獎勵 (支援精準時間過濾) ══ */
 function calcAutoReward() {
   const platId = S.selPlatformId;
   const dStr = document.getElementById('f-date') ? document.getElementById('f-date').value : todayStr();
+  const tStr = document.getElementById('f-time') ? document.getElementById('f-time').value : nowTime();
   const curOrders = pf(document.getElementById('f-orders') ? document.getElementById('f-orders').value : 0);
   const bonusEl = document.getElementById('f-bonus');
 
   if(!platId || !dStr) return;
 
-  // 當單數小於等於 0 時，清空自動獎勵紀錄並停止計算
   if (curOrders <= 0) {
      if (bonusEl.dataset.lastAuto) {
          bonusEl.value = '';
          delete bonusEl.dataset.lastAuto;
-         delete bonusEl.dataset.achieved; // 清除達標紀錄
+         delete bonusEl.dataset.achieved;
      }
      return;
   }
@@ -2273,17 +2368,19 @@ function calcAutoReward() {
   let totalAutoBonus = 0;
   
   (S.settings.rewards ||[]).forEach(r => {
-    if(r.platformId !== platId) return;
+    if (r.active === false) return;
+    if (r.platformId !== platId) return;
     const rWindow = getRewardWindow(dStr, r);
-    if(!rWindow) return;
+    if (!rWindow) return;
     
-    // 確保目前輸入的這筆單，日期真的落在這個獎勵區間內
-    if (dStr < rWindow.start || dStr > rWindow.end) return;
+    // 確保目前輸入的這筆單，落在這個獎勵的日期與時間區間內
+    if (!isWithinWindow(dStr, tStr, rWindow)) return;
 
     let accum = 0;
     S.records.forEach(rec => {
         if(rec.id === S.editingId || rec.platformId !== platId || rec.isPunchOnly) return;
-        if(rec.date >= rWindow.start && rec.date <= rWindow.end) accum += pf(rec.orders);
+        // 使用精密比對
+        if(isWithinWindow(rec.date, rec.time, rWindow)) accum += pf(rec.orders);
     });
     
     const newTotal = accum + curOrders;
@@ -2301,17 +2398,14 @@ function calcAutoReward() {
   });
 
   if (totalAutoBonus > 0) {
-      // 👇 加入防抖判斷：如果這個金額已經被系統記錄過「已達標」，就不再彈出 Toast 也不覆寫！
       const currentAchieved = bonusEl.dataset.achieved;
       if (currentAchieved !== String(totalAutoBonus)) {
-          // 只有當尚未紀錄此階段，或者是完全空白時才覆寫
           bonusEl.value = totalAutoBonus;
           bonusEl.dataset.lastAuto = totalAutoBonus; 
-          bonusEl.dataset.achieved = totalAutoBonus; // 📝 記住這次已經達標的金額
+          bonusEl.dataset.achieved = totalAutoBonus; 
           toast(`🎁 達標！自動帶入獎金差額 $${totalAutoBonus}`);
       }
   } else {
-      // 如果退階 (譬如把單數改小)，則清除達標紀錄
       delete bonusEl.dataset.achieved;
   }
 }
@@ -2447,6 +2541,7 @@ function getRewardsHtml() {
   let activeRewards = [];
 
   (S.settings.rewards ||[]).forEach(r => {
+    if (r.active === false) return; // 👈 新增：忽略已停用的獎勵
     let windowsToCheck =[];
     if (r.recurring) {
         windowsToCheck.push(getRewardWindow(todayStr(currentMon), r));
@@ -4597,8 +4692,6 @@ function confirmAddVehRec() {
   });
 }
 
-async function deleteVehRecFromEdit() { const ok = await customConfirm('確定刪除此記錄嗎？<br><strong>此動作無法復原。</strong>'); if(!ok) return; S.vehicleRecs = S.vehicleRecs.filter(r => r.id !== editingVehRecId); saveVehicleRecs(); closeOverlay('veh-rec-add-page'); toast('✅ 記錄已刪除'); renderVehicles(); }
-
 /* ══ 替換：新增車輛彈窗與左右滑動圖示選擇 ══ */
 function openAddVehicle() {
   S.newVehIcon = 1; 
@@ -5072,39 +5165,77 @@ function renderSettings() {
   document.getElementById('settings-content').innerHTML = html;
 }
 
-/* ✨ 新增：提醒設定彈窗 */
+/* ✨ 重新設計：每日記錄提醒彈窗 */
 function openReminderSettings() {
   document.getElementById('sub-title').textContent = '每日記錄提醒';
   document.getElementById('sub-top-right').innerHTML = '';
   const r = S.settings.reminder || { enabled: false, time: '22:00' };
 
   document.getElementById('sub-body').innerHTML = `
-    <div style="background:var(--sf2); padding:16px; border-radius:12px; margin-bottom:20px;">
-      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
-        💡 設定提醒時間，系統將在指定時間發送通知，提醒您記錄今天的收入與工時。
+    <div style="padding:16px; padding-bottom:32px;">
+      
+      <!-- 頂部大型時鐘視覺 -->
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg-input); border-radius:24px; padding:32px 16px; margin-bottom:24px; border:2px dashed #cbd5e1; position:relative;">
+        <div style="font-size:48px; margin-bottom:12px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.1));">⏰</div>
+        <div style="font-size:16px; font-weight:900; color:var(--t1); margin-bottom:14px;">不要錯過任何一筆收入！</div>
+        <div style="font-size:12px; color:var(--text-blue); font-weight:600; text-align:center; line-height:1.6; max-width:300px;">
+          設定專屬的提醒時間，系統會自動發送推播與音效通知，提醒您結算今天的辛勞。
+        </div>
       </div>
-    </div>
-    
-    <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-size:14px; font-weight:700; color:var(--t1);">🔔 開啟每日提醒</span>
-        <label class="switch">
-          <input type="checkbox" id="rem-enabled" ${r.enabled ? 'checked' : ''} onchange="requestNotificationPermission(this)">
-          <span class="slider"></span>
-        </label>
+
+      <!-- 控制面板 -->
+      <div style="background:#ffffff; border:2px solid ${r.enabled ? '#10b981' : '#e2e8f0'}; border-radius:20px; padding:20px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.03); transition:0.3s;" id="rem-panel-box">
+        
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:10px; height:10px; border-radius:50%; background:${r.enabled ? '#10b981' : '#94a3b8'}; box-shadow:0 0 8px ${r.enabled ? '#10b981' : 'transparent'}; transition:0.3s;" id="rem-status-dot"></div>
+            <span style="font-size:16px; font-weight:900; color:var(--t1);">🔔 開啟每日推播提醒</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="rem-enabled" ${r.enabled ? 'checked' : ''} onchange="toggleReminderUI(this)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div style="border-top:1px dashed var(--border); margin-bottom:16px;"></div>
+        
+        <div style="display:flex; flex-direction:column; gap:8px; opacity:${r.enabled ? '1' : '0.4'}; pointer-events:${r.enabled ? 'auto' : 'none'}; transition:0.3s;" id="rem-time-group">
+          <label style="font-size:12px; font-weight:800; color:var(--t2); letter-spacing:0.5px;">選擇推播發送時間</label>
+          <div style="position:relative;">
+            <input type="time" id="rem-time" value="${r.time}" style="width:350px; padding:14px 16px; background:var(--sf2); border:1.5px solid var(--border); border-radius:12px; font-family:var(--mono); font-size:22px; font-weight:900; color:#2563eb; outline:none; text-align:center; transition:0.2s;">
+          </div>
+        </div>
+        
       </div>
       
-      <div style="border-top:1px dashed var(--border);"></div>
-      
-      <div class="fg">
-        <label style="font-weight:700; color:var(--t1);">⏰ 提醒時間</label>
-        <input type="time" class="finp" id="rem-time" value="${r.time}" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
-      </div>
+      <button onclick="saveReminderSettings()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; box-shadow:0 8px 24px rgba(255,107,53,0.3); margin-top:24px;">
+        💾 儲存提醒設定
+      </button>
     </div>
-    
-    <button onclick="saveReminderSettings()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 儲存提醒設定</button>
   `;
   openOverlay('sub-page');
+}
+
+// 👇 處理切換開關時的即時視覺連動 (邊框變色、區塊淡化)
+window.toggleReminderUI = function(checkbox) {
+  const panel = document.getElementById('rem-panel-box');
+  const dot = document.getElementById('rem-status-dot');
+  const group = document.getElementById('rem-time-group');
+  
+  if (checkbox.checked) {
+    panel.style.borderColor = '#10b981';
+    dot.style.background = '#10b981';
+    dot.style.boxShadow = '0 0 8px #10b981';
+    group.style.opacity = '1';
+    group.style.pointerEvents = 'auto';
+    requestNotificationPermission(checkbox); // 觸發權限要求
+  } else {
+    panel.style.borderColor = '#e2e8f0';
+    dot.style.background = '#94a3b8';
+    dot.style.boxShadow = 'none';
+    group.style.opacity = '0.4';
+    group.style.pointerEvents = 'none';
+  }
 }
 
 // 請求瀏覽器通知權限
@@ -6123,50 +6254,6 @@ function applyBackground() {
   document.body.style.boxShadow = 'none';
 }
 
-/* ══ 補齊：進階獎勵項目設定彈窗 ══ */
-function openRewardSettings() {
-  document.getElementById('sub-title').textContent = '獎勵項目設定';
-
-    // 👈 將「新增」按鈕注入至右上角
-  document.getElementById('sub-top-right').innerHTML = `<button onclick="openAddReward()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">＋ 新增</button>`;
-
-  let html = `<div class="set-list" style="margin-bottom:16px;">`;
-  
-  if (!S.settings.rewards || S.settings.rewards.length === 0) {
-    html += `<div style="padding:16px; text-align:center; color:var(--t3); font-size:13px;">目前無設定任何獎勵</div>`;
-  } else {
-    S.settings.rewards.forEach((r, i) => {
-      // 組合階距顯示字串
-      let tiersStr = (r.tiers ||[]).map(t => `滿${t.orders}單 $${t.amount}`).join('｜');
-      let dateStr = r.recurring ? '🔄 每週固定循環' : `📅 ${r.startDate} ~ ${r.endDate}`;
-      
-      html += `
-        <div class="set-row" style="align-items:flex-start;">
-          <span class="sn" style="flex:1;">
-            <div style="font-weight:700; color:var(--t1); margin-bottom:4px;">${r.name}</div>
-            <div class="sn-sub" style="color:var(--acc); font-weight:600; margin-bottom:2px;">${getPlatform(r.platformId).name}</div>
-            <div class="sn-sub" style="font-size:10px;">${dateStr}</div>
-            <div class="sn-sub" style="font-size:11px; margin-top:4px; color:var(--text-blue); font-family:var(--mono);">${tiersStr}</div>
-          </span>
-          <button onclick="event.stopPropagation(); deleteReward(${i});" class="del-btn" style="margin-top:4px;">✕</button>
-        </div>`;
-    });
-  }
-  html += `</div>`;
-  
-  document.getElementById('sub-body').innerHTML = html;
-  openOverlay('sub-page');
-}
-
-async function deleteReward(i) { 
-  const ok = await customConfirm(`確定刪除「${S.settings.rewards[i]?.name}」？`); 
-  if (!ok) return; 
-  S.settings.rewards.splice(i, 1); 
-  saveSettings(); 
-  openRewardSettings(); // 重新渲染彈窗內的清單
-  toast('✅ 獎勵已刪除'); 
-}
-
 /* ══ 全新美化版：平台列表與規則設定 ══ */
 function openPlatformList() {
   document.getElementById('sub-title').textContent = '平台列表與規則';
@@ -6248,51 +6335,93 @@ window.togglePlatform = function(id, isChecked) {
   }
 }
 
+/* ══ 收入目標設定 (精美卡片化設計) ══ */
 function openGoalSettings() { 
   document.getElementById('sub-title').textContent = '收入目標設定'; 
   document.getElementById('sub-top-right').innerHTML = '';
   document.getElementById('sub-add-btn')?.style.setProperty('display', 'none'); 
   const g = S.settings.goals || {}; 
   
-  // 檢查是否為 0，若是則輸出空字串，透過 placeholder 提示，移除預設 0 的困擾
   const wVal = g.weekly > 0 ? g.weekly : '';
   const mVal = g.monthly > 0 ? g.monthly : '';
   const yVal = g.yearly > 0 ? g.yearly : '';
 
-  // 美化版面配置
   document.getElementById('sub-body').innerHTML = `
-    <div style="background:var(--sf2); padding:16px; border-radius:12px; margin-bottom:20px;">
-      <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
-        💡 設定您的外送收入目標。<br>設定後即可在首頁「目標進度」追蹤您的達標狀況與剩餘天數！
-      </div>
-    </div>
-    
-    <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
-      <div class="fg">
-        <label style="font-weight:700; color:var(--t1);">📊 週目標 (NT$)</label>
-        <input type="number" class="finp" id="g-weekly" value="${wVal}" placeholder="請輸入本週目標金額" inputmode="decimal" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
+    <div style="padding:16px; padding-bottom:32px;">
+      <div style="font-size:13px; color:var(--hint-color); line-height:1.6; font-weight:700; margin-bottom:20px; background:var(--blue-d); padding:12px 16px; border-radius:12px; border:1px solid #bfdbfe;">
+        💡 設定您的外送收入目標。<br>設定後即可在首頁的「目標進度」頁籤追蹤您的達標狀況與剩餘天數！
       </div>
       
-      <div style="border-top:1px dashed var(--border);"></div>
+      <div style="background:#ffffff; border-radius:24px; padding:16px 14px; border:2px solid #e2e8f0;">
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          
+          <!-- 週目標卡片 -->
+          <div style="background:linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border:2px solid #bfdbfe; border-radius:20px; padding:16px; box-shadow:0 6px 16px rgba(37,99,235,0.06); position:relative; overflow:hidden;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:40px; height:40px; background:#dbeafe; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:inset 0 -2px 4px rgba(0,0,0,0.05);">🏃</div>
+                <div>
+                  <div style="font-size:15px; font-weight:900; color:#1e3a8a; letter-spacing:0.5px;">本週目標</div>
+                  <div style="font-size:11px; font-family:var(--mono); color:#3b82f6; font-weight:700;">Weekly Goal</div>
+                </div>
+              </div>
+            </div>
+            <div style="position:relative;">
+              <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:16px; font-weight:900; color:#2563eb; font-family:var(--mono);">NT$</span>
+              <input type="number" id="g-weekly" value="${wVal}" placeholder="請輸入金額" inputmode="decimal" style="width:100%; padding:14px 16px 14px 60px; background:#ffffff; border:1.5px solid #93c5fd; border-radius:12px; font-family:var(--mono); font-size:20px; font-weight:900; color:#1d4ed8; outline:none; transition:0.2s;">
+            </div>
+          </div>
+          
+          <!-- 月目標卡片 -->
+          <div style="background:linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%); border:2px solid #e9d5ff; border-radius:20px; padding:16px; box-shadow:0 6px 16px rgba(168,85,247,0.06); position:relative; overflow:hidden;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:40px; height:40px; background:#f3e8ff; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:inset 0 -2px 4px rgba(0,0,0,0.05);">🔥</div>
+                <div>
+                  <div style="font-size:15px; font-weight:900; color:#581c87; letter-spacing:0.5px;">本月目標</div>
+                  <div style="font-size:11px; font-family:var(--mono); color:#9333ea; font-weight:700;">Monthly Goal</div>
+                </div>
+              </div>
+            </div>
+            <div style="position:relative;">
+              <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:16px; font-weight:900; color:#9333ea; font-family:var(--mono);">NT$</span>
+              <input type="number" id="g-monthly" value="${mVal}" placeholder="請輸入金額" inputmode="decimal" style="width:100%; padding:14px 16px 14px 60px; background:#ffffff; border:1.5px solid #d8b4fe; border-radius:12px; font-family:var(--mono); font-size:20px; font-weight:900; color:#7e22ce; outline:none; transition:0.2s;">
+            </div>
+          </div>
+
+          <!-- 年目標卡片 -->
+          <div style="background:linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border:2px solid #99f6e4; border-radius:20px; padding:16px; box-shadow:0 6px 16px rgba(13,148,136,0.06); position:relative; overflow:hidden;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:40px; height:40px; background:#ccfbf1; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:inset 0 -2px 4px rgba(0,0,0,0.05);">👑</div>
+                <div>
+                  <div style="font-size:15px; font-weight:900; color:#134e4a; letter-spacing:0.5px;">全年目標</div>
+                  <div style="font-size:11px; font-family:var(--mono); color:#0d9488; font-weight:700;">Yearly Goal</div>
+                </div>
+              </div>
+            </div>
+            <div style="position:relative;">
+              <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:16px; font-weight:900; color:#0d9488; font-family:var(--mono);">NT$</span>
+              <input type="number" id="g-yearly" value="${yVal}" placeholder="請輸入金額" inputmode="decimal" style="width:100%; padding:14px 16px 14px 60px; background:#ffffff; border:1.5px solid #5eead4; border-radius:12px; font-family:var(--mono); font-size:20px; font-weight:900; color:#0f766e; outline:none; transition:0.2s;">
+            </div>
+          </div>
+        </div>
+      </div>
       
-      <div class="fg">
-        <label style="font-weight:700; color:var(--t1);">📈 月目標 (NT$)</label>
-        <input type="number" class="finp" id="g-monthly" value="${mVal}" placeholder="請輸入本月目標金額" inputmode="decimal" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
-      </div>
-
-      <div style="border-top:1px dashed var(--border);"></div>
-
-      <div class="fg">
-        <label style="font-weight:700; color:var(--t1);">👑 年目標 (NT$)</label>
-        <input type="number" class="finp" id="g-yearly" value="${yVal}" placeholder="請輸入本年目標金額" inputmode="decimal" style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--acc);">
-      </div>
+      <button onclick="saveGoals()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; box-shadow:0 8px 24px rgba(255,107,53,0.3); margin-top:24px;">
+        💾 儲存收入目標設定
+      </button>
     </div>
     
-    <button onclick="saveGoals()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 儲存收入目標設定</button>
+    <style>
+      /* 讓聚焦時邊框發光 */
+      #g-weekly:focus { box-shadow: 0 0 0 4px rgba(59,130,246,0.15); border-color: #3b82f6 !important; }
+      #g-monthly:focus { box-shadow: 0 0 0 4px rgba(168,85,247,0.15); border-color: #a855f7 !important; }
+      #g-yearly:focus { box-shadow: 0 0 0 4px rgba(13,148,136,0.15); border-color: #0d9488 !important; }
+    </style>
   `; 
   openOverlay('sub-page'); 
 }
-
 function saveGoals() { 
   S.settings.goals = { 
     weekly: pf(document.getElementById('g-weekly').value), 
@@ -6305,49 +6434,225 @@ function saveGoals() {
   if(S.tab === 'home') renderHome();
   toast('✅ 目標已儲存'); 
 }
-/* ══ 替換：進階獎勵介面與邏輯 ══ */
-let tempTiers =[];
 
-/* ══ 替換：新增進階獎勵項目 ══ */
-function openAddReward() { 
+/* ══ 進階獎勵項目清單與設定 (支援折疊、停用、刪除) ══ */
+let editingRewardId = null;
+let tempTiers = [];
+
+function openRewardSettings() {
+  document.getElementById('sub-title').textContent = '獎勵項目設定';
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="openAddReward()" style="background:var(--acc); color:#fff; border:none; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(255,107,53,0.3);">＋ 新增</button>`;
+
+  let html = `<div style="padding:16px; display:flex; flex-direction:column; gap:12px;">`;
+  
+  if (!S.settings.rewards || S.settings.rewards.length === 0) {
+    html += `<div class="empty-tip">目前無設定任何獎勵</div>`;
+  } else {
+    // 1. 將獎勵依照平台分群
+    const groupedRewards = {};
+    S.settings.rewards.forEach(r => {
+      if (!groupedRewards[r.platformId]) groupedRewards[r.platformId] = [];
+      groupedRewards[r.platformId].push(r);
+    });
+
+    // 2. 針對每個平台繪製一個「可折疊的卡片框」
+    for (let platId in groupedRewards) {
+      const plat = getPlatform(platId);
+      const platColor = plat.color || '#94a3b8';
+      const platName = plat.name || '未知平台';
+      const rList = groupedRewards[platId];
+
+      html += `
+      <div style="background:#ffffff; border-radius:16px; border:2px solid ${platColor}50; box-shadow:0 4px 12px rgba(0,0,0,0.02); overflow:hidden;">
+        
+        <!-- 平台群組頭部 (點擊可展開/收起) -->
+        <div onclick="toggleRewardGroup('${platId}')" style="background:${platColor}15; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="background:${platColor}; color:#fff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:900;">${platName.charAt(0)}</span>
+            <span style="font-size:16px; font-weight:900; color:var(--t1);">${platName}</span>
+            <span style="background:#fff; color:${platColor}; font-size:16px; font-weight:900; padding:4px 12px; border-radius:8px; margin-left:4px;">${rList.length} <span style="font-size:10px; font-weight:500;">組</span></span>
+          </div>
+          <div id="rw-grp-icon-${platId}" style="color:${platColor}; font-weight:900; transition:0.3s; transform:rotate(0deg); font-size:22px;">▼</div>
+        </div>
+
+        <!-- 👇 修改 1：拔除外層 padding，讓折疊時高度能真正歸零，不會露出一截白邊 -->
+        <div id="rw-grp-body-${platId}" style="max-height:0px; overflow:hidden; transition:max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
+          <!-- 將 padding 移到內層容器 -->
+          <div style="display:flex; flex-direction:column; gap:10px; padding:12px;">
+      `;
+
+      // 3. 繪製清單內部卡片
+      rList.forEach(r => {
+        const isSystem = ['fp_m_w', 'fp_t_s', 'fp_sun'].includes(r.id);
+        const isActive = r.active !== false; 
+        
+        let dateStr = r.recurring 
+          ? '🔄 每週自動循環' 
+          : `📅 ${r.startDate.substring(5)} ${r.startTime||'00:00'} ~ ${r.endDate.substring(5)} ${r.endTime||'23:59'}`;
+          
+        let tiersHtml = (r.tiers || []).map(t => `<span style="background:var(--sf2); padding:3px 8px; border-radius:6px; font-size:10px; font-weight:800; font-family:var(--mono); color:var(--t2);">滿${t.orders}單 $${t.amount}</span>`).join('');
+
+        let actionHtml = '';
+        if (isSystem) {
+          actionHtml = `<span style="background:var(--sf2); color:var(--t3); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; border:1px dashed var(--border);">🔒 內建模板不可改</span>`;
+        } else {
+          actionHtml = `
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label class="switch" style="transform: scale(0.8); margin-right:4px;">
+                <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleRewardActive('${r.id}', this.checked)">
+                <span class="slider"></span>
+              </label>
+              <button onclick="openEditReward('${r.id}')" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 2px 4px rgba(37,99,235,0.05); transition:0.2s;">編輯</button>
+              <button onclick="deleteReward('${r.id}')" style="background:#fef2f2; color:#dc2626; border:1px solid #fecdd3; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 2px 4px rgba(220,38,38,0.05); transition:0.2s;">刪除</button>
+            </div>
+          `;
+        }
+
+        html += `
+          <!-- 👇 修改 2：內部卡片邊框套用平台專屬顏色，並加入左側粗色條，提升一體感 -->
+          <div style="border: 2px solid ${isActive ? platColor+'30' : '#e2e8f0'}; border-radius:12px; padding:12px 12px 12px 16px; opacity:${isActive ? '1' : '0.5'}; transition:0.3s; background:${isActive ? '#fff' : '#f8fafc'}; position:relative; overflow:hidden;">
+            
+            <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:${isActive ? platColor : '#cbd5e1'};"></div>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+              <span style="font-size:15px; font-weight:900; color:var(--t1);">${safeText(r.name)}</span>
+              ${!isActive ? `<span style="font-size:10px; background:var(--t3); color:#fff; padding:2px 6px; border-radius:4px; font-weight:800;">已停用</span>` : ''}
+            </div>
+
+            <div style="font-size:11px; color:var(--t2); font-weight:700; margin-bottom:12px; display:inline-block; background:var(--sf2); padding:2px 8px; border-radius:6px;">
+              ${dateStr}
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
+              ${tiersHtml}
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; border-top:1px dashed var(--border); padding-top:10px;">
+              ${actionHtml}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div></div></div>`; // 結束群組內部與外框
+    }
+  }
+  html += `</div>`;
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
+}
+
+/* 控制平台群組折疊 */
+window.toggleRewardGroup = function(platId) {
+  const body = document.getElementById(`rw-grp-body-${platId}`);
+  const icon = document.getElementById(`rw-grp-icon-${platId}`);
+  if (!body || !icon) return;
+
+  if (body.style.maxHeight === '0px') {
+    body.style.maxHeight = '2000px';
+    icon.style.transform = 'rotate(180deg)';
+  } else {
+    body.style.maxHeight = '0px';
+    icon.style.transform = 'rotate(0deg)';
+  }
+}
+
+/* 切換獎勵啟用狀態 */
+window.toggleRewardActive = function(id, isChecked) {
+  const r = S.settings.rewards.find(x => x.id === id);
+  if (r) {
+    r.active = isChecked;
+    saveSettings();
+    openRewardSettings(); // 重新渲染刷新透明度
+    if(S.tab === 'home') renderHome();
+    toast(isChecked ? '✅ 獎勵已啟用' : '⏸️ 獎勵已停用');
+  }
+}
+
+/* 刪除自訂獎勵 */
+window.deleteReward = async function(id) {
+  const r = S.settings.rewards.find(x => x.id === id);
+  if (!r) return;
+  const ok = await customConfirm(`確定要刪除「${r.name}」嗎？<br><span style="color:var(--t3); font-size:12px;">刪除後無法復原</span>`); 
+  if (!ok) return; 
+  
+  S.settings.rewards = S.settings.rewards.filter(x => x.id !== id);
+  saveSettings(); 
+  openRewardSettings(); 
+  if(S.tab === 'home') renderHome();
+  toast('✅ 獎勵已刪除'); 
+}
+
+/* ══ 新增與編輯表單共用邏輯 ══ */
+window.openAddReward = function() { 
+  editingRewardId = null;
   document.getElementById('sub-title').textContent = '新增進階獎勵項目'; 
   
-  // 👈 進入新增表單時，清空右上角按鈕，避免殘留
-  document.getElementById('sub-top-right').innerHTML = ''; 
+  // 👇 注入返回清單按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="openRewardSettings()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回清單</button>
+  `;
   
-  tempTiers =[{orders:0, amount:0}, {orders:0, amount:0}];
+  tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
   renderRewardForm();
+}
+
+window.openEditReward = function(id) {
+  const r = S.settings.rewards.find(x => x.id === id);
+  if(!r) return;
+  editingRewardId = id;
+  document.getElementById('sub-title').textContent = '編輯獎勵項目'; 
+  
+  // 👇 注入返回清單按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="openRewardSettings()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回清單</button>
+  `;
+  
+  // 深拷貝一份階距陣列，避免直接修改到原始資料
+  tempTiers = JSON.parse(JSON.stringify(r.tiers || []));
+  renderRewardForm(r);
+}
+
+// 👇 輔助函式：在重新渲染前，先把畫面上已經輸入的值保存起來，避免清空
+function saveTempFormState() {
+  const currentData = {
+    name: document.getElementById('rw-name')?.value || '',
+    platformId: document.getElementById('rw-plat')?.value || '',
+    startDate: document.getElementById('rw-start')?.value || todayStr(),
+    endDate: document.getElementById('rw-end')?.value || todayStr(),
+    startTime: document.getElementById('rw-start-time')?.value || '00:00',
+    endTime: document.getElementById('rw-end-time')?.value || '23:59',
+    recurring: document.getElementById('rw-recurring')?.checked || false,
+  };
+  return currentData;
 }
 
 window.addRewardTier = function() {
+  const savedState = saveTempFormState();
   tempTiers.push({orders:0, amount:0});
-  renderRewardForm();
+  renderRewardForm(savedState);
 }
 
-// 👇 額外新增：用來移除特定一階獎勵的函式
 window.removeRewardTier = function(idx) {
-  if (tempTiers.length <= 1) {
-    toast('⚠️ 至少需要保留一階獎勵');
-    return;
-  }
+  if (tempTiers.length <= 1) { toast('⚠️ 至少需要保留一階獎勵'); return; }
+  const savedState = saveTempFormState();
   tempTiers.splice(idx, 1);
-  renderRewardForm();
+  renderRewardForm(savedState);
 }
 
-function renderRewardForm() {
-  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}">${safeText(p.name)}</option>`).join(''); 
+function renderRewardForm(data = null) {
+  const pId = data ? data.platformId : (S.platforms.find(p=>p.active)?.id || '');
+  const platOpts = S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}" ${p.id===pId?'selected':''}>${safeText(p.name)}</option>`).join(''); 
   let tiersHtml = '';
   
   // 美化每一階的獎勵區塊
   tempTiers.forEach((t, idx) => {
-    // 依據階級給予不同的徽章顏色 (前三階特殊顏色，後面統一灰藍色)
     const badgeColors = ['#f59e0b', '#94a3b8', '#d97706'];
     const bColor = badgeColors[idx] || '#64748b';
     const bBg = badgeColors[idx] ? badgeColors[idx] + '20' : '#f1f5f9';
 
     tiersHtml += `
       <div style="background:#ffffff; border:1.5px solid #cbd5e1; padding:12px; border-radius:12px; margin-bottom:10px; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
-        
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div style="background:${bBg}; color:${bColor}; font-size:11px; font-weight:900; padding:4px 10px; border-radius:8px; display:flex; align-items:center; gap:4px; border:1px solid ${bColor}40;">
             <span style="font-size:13px;">${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅'}</span> 第 ${idx+1} 階
@@ -6382,35 +6687,38 @@ function renderRewardForm() {
         <div style="font-size:13px; font-weight:800; color:var(--blue); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
           <span style="font-size:16px;">🏷️</span> 獎勵基本設定
         </div>
-        
         <div class="fg" style="margin-bottom:12px">
           <label style="color:var(--t1);">獎勵名稱</label>
-          <input type="text" class="finp" id="rw-name" placeholder="例如：週末衝單獎勵、雨天加碼" style="font-weight:700;">
+          <input type="text" class="finp" id="rw-name" value="${data ? safeText(data.name) : ''}" placeholder="例如：週末衝單獎勵" style="font-weight:700;">
         </div>
-        
         <div class="fg" style="margin-bottom:4px">
           <label style="color:var(--t1);">適用平台</label>
           <select class="fsel" id="rw-plat" style="font-weight:800; color:var(--t1);">${platOpts}</select>
         </div>
       </div>
 
-      <!-- 區塊 2：日期與循環 -->
+      <!-- 區塊 2：日期與時間設定 -->
       <div class="card" style="padding:16px; border:1px solid #e9d5ff; box-shadow:0 4px 12px rgba(168,85,247,0.08);">
         <div style="font-size:13px; font-weight:800; color:#9333ea; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
           <span style="font-size:16px;">⏳</span> 期間與循環規則
         </div>
         
-        <div style="display:flex; gap:10px; margin-bottom:14px;">
-          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">開始日期</label><input type="date" class="finp" id="rw-start" value="${todayStr()}" style="font-family:var(--mono); font-weight:700; color:var(--text-blue);"></div>
-          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">結束日期</label><input type="date" class="finp" id="rw-end" value="${todayStr()}" style="font-family:var(--mono); font-weight:700; color:var(--text-red);"></div>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">開始日期</label><input type="date" class="finp" id="rw-start" value="${data ? (data.startDate||todayStr()) : todayStr()}" style="font-family:var(--mono); font-weight:700; color:var(--text-blue); padding:8px;"></div>
+          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">結束日期</label><input type="date" class="finp" id="rw-end" value="${data ? (data.endDate||todayStr()) : todayStr()}" style="font-family:var(--mono); font-weight:700; color:var(--text-red); padding:8px;"></div>
         </div>
-        
+
+        <div style="display:flex; gap:10px; margin-bottom:14px;">
+          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">開始時間 (選填)</label><input type="time" class="finp" id="rw-start-time" value="${data ? (data.startTime||'00:00') : '00:00'}" style="font-family:var(--mono); font-weight:700; color:var(--text-blue); padding:8px;"></div>
+          <div class="fg" style="flex:1; margin-bottom:0;"><label style="color:var(--t1);">結束時間 (選填)</label><input type="time" class="finp" id="rw-end-time" value="${data ? (data.endTime||'23:59') : '23:59'}" style="font-family:var(--mono); font-weight:700; color:var(--text-red); padding:8px;"></div>
+        </div>
+
         <div style="background:#fdf4ff; border:1px solid #f3e8ff; border-radius:12px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
           <div style="display:flex; flex-direction:column; gap:2px;">
             <span style="font-size:13px; font-weight:800; color:#7e22ce;">🔄 依週期固定循環</span>
-            <span style="font-size:10px; color:#a855f7; font-weight:600;">開啟後將無視上方日期，每週自動套用</span>
+            <span style="font-size:10px; color:#a855f7; font-weight:600;">開啟將自動套用至每週，無視上方日期時間</span>
           </div>
-          <label class="switch"><input type="checkbox" id="rw-recurring"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="rw-recurring" ${data && data.recurring ? 'checked' : ''}><span class="slider"></span></label>
         </div>
       </div>
 
@@ -6419,22 +6727,19 @@ function renderRewardForm() {
         <div style="font-size:13px; font-weight:800; color:var(--t1); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
           <span style="font-size:16px;">📈</span> 設定達標階距
         </div>
-        
         ${tiersHtml}
-        
         <button onclick="addRewardTier()" style="width:100%; padding:12px; border:2px dashed #94a3b8; background:transparent; color:#475569; border-radius:12px; cursor:pointer; font-weight:800; font-size:13px; margin-top:4px; transition:0.2s;">➕ 再新增一階獎勵</button>
       </div>
 
-      <button onclick="saveNewReward()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:14px; box-shadow:0 8px 24px rgba(255,107,53,0.35); margin-top:8px;">
+      <button onclick="submitRewardSave()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:14px; box-shadow:0 8px 24px rgba(255,107,53,0.35); margin-top:8px;">
         💾 儲存並發布獎勵
       </button>
-      
     </div>
   `; 
   openOverlay('sub-page'); 
 }
 
-function saveNewReward() { 
+window.submitRewardSave = function() { 
   const name = document.getElementById('rw-name').value.trim(); 
   if (!name) { toast('請輸入獎勵名稱'); return; } 
   if (!S.settings.rewards) S.settings.rewards=[]; 
@@ -6442,21 +6747,38 @@ function saveNewReward() {
   const tiers = tempTiers.map(t => ({ orders: pf(t.orders), amount: pf(t.amount) })).filter(t => t.orders > 0 && t.amount > 0);
   if(tiers.length === 0) { toast('請至少設定一階有效的獎勵'); return; }
 
-  S.settings.rewards.push({ 
-    id: newId(), name, 
+  const newRewardData = { 
+    id: editingRewardId || newId(), 
+    name, 
     platformId: document.getElementById('rw-plat').value, 
     startDate: document.getElementById('rw-start').value,
     endDate: document.getElementById('rw-end').value,
+    startTime: document.getElementById('rw-start-time').value || '00:00',
+    endTime: document.getElementById('rw-end-time').value || '23:59',
     recurring: document.getElementById('rw-recurring').checked,
-    tiers: tiers
-  }); 
+    tiers: tiers,
+    active: true // 儲存時預設為啟用
+  }; 
+
+  if (editingRewardId) {
+    const idx = S.settings.rewards.findIndex(x => x.id === editingRewardId);
+    if (idx >= 0) {
+      // 保留原本的停用/啟用狀態
+      newRewardData.active = S.settings.rewards[idx].active !== false;
+      S.settings.rewards[idx] = newRewardData;
+    }
+  } else {
+    S.settings.rewards.push(newRewardData); 
+  }
+
   saveSettings(); 
-  closeOverlay('sub-page'); 
-  renderSettings(); 
-  toast('✅ 獎勵已新增'); 
+  openRewardSettings(); // 直接切回清單頁
+  if(S.tab === 'home') renderHome();
+  toast('✅ 獎勵已儲存'); 
 }
 
 function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
+
 function doRestore() { 
   const fi = document.getElementById('restore-file'); 
   fi.onchange = async () => { 
