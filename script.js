@@ -4341,8 +4341,8 @@ async function deleteVehicle(id) {
 }
 
 let editingVehRecId = null; 
-const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '皮帶', '傳動保養', '大保養'];
-const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '鍊條', '煞車油', '煞車來令片', '後輪', '前輪', '其它'];
+const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '傳動皮帶', '傳動保養', '大保養'];
+const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '傳動鍊條', '煞車油', '前煞車皮', '後煞車皮', '後輪', '前輪', '其它'];
 
 /* ══ 動態保養項目全域變數與邏輯 ══ */
 let tempMaintItems = []; // 存放 [{ name: '', amount: '' }]
@@ -4388,8 +4388,27 @@ function calcMaintTotal() {
   if (displayEl) displayEl.textContent = fmt(total);
   return total;
 }
-// 點擊標籤快速加入
-function clickMaintTag(tagName) {
+// 點擊標籤快速加入與切換特效
+function clickMaintTag(tagName, el) {
+  // 如果已經是亮起狀態，再次點擊就取消它
+  if (el.classList.contains('on')) {
+    el.classList.remove('on');
+    // 從輸入框中把這個項目移除
+    const idx = tempMaintItems.findIndex(t => t.name === tagName);
+    if (idx !== -1) {
+      if (tempMaintItems.length === 1) {
+        tempMaintItems[0] = { name: '', amount: '' }; // 如果只剩一行，就清空
+      } else {
+        tempMaintItems.splice(idx, 1);
+      }
+      renderMaintDynamicList();
+    }
+    return;
+  }
+
+  // 👇 如果還沒亮起，就加上 'on' 讓 CSS 特效生效
+  el.classList.add('on');
+
   // 找尋第一個 name 為空的欄位
   const emptyIdx = tempMaintItems.findIndex(t => t.name.trim() === '');
   if (emptyIdx !== -1) {
@@ -4483,7 +4502,8 @@ window.openAddVehRec = function(recordId = null) {
   const tagsContainer = document.getElementById('vm-items-tags');
   if (tagsContainer) {
     tagsContainer.innerHTML = maintList.map(item => 
-      `<div class="item-chip" onclick="clickMaintTag('${item}')">${item}</div>`
+      // 👇 加入 this，這樣函式才知道是哪一個標籤被點擊了
+      `<div class="item-chip" onclick="clickMaintTag('${item}', this)">${item}</div>`
     ).join('');
   }
 
