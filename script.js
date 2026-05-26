@@ -5566,14 +5566,22 @@ async function requestLogin() {
     finishProgress(() => {
       if (data.success) {
         if (data.directLogin) {
+          // 檢查密碼是否過弱
+          const isWeak = !pwdRegex.test(pwd);
+
           // ✅ 舊用戶，密碼正確，直接瞬間登入
-          USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
+          USER = { 
+            email: email, verified: true, loggedIn: true, 
+            joinDate: new Date(data.user.createdAt).toLocaleDateString(), 
+            token: data.token, role: data.user.role, avatar: selectedAvatar,
+            isPasswordWeak: isWeak // 👈 新增：記錄他的密碼是不是太弱
+          };
           saveUser();
           
-          // 👇 修正：只要登入的密碼「不符合最高安全強度」（涵蓋管理員建立的 1234 或其它簡單密碼），就強制要求更改！
-          if (!pwdRegex.test(pwd)) {
-            toast('⚠️ 您的密碼強度過低或為初始密碼，請立即更改！');
-            showForcePasswordChange();
+          // 👇 如果密碼太弱，強制要求更改！
+          if (isWeak) {
+            // 傳入 true，啟用無路可退的強制修改模式
+            showForcePasswordChange(true);
             return;
           }
 
@@ -7297,10 +7305,29 @@ function applyBackground() {
    ========================================================= */
 
 /* --- 1. 更改密碼 (包含 1234 強制更改) --- */
-window.showForcePasswordChange = function() {
-  document.getElementById('sub-title').textContent = '安全設定：更改密碼';
-  document.getElementById('sub-top-right').innerHTML = '';
+window.showForcePasswordChange = function(isForced = false) {
+  document.getElementById('sub-title').textContent = isForced ? '⚠️ 安全要求：請立即更改密碼' : '安全設定：更改密碼';
   
+  const topBarEl = document.querySelector('.overlay-page .top-bar');
+  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  
+  // 👇 真正的強制鎖定機制
+  if (isForced) {
+    document.getElementById('sub-top-right').innerHTML = '';
+    // 隱藏左上角的 X 按鈕
+    if (closeBtnEl) closeBtnEl.style.display = 'none';
+    // 阻擋點擊背景關閉
+    document.getElementById('sub-page').style.pointerEvents = 'auto'; // 確保本體可點
+    document.getElementById('sub-page').dataset.forced = 'true'; // 給個標記
+    
+    // 提示強制狀態
+    toast('⚠️ 您的密碼強度過低或為初始密碼，請立即更改！', 5000);
+  } else {
+    document.getElementById('sub-top-right').innerHTML = '';
+    if (closeBtnEl) closeBtnEl.style.display = ''; // 恢復顯示
+    document.getElementById('sub-page').dataset.forced = 'false';
+  }
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
       
@@ -7355,6 +7382,17 @@ window.submitChangePassword = async function() {
     finishProgress(() => {
       if (data.success) {
         toast('✅ 密碼已成功更改！');
+        
+        // 👇 解除密碼過弱的標記，並重新儲存 USER
+        USER.isPasswordWeak = false;
+        saveUser();
+
+        // 👇 恢復原本隱藏的 X 按鈕
+        const topBarEl = document.querySelector('.overlay-page .top-bar');
+        const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+        if (closeBtnEl) closeBtnEl.style.display = '';
+        document.getElementById('sub-page').dataset.forced = 'false';
+
         document.getElementById('sub-page').style.zIndex = '200';
         closeOverlay('sub-page');
         renderSettings();
@@ -7646,6 +7684,13 @@ async function init() {
   // 👇 新增這行：無論是冷啟動還是重整網頁，立刻向後端報到並更新「最後上線時間」
   if (USER && USER.loggedIn) {
     checkAccountStatus();
+    
+    // 🚨 終極防線：如果他在登入時被判定密碼過弱，卻直接關閉 APP，啟動時直接再次攔截鎖死！
+    if (USER.isPasswordWeak) {
+      setTimeout(() => {
+        showForcePasswordChange(true);
+      }, 800); // 稍微延遲，等畫面載入完畢再彈出，避免被蓋掉
+    }
   }
 
   if (!S.platforms || S.platforms.length === 0) {
@@ -7692,8 +7737,15 @@ window.onSplashFinished = function() {
 /* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-     // 從背景喚醒時，順便在背景檢查一次帳號是否超過 31 天未登入
-     checkAccountStatus();
+     if (USER && USER.loggedIn) {
+       // 從背景喚醒時，順便在背景檢查一次帳號是否超過 31 天未登入
+       checkAccountStatus();
+       
+       // 🚨 終極防線：從背景喚醒時，若密碼依然過弱，再次攔截！
+       if (USER.isPasswordWeak) {
+         setTimeout(() => showForcePasswordChange(true), 100);
+       }
+     }
      
      // 當手機把 APP 從背景叫回來時，延遲 300 毫秒等畫面恢復
      setTimeout(() => {
