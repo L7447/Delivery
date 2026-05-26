@@ -5443,10 +5443,33 @@ function renderAuthContent() {
           <input type="password" class="auth-input" id="auth-pwd" placeholder="請設定密碼">
         </div>
 
-        <div style="display:block; font-weight:600; color:#64748b; font-size:11px; margin:-4px 0 16px 4px; line-height:1.8;">
-          <div style="color: #000000;">密碼需至少<span style="color: #ff0000;">12位數</span>，<span style="color: #ff0000;">含大小寫</span>、<span style="color: #ff0000;">數字</span>與<span style="color: #ff0000;">特殊符號</span>。</div>
-          <div style="color: #000000;">推薦使用 <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; font-weight:700;">1Password 生成器</a>。</div>
-          <div style="font-size:12px; font-weight:700; color: #ff6600; border:1.5px solid #2eaf34; border-radius:6px; padding:1px 4px; margin-top:5px; width:275px;">（密碼生成後，先儲存起來，避免忘記或不見！）</div>
+        <!-- 👇 重新設計：密碼規則與溫馨提示區塊 -->
+        <div style="margin: 8px 0 16px 0; display:flex; flex-direction:column; gap:8px;">
+          
+          <!-- 1. 密碼規則框 (淡紅色系) -->
+          <div style="background:#fef2f2; border:1.5px solid #fecdd3; border-radius:12px; padding:10px 12px;">
+            <div style="display:flex; align-items:center; gap:6px; color:#e11d48; font-weight:900; font-size:13px; margin-bottom:6px;">
+              <span>🛡️</span> 必須符合以下密碼規則
+            </div>
+            <div style="color:#881337; font-size:11px; line-height:1.8; font-weight:700; padding-left:4px;">
+              • 長度至少 <span style="color:#dc2626; font-weight:900;">12 位數</span><br>
+              • 包含 <span style="color:#dc2626; font-weight:900;">大小寫英文</span>、<span style="color:#dc2626; font-weight:900;">數字</span> 與 <span style="color:#dc2626; font-weight:900;">特殊符號</span>
+            </div>
+          </div>
+
+          <!-- 2. 溫馨提示與工具框 (淡橘色系) -->
+          <div style="background:#fff7ed; border:1.5px solid #fed7aa; border-radius:12px; padding:10px 12px;">
+            <div style="display:flex; align-items:center; gap:6px; color:#ea580c; font-weight:900; font-size:13px; margin-bottom:6px;">
+              <span>💡</span> 密碼設定建議
+            </div>
+            <div style="color:#9a3412; font-size:11px; line-height:1.6; font-weight:700; padding-left:4px;">
+              <div>• 推薦使用：<a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:#2563eb; text-decoration:underline;">1Password 密碼生成器</a></div>
+              <div style="margin-top:6px; background:#ffedd5; padding:6px; border-radius:6px; border-left:3px solid #f97316;">
+                <span style="color:#c2410c;">⚠️ 重要提醒：</span>密碼生成後，請務必先 <b>複製並儲存起來</b>，以免遺失無法登入！
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; cursor:pointer;">
@@ -7355,20 +7378,34 @@ window.showForcePasswordChange = function(isForced = false) {
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
       
-      <!-- 👇 全新鮮明高對比配色的密碼規則警告框 -->
-      <div style="background:#fffbeb; border:2px solid #f59e0b; padding:14px; border-radius:16px; margin-bottom:24px; box-shadow:0 6px 16px rgba(245,158,11,0.15);">
-        <div style="display:flex; align-items:center; gap:6px; color:#d97706; font-weight:900; font-size:16px; margin-bottom:12px;">
-          <span style="font-size:22px;">🛡️</span> 必須符合以下密碼規則
-        </div>
-        <div style="color:#451a03; font-size:13px; line-height:2.2; font-weight:700;">
-          1. 長度至少 <span style="background:#fee2e2; color:#dc2626; padding:3px 8px; border-radius:8px; font-family:var(--mono); font-weight:900; border:1px solid #fecdd3;">12 位數</span><br>
-          2. 包含 <span style="background:#e0e7ff; color:#2563eb; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #bfdbfe;">大寫</span> 與 <span style="background:#e0e7ff; color:#2563eb; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #bfdbfe;">小寫</span> 英文字母<br>
-          3. 包含 <span style="background:#dcfce7; color:#16a34a; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #bbf7d0;">數字</span> 與 <span style="background:#f3e8ff; color:#9333ea; padding:3px 8px; border-radius:8px; font-weight:900; border:1px solid #e9d5ff;">特殊符號</span><br>
-          
-          <div style="margin-top:12px; padding-top:12px; border-top:1.5px dashed #fcd34d; font-size:12px; display:flex; align-items:center; gap:6px;">
-            💡 推薦使用：<a href="https://1password.com/zh-tw/password-generator" target="_blank" style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:8px; text-decoration:none; font-weight:900; box-shadow:0 2px 4px rgba(234,88,12,0.3);">1Password 密碼生成器 ➔</a>
+      <!-- 👇 重新設計：密碼規則與溫馨提示區塊 -->
+      <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+        
+        <!-- 1. 密碼規則框 (淡紅色系) -->
+        <div style="background:#fef2f2; border:1.5px solid #fecdd3; border-radius:12px; padding:12px;">
+          <div style="display:flex; align-items:center; gap:6px; color:#e11d48; font-weight:900; font-size:14px; margin-bottom:8px;">
+            <span style="font-size:18px;">🛡️</span> 必須符合以下密碼規則
+          </div>
+          <div style="color:#881337; font-size:12px; line-height:1.8; font-weight:700; padding-left:4px;">
+            • 長度至少 <span style="background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:6px; font-family:var(--mono); font-weight:900; border:1px solid #fca5a5;">12 位數</span><br>
+            • 包含 <span style="background:#e0e7ff; color:#2563eb; padding:2px 6px; border-radius:6px; font-weight:900; border:1px solid #bfdbfe;">大小寫英文</span><br>
+            • 包含 <span style="background:#dcfce7; color:#16a34a; padding:2px 6px; border-radius:6px; font-weight:900; border:1px solid #bbf7d0;">數字</span> 與 <span style="background:#f3e8ff; color:#9333ea; padding:2px 6px; border-radius:6px; font-weight:900; border:1px solid #e9d5ff;">特殊符號</span>
           </div>
         </div>
+
+        <!-- 2. 溫馨提示與工具框 (淡橘色系) -->
+        <div style="background:#fff7ed; border:1.5px solid #fed7aa; border-radius:12px; padding:12px;">
+          <div style="display:flex; align-items:center; gap:6px; color:#ea580c; font-weight:900; font-size:14px; margin-bottom:8px;">
+            <span style="font-size:18px;">💡</span> 密碼設定建議
+          </div>
+          <div style="color:#9a3412; font-size:12px; line-height:1.6; font-weight:700; padding-left:4px;">
+            <div style="margin-bottom:8px;">• 推薦使用：<a href="https://1password.com/zh-tw/password-generator" target="_blank" style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:8px; text-decoration:none; font-weight:900; box-shadow:0 2px 4px rgba(234,88,12,0.3); display:inline-block; margin-left:4px;">1Password 生成器 ➔</a></div>
+            <div style="background:#ffedd5; padding:8px; border-radius:8px; border-left:3px solid #f97316;">
+              <span style="color:#c2410c;">⚠️ 重要提醒：</span>密碼生成後，請務必先 <b>複製並儲存起來</b>，以免遺失無法登入！
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div class="fg" style="margin-bottom:16px;">
