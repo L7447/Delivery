@@ -393,6 +393,7 @@ let tempAuthCode = '';
 
 // 👇 全域權限控制變數 (預設必須登入)
 let GLOBAL_REQUIRE_LOGIN = true; 
+let GLOBAL_ALLOW_REGISTRATION = true; // 👈 新增：控制是否允許註冊
 
 // 👇 獲取雲端權限設定
 async function fetchSystemSettings() {
@@ -400,7 +401,8 @@ async function fetchSystemSettings() {
     const res = await fetch(`${API_BASE_URL}/settings/system`);
     const data = await res.json();
     if (data.success && data.settings) {
-      GLOBAL_REQUIRE_LOGIN = data.settings.requireLoginToAdd !== false; // 確保預設 true
+      GLOBAL_REQUIRE_LOGIN = data.settings.requireLoginToAdd !== false; 
+      GLOBAL_ALLOW_REGISTRATION = data.settings.allowRegistration !== false; // 👈 新增
     }
   } catch(e) { console.log('無法取得系統設定', e); }
 }
@@ -5400,10 +5402,15 @@ function renderAuthContent() {
 
         <button onclick="requestLogin()" class="auth-btn-blue">登入 ➔</button>
         
+        <!-- 👇 動態判斷是否顯示註冊按鈕 -->
+        ${GLOBAL_ALLOW_REGISTRATION ? `
         <div class="auth-switch-text">
           還沒有帳號嗎？ 
           <button class="auth-switch-btn" onclick="window.switchAuthTab('register')">註冊新帳號</button>
-        </div>
+        </div>` : `
+        <div class="auth-switch-text" style="color:var(--red);">
+          ⚠️ 系統目前暫停開放註冊
+        </div>`}
       </div>
     `;
   } else {
@@ -6046,10 +6053,23 @@ function openAdminSystemSettings() {
       </div>
       <div style="border-top:1px dashed var(--border); margin-bottom:16px;"></div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <span style="font-size:15px; font-weight:800; color:var(--t1);">🔒 必須登入才能新增記錄</span>
         <label class="switch">
           <input type="checkbox" id="adm-req-login" ${GLOBAL_REQUIRE_LOGIN ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div style="border-top:1px dashed var(--border); margin-bottom:16px;"></div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:15px; font-weight:800; color:var(--t1);">🌐 開放註冊新帳號</span>
+          <span style="font-size:11px; color:var(--t3); font-weight:600;">關閉後，登入畫面將隱藏「註冊」按鈕</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="adm-allow-reg" ${GLOBAL_ALLOW_REGISTRATION ? 'checked' : ''}>
           <span class="slider"></span>
         </label>
       </div>
@@ -6062,6 +6082,8 @@ function openAdminSystemSettings() {
 /* ✨ 新增：同步系統權限至雲端 */
 async function saveAdminSystemSettings() {
   const reqLogin = document.getElementById('adm-req-login').checked;
+  const allowReg = document.getElementById('adm-allow-reg').checked;
+  
   showProgress('同步設定至伺服器...');
 
   try {
@@ -6070,14 +6092,16 @@ async function saveAdminSystemSettings() {
       headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
       body: JSON.stringify({
         adminEmail: USER.email,
-        requireLoginToAdd: reqLogin
+        requireLoginToAdd: reqLogin,
+        allowRegistration: allowReg // 👈 傳送註冊開關設定
       })
     });
     const data = await res.json();
 
     finishProgress(() => {
       if (data.success) {
-        GLOBAL_REQUIRE_LOGIN = reqLogin; // 同步本地變數
+        GLOBAL_REQUIRE_LOGIN = reqLogin;
+        GLOBAL_ALLOW_REGISTRATION = allowReg; 
         toast('✅ 系統存取權限已更新');
         document.getElementById('sub-page').style.zIndex = '200';
         openAccountStats(); 
