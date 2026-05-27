@@ -9,9 +9,10 @@
   
   <style>
     :root {
-      --bg: #f4f7f9;
-      --text-main: #1e293b;
+      --bg: #f8fafc;
+      --text-main: #0f172a;
       --text-muted: #64748b;
+      --primary: #FF6B35;
       
       /* 對應積木圖片的四種主題色 */
       --c-blue-bg: #eaf3ff; --c-blue-border: #b8dbff; --c-blue-text: #0066cc;
@@ -24,115 +25,188 @@
     body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--bg); color: var(--text-main); overflow-x: hidden; }
 
     /* --- 頂部導覽 --- */
-    header { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); padding: 16px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; position: fixed; top: 0; width: 100%; z-index: 100; }
-    .logo { font-size: 18px; font-weight: 900; color: #334155; display: flex; align-items: center; gap: 10px; }
-    .logo img { width: 36px; height: 36px; border-radius: 10px; }
-    .btn-open { background: #1e293b; color: #fff; text-decoration: none; padding: 8px 20px; border-radius: 99px; font-weight: 700; font-size: 14px; transition: 0.2s; }
-    .btn-open:active { transform: scale(0.95); background: #334155; }
+    header { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 12px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; position: fixed; top: 0; width: 100%; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+    .logo { font-size: 18px; font-weight: 900; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+    .logo img { width: 42px; height: 42px; border-radius: 12px; }
+    .btn-open { background: var(--primary); color: #fff; text-decoration: none; padding: 10px 24px; border-radius: 99px; font-weight: 800; font-size: 15px; transition: 0.2s; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3); }
+    .btn-open:active { transform: scale(0.95); }
 
-    /* --- 頁首介紹 --- */
-    .intro-header { text-align: center; padding: 100px 20px 30px; }
-    .intro-header h1 { font-size: 28px; font-weight: 900; margin-bottom: 12px; }
-    .intro-header p { font-size: 15px; color: var(--text-muted); font-weight: 500; }
-
-    /* --- 四大區塊積木按鈕 (參照 4385 圖片) --- */
-    .grid-blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto 40px; padding: 0 20px; }
+    /* --- 首頁 Hero 區塊 (包含跳動大圓圖) --- */
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 5% 40px;
+      max-width: 1000px;
+      margin: 0 auto;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
     
-    .block-card { border-radius: 16px; border: 2px solid; padding: 20px; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
+    .hero-text { flex: 1; min-width: 300px; text-align: left; }
+    .hero-text h1 { font-size: clamp(32px, 5vw, 46px); font-weight: 900; line-height: 1.3; margin-bottom: 16px; color: var(--text-main); }
+    .hero-text p { font-size: 16px; color: var(--text-muted); margin-bottom: 24px; font-weight: 600; line-height: 1.6; }
+    
+    .hero-image {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      min-width: 300px;
+    }
+    .hero-image img {
+      width: 100%;
+      max-width: 380px;
+      border-radius: 50%;
+      box-shadow: 0 24px 48px rgba(255, 107, 53, 0.2);
+      animation: float 4s ease-in-out infinite;
+      border: 8px solid #ffffff;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+
+    /* --- 四大區塊積木按鈕 --- */
+    .section-header { text-align: center; margin-bottom: 30px; padding: 0 20px; }
+    .section-header h2 { font-size: 24px; font-weight: 900; color: #1e293b; margin-bottom: 8px; }
+    .section-header p { font-size: 14px; color: #64748b; font-weight: 600; }
+
+    .grid-blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto 60px; padding: 0 20px; }
+    
+    .block-card { border-radius: 20px; border: 2.5px solid; padding: 24px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
     .block-card:active { transform: scale(0.96); }
-    .block-card.active { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-5px); }
+    .block-card.active { box-shadow: 0 12px 30px rgba(0,0,0,0.1); transform: translateY(-5px); }
+    /* 點綴小積木圖示 */
+    .block-card::before { content: '🧩'; position: absolute; right: -10px; bottom: -10px; font-size: 80px; opacity: 0.1; transform: rotate(-15deg); pointer-events: none; }
     
-    .b-title { font-size: 20px; font-weight: 900; margin-bottom: 6px; text-align: center; }
-    .b-desc { font-size: 13px; font-weight: 700; text-align: center; opacity: 0.8; margin-bottom: 16px; }
-    .b-tag { background: #fff; padding: 6px 0; text-align: center; border-radius: 8px; font-size: 12px; font-weight: 800; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .b-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; text-align: center; position: relative; z-index: 1; }
+    .b-desc { font-size: 13px; font-weight: 700; text-align: center; opacity: 0.8; margin-bottom: 20px; position: relative; z-index: 1; }
+    .b-tag { background: rgba(255,255,255,0.9); padding: 8px 0; text-align: center; border-radius: 12px; font-size: 12px; font-weight: 800; width: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.03); position: relative; z-index: 1; }
 
-    /* 顏色配置 */
+    /* 積木顏色配置 */
     .c-blue { background: var(--c-blue-bg); border-color: var(--c-blue-border); }
     .c-blue .b-title { color: var(--c-blue-text); }
-    .c-blue .b-tag { color: var(--c-blue-text); }
+    .c-blue .b-tag { color: var(--c-blue-text); border: 1px solid var(--c-blue-border); }
 
     .c-green { background: var(--c-green-bg); border-color: var(--c-green-border); }
     .c-green .b-title { color: var(--c-green-text); }
-    .c-green .b-tag { color: var(--c-green-text); }
+    .c-green .b-tag { color: var(--c-green-text); border: 1px solid var(--c-green-border); }
 
     .c-yellow { background: var(--c-yellow-bg); border-color: var(--c-yellow-border); }
     .c-yellow .b-title { color: var(--c-yellow-text); }
-    .c-yellow .b-tag { color: var(--c-yellow-text); }
+    .c-yellow .b-tag { color: var(--c-yellow-text); border: 1px solid var(--c-yellow-border); }
 
     .c-purple { background: var(--c-purple-bg); border-color: var(--c-purple-border); }
     .c-purple .b-title { color: var(--c-purple-text); }
-    .c-purple .b-tag { color: var(--c-purple-text); }
+    .c-purple .b-tag { color: var(--c-purple-text); border: 1px solid var(--c-purple-border); }
 
-    /* --- 區塊 A：展示區 --- */
-    #display-area { display: none; padding: 20px; text-align: center; max-width: 600px; margin: 0 auto 60px; }
+    /* --- 區塊 A：動態展示區 --- */
+    #display-area { display: none; padding: 40px 20px; text-align: center; background: #ffffff; border-top: 1px solid #e2e8f0; margin-top: 40px; }
+    .display-container { max-width: 600px; margin: 0 auto; }
     
     .da-header { margin-bottom: 24px; }
-    .da-main-title { font-size: 22px; font-weight: 900; color: var(--text-main); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .da-sub-title { font-size: 15px; color: #475569; font-weight: 700; background: #e2e8f0; display: inline-block; padding: 4px 16px; border-radius: 20px; }
+    .da-main-title { font-size: 24px; font-weight: 900; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .da-sub-title { font-size: 15px; color: #334155; font-weight: 800; background: #f1f5f9; display: inline-block; padding: 6px 20px; border-radius: 99px; border: 1.5px solid #e2e8f0; }
 
-    /* 精美手機外框 */
+    /* 👇 修改重點：加寬的精美展示外框與比例 */
     .device-frame { 
       background: #ffffff; 
-      padding: 12px; 
+      padding: 16px; 
       border-radius: 36px; 
-      box-shadow: 0 24px 48px rgba(0,0,0,0.08), inset 0 0 0 4px #e2e8f0; 
-      border: 6px solid #f8fafc;
-      max-width: 320px; 
+      box-shadow: 0 24px 48px rgba(0,0,0,0.1), inset 0 0 0 4px #cbd5e1; 
+      border: 8px solid #f8fafc;
+      max-width: 420px; /* 👈 加寬 */
       margin: 0 auto; 
       cursor: pointer;
       position: relative;
     }
     .device-frame::after {
-      content: '👆 點擊換圖'; position: absolute; right: -20px; bottom: 30px; background: #1e293b; color: #fff; font-size: 11px; font-weight: 800; padding: 6px 12px; border-radius: 12px; transform: rotate(-10deg); box-shadow: 0 4px 10px rgba(0,0,0,0.2); pointer-events: none;
+      content: '👆 點圖切換'; position: absolute; right: -25px; bottom: 40px; background: #1e293b; color: #fff; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 12px 12px 12px 0; transform: rotate(-8deg); box-shadow: 0 8px 16px rgba(0,0,0,0.2); pointer-events: none; z-index: 10;
     }
     
-    .img-container { border-radius: 24px; overflow: hidden; background: #f1f5f9; aspect-ratio: 1 / 2.1; display: flex; align-items: center; justify-content: center; }
-    .img-container img { width: 100%; height: 100%; object-fit: cover; }
+    /* 👇 修改重點：降低高度比例，從原本狹長的 1/2.1 改為 1/1.85，看起來更舒服 */
+    .img-container { 
+      border-radius: 20px; 
+      overflow: hidden; 
+      background: #f1f5f9; 
+      aspect-ratio: 1 / 1.85; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      box-shadow: inset 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .img-container img { width: 100%; height: 100%; object-fit: cover; } /* cover 會自動裁切填滿框框 */
     
     /* 進度點點 */
-    .dots-wrap { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; transition: 0.3s; }
-    .dot.active { background: #3b82f6; width: 24px; }
+    .dots-wrap { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; transition: 0.3s; }
+    .dot.active { background: #3b82f6; width: 28px; }
 
     /* --- 動畫過場 --- */
     .anim-wrap { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    .slide-out-left { transform: translateX(-30px); opacity: 0; }
-    .slide-in-right { transform: translateX(30px); opacity: 0; }
+    .slide-out-left { transform: translateX(-40px); opacity: 0; }
+    .slide-in-right { transform: translateX(40px); opacity: 0; }
     .show-normal { transform: translateX(0); opacity: 1; }
 
     /* 左右滑動提示 */
-    .swipe-hint { font-size: 12px; color: #94a3b8; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
+    .swipe-hint { font-size: 13px; color: #94a3b8; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; background: #f8fafc; padding: 10px; border-radius: 16px; max-width: 300px; margin-left: auto; margin-right: auto; }
+
+    /* 頁尾 */
+    footer { padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 13px; font-weight: 600; background: var(--bg); }
+
+    /* RWD */
+    @media (max-width: 768px) {
+      .hero { flex-direction: column-reverse; text-align: center; padding-top: 100px; gap: 20px; }
+      .hero-text { text-align: center; }
+      .hero-image img { max-width: 280px; }
+    }
   </style>
 </head>
 <body>
 
+  <!-- 導覽列 -->
   <header>
     <div class="logo">
+      <!-- 替換成您的 Icon 路徑 -->
       <img src="icon-192.png" alt="Logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'36\' height=\'36\'><rect width=\'36\' height=\'36\' fill=\'%23e2e8f0\'/></svg>'">
-      功能導覽
+      外送記錄與分析
     </div>
     <a href="index.html" class="btn-open">開啟 APP</a>
   </header>
 
-  <div class="intro-header">
-    <h1>外送記錄與分析</h1>
-    <p>簡單、直覺，專注於記錄與分析您的每一趟行程</p>
+  <!-- 首頁主視覺 (跳動大圓圖) -->
+  <section class="hero">
+    <div class="hero-text">
+      <h1>專為外送員打造的<br><span style="color: var(--primary);">智慧記錄管家</span></h1>
+      <p>精準掌握每一分收入，自動計算時薪與達標進度。<br>支援油耗計算、保養時間軸，讓跑單更有感！</p>
+      <a href="index.html" class="btn-open" style="display:inline-block; font-size: 16px; padding: 14px 32px;">馬上免費使用 🚀</a>
+    </div>
+    <div class="hero-image">
+      <!-- 替換成您的吉祥物圖片 -->
+      <img src="icon-512.png" alt="外送員吉祥物" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23cbd5e1\'/></svg>'">
+    </div>
+  </section>
+
+  <div class="section-header">
+    <h2>功能總覽</h2>
+    <p>點擊下方模組，觀看詳細操作展示</p>
   </div>
 
-  <!-- 四大模組按鈕 -->
+  <!-- 四大模組按鈕 (積木風格) -->
   <div class="grid-blocks">
     <div class="block-card c-blue" onclick="loadMainCategory('home')">
       <div>
-        <div class="b-title">首頁</div>
-        <div class="b-desc">日常操作與追蹤</div>
+        <div class="b-title">首頁模組</div>
+        <div class="b-desc">日常操作與狀態追蹤</div>
       </div>
-      <div class="b-tag">打卡 / 排程 / 目標 / 獎勵</div>
+      <div class="b-tag">打卡 / 日程表 / 目標 / 獎勵</div>
     </div>
     
     <div class="block-card c-green" onclick="loadMainCategory('history')">
       <div>
         <div class="b-title">查看紀錄</div>
-        <div class="b-desc">歷史資料查詢</div>
+        <div class="b-desc">歷史資料精準查詢</div>
       </div>
       <div class="b-tag">全螢幕日曆 / 區間列表</div>
     </div>
@@ -142,7 +216,7 @@
         <div class="b-title">收入分析</div>
         <div class="b-desc">視覺化圖表統計</div>
       </div>
-      <div class="b-tag">各項分析 / TOP 5 榜單</div>
+      <div class="b-tag">佔比分析 / TOP 5 榜單</div>
     </div>
 
     <div class="block-card c-purple" onclick="loadMainCategory('vehicle')">
@@ -150,29 +224,36 @@
         <div class="b-title">車輛管理</div>
         <div class="b-desc">保養與油耗追蹤</div>
       </div>
-      <div class="b-tag">燃料油耗 / 保養維修記錄</div>
+      <div class="b-tag">燃料花費 / 保養維修記錄</div>
     </div>
   </div>
 
-  <!-- 區塊 A：展示區 -->
+  <!-- 區塊 A：動態展示區 -->
   <div id="display-area">
-    <div class="da-header anim-wrap" id="anim-header">
-      <div class="da-main-title" id="da-main-title">分類名稱</div>
-      <div class="da-sub-title" id="da-sub-title">步驟說明</div>
-    </div>
+    <div class="display-container">
+      <div class="da-header anim-wrap" id="anim-header">
+        <div class="da-main-title" id="da-main-title">分類名稱</div>
+        <div class="da-sub-title" id="da-sub-title">步驟說明</div>
+      </div>
 
-    <div class="device-frame" id="device-clicker">
-      <div class="img-container anim-wrap" id="anim-img">
-        <img id="da-img" src="" alt="App Screenshot" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23e2e8f0\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-size=\'14px\' fill=\'%2364748b\'>圖片準備中</text></svg>'">
+      <div class="device-frame" id="device-clicker">
+        <div class="img-container anim-wrap" id="anim-img">
+          <img id="da-img" src="" alt="App Screenshot" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23f8fafc\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-size=\'16px\' font-weight=\'bold\' fill=\'%2394a3b8\'>圖片準備中</text></svg>'">
+        </div>
+      </div>
+
+      <div class="dots-wrap" id="da-dots"></div>
+
+      <div class="swipe-hint">
+        <span>⟵</span> 在圖片上左右滑動可切換大項目 <span>⟶</span>
       </div>
     </div>
-
-    <div class="dots-wrap" id="da-dots"></div>
-
-    <div class="swipe-hint">
-      <span>⟵</span> 在圖片區左右滑動可切換大項目 <span>⟶</span>
-    </div>
   </div>
+
+  <footer>
+    <div style="margin-bottom: 8px;">外送記錄與分析 APP © 2026</div>
+    <div>由 ej/ao3tjpfu8 為外送員專屬開發 🛵</div>
+  </footer>
 
   <script>
     // --- 定義展示資料結構 ---
@@ -192,18 +273,18 @@
           },
           {
             title: '平台日程表',
-            steps: [ { desc: '2-1 平台日程表', img: 'intro/in6.png' } ]
+            steps: [ { desc: '2-1 結算與發薪提醒', img: 'intro/in6.png' } ]
           },
           {
             title: '目標進度',
-            steps: [ { desc: '3-1 目標進度', img: 'intro/in7.png' } ]
+            steps: [ { desc: '3-1 週、月、年達標追蹤', img: 'intro/in7.png' } ]
           },
           {
             title: '獎勵進度',
             steps: [
-              { desc: '4-1 達標狀態', img: 'intro/in8.png' },
+              { desc: '4-1 目前達標狀態', img: 'intro/in8.png' },
               { desc: '4-2 獎勵全部完成', img: 'intro/in9.png' },
-              { desc: '4-3 即將到來獎勵', img: 'intro/in10.png' }
+              { desc: '4-3 即將到來獎勵預覽', img: 'intro/in10.png' }
             ]
           }
         ]
@@ -247,7 +328,6 @@
 
     // 點擊四大積木
     window.loadMainCategory = function(tabId) {
-      // 視覺按鈕切換
       document.querySelectorAll('.block-card').forEach(el => el.classList.remove('active'));
       event.currentTarget.classList.add('active');
 
@@ -279,7 +359,7 @@
         // 替換資料
         titleEl.textContent = section.title;
         titleEl.style.color = data.color;
-        subTitleEl.textContent = step.desc;
+        subTitleEl.innerHTML = `<span>🔖</span> ${step.desc}`;
         imgEl.src = step.img;
 
         // 畫點點
@@ -307,11 +387,9 @@
       const section = data.sections[currentSectionIdx];
 
       if (currentStepIdx < section.steps.length - 1) {
-        // 同區塊的下一張 (文字跟圖片一起滑動)
         currentStepIdx++;
         renderView('slide-in-right');
       } else {
-        // 跳下一個區塊
         nextSection();
       }
     });
@@ -323,7 +401,6 @@
         currentStepIdx = 0;
         renderView('slide-in-right');
       } else {
-        // 到底了，循環回第一個
         currentSectionIdx = 0;
         currentStepIdx = 0;
         renderView('slide-in-right');
@@ -334,8 +411,7 @@
       const data = appData[currentMainTab];
       if (currentSectionIdx > 0) {
         currentSectionIdx--;
-        currentStepIdx = 0; // 回到該區塊的第一張
-        // 往回滑，進場方向設定從左邊進來
+        currentStepIdx = 0; 
         renderView('slide-out-left'); 
       }
     }
@@ -357,12 +433,9 @@
 
     function handleSwipe() {
       const swipeDist = touchendX - touchstartX;
-      // 設定滑動閾值 50px
-      if (swipeDist < -50) {
-        // 左滑 (下一區塊)
+      if (swipeDist < -40) {
         nextSection();
-      } else if (swipeDist > 50) {
-        // 右滑 (上一區塊)
+      } else if (swipeDist > 40) {
         prevSection();
       }
     }
