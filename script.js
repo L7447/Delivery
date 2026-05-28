@@ -1047,8 +1047,14 @@ function switchRptTab(tab, index, btnEl) {
 
 /* ══ 替換：車輛頁籤切換 (四色強化漸層風格) ══ */
 function switchVehicleTab(tab, index) { 
-  document.getElementById('veh-selector-container').style.display = 'block';
-  if (document.querySelector('#page-vehicles .month-nav')) document.querySelector('#page-vehicles .month-nav').style.display = 'flex';
+  const wrapper = document.getElementById('veh-selector-wrapper');
+  const container = document.getElementById('veh-selector-container');
+  const monthLabel = document.getElementById('veh-month-label');
+  const monthNav = monthLabel ? monthLabel.parentElement : null;
+
+  if (wrapper) wrapper.style.display = '';
+  if (container) container.style.display = '';
+  if (monthNav) monthNav.style.display = 'flex';
 
   S.vehicleTab = tab; 
   const tabBg = document.getElementById('veh-tab-bg');
@@ -3744,24 +3750,32 @@ function changeVehMonth(offset) {
   // 僅重繪下方的詳細記錄
   renderVehicleContent(); 
 }
-/* ══ 新增：車輛管理 - 展開/收起上方車輛清單區塊 ══ */
+/* ══ 新增：車輛管理 - 展開/收起上方車輛清單區塊 (強化版) ══ */
 window.toggleVehHeader = function() {
-  const headerContainer = document.getElementById('veh-selector-container');
-  const monthNav = document.querySelector('#page-vehicles .month-nav'); // 隱藏最上方的年份月份切換器
+  // 1. 抓取車輛清單與它的外包裝
+  const container = document.getElementById('veh-selector-container');
+  const wrapper = document.getElementById('veh-selector-wrapper'); // 若有外包裝也一起抓
   
-  if (!headerContainer) return;
+  // 2. 利用月份文字標籤，反向抓取包住它的整條切換器外框
+  const monthLabel = document.getElementById('veh-month-label');
+  const monthNav = monthLabel ? monthLabel.parentElement : null;
   
-  if (headerContainer.style.display === 'none') {
-    // 展開 (顯示上方內容)
-    headerContainer.style.display = 'block';
-    if (monthNav) monthNav.style.display = 'flex';
+  if (!container) return;
+  
+  // 判斷目前的隱藏狀態
+  if (container.style.display === 'none') {
+    // 展開
+    if (wrapper) wrapper.style.display = '';
+    if (container) container.style.display = '';
+    if (monthNav) monthNav.style.display = 'flex'; // 恢復彈性排版
   } else {
-    // 收起 (隱藏上方內容，讓出空間)
-    headerContainer.style.display = 'none';
+    // 收起
+    if (wrapper) wrapper.style.display = 'none';
+    if (container) container.style.display = 'none';
     if (monthNav) monthNav.style.display = 'none';
   }
   
-  // 重新渲染當前的內容 (會自動更新剛剛寫好的按鈕顏色與箭頭方向)
+  // 重新渲染下方的內容與按鈕樣式
   renderVehicleContent();
 };
 function selectVehicle(id) { 
