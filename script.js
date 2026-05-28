@@ -3921,12 +3921,6 @@ function renderVehicleContent() {
     const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
     const maintList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
     
-    // 👇 新增：判斷上方清單是否處於「收起」狀態，以決定按鈕的樣式與文字
-    const isHeaderHidden = document.getElementById('veh-selector-container')?.style.display === 'none';
-    const toggleIcon = isHeaderHidden ? '▼' : '▲';
-    const toggleColor = isHeaderHidden ? 'var(--blue)' : 'var(--t3)';
-    const toggleBg = isHeaderHidden ? 'var(--blue-d)' : 'var(--sf2)';
-    
     html += `
       <style>
         .search-quick-tag { font-size:11px; padding:4px 10px; background:var(--sf2); color:var(--t2); border-radius:8px; border:1px solid var(--border); cursor:pointer; transition:0.2s; font-weight:700; }
@@ -3934,15 +3928,15 @@ function renderVehicleContent() {
       </style>
       <div style="background:var(--sf); padding:12px; border-radius:16px; margin-bottom:12px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
-          <input type="text" class="finp" id="veh-search-kw" placeholder="🔍 搜尋項目、店家或備註..." oninput="doVehSearch()" style="flex:1; padding:8px 12px; font-size:14px; border-radius:12px; border:1.5px solid var(--text-blue); background:#f8fafc;">
+          <input type="text" class="finp" id="veh-search-kw" placeholder="🔍 搜尋項目、店家或備註..." oninput="doVehSearch(false)" style="flex:1; padding:8px 12px; font-size:14px; border-radius:12px; border:1.5px solid var(--text-blue); background:#f8fafc;">
           
-          <!-- 👇 新增：控制上方清單的折疊按鈕 -->
-          <button onclick="toggleVehHeader()" style="width:42px; height:42px; border-radius:12px; background:${toggleBg}; color:${toggleColor}; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900; cursor:pointer; flex-shrink:0; transition:0.2s; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-            ${toggleIcon}
+          <!-- 👇 改為「放大至懸浮視窗」按鈕 -->
+          <button onclick="openVehSearchFullscreen()" style="width:42px; height:42px; border-radius:12px; background:#eff6ff; color:#2563eb; border:1.5px solid #bfdbfe; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; cursor:pointer; flex-shrink:0; transition:0.2s; box-shadow:0 2px 4px rgba(37,99,235,0.1);">
+            ⤢
           </button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          ${maintList.map(item => `<div class="search-quick-tag" onclick="document.getElementById('veh-search-kw').value='${item}'; doVehSearch();">${item}</div>`).join('')}
+          ${maintList.map(item => `<div class="search-quick-tag" onclick="document.getElementById('veh-search-kw').value='${item}'; doVehSearch(false);">${item}</div>`).join('')}
         </div>
       </div>
       <div id="veh-search-results" style="display:flex; flex-direction:column; gap:8px;">
@@ -3950,7 +3944,7 @@ function renderVehicleContent() {
       </div>
     `;
     container.innerHTML = html;
-    if(document.getElementById('veh-search-kw') && document.getElementById('veh-search-kw').value) doVehSearch();
+    if(document.getElementById('veh-search-kw') && document.getElementById('veh-search-kw').value) doVehSearch(false);
     return;
   }
 
@@ -4165,7 +4159,7 @@ function renderVehicleContent() {
     const v = S.vehicles.find(x => x.id === S.selVehicleId);
     const isEV = v && v.defaultFuel === 'electric';
     
-let totalEVFee = 0;
+  let totalEVFee = 0;
     fuelRecs.forEach(r => { if(r.fuelType === 'electric') totalEVFee += pf(r.amount); });
 
     if (isEV) {
@@ -4909,11 +4903,58 @@ function renderShopHistory() {
 }
 function deleteShopHistory(index) { S.settings.shopHistory.splice(index, 1); saveSettings(); renderShopHistory(); }
 
+/* ══ 新增：開啟車輛搜尋的「全螢幕懸浮視窗」 ══ */
+window.openVehSearchFullscreen = function() {
+  // 把目前頁面上的搜尋關鍵字帶過去
+  const currentKw = document.getElementById('veh-search-kw')?.value || '';
+
+  document.getElementById('sub-title').textContent = '車輛記錄完整搜尋';
+  document.getElementById('sub-top-right').innerHTML = ''; // 清空右上角
+
+  const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
+  const maintList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
+
+  // 👇 透過設定 flex:1 與 overflow-y:auto 讓結果清單能貫穿整個螢幕高度
+  let html = `
+    <div style="padding:16px; display:flex; flex-direction:column; height:100vh; max-height: calc(100vh - 80px);">
+      <div style="background:var(--sf); padding:12px; border-radius:16px; margin-bottom:12px; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.05); flex-shrink:0;">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+          <input type="text" class="finp" id="fs-veh-search-kw" value="${currentKw}" placeholder="🔍 搜尋項目、店家或備註..." oninput="doVehSearch(true)" style="flex:1; padding:10px 14px; font-size:15px; border-radius:12px; border:2px solid var(--text-blue); background:#ffffff; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          ${maintList.map(item => `<div class="search-quick-tag" onclick="document.getElementById('fs-veh-search-kw').value='${item}'; doVehSearch(true);">${item}</div>`).join('')}
+        </div>
+      </div>
+
+      <!-- 這裡就是全螢幕滑動區 -->
+      <div id="fs-veh-search-results" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:60px;">
+        <div class="empty-tip">請輸入或點選上方標籤開始搜尋</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
+
+  // 如果原本就有帶入關鍵字，自動觸發一次全螢幕版的搜尋
+  if (currentKw) {
+    setTimeout(() => doVehSearch(true), 50);
+  }
+};
+
 // 執行車輛保養記錄搜尋與渲染精美時間軸 (全連接線與標籤設計)
-window.doVehSearch = function() {
-  const kw = document.getElementById('veh-search-kw').value.trim().toLowerCase();
-  const resEl = document.getElementById('veh-search-results');
-  
+window.doVehSearch = function(isFullScreen = false) {
+  // 👇 根據模式抓取對應的輸入框與結果容器
+  const inputId = isFullScreen ? 'fs-veh-search-kw' : 'veh-search-kw';
+  const resultId = isFullScreen ? 'fs-veh-search-results' : 'veh-search-results';
+
+  const kwEl = document.getElementById(inputId);
+  const resEl = document.getElementById(resultId);
+
+  if (!kwEl || !resEl) return;
+
+  const kw = kwEl.value.trim().toLowerCase();
+
   if (!kw) { resEl.innerHTML = '<div class="empty-tip">請輸入或點選上方標籤開始搜尋</div>'; return; }
   
   // 過濾當前車輛的保養記錄
@@ -4955,16 +4996,13 @@ window.doVehSearch = function() {
   recs.forEach((r, idx) => {
     const isLatest = idx === 0;
     
-    // 加粗框線與背景顏色設定
-    const boxBorder = isLatest ? '#10b981' : '#cbd5e1'; // 框線：最新亮綠，其他淡灰
-    const bottomBg = isLatest ? '#ebfcf0' : '#f8fafc'; // 下層背景：最新淡綠，其他淡灰
+    const boxBorder = isLatest ? '#10b981' : '#cbd5e1'; 
+    const bottomBg = isLatest ? '#ebfcf0' : '#f8fafc'; 
     
-    // 雙色膠囊優化配色 (左深右淺，無邊框設計)
-    const capLeftBg = isLatest ? '#059669' : '#3e4f66'; // 項目背景
-    const capRightBg = isLatest ? '#beffde' : '#d7dee7'; // 機車行背景
-    const capRightText = isLatest ? '#059669' : '#3e4f66'; // 機車行文字顏色
+    const capLeftBg = isLatest ? '#059669' : '#3e4f66'; 
+    const capRightBg = isLatest ? '#beffde' : '#d7dee7'; 
+    const capRightText = isLatest ? '#059669' : '#3e4f66'; 
     
-    // 計算與前一次(上一筆較舊的紀錄)的差異，生成置中的白底膠囊並帶有上下連接線
     let diffHtml = '';
     if (idx < recs.length - 1) {
       const olderRec = recs[idx + 1];
@@ -4994,7 +5032,6 @@ window.doVehSearch = function() {
         </div>`;
     }
 
-    // 項目文字萃取
     let matchedItems = (r.items || []).filter(i => i.toLowerCase().includes(kw));
     if (matchedItems.length === 0 && r.items && r.items.length > 0) matchedItems = [r.items[0]];
     const itemText = matchedItems.length > 0 ? safeText(matchedItems.join('、')) : '未填寫';
@@ -5002,46 +5039,29 @@ window.doVehSearch = function() {
     html += `
       <!-- 卡片外層，包含圓點與縮排 -->
       <div style="position:relative; z-index:2; margin-bottom:${diffHtml ? '0' : '10px'};">
-        <!-- 加粗的時間軸圓點 -->
         <div style="position:absolute; left:-18px; top:12px; width:14px; height:14px; border-radius:50%; background:${boxBorder}; border:2px solid #ffffff; box-shadow:0 0 0 1px ${boxBorder};"></div>
         
-        <!-- 卡片主體 (加粗邊框 2.5px，極小縮排) -->
         <div onclick="openAddVehRec('${safeText(r.id)}')" style="border:2.5px solid ${boxBorder}; border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:0 4px 8px rgba(0,0,0,0.03); transition:transform 0.1s;">
-          
-          <!-- ★ 上層：淺灰色背景，3 等分均分對齊 -->
           <div style="background: rgb(236, 241, 244); padding:8px 12px; display:flex; align-items:center; border-bottom:2.5px solid #cbd5e1;">
-            
-            <!-- 左 1/3：日期 -->
             <div style="flex:1; text-align:left; font-family:var(--mono); font-size:14px; font-weight:900; color: #334155;">
               ${r.date.replace(/-/g, '/')}
             </div>
-            
-            <!-- 中 1/3：大字體里程 -->
             <div style="flex:1; text-align:center; font-family:var(--mono); font-size:18px; font-weight:900; color: #2a69fc; line-height:1; letter-spacing:1px;">
               ${fmt(r.km)}<span style="font-size:11px; color: #282a2d; margin-left:2px;"> km</span>
             </div>
-            
-            <!-- 右 1/3：最新標籤 (靠右對齊) -->
             <div style="flex:1; text-align:right; height:18px;">
               ${isLatest ? `<span style="background: #10b981; color:#ffffff; padding:2px 8px; border-radius:6px; font-size:14px; font-weight:750; letter-spacing:1px;">最新</span>` : ''}
             </div>
-
           </div>
           
-          <!-- ★ 下層：背景依最新記錄變換，放置優化配色的雙色膠囊 -->
           <div style="background:${bottomBg}; padding:7px 12px; display:flex; justify-content:flex-start;">
-            
-            <!-- 無圖示雙色膠囊 (靠色塊區分，無邊框設計更現代) -->
             <div style="display:inline-flex; border-radius:6px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.06);">
               <span style="background:${capLeftBg}; color: #ffffff; font-size:14px; font-weight:750; padding:4px 12px; letter-spacing:0.5px;">${itemText}</span>
               ${r.shop ? `<span style="background:${capRightBg}; color:${capRightText}; font-size:13px; font-weight:800; padding:4px 12px; display:flex; align-items:center; border:1.5px solid ${capLeftBg}; border-radius:0px 6px 6px 0px;">${safeText(r.shop)}</span>` : ''}
             </div>
-            
           </div>
-
         </div>
       </div>
-      
       ${diffHtml}
     `;
   });
