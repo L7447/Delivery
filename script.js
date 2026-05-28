@@ -1047,6 +1047,9 @@ function switchRptTab(tab, index, btnEl) {
 
 /* ══ 替換：車輛頁籤切換 (四色強化漸層風格) ══ */
 function switchVehicleTab(tab, index) { 
+  document.getElementById('veh-selector-container').style.display = 'block';
+  if (document.querySelector('#page-vehicles .month-nav')) document.querySelector('#page-vehicles .month-nav').style.display = 'flex';
+
   S.vehicleTab = tab; 
   const tabBg = document.getElementById('veh-tab-bg');
   tabBg.style.transform = `translateX(${index * 100}%)`; 
@@ -3741,6 +3744,26 @@ function changeVehMonth(offset) {
   // 僅重繪下方的詳細記錄
   renderVehicleContent(); 
 }
+/* ══ 新增：車輛管理 - 展開/收起上方車輛清單區塊 ══ */
+window.toggleVehHeader = function() {
+  const headerContainer = document.getElementById('veh-selector-container');
+  const monthNav = document.querySelector('#page-vehicles .month-nav'); // 隱藏最上方的年份月份切換器
+  
+  if (!headerContainer) return;
+  
+  if (headerContainer.style.display === 'none') {
+    // 展開 (顯示上方內容)
+    headerContainer.style.display = 'block';
+    if (monthNav) monthNav.style.display = 'flex';
+  } else {
+    // 收起 (隱藏上方內容，讓出空間)
+    headerContainer.style.display = 'none';
+    if (monthNav) monthNav.style.display = 'none';
+  }
+  
+  // 重新渲染當前的內容 (會自動更新剛剛寫好的按鈕顏色與箭頭方向)
+  renderVehicleContent();
+};
 function selectVehicle(id) { 
   S.selVehicleId = id; 
   _syncVehSelectorActive(id); 
@@ -3884,6 +3907,12 @@ function renderVehicleContent() {
     const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
     const maintList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
     
+    // 👇 新增：判斷上方清單是否處於「收起」狀態，以決定按鈕的樣式與文字
+    const isHeaderHidden = document.getElementById('veh-selector-container')?.style.display === 'none';
+    const toggleIcon = isHeaderHidden ? '▼' : '▲';
+    const toggleColor = isHeaderHidden ? 'var(--blue)' : 'var(--t3)';
+    const toggleBg = isHeaderHidden ? 'var(--blue-d)' : 'var(--sf2)';
+    
     html += `
       <style>
         .search-quick-tag { font-size:11px; padding:4px 10px; background:var(--sf2); color:var(--t2); border-radius:8px; border:1px solid var(--border); cursor:pointer; transition:0.2s; font-weight:700; }
@@ -3892,6 +3921,11 @@ function renderVehicleContent() {
       <div style="background:var(--sf); padding:12px; border-radius:16px; margin-bottom:12px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.02);">
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
           <input type="text" class="finp" id="veh-search-kw" placeholder="🔍 搜尋項目、店家或備註..." oninput="doVehSearch()" style="flex:1; padding:8px 12px; font-size:14px; border-radius:12px; border:1.5px solid var(--text-blue); background:#f8fafc;">
+          
+          <!-- 👇 新增：控制上方清單的折疊按鈕 -->
+          <button onclick="toggleVehHeader()" style="width:42px; height:42px; border-radius:12px; background:${toggleBg}; color:${toggleColor}; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900; cursor:pointer; flex-shrink:0; transition:0.2s; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            ${toggleIcon}
+          </button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
           ${maintList.map(item => `<div class="search-quick-tag" onclick="document.getElementById('veh-search-kw').value='${item}'; doVehSearch();">${item}</div>`).join('')}
