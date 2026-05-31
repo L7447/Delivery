@@ -26,7 +26,7 @@ const DEFAULT_WAGE_RULES = [
 function getActiveWageRules() {
   return (S.settings && S.settings.wageRules) ? S.settings.wageRules : DEFAULT_WAGE_RULES;
 }
-/* === 全域：基本工資標籤產生器 === */
+/* === 全域：基本工資標籤產生器 (高質感狀態圖例版) === */
 function getWageBadge(hours, total) {
   // 如果使用者手動關閉此功能，直接回傳空字串不顯示標籤
   if (S.settings && S.settings.wageRulesEnabled === false) return '';
@@ -37,7 +37,34 @@ function getWageBadge(hours, total) {
   
   const rule = rules.find(r => avg >= r.min && avg <= r.max);
   if (!rule) return ''; 
-  return `<div style="margin-top:6px;"><span style="background:${rule.bg}; color:${rule.color}; font-size:11px; padding:4px 6px; border-radius:5px; font-weight:800; white-space:nowrap; display:inline-block; line-height:1;">${rule.text}</span></div>`;
+
+  // 自動將 Emoji 圖示與文字分離 (利用空白切割)
+  const parts = rule.text.trim().split(' ');
+  const icon = parts.length > 1 ? parts[0] : '';
+  const text = parts.length > 1 ? parts.slice(1).join(' ') : rule.text;
+
+  // 定義進階樣式色系配對 (對齊設定頁的顏色)
+  let bg = '#f0fdf4', color = '#15803d', border = '#86efac', shadow = 'rgba(22,163,74,0.15)'; // 第 4 階 (綠色)
+  
+  if (rule.color.includes('red')) {
+    // 第 1 階 (紅色)
+    bg = '#fef2f2'; color = '#e11d48'; border = '#fecdd3'; shadow = 'rgba(225,29,72,0.15)';
+  } else if (rule.color.includes('acc')) {
+    // 第 2 階 (橘色)
+    bg = '#fff7ed'; color = '#c2410c'; border = '#fdba74'; shadow = 'rgba(234,88,12,0.15)';
+  } else if (rule.color.includes('blue')) {
+    // 第 3 階 (藍色)
+    bg = '#eff6ff'; color = '#1d4ed8'; border = '#bfdbfe'; shadow = 'rgba(37,99,235,0.15)';
+  }
+
+  // 套用與「首頁狀態圖例」一模一樣的立體膠囊設計
+  return `
+    <div style="margin-top:6px;">
+      <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: ${bg}; color: ${color}; border: 1.5px solid ${border}; box-shadow: 0 2px 6px ${shadow}; white-space: nowrap;">
+        ${icon ? `<span style="font-size: 13px;">${icon}</span> ` : ''}${text}
+      </span>
+    </div>
+  `;
 }
 /* ══ ✨ 新增：基本工資分析設定 ══ */
 function openWageSettings() {
