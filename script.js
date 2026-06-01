@@ -1066,8 +1066,10 @@ function switchRptTab(tab, index, btnEl) {
   document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; 
   document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); 
   btnEl.classList.add('active');
-  ['overview','trend','compare','top3'].forEach(v => { 
-    document.getElementById(`rv-${v}`).style.display = v===S.rptView ? '' : 'none'; 
+  // 👇 加入了 yearOverview
+  ['overview', 'yearOverview', 'trend', 'compare', 'top3'].forEach(v => { 
+    const el = document.getElementById(`rv-${v}`);
+    if (el) el.style.display = v === S.rptView ? '' : 'none'; 
   }); 
   renderReport(); 
 }
@@ -1502,7 +1504,7 @@ function buildRecItem(r) {
       <div class="hist-rec-card cashtip-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="border: 1.5px solid #22c55e; box-shadow: 0 2px 6px rgba(34, 197, 94, 0.05); cursor:pointer; position:relative; margin-bottom:5px;">
         
         <!-- 左上角絕對定位標籤 -->
-        <span style="position:absolute; top:0; left:0; background:#22c55e; color:#ffffff; padding:4px 14px; border-radius:0 0 16px 0; font-size:12px; font-weight:900; letter-spacing:1px; z-index:1; line-height:1.4;">💵 現金小費</span>
+        <span style="position:absolute; top:0; left:0; background:#22c55e; color:#ffffff; padding:4px 10px; border-radius:0 0 16px 0; font-size:13px; font-weight:700; letter-spacing:1px; z-index:1; line-height:1.4;">💵 現金小費</span>
         
         <!-- 右側內容區塊 (利用 padding-left: 105px 避開左上標籤) -->
         <div style="display:flex; align-items:center; justify-content:space-between; padding: 4px 10px 4px 105px; min-height: 32px;">
@@ -2550,12 +2552,27 @@ function cancelAddRecord() {
 /* ══ 4. 新增記錄 結束 ════════════════════════════════════ */
 
 /* ══ 5. 收入分析 開始 ════════════════════════════════════ */
+/* ══ 修正：確保收入分析頁面可正常捲動 ══ */
 function renderReport() {
+  // 👇 改為直接抓取我們在 HTML 新增的獨立滾動區域
+  const scrollArea = document.getElementById('report-scroll-area');
+  if (scrollArea) {
+    scrollArea.style.overflowY = 'auto';
+    scrollArea.style.overflowX = 'hidden';
+    scrollArea.style.display = 'block';
+  }
+
   if (!S.trendDate) S.trendDate = new Date();
   if (S.rptView === 'overview') renderRptOverview(); 
+  if (S.rptView === 'yearOverview') renderRptYearOverview();
   if (S.rptView === 'trend') renderRptTrend();
   if (S.rptView === 'compare') renderRptCompare(); 
   if (S.rptView === 'top3') renderRptTop3();
+}
+// 專屬年總覽的年份切換器
+window.navRptYear = function(dir) {
+  S.rptY += dir;
+  renderReport();
 }
 
 /* ══ 替換：獎勵進度 (改移至首頁，並回傳 HTML 字串) ══ */
@@ -2980,6 +2997,179 @@ function renderRptOverview() {
   }
 }
 
+/* ══ 新增：年總覽頁面 (以全年資料為基礎計算) ══ */
+function renderRptYearOverview() {
+  if (!S.rptYearOverviewFilter) S.rptYearOverviewFilter = 'all';
+  
+  // 👈 抓取該年度「所有月份」的記錄
+  const allYearRecs = S.records.filter(r => r.date && r.date.startsWith(`${S.rptY}-`));
+  
+  // 依照選擇的標籤過濾資料
+  const isAll = S.rptYearOverviewFilter === 'all';
+  const recs = isAll ? allYearRecs : allYearRecs.filter(r => r.platformId === S.rptYearOverviewFilter || r.isPunchOnly);
+  
+  const total = recs.reduce((s,r) => s+recTotal(r), 0); 
+  const income = recs.reduce((s,r) => s+pf(r.income), 0); 
+  const bonus = recs.reduce((s,r) => s+pf(r.bonus)+pf(r.tempBonus), 0); 
+  const tips = recs.reduce((s,r) => s+pf(r.tips), 0);
+  const orders = recs.reduce((s,r) => s+pf(r.orders), 0); 
+  const mileage = recs.reduce((s,r) => s+pf(r.mileage), 0); 
+  const hours = calcTotalHours(recs);
+  const cashTipTotal = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
+
+  const activePlats = S.platforms.filter(p=>p.active);
+  let filterName = isAll ? '全部平台' : safeText(activePlats.find(p=>p.id===S.rptYearOverviewFilter)?.name || '');
+
+  const avgOrd = orders > 0 ? Math.round(total / orders) : 0;
+  const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
+  const avgHr = hours > 0 ? Math.round(total / hours) : 0;
+
+  const wageHtml = getWageBadge(hours, total);
+
+  // 單數、里程、工時膠囊
+  let tagsParts = [];
+  if (orders > 0) {
+    tagsParts.push(`<div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${fmt(orders)}</span><span style="font-size:11px; font-weight:600; color:#f97316;">單</span></div>`);
+  }
+  if (mileage > 0) {
+    tagsParts.push(`<div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${fmt(mileage)}</span><span style="font-size:11px; font-weight:800; color:#22c55e;">km</span></div>`);
+  }
+  if (hours > 0) {
+    tagsParts.push(`<div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;"><span style="font-size:11px;">⏱️</span><span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(hours)}</span></div>`);
+  }
+
+  let tagsHtml = tagsParts.length > 0 ? `<div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:4px; background: #e2e8f0; gap:2px;">${tagsParts.join('')}</div>` : '';
+
+  // 👇 年份導航列 (無月份)
+  let html = `
+    <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+      <button class="btn btn1" onclick="navRptYear(-1)" style="width: 42px; height: 42px;">◀</button>
+      <span style="font-family:var(--mono); font-size: 18px; font-weight: 900; color: #1e293b; letter-spacing: 0px; text-align: center; flex: 1;">
+        <span style="color: #006eff; font-size: 24px;">${S.rptY}</span> 年全年總覽
+      </span>
+      <button class="btn btn1" onclick="navRptYear(1)" style="width: 42px; height: 42px;">▶</button>
+    </div>`;
+
+  const pcts = getExactPercentages([income, bonus, tips]);
+  const incPct = pcts[0]; const bonPct = pcts[1]; const tipPct = pcts[2];
+
+  // 全年總收入框
+  html += `
+    <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
+
+      <div id="rpt-year-overview-col-btn" onclick="toggleSummaryCard('rpt-year-overview-col')" style="position:absolute; top:2px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.3); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      
+      <div onclick="toggleSummaryCard('rpt-year-overview-col')" style="padding:4px 0px; cursor:pointer; text-align:center;">
+        <div style="margin-bottom:6px;">
+          ${isAll ? `<span style="font-size:16px; font-weight:900; color:var(--t2);">全部平台</span>` : `<span class="plat-badge" style="background:${activePlats.find(p=>p.id===S.rptYearOverviewFilter)?.color}; font-size:14px; padding:4px 14px;">${filterName}</span>`}
+          <span style="font-size:18px; font-weight:800; color: var(--t2); margin-left:6px;">全年總收入</span>
+        </div>
+        <div style="font-family:var(--mono); font-size:36px; font-weight:800; color: #0db3e6; line-height:1; margin-bottom:8px;"><span style="font-size:18px;">$ </span> ${fmt(total)}</div>
+        ${tagsHtml}
+        
+        <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; padding: 0 4px 0px 4px;">
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
+            <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: #1f9c4d; font-size:11px; font-weight:700; font-family:var(--mono);">淨行程</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);"><span style="color: #1f9c4d; font-size:12px; font-weight:700;">${incPct}<span style="font-size:8px;">%</span></span></span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;"><span style="color: #1f9c4d; font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(income)}</span></div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(245, 158, 11, 0.15); border-radius:12px;">
+            <div style="background: rgba(245, 158, 11, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: hsl(25, 100%, 55%); font-size:11px; font-weight:700; font-family:var(--mono);">獎勵</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);"><span style="color: hsl(25, 100%, 55%); font-size:12px; font-weight:700;">${bonPct}<span style="font-size:8px;">%</span></span></span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;"><span style="color: hsl(25, 100%, 55%); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(bonus)}</span></div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(190, 59, 246, 0.15); border-radius:12px;">
+            <div style="background: rgba(190, 59, 246, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:11px; font-weight:700; font-family:var(--mono);">小費</span>
+              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(190, 59, 246, 0.3);"><span style="color: rgba(137, 43, 226, 0.9); font-size:12px; font-weight:700;">${tipPct}<span style="font-size:8px;">%</span></span></span>
+            </div>
+            <div style="background: #ffffff; border-radius:10px; text-align:center;"><span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(tips)}</span></div>
+          </div>
+        </div>
+      </div> 
+      <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
+
+      <div id="rpt-year-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
+        <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
+          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">一單：<span style="font-family:var(--mono); color: var(--text-cyan); font-size:20px; font-weight:800;">$ ${fmt(avgOrd)}</span></div>
+          <div class="h-div" style="height:45px; align-self:center;"></div>
+          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span></div>
+          <div class="h-div" style="height:45px; align-self:center;"></div>
+          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">時薪 $： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;">${fmt(avgHr)}</span>${wageHtml}</div>
+        </div>
+        ${cashTipTotal > 0 ? `
+        <div style="border-top:1px dashed var(--border);"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
+          <span style="background: rgba(22,163,74,0.2); color: var(--green); font-size:11px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);">$${fmt(cashTipTotal)}</span>
+        </div>` : ''}
+      </div>
+    </div>`;
+
+  // 結構佔比分析卡片
+  html += `<div class="card" style="border:1.5px solid var(--card-border);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="font-size:13px; font-weight:800; color:var(--t2);">📊 結構佔比分析</div>
+    </div>`;
+
+  html += `<div style="display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
+    <button onclick="S.rptYearOverviewFilter='all'; renderReport()" style="flex-shrink:0; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${isAll ? 'background:var(--acc); color:#fff; box-shadow:0 2px 6px rgba(255,107,53,0.3);' : 'background:var(--sf2); color:var(--t2);'}">全部</button>`;
+  activePlats.forEach(p => {
+    let isActive = S.rptYearOverviewFilter === p.id;
+    html += `<button onclick="S.rptYearOverviewFilter='${safeText(p.id)}'; renderReport()" style="flex-shrink:0; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${isActive ? `background:${p.color}; color:#fff; box-shadow:0 2px 6px ${p.color}50;` : `background:${p.color}15; color:${p.color};`}">${safeText(p.name)}</button>`;
+  });
+  html += `</div>`;
+
+  let pieLabels = [], pieData = [], pieColors = [], listHtml = '';
+  if (isAll && total > 0) {
+    const platData = activePlats.map(p => ({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
+    pieLabels = platData.map(p=>p.name); pieData = platData.map(p=>p.val); pieColors = platData.map(p=>p.color);
+    const platPcts = getExactPercentages(pieData);
+    listHtml = platData.map((p, idx) => {
+      const pct = platPcts[idx];
+      return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;"><div style="width:12px; height:12px; border-radius:4px; background:${p.color}; margin-right:10px;"></div><span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(p.name)}</span><span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct} %</span><span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(p.val)}</span></div>`;
+    }).join('');
+  } else if (!isAll && total > 0) {
+    pieLabels = ['行程', '獎勵', '小費']; pieData = [income, bonus, tips]; pieColors = ['#22c55e', '#f59e0b', '#3b82f6'];
+    const details = [{ name: '行程收入', val: income, color: '#22c55e', pct: incPct }, { name: '獎勵金額', val: bonus, color: '#f59e0b', pct: bonPct }, { name: 'APP小費', val: tips, color: '#3b82f6', pct: tipPct }].filter(d => d.val > 0);
+    listHtml = details.map(d => `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;"><div style="width:12px; height:12px; border-radius:4px; background:${d.color}; margin-right:10px;"></div><span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(d.name)}</span><span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${d.pct} %</span><span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(d.val)}</span></div>`).join('');
+  }
+
+  if (total > 0) {
+    // 👇 年總覽專屬 Canvas ID (避免與月總覽衝突)
+    html += `
+      <div style="position:relative; height:180px; margin-bottom:16px;">
+        <canvas id="plat-pie-year"></canvas>
+      </div>
+      <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; padding:8px 0; border-bottom:2px solid var(--border);">
+          <span style="flex:1; font-size:12px; font-weight:800; color:var(--t3);">項目</span><span style="font-size:12px; font-weight:800; color:var(--t3); width:50px; text-align:right;">佔比</span><span style="font-size:12px; font-weight:800; color:var(--t3); width:100px; text-align:right;">金額</span>
+        </div>
+        ${listHtml}
+        <div style="position:relative; display:flex; align-items:center; padding:10px 14px; margin: 6px -14px 4px -14px; z-index:1;">
+          <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));"><defs><linearGradient id="darkGoldGradY" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b3b3f" /><stop offset="40%" stop-color="#353535" /><stop offset="50%" stop-color="#282828" /><stop offset="100%" stop-color="#18181b" /></linearGradient><linearGradient id="goldLineGradY" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fbbf24" /><stop offset="50%" stop-color="#fef08a" /><stop offset="100%" stop-color="#d97706" /></linearGradient></defs><polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGradY)" /><polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGradY)" stroke-width="1.5" /><polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" /></svg>
+          <span style="flex:1; font-size:18px; font-weight:500; color: #00eeff; letter-spacing:1px;">🔷 總計</span>
+          <span style="font-family:var(--mono); font-size:13px; font-weight:700; color: #FFD700; width:50px; text-align:right;">100 %</span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color: #ffffff; width:100px; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5);">$ ${fmt(total)}</span>
+        </div>
+      </div>`;
+  } else {
+    html += `<div class="empty-tip" style="padding:16px 0;">所選平台本年度無記錄</div>`;
+  }
+
+  html += `</div>`; 
+
+  document.getElementById('rv-yearOverview').innerHTML = html;
+  
+  if (total > 0 && pieData.length > 0) {
+    drawPie('plat-pie-year', pieLabels, pieData, pieColors);
+  }
+}
+
 /* ══ 替換：完整趨勢分析圖表 (加入 4 週趨勢) ══ */
 function renderRptTrend() {
   const el = document.getElementById('rv-trend');
@@ -3061,8 +3251,8 @@ function renderRptTrend() {
             </div>
           </div>
           <div style="display:flex; align-items:baseline; gap:4px;">
-            <span style="font-size:14px; font-weight:900; color:#047857;">NT$</span>
-            <span style="font-family: var(--mono); font-size: 26px; font-weight: 900; color: #047857;">${fmt(allTotal)}</span>
+            <span style="font-size:14px; font-weight:900; color:#047857;">$</span>
+            <span style="font-family: var(--mono); font-size: 26px; font-weight: 750; color: #047857;"> ${fmt(allTotal)}</span>
           </div>
         </div>
       </div>`;
@@ -3579,13 +3769,14 @@ function renderRptCompare() {
   }
 }
 
-/* 替換：TOP 5 競賽排行榜 (雙色膠囊、客製化字距、左右兩等分對齊、獎牌放大、內距微調) */
+/* 替換：TOP 5 競賽排行榜 (已修復：去除單純只有打卡與現金小費的日子) */
 function renderRptTop3() {
   const el = document.getElementById('rv-top3'); 
   const monthRecs = getMonthRecs(S.rptY, S.rptM); 
   
-  // 1. 預先整理每日的完整數據 (收入、單數、工時)
+  // 1. 預先整理每日的完整數據
   const dayStats = {};
+  
   monthRecs.forEach(r => {
     if (!dayStats[r.date]) {
       const d = new Date(r.date + 'T00:00:00');
@@ -3595,27 +3786,37 @@ function renderRptTop3() {
         dowStr: ['日','一','二','三','四','五','六'][d.getDay()],
         total: 0,
         orders: 0,
-        rawRecs: []
+        rawRecs: [],
+        hasValidTrip: false // 👈 新增標記：用來判斷這天有沒有「一般行程」
       };
     }
-    dayStats[r.date].total += recTotal(r);
-    dayStats[r.date].orders += pf(r.orders);
+    
+    // 💡 將所有記錄（含打卡、小費）都塞進去，供智慧工時系統分析
     dayStats[r.date].rawRecs.push(r);
+    
+    // 💡 只有「非打卡 且 非現金小費」的實質行程，才計算收入與單數，並標記為有效日
+    if (!r.isPunchOnly && !r.isCashTip) {
+      dayStats[r.date].total += recTotal(r);
+      dayStats[r.date].orders += pf(r.orders);
+      dayStats[r.date].hasValidTrip = true;
+    }
   });
 
-  // 計算每日的精準工時
-  Object.values(dayStats).forEach(ds => {
+  // 2. 嚴格過濾：只保留有「實際跑單」的日子，並計算精準工時
+  const validDays = Object.values(dayStats).filter(ds => ds.hasValidTrip);
+  
+  validDays.forEach(ds => {
     ds.hours = calcTotalHours(ds.rawRecs);
   });
 
-  // 2. 排序邏輯：總收入(降冪) > 總工時(升冪) > 單數(升冪)
-  const sortedDays = Object.values(dayStats).sort((a, b) => {
+  // 3. 排序邏輯：總收入(降冪) > 總工時(升冪) > 單數(升冪)
+  const sortedDays = validDays.sort((a, b) => {
     if (b.total !== a.total) return b.total - a.total; // 錢多者勝
     if (a.hours !== b.hours) return a.hours - b.hours; // 時間短者勝
     return a.orders - b.orders; // 單數少者勝
   });
 
-  // 3. 處理「完全平手」的並列邏輯
+  // 4. 處理「完全平手」的並列邏輯
   let groupedRanks = [];
   let currentGroup = [];
   
@@ -3624,7 +3825,6 @@ function renderRptTop3() {
       currentGroup.push(day);
     } else {
       const prev = currentGroup[0];
-      // 如果三項數據完全相同，判為平手，放入同一個 Group
       if (day.total === prev.total && day.hours === prev.hours && day.orders === prev.orders) {
         currentGroup.push(day);
       } else {
@@ -3650,7 +3850,7 @@ function renderRptTop3() {
     </div>`;
 
   if (!groupedRanks.length) { 
-    html += `<div class="empty-tip" style="margin-top:40px;">本月暫無記錄</div>`; 
+    html += `<div class="empty-tip" style="margin-top:40px;">本月暫無有效行程記錄</div>`; 
     el.innerHTML = html;
     return;
   }
@@ -3664,20 +3864,17 @@ function renderRptTop3() {
     <div style="display:flex; flex-direction:column; gap:8px; padding-bottom:24px;">
   `;
 
-  // 4. 渲染各名次卡片
+  // 5. 渲染各名次卡片
   groupedRanks.forEach((group, i) => {
-    // 取得該名次的共通數據
     const stats = group[0];
     const total = stats.total;
     const orders = stats.orders;
     const hours = stats.hours;
 
-    // 將所有並列的日期組合成標籤陣列 (改成 <div> 強制換行)
     const datesHtml = group.map(d => 
       `<div style="margin-bottom:2px;">${d.dateStr} (週${d.dowStr})</div>`
     ).join('');
 
-    // 名次視覺樣式設定 (依照名次給予專屬的雙色膠囊配色)
     let bgStyle, borderLeft, dateColor, valueColor;
     let medalBox = ''; 
     let pillBorder, pillLeftBg, pillLeftText, pillRightBg, pillRightText;
@@ -3697,7 +3894,7 @@ function renderRptTop3() {
       borderLeft = '#f97316'; dateColor = '#c2410c'; valueColor = '#c2410c';
       medalBox = `<div style="width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,0.9); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(8px); border:1.5px solid rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.06); font-size:36px; flex-shrink:0;">🥉</div>`;
       pillBorder = '#fed7aa'; pillLeftBg = '#ffedd5'; pillLeftText = '#ea580c'; pillRightBg = '#ffffff'; pillRightText = '#c2410c';
-    } else { // 4️⃣ & 5️⃣ 第四、第五名 (乾淨白底與圓圈)
+    } else { // 4️⃣ & 5️⃣ 第四、第五名
       bgStyle = '#ffffff';
       borderLeft = '#cbd5e1'; dateColor = '#64748b'; valueColor = '#475569';
       const numColor = i === 3 ? '#64748b' : '#94a3b8';
@@ -3705,10 +3902,8 @@ function renderRptTop3() {
       pillBorder = '#e2e8f0'; pillLeftBg = '#f8fafc'; pillLeftText = '#64748b'; pillRightBg = '#ffffff'; pillRightText = '#475569';
     }
 
-    // 判斷是否兩項都有值，如果有才渲染膠囊
     let pillsHtml = '';
     if (orders > 0 || hours > 0) {
-      // 雙色膠囊 HTML (加入客製化字距)
       pillsHtml = `
         <div style="display:inline-flex; align-items:stretch; border-radius:6px; border:2px solid ${pillBorder}; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.03); margin-top:2px;">
           ${orders > 0 ? `<span style="padding:2px 8px; background:${pillLeftBg}; font-size:11px; font-weight:800; color:${pillLeftText}; font-family:var(--mono); border-right:2px solid ${pillBorder}; letter-spacing:0.7px;">${orders}<span style="font-size:9px; font-weight:600;"> 單</span></span>` : ''}
@@ -3717,34 +3912,21 @@ function renderRptTop3() {
       `;
     }
 
-    // 卡片結構：左側 flex:1 佔滿空間 (獎牌+日期)，右側 flex-shrink:0 (金額)
     html += `
       <div style="background: ${bgStyle}; border-radius:20px; padding:8px 13px; display:flex; align-items:center; justify-content:space-between; border:3px solid ${pillBorder}; position:relative; overflow:hidden;">
-        
-        <!-- 左側粗色條 -->
         <div style="position:absolute; left:0; top:0; bottom:0; width:8px; background:${borderLeft};"></div>
-        
-        <!-- 左半部 (2等分之左，靠左對齊) -->
         <div style="display:flex; align-items:center; gap:12px; padding-left:6px; flex:1;">
           ${medalBox}
-          
           <div style="display:flex; flex-direction:column; justify-content:center;">
-            <!-- 日期顯示 (平手強制換行) -->
             <div style="font-size:14px; font-weight:900; color:${dateColor}; line-height:1.4; margin-bottom:2px;">
               ${datesHtml}
             </div>
-            <!-- 雙色膠囊 -->
-            <div>
-              ${pillsHtml}
-            </div>
+            <div>${pillsHtml}</div>
           </div>
         </div>
-        
-        <!-- 右半部 (2等分之右，金額調小並空一格) -->
         <div style="font-family:var(--mono); font-size:22px; font-weight:800; color:${valueColor}; text-align:right; flex-shrink:0; padding-left:10px;">
           <span style="font-size:11px; opacity:0.85;">$ </span>${fmt(total)}
         </div>
-
       </div>
     `;
   });
