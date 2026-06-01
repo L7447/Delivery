@@ -1495,25 +1495,29 @@ function buildRecItem(r) {
   const dStr = safeText(r.date.replace(/-/g, '/'));
   const tStr = safeText(r.time || '--:--');
   
-  // 1. 現金小費專屬卡片
+  // 1. 現金小費專屬卡片 (極簡濃縮 1 行版)
   if (r.isCashTip) {
     const plat = getPlatform(r.platformId);
     return `
-      <div class="hist-rec-card cashtip-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="border-color: ${plat.color}; box-shadow: 0 2px 8px ${plat.color}15;">
-        <div class="hrc-top" style="padding:6px 10px; display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span class="hrc-plat-tag" style="background:${plat.color};">${safeText(plat.name)}</span>
-              <span style="font-size:11px; font-weight:700; color: #16a34a;">💵 現金小費</span>
-              <!-- 👇 綠色系雙色時間膠囊 -->
-              <div style="display:inline-flex; align-items:center; border-radius:6px; border:1px solid #bbf7d0; overflow:hidden;">
-                <span style="padding:2px 6px; background:#dcfce7; font-size:11px; font-weight:800; color:#16a34a; font-family:var(--mono); border-right:1px solid #bbf7d0;">${dStr}</span>
-                <span style="padding:2px 6px; background:#ffffff; font-size:11px; font-weight:900; color:#15803d; font-family:var(--mono);">${tStr}</span>
-              </div>
-            </div>
-            ${r.note ? `<div style="font-size:11px; color:var(--red); font-weight:700;">${safeTextWithBr(r.note)}</div>` : ''}
+      <div class="hist-rec-card cashtip-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="border: 1.5px solid #22c55e; box-shadow: 0 2px 6px rgba(34, 197, 94, 0.05); cursor:pointer; position:relative; margin-bottom:5px;">
+        
+        <!-- 左上角絕對定位標籤 -->
+        <span style="position:absolute; top:0; left:0; background:#22c55e; color:#ffffff; padding:4px 14px; border-radius:0 0 16px 0; font-size:12px; font-weight:900; letter-spacing:1px; z-index:1; line-height:1.4;">💵 現金小費</span>
+        
+        <!-- 右側內容區塊 (利用 padding-left: 105px 避開左上標籤) -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding: 4px 10px 4px 105px; min-height: 32px;">
+          
+          <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; padding-right:8px;">
+            <span style="font-size:12px; font-weight:900; color:#15803d; font-family:var(--mono); flex-shrink:0;">${tStr}</span>
+            <span style="background:${plat.color}15; color:${plat.color}; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:900; border:1px solid ${plat.color}30; flex-shrink:0;">${safeText(plat.name)}</span>
+            <!-- 備註過長時會自動變成 ... 省略號 -->
+            ${r.note ? `<span style="font-size:11px; color:#ea580c; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📝 ${safeText(r.note)}</span>` : ''}
           </div>
-          <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a;">$${fmt(r.cashTipAmt)}</div>
+          
+          <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a; flex-shrink:0;">
+            <span style="font-size:12px; opacity:0.8;">$</span> ${fmt(r.cashTipAmt)}
+          </div>
+          
         </div>
       </div>`;
   }
@@ -2080,10 +2084,15 @@ function renderHistRecords(ds) {
     
     let sumHtml = total > 0 ? buildSummaryCard('當日', total, orders, mileage, hours, dayBonus, dayTemp, dayTips, 'hist-day-card', dStr) : '';
     if (cashTips > 0) {
-      sumHtml += `<div style="background:#f0fdf4; border:1.5px solid #708090; border-radius:12px; padding:5px 16px; margin:2px 0px; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:13px; font-weight:700; color:#15803d;">💵 當日現金小費 (不計入總收入)</span>
-        <span style="font-family:var(--mono); font-size:16px; font-weight:800; color:#16a34a;">$${fmt(cashTips)}</span>
-      </div>`;
+      sumHtml += `
+        <div style="display: flex; align-items: stretch; border-radius: 12px; border: 2px solid #22c55e; overflow: hidden; margin: 4px 0px;">
+          <div style="background: #1fa550; padding: 3px 12px; flex: 1; display:flex; align-items:center;">
+            <span style="font-size:14px; font-weight:750; color:#ffffff; letter-spacing:0.5px;">當日現金小費 <span style="font-size:12px; font-weight:700;">(不計入總收入)</span></span>
+          </div>
+          <div style="background: #ffffff; padding: 3px 16px; display:flex; align-items:center;">
+            <span style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a;"><span style="font-size:13px;">$</span> ${fmt(cashTips)}</span>
+          </div>
+        </div>`;
     }
     sumEl.innerHTML = sumHtml;
   } else { sumEl.innerHTML = ''; }
@@ -4336,7 +4345,7 @@ function renderVehicleContent() {
                   </div>
                   <div class="vc-right">
                     <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:2px;">花費</span>
-                    <span class="vc-right-val" style="color:#2563eb;">-$${fmt(r.amount)}</span>
+                    <span class="vc-right-val" style="color:#2563eb;"><span style="font-size:10px;">-$</span> ${fmt(r.amount)}</span>
                   </div>
                 </div>`;
           } else {
@@ -4367,23 +4376,30 @@ function renderVehicleContent() {
           // ── 🔧 保養 / 🛠️ 維修紀錄卡片 ──
           const isRepair = r.maintCategory === 'repair';
           const iconSrc = isRepair ? 'Vehicle/ve4.png' : 'Vehicle/ve3.png';
-          const iconSize = isRepair ? '38px' : '38px'; // 💡 維修圖示特別放大
-          const rightColor = isRepair ? '#0ea5e9' : '#16a34a';
-          const rightBg = isRepair ? '#eff6ff' : '#f0fdf4';
+          const iconSize = '38px'; 
+          
+          // 動態色彩：維修(藍色) / 保養(綠色)
+          const cardBorder = isRepair ? '#3b82f6' : '#10b981';
+          const cardShadow = isRepair ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)';
+          const rightColor = isRepair ? '#2563eb' : '#16a34a';
+          const rightBg    = isRepair ? '#eff6ff' : '#f0fdf4';
+          const pillBg     = isRepair ? '#dbeafe' : '#dcfce7';
+          const pillBorder = isRepair ? '#bfdbfe' : '#86efac';
+          const pillColor  = isRepair ? '#1d4ed8' : '#15803d';
           
           let pillsHtml = '';
           if (r.km) pillsHtml += `<div class="vb-pill" style="color: #ea580c; border:1px solid #c8cbce;">${fmt(r.km)}<span style="color: #64748b; font-size:10px; letter-spacing:1px;">km</span></div>`;
 
           (r.items || []).forEach(item => {
-            pillsHtml += `<div class="vb-pill" style="background: #dcfce7; border:1px solid #69d390; color: #16a34a; font-size:10px; font-weight:700;">${safeText(item)}</div>`;
+            pillsHtml += `<div class="vb-pill" style="background: ${pillBg}; border:1px solid ${pillBorder}; color: ${pillColor}; font-size:10px; font-weight:800;">${safeText(item)}</div>`;
           });
 
-          // 💡 機車行標籤改藍色 & 新增備註細節標籤
-          const shopHtml = r.shop ? `<div class="vt-tag" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;">${safeText(r.shop)}</div>` : '';
-          const noteHtml = r.note ? `<div class="vt-tag" style="background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${safeText(r.note)}</div>` : '';
+          // 機車行與備註標籤
+          const shopHtml = r.shop ? `<div class="vt-tag" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:800;">${safeText(r.shop)}</div>` : '';
+          const noteHtml = r.note ? `<div class="vt-tag" style="background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:800;">${safeText(r.note)}</div>` : '';
 
           htmlContent = `
-            <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
+            <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')" style="border: 2px solid ${cardBorder}60;">
               <div class="vc-left"><img src="${iconSrc}" style="width:${iconSize}; height:${iconSize}; transition:0.3s;"></div>
               <div class="vc-mid">
                 <div class="vc-mid-top">
@@ -4393,9 +4409,9 @@ function renderVehicleContent() {
                 </div>
                 <div class="vc-mid-bot">${pillsHtml}</div>
               </div>
-              <div class="vc-right" style="background:${rightBg}; border-left:none;">
+              <div class="vc-right" style="background:${rightBg}; border-left: 1px dashed ${cardBorder}60;">
                 <span style="font-size:10px; color:${rightColor}; font-weight:700; margin-bottom:2px;">花費</span>
-                <span class="vc-right-val" style="color:${rightColor};">-$${fmt(r.amount)}</span>
+                <span class="vc-right-val" style="color:${rightColor}; font-family:var(--mono); font-weight:900;"><span style="font-size:10px;">-$</span> ${fmt(r.amount)}</span>
               </div>
             </div>`;
       }
@@ -5022,13 +5038,19 @@ window.doVehSearch = function(isFullScreen = false) {
       
   recs.forEach((r, idx) => {
     const isLatest = idx === 0;
+    const isRepair = r.maintCategory === 'repair';
     
-    const boxBorder = isLatest ? '#10b981' : '#cbd5e1'; 
-    const bottomBg = isLatest ? '#ebfcf0' : '#f8fafc'; 
+    // 👇 依據類別與是否為最新，設定色彩
+    let baseColor = isRepair ? '#3b82f6' : '#10b981'; // 藍 vs 綠
     
-    const capLeftBg = isLatest ? '#059669' : '#3e4f66'; 
-    const capRightBg = isLatest ? '#beffde' : '#d7dee7'; 
-    const capRightText = isLatest ? '#059669' : '#3e4f66'; 
+    // 時間軸圓點與卡片邊框
+    const boxBorder = isLatest ? baseColor : '#cbd5e1'; 
+    const bottomBg = isLatest ? (isRepair ? '#eff6ff' : '#ebfcf0') : '#f8fafc'; 
+    
+    // 下方標籤顏色
+    const capLeftBg = isLatest ? (isRepair ? '#2563eb' : '#059669') : '#475569'; 
+    const capRightBg = isLatest ? (isRepair ? '#dbeafe' : '#beffde') : '#f1f5f9'; 
+    const capRightText = isLatest ? (isRepair ? '#1d4ed8' : '#059669') : '#334155';
     
     let diffHtml = '';
     if (idx < recs.length - 1) {
@@ -5038,7 +5060,7 @@ window.doVehSearch = function(isFullScreen = false) {
       
       diffHtml = `
         <div style="display:flex; flex-direction:column; align-items:center; position:relative; z-index:2;">
-          <div style="width:2px; height:8px; background: #10b981;"></div>
+          <div style="width:2px; height:8px; background: ${baseColor};"></div>
 
           <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:8px; display:inline-flex; align-items:stretch; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
             <div style="padding:1px 10px; display:flex; align-items:center;">
