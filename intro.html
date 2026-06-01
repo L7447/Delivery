@@ -57,7 +57,6 @@
       width: 100%;
       max-width: 380px;
       border-radius: 50%;
-      box-shadow: 0 24px 48px rgba(255, 107, 53, 0.2);
       animation: float 4s ease-in-out infinite;
       border: 8px solid #ffffff;
     }
@@ -72,71 +71,102 @@
     .section-header h2 { font-size: 24px; font-weight: 900; color: #1e293b; margin-bottom: 8px; }
     .section-header p { font-size: 14px; color: #64748b; font-weight: 600; }
 
-    .grid-blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto 60px; padding: 0 20px; }
+    /* --- 功能總覽專屬外層區塊 --- */
+    .overview-section {
+      background-color: #ffffff; /* 👈 您可以在這裡更改總覽區塊的背景色 (目前為純白) */
+      padding: 60px 0 200px 0; /* 增加上下內距，讓區塊更有獨立的空間感 */
+      border-top: 1px solid #e2e8f0; 
+      border-bottom: 1px solid #e2e8f0; 
+      width: 100%;
+    }
+
+    /* 👇 終極強制 2x2 網格排版 */
+    .grid-blocks { 
+      display: grid; 
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 70px 50px; /* 👈 修改這裡，把原本的 20px 改成 40px 20px (上下40，左右20) */
+      max-width: 900px; 
+      margin: 0 auto; 
+      padding: 0 20px; 
+      width: 100%;
+    }
     
-    .block-card { border-radius: 20px; border: 2.5px solid; padding: 24px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+    /* 確保卡片本身允許內部內容縮小 */
+    .block-card { 
+      min-width: 0; 
+      border-radius: 20px; 
+      /* 👇 8px 的超厚白框 */
+      border: 10px solid #ffffff; 
+      /* 👇 關鍵魔法：利用 box-shadow 畫出外層的極細灰線，讓白框在白底上完美現形！ */
+      box-shadow: 0 0 0 1.5px #cbd5e1, 0 12px 24px rgba(0,0,0,0.06); 
+      padding: 4px 16px 20px 16px; 
+      cursor: pointer; 
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      justify-content: center; 
+      position: relative; max-height: 200px;
+    }
     .block-card:active { transform: scale(0.96); }
-    .block-card.active { box-shadow: 0 12px 30px rgba(0,0,0,0.1); transform: translateY(-5px); }
+    .block-card.active { box-shadow: 0 0 0 2px #94a3b8, 0 12px 30px rgba(0, 0, 0, 0.15); transform: translateY(-5px); }
     /* 點綴小積木圖示 */
-    .block-card::before { content: '🧩'; position: absolute; right: -10px; bottom: -10px; font-size: 80px; opacity: 0.1; transform: rotate(-15deg); pointer-events: none; }
+    .block-card::before { content: '🧩'; position: absolute; right: -10px; bottom: 50px; font-size: 60px; opacity: 0.3; transform: rotate(-15deg); pointer-events: none; }
     
-    .b-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; text-align: center; position: relative; z-index: 1; }
-    .b-desc { font-size: 13px; font-weight: 700; text-align: center; opacity: 0.8; margin-bottom: 20px; position: relative; z-index: 1; }
-    .b-tag { background: rgba(255,255,255,0.9); padding: 8px 0; text-align: center; border-radius: 12px; font-size: 12px; font-weight: 800; width: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.03); position: relative; z-index: 1; }
+    .b-title { font-size: 32px; font-weight: 850; margin-bottom: 12px; text-align: center; position: relative; z-index: 1; width: 100%; }
+    .b-desc { font-size: 24px; font-weight: 800; text-align: center; opacity: 0.8; margin-bottom: 15px; position: relative; z-index: 1; width: 100%; letter-spacing: 3px; }
+    /* 標籤樣式：無圓角、深底白字、懸浮在底部白框上 */
+    .b-tag { 
+      padding: 6px 0; 
+      text-align: center; 
+      border-radius: 0; /* 取消圓角 */
+      font-size: 18px; 
+      font-weight: 650; 
+      width: 70%; 
+      position: absolute; 
+      bottom: -8px; /* 👈 剛好對齊 8px 的厚白框 */
+      left: 50%;
+      transform: translate(-50%, 50%); 
+      z-index: 10; 
+      color: #ffffff !important; 
+    }
 
     /* 積木顏色配置 */
-    .c-blue { background: var(--c-blue-bg); border-color: var(--c-blue-border); }
+    .c-blue { background: var(--c-blue-bg); border-color: #ffffff; }
     .c-blue .b-title { color: var(--c-blue-text); }
-    .c-blue .b-tag { color: var(--c-blue-text); border: 1px solid var(--c-blue-border); }
+    .c-blue .b-tag { background-color: var(--c-blue-text); /* 👈 使用深色作為背景 */ }
 
-    .c-green { background: var(--c-green-bg); border-color: var(--c-green-border); }
+    .c-green { background: var(--c-green-bg); border-color: #ffffff; }
     .c-green .b-title { color: var(--c-green-text); }
-    .c-green .b-tag { color: var(--c-green-text); border: 1px solid var(--c-green-border); }
+    .c-green .b-tag { background-color: var(--c-green-text); }
 
-    .c-yellow { background: var(--c-yellow-bg); border-color: var(--c-yellow-border); }
+    .c-yellow { background: var(--c-yellow-bg); border-color: #ffffff; }
     .c-yellow .b-title { color: var(--c-yellow-text); }
-    .c-yellow .b-tag { color: var(--c-yellow-text); border: 1px solid var(--c-yellow-border); }
+    .c-yellow .b-tag { background-color: var(--c-yellow-text); }
 
-    .c-purple { background: var(--c-purple-bg); border-color: var(--c-purple-border); }
+    .c-purple { background: var(--c-purple-bg); border-color: #ffffff; }
     .c-purple .b-title { color: var(--c-purple-text); }
-    .c-purple .b-tag { color: var(--c-purple-text); border: 1px solid var(--c-purple-border); }
+    .c-purple .b-tag { background-color: var(--c-purple-text); }
 
-    /* --- 區塊 A：動態展示區 --- */
-    #display-area { display: none; padding: 40px 20px; text-align: center; background: #ffffff; border-top: 1px solid #e2e8f0; margin-top: 40px; }
-    .display-container { max-width: 600px; margin: 0 auto; }
+    .display-container { 
+      max-width: 590px; 
+      margin: 0 auto; 
+      /* 👇 轉換為 Flex 彈性排版，並配合外層高度 */
+      display: flex;
+      flex-direction: column;
+    }
     
-    .da-header { margin-bottom: 24px; }
+    .da-header { margin-bottom: 0; }
     .da-main-title { font-size: 24px; font-weight: 900; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .da-sub-title { font-size: 15px; color: #334155; font-weight: 800; background: #f1f5f9; display: inline-block; padding: 6px 20px; border-radius: 99px; border: 1.5px solid #e2e8f0; }
 
-    /* 👇 修改重點：加寬的精美展示外框與比例 */
-    .device-frame { 
-      background: #ffffff; 
-      padding: 16px; 
-      border-radius: 36px; 
-      box-shadow: 0 24px 48px rgba(0,0,0,0.1), inset 0 0 0 4px #cbd5e1; 
-      border: 8px solid #f8fafc;
-      max-width: 420px; /* 👈 加寬 */
-      margin: 0 auto; 
-      cursor: pointer;
-      position: relative;
-    }
-    .device-frame::after {
-      content: '👆 點圖切換'; position: absolute; right: -25px; bottom: 40px; background: #1e293b; color: #fff; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 12px 12px 12px 0; transform: rotate(-8deg); box-shadow: 0 8px 16px rgba(0,0,0,0.2); pointer-events: none; z-index: 10;
+    /* 動態展示區標題容器 */
+    .da-header-wrapper {
+      position: relative; /* 讓按鈕可以相對於這個區塊定位 */
+      margin-bottom: 8px;
     }
     
-    /* 👇 修改重點：降低高度比例，從原本狹長的 1/2.1 改為 1/1.85，看起來更舒服 */
-    .img-container { 
-      border-radius: 20px; 
-      overflow: hidden; 
-      background: #f1f5f9; 
-      aspect-ratio: 1 / 1.85; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      box-shadow: inset 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .img-container img { width: 100%; height: 100%; object-fit: cover; } /* cover 會自動裁切填滿框框 */
+    
     
     /* 進度點點 */
     .dots-wrap { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
@@ -160,7 +190,198 @@
       .hero { flex-direction: column-reverse; text-align: center; padding-top: 100px; gap: 20px; }
       .hero-text { text-align: center; }
       .hero-image img { max-width: 280px; }
+      
+      /* 👇 在手機上，強迫使用 2x2，並大幅縮小字體與內距，避免破版 */
+      .grid-blocks { 
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important; 
+        gap: 60px 10px; 
+        padding: 30px 12px 60px 12px; 
+      }
+      /* 手機版的邊框稍微變細 5px，同樣加上輪廓線 */
+      .block-card { 
+        padding: 2px 8px 16px 8px; 
+        border: 8px solid #ffffff; 
+        box-shadow: 0 0 0 1px #cbd5e1, 0 8px 16px rgba(0,0,0,0.05); 
+      }
+      .b-title { font-size: 22px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .b-desc { font-size: 16px; margin-bottom: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 1.5px; }
+      /* 手機版懸浮標籤調整 */
+      .b-tag { font-size: 13px; padding: 6px 0; width: 85%; border-radius: 0; bottom: -5px; }
+
+      /* 手機版：標題兩側增加留白，避免文字蓋住右側按鈕 */
+      .da-main-title { padding: 0 80px; font-size: 20px; }
+      /* 手機版：返回按鈕調整位置與大小 */
+
     }
+
+    /* --- 區塊 A：動態展示區 (橫向滑動版) --- */
+    #display-area { 
+      display: none; 
+      padding: 60px 0; /* 移除左右 padding，讓軌道可以頂到螢幕邊緣 */
+      background: var(--bg); 
+      margin-top: 20px; 
+    }
+
+    /* 頂部標題與返回按鈕 */
+    
+    
+
+    /* 👇 橫向滑動軌道核心設定 */
+    .scroll-track {
+      display: flex;
+      overflow-x: auto; /* 開啟原生橫向捲軸 */
+      gap: 24px;
+      padding: 10px 5% 40px 5%; /* 底部留 40px 給滑動條空間 */
+      scroll-snap-type: x mandatory; /* 讓滑動時有吸附卡片的效果 */
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* 👇 自訂底部滑動條 (Scrollbar) 樣式 */
+    .scroll-track::-webkit-scrollbar {
+      height: 12px; /* 滑動條粗細 */
+    }
+    .scroll-track::-webkit-scrollbar-track {
+      background: #e2e8f0; /* 滑動條軌道背景色 */
+      border-radius: 100px;
+      margin: 0 5%; /* 讓軌道不貼邊 */
+    }
+    .scroll-track::-webkit-scrollbar-thumb {
+      background: #94a3b8; /* 滑動塊的顏色 */
+      border-radius: 100px;
+      border: 3px solid #e2e8f0; /* 製作內縮效果 */
+    }
+    .scroll-track::-webkit-scrollbar-thumb:hover {
+      background: #64748b; /* 滑鼠移上去變深 */
+    }
+
+    /* 單張卡片容器 */
+    .scroll-card {
+      flex: 0 0 97%; /* 手機上一張卡片佔 85% 寬度，暗示右邊還有 */
+      max-width: 390px; /* 電腦版最大寬度 */
+      scroll-snap-align: center; /* 滑動停止時置中對齊 */
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 若只有一張圖隱藏提示 */
+    .device-frame.hide-hint::after { display: none; }
+
+    
+.device-frame { 
+  background: #ffffff; 
+  /* 👇 將上方的 padding 改為 48px (原本是 16px) */
+  padding: 48px 16px 16px 16px; 
+  border-radius: 36px; box-shadow: 0 24px 48px rgba(0,0,0,0.08), inset 0 0 0 4px #09b794; 
+  border: 8px solid #ffffff; cursor: pointer;
+  position: relative; transition: all 0.3s;
+}
+.device-frame:active { transform: scale(0.98); }
+
+    
+    .img-container { border-radius: 20px; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
+    .img-container img { width: 100%; height: auto; display: block; }
+
+    /* 👇 卡片內部的進度點點 */
+    .card-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+    .card-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: 0.3s; }
+    .card-dots .dot.active { background: #3b82f6; width: 24px; }
+
+    /* 👇 卡片右下角的動態提示標籤 */
+.click-hint {
+  position: absolute; 
+  top: 12px;     /* 👇 放置在上方空出來的區域 */
+  right: 16px;   /* 👇 與圖片右側邊緣對齊 */
+  background: #1e293b; color: #fff; font-size: 14px; font-weight: 800; 
+  padding: 6px 14px; border-radius: 12px; 
+  pointer-events: none; transition: 0.3s; z-index: 10;
+
+  /* 加入一個輕微的上下浮動動畫 */
+  animation: floatHint 2s ease-in-out infinite;
+}
+@keyframes floatHint {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+    /* 👇 軌道最右側的「巨大回總覽按鈕」卡片 */
+    .end-card {
+      display: flex; align-items: center; justify-content: center;
+      flex: 0 0 85%; max-width: 360px; scroll-snap-align: center;
+    }
+    .btn-giant-back {
+      background: #ffffff; border: 4px dashed #cbd5e1; color: #475569; width: 100%; height: 80%; min-height: 400px; border-radius: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; gap: 16px; cursor: pointer; transition: 0.3s;
+    }
+    .btn-giant-back:hover { background: #f1f5f9; border-color: #94a3b8; color: #0f172a; transform: scale(0.96); border-style: solid; }
+
+    /* 👇 2. 圖片外框左右的懸浮切換按鈕 */
+    .nav-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.95);
+      color: #334155;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 900;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: pointer;
+      z-index: 20;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1.5px solid #e2e8f0;
+    }
+    .nav-arrow:active { transform: translateY(-50%) scale(0.85); background: #f1f5f9; }
+    /* 讓按鈕凸出一半在框外，看起來更有立體感 */
+    .nav-arrow.prev { left: -14px; }
+    .nav-arrow.next { right: -14px; }
+
+
+.card-title {
+  font-size: 20px; font-weight: 900; margin: 0 auto 1px -15px; letter-spacing: 2.5px;
+  padding: 10px 24px 16px 24px; width: max-content; min-width: 180px;
+  position: relative; z-index: 3; text-align: center;
+  /* 👇 底部中央切出箭頭形狀 */
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), 50% 100%, 0 calc(100% - 12px));
+}
+.card-title::before { content:''; position:absolute; inset:0; background:currentColor; opacity:0.15; z-index:-1; }
+.card-subtitle {
+  font-size: 18px; font-weight: 700; color: #ffffff; margin: 0 auto 8px auto; letter-spacing: 1.5px;
+  background: #334155; width: 90%; /* 比上半部寬 */
+  padding: 6px 10px; border-radius: 0 25px 0px 20px;
+  display: flex; align-items: flex-start; justify-content: flex-start; text-align: left; line-height: 1.5; max-width: 100%;
+  box-shadow: 4px 4px 0 #94a3b8;
+}
+/* 鎖定第一個 span（即 1-1. 數字膠囊） */
+.card-subtitle span:first-child {
+  flex-shrink: 0;          /* 絕對不允許被壓縮 */
+  white-space: nowrap;     /* 絕對不允許文字換行 */
+  margin-top: 2px;         /* 微調位置，讓它與右邊文字的視覺重心對齊 */
+}
+
+.da-top-bar {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: #ffffff; padding: 2px 6px 2px 20px;
+  border-radius: 99px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  margin: 0 auto -5px 15px; /* 置中 */
+  border: 1px solid #e2e8f0;
+}
+.da-category-title {
+  font-size: 18px; font-weight: 900; color: #0f172a; 
+  display: flex; align-items: center; gap: 8px;
+}
+/* 中間的分隔線 */
+.da-category-title::after {
+  content: ''; display: inline-block; width: 4px; height: 33px; background: #e2e8f0; margin-left: 12px;
+}
+.btn-back-overview {
+  background: #334155; color: #ffffff; padding: 6px 14px; border-radius: 8px 20px 8px 20px; font-size: 14px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 0 #0f172a; transform: translateY(4px); margin: 0 8px 12px 0;
+}
+.btn-back-overview:hover { background: #475569; }
+.btn-back-overview:active { box-shadow: 0 0 0 #0f172a; transform: translateY(18px); transition: 0.01s; }
   </style>
 </head>
 <body>
@@ -184,262 +405,278 @@
     </div>
     <div class="hero-image">
       <!-- 替換成您的吉祥物圖片 -->
-      <img src="icon-512.png" alt="外送員吉祥物" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23cbd5e1\'/></svg>'">
+      <img src="icon-512.png" alt="外送員" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23cbd5e1\'/></svg>'">
     </div>
   </section>
 
-  <div class="section-header">
-    <h2>功能總覽</h2>
-    <p>點擊下方模組，觀看詳細操作展示</p>
-  </div>
-
-  <!-- 四大模組按鈕 (積木風格) -->
-  <div class="grid-blocks">
-    <div class="block-card c-blue" onclick="loadMainCategory('home')">
-      <div>
-        <div class="b-title">首頁模組</div>
-        <div class="b-desc">日常操作與狀態追蹤</div>
-      </div>
-      <div class="b-tag">打卡 / 日程表 / 目標 / 獎勵</div>
-    </div>
-    
-    <div class="block-card c-green" onclick="loadMainCategory('history')">
-      <div>
-        <div class="b-title">查看紀錄</div>
-        <div class="b-desc">歷史資料精準查詢</div>
-      </div>
-      <div class="b-tag">全螢幕日曆 / 區間列表</div>
+  <section class="overview-section">
+    <div class="section-header">
+      <h2>功能總覽</h2>
+      <p>點擊下方模組，觀看詳細操作展示</p>
     </div>
 
-    <div class="block-card c-yellow" onclick="loadMainCategory('analysis')">
-      <div>
-        <div class="b-title">收入分析</div>
-        <div class="b-desc">視覺化圖表統計</div>
-      </div>
-      <div class="b-tag">佔比分析 / TOP 5 榜單</div>
-    </div>
-
-    <div class="block-card c-purple" onclick="loadMainCategory('vehicle')">
-      <div>
-        <div class="b-title">車輛管理</div>
-        <div class="b-desc">保養與油耗追蹤</div>
-      </div>
-      <div class="b-tag">燃料花費 / 保養維修記錄</div>
-    </div>
-  </div>
-
-  <!-- 區塊 A：動態展示區 -->
-  <div id="display-area">
-    <div class="display-container">
-      <div class="da-header anim-wrap" id="anim-header">
-        <div class="da-main-title" id="da-main-title">分類名稱</div>
-        <div class="da-sub-title" id="da-sub-title">步驟說明</div>
-      </div>
-
-      <div class="device-frame" id="device-clicker">
-        <div class="img-container anim-wrap" id="anim-img">
-          <img id="da-img" src="" alt="App Screenshot" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><rect width=\'100%\' height=\'100%\' fill=\'%23f8fafc\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-size=\'16px\' font-weight=\'bold\' fill=\'%2394a3b8\'>圖片準備中</text></svg>'">
+    <!-- 四大模組按鈕 (積木風格) -->
+    <div class="grid-blocks">
+      <div class="block-card c-blue" onclick="loadMainCategory('home')">
+        <div>
+          <div class="b-title">今日概況</div>
+          <div class="b-desc">日常操作 與 狀態追蹤</div>
         </div>
+        <div class="b-tag">打卡 / 日程表 / 目標 / 獎勵</div>
+      </div>
+      
+      <div class="block-card c-green" onclick="loadMainCategory('history')">
+        <div>
+          <div class="b-title">查看紀錄</div>
+          <div class="b-desc">歷史資料精準查詢</div>
+        </div>
+        <div class="b-tag">全螢幕日曆 / 區間列表</div>
       </div>
 
-      <div class="dots-wrap" id="da-dots"></div>
+      <div class="block-card c-yellow" onclick="loadMainCategory('analysis')">
+        <div>
+          <div class="b-title">收入分析</div>
+          <div class="b-desc">視覺化圖表統計</div>
+        </div>
+        <div class="b-tag">佔比分析 / TOP 5 榜單</div>
+      </div>
 
-      <div class="swipe-hint">
-        <span>⟵</span> 在圖片上左右滑動可切換大項目 <span>⟶</span>
+      <div class="block-card c-purple" onclick="loadMainCategory('vehicle')">
+        <div>
+          <div class="b-title">車輛管理</div>
+          <div class="b-desc">保養 與 油耗追蹤</div>
+        </div>
+        <div class="b-tag">燃料花費 / 保養維修記錄</div>
       </div>
     </div>
+  </section>
+
+  <!-- 區塊 A：動態展示區 (橫向滑動版) -->
+  <div id="display-area">
+    
+    <!-- 頂部控制列 (固定在左上角與右上角) -->
+    <div class="da-top-bar">
+      <div class="da-category-title" id="da-category-title">功能展示</div>
+      <button onclick="backToBlocks()" class="btn-back-overview">
+        <span style="font-size: 16px; font-weight: 900;">↑</span> 功能總覽
+      </button>
+    </div>
+
+    <!-- 橫向滑動軌道 (所有圖片會並排在這裡) -->
+    <div class="scroll-track" id="scroll-track">
+      <!-- 這裡的卡片會由 JavaScript 動態生成塞入 -->
+    </div>
+
+    <!-- 底部提示文字 -->
+    <div class="swipe-hint">
+      <span>⟵</span> 拖曳下方滑動條，或在畫面上左右滑動 <span>⟶</span>
+    </div>
+
   </div>
 
   <footer>
     <div style="margin-bottom: 8px;">外送記錄與分析 APP © 2026</div>
-    <div>由 ej/ao3tjpfu8 為外送員專屬開發 🛵</div>
+    <div>由 黒崎 為外送員專屬開發 🛵</div>
   </footer>
 
   <script>
     // --- 定義展示資料結構 ---
     const appData = {
-      'home': {
-        color: 'var(--c-blue-text)',
-        sections: [
-          {
-            title: '打卡系統',
-            steps: [
-              { desc: '1-1 上線打卡前狀態', img: 'intro/in1.png' },
-              { desc: '1-2 上線打卡後狀態', img: 'intro/in2.png' },
-              { desc: '1-3 上線中記錄', img: 'intro/in3.png' },
-              { desc: '1-4 上線中持續時間狀態', img: 'intro/in4.png' },
-              { desc: '1-5 下線打卡後記錄', img: 'intro/in5.png' }
-            ]
-          },
-          {
-            title: '平台日程表',
-            steps: [ { desc: '2-1 結算與發薪提醒', img: 'intro/in6.png' } ]
-          },
-          {
-            title: '目標進度',
-            steps: [ { desc: '3-1 週、月、年達標追蹤', img: 'intro/in7.png' } ]
-          },
-          {
-            title: '獎勵進度',
-            steps: [
-              { desc: '4-1 目前達標狀態', img: 'intro/in8.png' },
-              { desc: '4-2 獎勵全部完成', img: 'intro/in9.png' },
-              { desc: '4-3 即將到來獎勵預覽', img: 'intro/in10.png' }
-            ]
-          }
-        ]
-      },
-      'history': {
-        color: 'var(--c-green-text)',
-        sections: [
-          { title: '全螢幕日曆', steps: [{ desc: '掌握每日出勤狀況', img: 'intro/hist1.png' }] },
-          { title: '週～年記錄表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist2.png' }] }
-        ]
-      },
-      'analysis': {
-        color: 'var(--c-yellow-text)',
-        sections: [
-          { title: '各種分析圖表', steps: [{ desc: '收入結構與佔比圓餅圖', img: 'intro/ana1.png' }, { desc: '歷史趨勢柱狀圖', img: 'intro/ana2.png' }] },
-          { title: 'TOP 5 排行榜', steps: [{ desc: '單月最佳收入排行', img: 'intro/ana3.png' }] }
-        ]
-      },
-      'vehicle': {
-        color: 'var(--c-purple-text)',
-        sections: [
-          { title: '車輛燃料記錄', steps: [{ desc: '油耗計算與油資統計', img: 'intro/veh1.png' }] },
-          { title: '保養花費記錄', steps: [{ desc: '保養時間軸與里程追蹤', img: 'intro/veh2.png' }] }
-        ]
-      }
+      'home': { name: '今日概況', color: 'var(--c-blue-text)', sections: [ { title: '1.打卡系統', steps: [ { desc: '1-1. 打卡前。', img: 'intro/in1.png' }, { desc: '1-2. 打卡後。', img: 'intro/in2.png' }, { desc: '1-3. 打卡後，馬上顯示記錄。', img: 'intro/in3.png' }, { desc: '1-4. 上線時間，持續累積不中斷。', img: 'intro/in4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/in5.png' } ] }, { title: '2.平台日程表', steps: [ { desc: '結算與發薪提醒', img: 'intro/in6.png' } ] }, { title: '3.目標進度', steps: [ { desc: '目標進度追蹤', img: 'intro/in7.png' } ] }, { title: '4.獎勵進度', steps: [ { desc: '4-1. 目前達標進度。', img: 'intro/in8.png' }, { desc: '4-2. 最高階獎勵完成。', img: 'intro/in9.png' }, { desc: '4-3. 「即將到來」獎勵預覽。', img: 'intro/in10.png' } ] } ] },
+      'history': { name: '查看紀錄', color: 'var(--c-green-text)', sections: [ { title: '全螢幕日曆', steps: [{ desc: '掌握每日出勤狀況', img: 'intro/hist1.png' }] }, { title: '週～年記錄表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist2.png' }] } ] },
+      'analysis': { name: '收入分析', color: 'var(--c-yellow-text)', sections: [ { title: '各種分析圖表', steps: [{ desc: '收入結構與佔比圓餅圖', img: 'intro/ana1.png' }, { desc: '歷史趨勢柱狀圖', img: 'intro/ana2.png' }] }, { title: 'TOP 5 排行榜', steps: [{ desc: '單月最佳收入排行', img: 'intro/ana3.png' }] } ] },
+      'vehicle': { name: '車輛管理', color: 'var(--c-purple-text)', sections: [ { title: '車輛燃料記錄', steps: [{ desc: '油耗計算與油資統計', img: 'intro/veh1.png' }] }, { title: '保養花費記錄', steps: [{ desc: '保養時間軸與里程追蹤', img: 'intro/veh2.png' }] } ] }
     };
 
-    // --- 狀態變數 ---
-    let currentMainTab = '';
-    let currentSectionIdx = 0;
-    let currentStepIdx = 0;
-
-    // --- DOM 元素 ---
     const displayArea = document.getElementById('display-area');
-    const titleEl = document.getElementById('da-main-title');
-    const subTitleEl = document.getElementById('da-sub-title');
-    const imgEl = document.getElementById('da-img');
-    const dotsWrap = document.getElementById('da-dots');
-    const animHeader = document.getElementById('anim-header');
-    const animImg = document.getElementById('anim-img');
+    const scrollTrack = document.getElementById('scroll-track');
+    const categoryTitleEl = document.getElementById('da-category-title');
+    
+    // 👇 新增這個自動雙色標籤產生器
+    function getDualColorDesc(desc, color) {
+      // 自動偵測開頭是否有「數字-數字.」或「數字.」的格式
+      const match = desc.match(/^([\d\-]+\.)\s*(.*)$/);
+      
+      if (match) {
+        // 如果有抓到數字，就切成雙色膠囊
+        const numPart = match[1];  // 例如 "1-1."
+        const textPart = match[2]; // 例如 "打卡前"
+        return `<span style="background:${color}; color:#fff; padding:2px 8px; border-radius:6px; font-family:monospace; margin-right:6px; font-weight:900;">${numPart}</span><span>${textPart}</span>`;
+      }
+      
+      // 如果沒有數字 (例如「結算與發薪提醒」)，就維持原本的樣式
+      return `<span style="margin-right:4px;">🔖 </span><span>${desc}</span>`;
+    }
 
-    // 點擊四大積木
+    // 記錄每個大分類(Card)內部目前的步驟索引
+    let cardStepState = {}; 
+    let currentMainTab = '';
+
+    // 點擊四大積木，生成整排內容
     window.loadMainCategory = function(tabId) {
       document.querySelectorAll('.block-card').forEach(el => el.classList.remove('active'));
       event.currentTarget.classList.add('active');
 
       currentMainTab = tabId;
-      currentSectionIdx = 0;
-      currentStepIdx = 0;
+      cardStepState = {}; // 切換模組時，重置所有卡片的進度
+      const data = appData[tabId];
       
-      displayArea.style.display = 'block';
+      categoryTitleEl.innerHTML = `<span style="color: ${data.color}">●</span> ${data.name}`;
       
-      // 平滑滾動到展示區
-      setTimeout(() => {
-        displayArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      let htmlContent = '';
 
-      renderView('slide-in-right');
+      data.sections.forEach((sec, sIdx) => {
+        // 將該區塊的步驟資料編碼，藏在 HTML 中方便點擊時讀取
+        const stepsJson = encodeURIComponent(JSON.stringify(sec.steps));
+        
+        // 判斷是否需要畫點點
+        let dotsHtml = '';
+        if (sec.steps.length > 1) {
+          dotsHtml = '<div class="card-dots">';
+          sec.steps.forEach((_, i) => dotsHtml += `<div class="dot ${i === 0 ? 'active' : ''}"></div>`);
+          dotsHtml += '</div>';
+        }
+
+        // 判斷初始提示文字
+        const isLastCard = (sIdx === data.sections.length - 1);
+        let hintText = sec.steps.length > 1 ? '👇 點圖看下一張' : (isLastCard ? '👇 點擊完成' : '👇 點圖看下個功能');
+        let hintColor = sec.steps.length > 1 ? '#1e293b' : '#3b82f6';
+
+        // 👇 動態判斷：如果圖片大於 1 張，就生成左右切換按鈕
+        let navArrows = '';
+        if (sec.steps.length > 1) {
+          navArrows = `
+            <div class="nav-arrow prev" id="btn-prev-${sIdx}" onclick="changeCardStep(event, ${sIdx}, -1, '${stepsJson}')" style="display:none;">◀</div>
+            <div class="nav-arrow next" id="btn-next-${sIdx}" onclick="changeCardStep(event, ${sIdx}, 1, '${stepsJson}')">▶</div>
+          `;
+        }
+
+        htmlContent += `
+          <div class="scroll-card" id="card-${sIdx}">
+            <div style="text-align: center;">
+              <div class="card-title" style="color: ${data.color}">${sec.title}</div>
+              <div class="card-subtitle" id="sub-${sIdx}">${getDualColorDesc(sec.steps[0].desc, data.color)}</div>
+            </div>
+            
+            <!-- 👇 onclick 改綁定給新的 changeCardStep 函式 -->
+            <div class="device-frame" onclick="changeCardStep(event, ${sIdx}, 1, '${stepsJson}')">
+              ${navArrows} <!-- 插入左右按鈕 -->
+              <div class="img-container">
+                <img id="img-${sIdx}" src="${sec.steps[0].img}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100%\\\' height=\\\'500\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23f8fafc\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%2394a3b8\\\'>圖片</text></svg>'">
+              </div>
+              ${dotsHtml}
+              <div class="click-hint" id="hint-${sIdx}" style="background: ${hintColor}">${hintText}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      // 👇 軌道最後加入「巨大回總覽按鈕卡片」
+      htmlContent += `
+        <div class="end-card" id="card-end">
+          <button class="btn-giant-back" onclick="backToBlocks()">
+            <span style="font-size: 40px;">✅</span>
+            <span>觀看完畢<br><small style="font-size: 16px; color: #94a3b8;">點此返回功能總覽</small></span>
+          </button>
+        </div>
+      `;
+
+      scrollTrack.innerHTML = htmlContent;
+      displayArea.style.display = 'block';
+      scrollTrack.scrollLeft = 0; // 重置捲軸
+
+      // 平滑滾動到展示區並微調位置
+      setTimeout(() => {
+        // 取得 A 區塊距離網頁最頂部的絕對位置
+        const targetY = displayArea.getBoundingClientRect().top + window.scrollY;
+        
+        // 👇 這裡就是微調的魔法數字！
+        // 數字越大，畫面停的位置就越「高」（預留更多上方空間給導覽列）
+        // 您可以試著改成 60, 80, 100 來抓您最喜歡的高度
+        const offset = 30; 
+        
+        window.scrollTo({ 
+          top: targetY - offset, 
+          behavior: 'smooth' 
+        });
+      }, 100);
     };
 
-    // 渲染畫面與動畫邏輯
-    function renderView(animClassIn) {
-      const data = appData[currentMainTab];
-      const section = data.sections[currentSectionIdx];
-      const step = section.steps[currentStepIdx];
+    // 核心邏輯：處理卡片內的「上一張 / 下一張」點擊事件
+    window.changeCardStep = function(event, sIdx, direction, stepsJsonEncoded) {
+      // 阻止事件冒泡，以免點擊箭頭時又觸發了底層外框的點擊事件
+      if (event) event.stopPropagation();
 
-      // 準備退場
-      animHeader.className = 'da-header anim-wrap slide-out-left';
-      animImg.className = 'img-container anim-wrap slide-out-left';
+      if (cardStepState[sIdx] === undefined) cardStepState[sIdx] = 0;
+      
+      const steps = JSON.parse(decodeURIComponent(stepsJsonEncoded));
+      let currStep = cardStepState[sIdx];
 
-      setTimeout(() => {
-        // 替換資料
-        titleEl.textContent = section.title;
-        titleEl.style.color = data.color;
-        subTitleEl.innerHTML = `<span>🔖</span> ${step.desc}`;
-        imgEl.src = step.img;
+      if (direction === -1) {
+        // 👉 動作：上一張
+        if (currStep > 0) {
+          currStep--;
+          cardStepState[sIdx] = currStep;
+        }
+      } else {
+        // 👉 動作：下一張
+        if (currStep < steps.length - 1) {
+          currStep++;
+          cardStepState[sIdx] = currStep;
+        } else {
+          // 如果已是最後一張圖，向右捲動到下一張卡片
+          const currentCard = document.getElementById(`card-${sIdx}`);
+          const nextCard = currentCard.nextElementSibling;
+          
+          if (nextCard) {
+            const scrollTarget = nextCard.offsetLeft - scrollTrack.offsetLeft - 10;
+            scrollTrack.scrollTo({ left: scrollTarget, behavior: 'smooth' });
+          }
+          return; // 捲動後就直接結束，不更新 UI
+        }
+      }
 
-        // 畫點點
-        dotsWrap.innerHTML = section.steps.map((_, i) => 
-          `<div class="dot ${i === currentStepIdx ? 'active' : ''}"></div>`
-        ).join('');
-
-        // 準備進場方向
-        animHeader.className = `da-header anim-wrap ${animClassIn}`;
-        animImg.className = `img-container anim-wrap ${animClassIn}`;
-        
-        // 強制重繪後套用顯示
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            animHeader.className = 'da-header anim-wrap show-normal';
-            animImg.className = 'img-container anim-wrap show-normal';
-          }, 50);
+      // === 執行 UI 視覺更新 ===
+      
+      // 1. 更新標題與圖片 (維持您的雙色標籤)
+      document.getElementById(`sub-${sIdx}`).innerHTML = getDualColorDesc(steps[currStep].desc, appData[currentMainTab].color);
+      document.getElementById(`img-${sIdx}`).src = steps[currStep].img;
+      
+      // 2. 更新進度點點
+      const dotContainer = document.getElementById(`card-${sIdx}`).querySelector('.card-dots');
+      if (dotContainer) {
+        Array.from(dotContainer.children).forEach((dot, i) => {
+          dot.className = i === currStep ? 'dot active' : 'dot';
         });
-      }, 300); // 退場動畫時間
-    }
-
-    // 點擊圖片：切換下一張或下一區塊
-    document.getElementById('device-clicker').addEventListener('click', () => {
-      const data = appData[currentMainTab];
-      const section = data.sections[currentSectionIdx];
-
-      if (currentStepIdx < section.steps.length - 1) {
-        currentStepIdx++;
-        renderView('slide-in-right');
-      } else {
-        nextSection();
       }
-    });
 
-    function nextSection() {
-      const data = appData[currentMainTab];
-      if (currentSectionIdx < data.sections.length - 1) {
-        currentSectionIdx++;
-        currentStepIdx = 0;
-        renderView('slide-in-right');
-      } else {
-        currentSectionIdx = 0;
-        currentStepIdx = 0;
-        renderView('slide-in-right');
+      // 3. 更新右下角的文字提示
+      const hint = document.getElementById(`hint-${sIdx}`);
+      if (hint) {
+        if (currStep === steps.length - 1) {
+          const isLastCard = (sIdx === appData[currentMainTab].sections.length - 1);
+          hint.innerText = isLastCard ? '👇 點擊完成' : '👇 點圖看下個功能';
+          hint.style.background = '#3b82f6'; 
+        } else {
+          hint.innerText = '👇 點圖看下一張';
+          hint.style.background = '#1e293b'; 
+        }
       }
-    }
 
-    function prevSection() {
-      const data = appData[currentMainTab];
-      if (currentSectionIdx > 0) {
-        currentSectionIdx--;
-        currentStepIdx = 0; 
-        renderView('slide-out-left'); 
+      // 4. 動態隱藏/顯示「左箭頭」 (第一張時隱藏左箭頭)
+      const btnPrev = document.getElementById(`btn-prev-${sIdx}`);
+      if (btnPrev) {
+        btnPrev.style.display = currStep > 0 ? 'flex' : 'none';
       }
-    }
+    };
 
-    // --- 左右滑動偵測 (Touch Swipe) ---
-    let touchstartX = 0;
-    let touchendX = 0;
-
-    const deviceFrame = document.getElementById('device-clicker');
-
-    deviceFrame.addEventListener('touchstart', e => {
-      touchstartX = e.changedTouches[0].screenX;
-    }, {passive: true});
-
-    deviceFrame.addEventListener('touchend', e => {
-      touchendX = e.changedTouches[0].screenX;
-      handleSwipe();
-    }, {passive: true});
-
-    function handleSwipe() {
-      const swipeDist = touchendX - touchstartX;
-      if (swipeDist < -40) {
-        nextSection();
-      } else if (swipeDist > 40) {
-        prevSection();
+    // 返回總覽按鈕 (平滑滾動回上方)
+    window.backToBlocks = function() {
+      const overviewEl = document.querySelector('.overview-section'); 
+      if (overviewEl) {
+        overviewEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
-    }
-
+    };
   </script>
 </body>
 </html>
