@@ -1098,6 +1098,7 @@ function switchVehicleTab(tab, index) {
       ? { bg: 'linear-gradient(135deg, #4f46e5 20%, #2563eb 60%, #93c5fd 88%, #ffffff 99%)', shadow: 'rgba(59,130,246,0.4)', textId: 'btn-veh-fuel' }
       : { bg: 'linear-gradient(135deg, #be123c 20%, #dc2626 60%, #fca5a5 88%, #ffffff 99%)', shadow: 'rgba(239,68,68,0.4)', textId: 'btn-veh-fuel' },
     maintenance: { bg: 'linear-gradient(135deg, #047857 20%, #059669 60%, #6ee7b7 88%, #ffffff 99%)', shadow: 'rgba(16,185,129,0.4)', textId: 'btn-veh-maint' },
+    wash: { bg: 'linear-gradient(135deg, #0891b2 20%, #06b6d4 60%, #a5f3fc 88%, #ffffff 99%)', shadow: 'rgba(6,182,212,0.4)', textId: 'btn-veh-wash' },
     yearly: { bg: 'linear-gradient(135deg, #be6017 20%, #d97706 60%, #fcd34d 88%, #ffffff 99%)', shadow: 'rgba(245,158,11,0.4)', textId: 'btn-veh-yearly' },
     search: { bg: 'linear-gradient(135deg, #4c1d95 20%, #7c3aed 60%, #c4b5fd 88%, #ffffff 99%)', shadow: 'rgba(139,92,246,0.4)', textId: 'btn-veh-search' }
   };
@@ -1105,7 +1106,7 @@ function switchVehicleTab(tab, index) {
   tabBg.style.background = colors[tab].bg; 
   tabBg.style.boxShadow = `0 4px 10px ${colors[tab].shadow}`;
 
-  ['fuel', 'maintenance', 'yearly', 'search'].forEach(t => {
+  ['fuel', 'maintenance', 'wash', 'yearly', 'search'].forEach(t => {
     document.getElementById(colors[t].textId).style.color = (t === tab) ? '#fff' : 'var(--t2)';
     document.getElementById(colors[t].textId).classList.toggle('active', t === tab);
   });
@@ -4001,7 +4002,7 @@ function selectVehicle(id) {
   _syncVehSelectorActive(id); 
   
   // 👉 新增這行：切換車輛時，重新觸發目前頁籤的顏色渲染 (因為油車和電車的燃料頁籤顏色不同)
-  const tabIndexMap = { 'fuel': 0, 'maintenance': 1, 'yearly': 2, 'search': 3 };
+  const tabIndexMap = { 'fuel': 0, 'maintenance': 1, 'wash': 2, 'yearly': 3, 'search': 4 };
   switchVehicleTab(S.vehicleTab, tabIndexMap[S.vehicleTab]);
 
   renderVehicleContent();     
@@ -4171,7 +4172,7 @@ function renderVehicleContent() {
     const yearRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(S.vehY + '-'));
     const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
     
-    let yDist = 0, yLiters = 0, yFuelAmt = 0, yMaintAmt = 0;
+    let yDist = 0, yLiters = 0, yFuelAmt = 0, yMaintAmt = 0, yWashAmt = 0, yWashCount = 0;
     const itemFreq = {};
 
     // 1. 燃料與里程計算
@@ -4179,14 +4180,17 @@ function renderVehicleContent() {
       if (r.type === 'fuel') {
         const diff = pf(r.km) - pf(r.prevKm); if (diff > 0) yDist += diff;
         yLiters += pf(r.liters); yFuelAmt += pf(r.amount);
-      } else {
+      } else if (r.type === 'maintenance') {
         yMaintAmt += pf(r.amount);
         if (r.items) r.items.forEach(it => { itemFreq[it] = (itemFreq[it] || 0) + 1; });
+      } else if (r.type === 'wash') {
+        yWashAmt += pf(r.amount);
+        yWashCount++; // 👈 新增：計算洗車次數
       }
     });
     
     const sortedItems = Object.entries(itemFreq).sort((a,b) => b[1] - a[1]);
-    const totalExp = yFuelAmt + yMaintAmt;
+    const totalExp = yFuelAmt + yMaintAmt + yWashAmt;
 
     // 2. 總支出金條卡片 (極度縮緊)
     html += `
@@ -4358,19 +4362,64 @@ function renderVehicleContent() {
       </div>
     </div>`;
 
+    // 5. 洗車美容總額 (水藍色漸層卡片，含次數與底部留白)
+    if (yWashCount > 0) {
+      html += `
+      <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:16px;">
+        <!-- 頂部水藍色玻璃感卡 -->
+        <div style="background:linear-gradient(180deg, #0891b2 0%, #06b6d4 100%); padding:10px 16px; position:relative; overflow:hidden;">
+          <div style="position:absolute; inset:0; opacity:0.2; background-image: radial-gradient(circle at right 20%, #ffffff 2px, transparent 2px); background-size: 20px 20px;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
+            <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
+              <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:16px;">🧽</div>
+              洗車美容總額
+            </h3>
+            <div style="background:#ffffff; padding:4px 12px; border-radius:10px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15); border:1px solid #67e8f9; display:flex; align-items:baseline;">
+              <span style="font-size:14px; font-weight:900; color:#0891b2; margin-right:4px;">$</span>
+              <span style="font-family:var(--mono); font-size:24px; font-weight:900; background:linear-gradient(180deg, #0891b2, #06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-0.5px;">${fmt(yWashAmt)}</span>
+            </div>
+          </div>
+        </div>
+        <!-- 下方緊湊立體清單區 -->
+        <div style="padding:12px 16px; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
+           <span style="font-size:14px; font-weight:800; color:#475569;">本年度洗車總計</span>
+           <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:#0891b2; background:#ecfeff; padding:4px 12px; border-radius:8px; border:1px solid #cffafe;">${yWashCount} <span style="font-size:12px; color:#64748b;">次</span></span>
+        </div>
+      </div>`;
+    } else {
+      // 若無洗車記錄，顯示空的提示區塊保持版面一致
+      html += `
+      <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:16px;">
+        <div style="background:linear-gradient(180deg, #0891b2 0%, #06b6d4 100%); padding:10px 16px; position:relative; overflow:hidden;">
+          <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
+            <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:16px;">🧽</div>
+            洗車美容總額
+          </h3>
+        </div>
+        <div style="padding:16px 0; text-align:center; background:#f8fafc;">
+          <div style="font-size:13px; font-weight:800; color:#94a3b8;">本年度尚無洗車記錄</div>
+        </div>
+      </div>`;
+    }
+
+    // 👇 底部增加 50px 空白空間
+    html += `<div style="height: 50px;"></div>`;
+
     container.innerHTML = html;
     return;
   }
 
-  // ── 3. 月度：車輛燃料 / 保養維修 ──
+  // ── 3. 月度：車輛燃料 / 保養維修 / 洗車美容 ──
   const prefix = `${S.vehY}-${pad(S.vehM)}`; 
   const monthRecs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix));
   const fuelRecs = monthRecs.filter(r => r.type === 'fuel'); 
   const maintRecs = monthRecs.filter(r => r.type === 'maintenance');
+  const washRecs = monthRecs.filter(r => r.type === 'wash');
 
-  let totalDistance = 0, totalLiters = 0, totalFuelPaid = 0, totalMaintPaid = 0;
+  let totalDistance = 0, totalLiters = 0, totalFuelPaid = 0, totalMaintPaid = 0, totalWashPaid = 0;
   fuelRecs.forEach(r => { const diff = pf(r.km) - pf(r.prevKm); if (diff > 0) totalDistance += diff; totalLiters += pf(r.liters); totalFuelPaid += pf(r.amount); });
   maintRecs.forEach(r => totalMaintPaid += pf(r.amount)); 
+  washRecs.forEach(r => totalWashPaid += pf(r.amount));
   const avgKmL = totalLiters > 0 ? (totalDistance / totalLiters).toFixed(1) : 0;
 
   if (S.vehicleTab === 'fuel') {
@@ -4489,6 +4538,31 @@ function renderVehicleContent() {
           </div>
         </div>
       </div>`;
+  } else if (S.vehicleTab === 'wash') {
+    html += `
+      <div style="background: linear-gradient(to right, #0891b2 0%, #06b6d4 20%, #22d3ee 40%, #67e8f9 60%, #a5f3fc 80%, #ecfeff 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.25); border: 1.5px solid #cffafe;">
+        <div onclick="toggleSummaryCard('veh-wash-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🧽 本月「洗車美容」</span>
+          
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
+              <span style="font-size:14px; font-weight:800; color:#0891b2; margin-right: 4px;">$</span>
+              <span style="font-family:var(--mono); font-size:26px; font-weight:900; color: #06b6d4;">${fmt(totalWashPaid)}</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.6); color:#0891b2; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+              <div id="veh-wash-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
+            </div>
+          </div>
+        </div>
+        <div id="veh-wash-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
+          <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:10px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1); display:flex; justify-content:center; text-align:center;">
+            <div style="flex:1;">
+              <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">本月洗車次數：</div>
+              <div style="font-weight:900; font-size:16px; color:#0891b2; font-family:var(--mono);">${washRecs.length} <span style="font-size:12px; color:#64748b;">次</span></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
   // 繪製記錄列表
@@ -4554,7 +4628,7 @@ function renderVehicleContent() {
                   </div>
                 </div>`;
           }
-      } else {
+      } else if (r.type === 'maintenance') {
           // ── 🔧 保養 / 🛠️ 維修紀錄卡片 ──
           const isRepair = r.maintCategory === 'repair';
           const iconSrc = isRepair ? 'Vehicle/ve4.png' : 'Vehicle/ve3.png';
@@ -4562,7 +4636,6 @@ function renderVehicleContent() {
           
           // 動態色彩：維修(藍色) / 保養(綠色)
           const cardBorder = isRepair ? '#3b82f6' : '#10b981';
-          const cardShadow = isRepair ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)';
           const rightColor = isRepair ? '#2563eb' : '#16a34a';
           const rightBg    = isRepair ? '#eff6ff' : '#f0fdf4';
           const pillBg     = isRepair ? '#dbeafe' : '#dcfce7';
@@ -4596,7 +4669,33 @@ function renderVehicleContent() {
                 <span class="vc-right-val" style="color:${rightColor}; font-family:var(--mono); font-weight:900;"><span style="font-size:10px;">-$</span> ${fmt(r.amount)}</span>
               </div>
             </div>`;
+            
+      } else if (r.type === 'wash') {
+          // ── 🧽 洗車美容紀錄卡片 ──
+          const cardBorder = '#06b6d4';
+          const rightColor = '#0891b2';
+          const rightBg    = '#ecfeff';
+          
+          const shopHtml = r.shop ? `<div class="vt-tag" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:800;">${safeText(r.shop)}</div>` : '';
+          const noteHtml = r.note ? `<div class="vt-tag" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:800;">${safeText(r.note)}</div>` : '';
+
+          htmlContent = `
+            <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')" style="border: 2px solid ${cardBorder}60;">
+              <div class="vc-left" style="background:#cffafe; border-right: 1px dashed #a5f3fc;"><span style="font-size:24px;">🧽</span></div>
+              <div class="vc-mid">
+                <div class="vc-mid-top">
+                  <div class="vt-time">${formatTime}</div>
+                  ${shopHtml}
+                  ${noteHtml}
+                </div>
+              </div>
+              <div class="vc-right" style="background:${rightBg}; border-left: 1px dashed ${cardBorder}60;">
+                <span style="font-size:10px; color:${rightColor}; font-weight:700; margin-bottom:2px;">花費</span>
+                <span class="vc-right-val" style="color:${rightColor}; font-family:var(--mono); font-weight:900;"><span style="font-size:10px;">-$</span> ${fmt(r.amount)}</span>
+              </div>
+            </div>`;
       }
+      
       html += htmlContent;
     });
   }
@@ -4742,7 +4841,7 @@ window.openAddVehRec = function(recordId = null) {
     S.addVehRecType = r.type; 
   } else { 
     // 🛡️ 防呆機制：預防從「年總覽」或「搜尋」頁籤點擊新增時，造成表單空白報錯卡住
-    S.addVehRecType = (S.vehicleTab === 'fuel' || S.vehicleTab === 'maintenance') ? S.vehicleTab : 'fuel'; 
+    S.addVehRecType = (['fuel', 'maintenance', 'wash'].includes(S.vehicleTab)) ? S.vehicleTab : 'fuel'; 
   }
   
   document.getElementById('vr-date').value = r ? r.date : todayStr(); 
@@ -4765,6 +4864,10 @@ window.openAddVehRec = function(recordId = null) {
     tempMaintItems = [{ name: '', amount: '' }];
     setMaintCategory('maintenance', 0);
   }
+  const vwAmount = document.getElementById('vw-amount'); if (vwAmount) vwAmount.value = (r && r.type === 'wash') ? (r.amount || '') : '';
+  const vwShop = document.getElementById('vw-shop'); if (vwShop) vwShop.value = (r && r.type === 'wash') ? (r.shop || '') : '';
+  const vwNote = document.getElementById('vw-note'); if (vwNote) vwNote.value = (r && r.type === 'wash') ? (r.note || '') : '';
+
   renderMaintDynamicList();
   
   const maintList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
@@ -4819,9 +4922,11 @@ function switchVehFormTab(type, index) {
   document.getElementById('veh-form-tab-bg').style.transform = `translateX(${index * 100}%)`; 
   document.getElementById('btn-form-fuel').classList.toggle('active', type === 'fuel'); 
   document.getElementById('btn-form-maint').classList.toggle('active', type === 'maintenance'); 
+  document.getElementById('btn-form-wash').classList.toggle('active', type === 'wash'); 
   
   document.getElementById('form-area-fuel').style.display = type === 'fuel' ? 'block' : 'none'; 
   document.getElementById('form-area-maint').style.display = type === 'maintenance' ? 'block' : 'none';
+  document.getElementById('form-area-wash').style.display = type === 'wash' ? 'block' : 'none';
   
   const v = S.vehicles.find(x => x.id === S.selVehicleId);
   const isEV = v && v.defaultFuel === 'electric';
@@ -4881,6 +4986,13 @@ function switchVehFormTab(type, index) {
           </div>`;
       }
     }
+  } else if (type === 'wash') {
+    // 【洗車美容】主題：水藍色
+    tabBg.style.backgroundColor = '#06b6d4'; 
+    tabBg.style.boxShadow = '0 4px 10px rgba(6, 182, 212, 0.4)';
+    vehPage.style.setProperty('--veh-inp-border', '#06b6d4');
+    vehPage.style.setProperty('--veh-inp-bg', 'rgba(6, 182, 212, 0.05)');
+    vehPage.style.setProperty('--veh-inp-color', '#0891b2'); 
   } else {
     // 【保養維修】主題：頁籤與背景為綠色，但輸入框的字改為「亮粉色」(#ec4899)
     tabBg.style.backgroundColor = 'var(--green)'; 
@@ -4928,6 +5040,9 @@ function confirmAddVehRec() {
         if (finalAmount <= 0) { toast('金額不能為 0'); return; }
       }
     }
+  } else if (S.addVehRecType === 'wash') {
+    finalAmount = pf(document.getElementById('vw-amount').value);
+    if (finalAmount <= 0) { toast('金額不能為 0'); return; }
   } else {
     // 整理明細陣列並防呆
     finalItemDetails = tempMaintItems.filter(t => t.name.trim() !== '' && pf(t.amount) > 0);
@@ -4954,14 +5069,19 @@ function confirmAddVehRec() {
         liters: isEV ? 0 : pf(document.getElementById('vr-liters').value), 
         price: isEV ? 0 : pf(document.getElementById('vr-price').value) 
       }; 
+    } else if (S.addVehRecType === 'wash') {
+      specificData = {
+        shop: document.getElementById('vw-shop').value.trim(),
+        note: document.getElementById('vw-note').value.trim()
+      };
     } else { 
       const shop = document.getElementById('vm-shop').value.trim(); 
       if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } 
       specificData = { 
-        maintCategory: currentMaintCategory, // 👈 新增這行，存入類別
+        maintCategory: currentMaintCategory, 
         km: pf(document.getElementById('vm-km').value), 
-        items: finalItems,             // 舊有陣列，專門用來相容「搜尋功能」和舊卡片顯示
-        itemDetails: finalItemDetails, // 新增的明細物件陣列
+        items: finalItems,             
+        itemDetails: finalItemDetails, 
         shop: shop, 
         payMethod: document.getElementById('vm-pay-method').value, 
         note: document.getElementById('vm-note').value 
