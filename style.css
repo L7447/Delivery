@@ -257,68 +257,46 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .auth-switch-btn { background: none; border: none; color: #2563eb; font-weight: 800; font-size: 14px; cursor: pointer; padding: 8px 12px; margin-left: 4px; border-radius: 8px; transition: 0.2s; }
 .auth-switch-btn:active { background: #eff6ff; }
 
-/* ══ 14. 現代化 Toast 提示與 3D 彈跳毛玻璃微光效果 ══ */
+/* 🌌 銀河極光 (包含背景全螢幕模糊失焦特效 - 修正版) */
 #toast { 
-  position: fixed; 
-  top: 35% !important; 
-  left: 50%; 
+  position: fixed; bottom: 50% !important; left: 50%; top: auto !important;
+  transform: translate(-50%, calc(50% + 50px)) scale(0.5) !important;
+  background: linear-gradient(135deg, #141E30, #243B55); 
+  border: 1px solid rgba(0, 229, 255, 0.2);
   
-  /* 初始狀態：縮小 0.7 倍、往下掉 40px、並帶有 3D 往後仰的角度 */
-  transform: translate(-50%, 40px) scale(0.7) perspective(400px) rotateX(-30deg) !important; 
-  transform-origin: center bottom; /* 以底部為 3D 翻轉的軸心 */
+  /* 👇 100vmax rgba(0,0,0,0.5) 會產生無限大的黑色遮罩，完美壓暗背景 */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 0 100vmax rgba(0, 0, 0, 0.5); 
   
-  /* 質感毛玻璃背景 */
-  background: rgba(19, 31, 200, 0.85); 
-  backdrop-filter: blur(16px); 
-  -webkit-backdrop-filter: blur(16px); 
-  
-  /* 邊框與初始陰影 */
-  border: 1px solid rgba(255, 255, 255, 0.25); 
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0px rgba(59, 130, 246, 0); 
-  
-  color: #ffffff; 
-  padding: 14px 28px; 
-  border-radius: 99px; 
-  font-size: 24px; 
-  font-weight: 700; 
-  letter-spacing: 0.5px;
-  
-  /* 👇 修復超出螢幕的核心設定 */
-  white-space: pre-wrap;     /* 允許自動換行並保留程式碼中的 \n */
-  word-break: break-word;    /* 英文或長數字也能強制斷行 */
-  min-width: 280px;
-  line-height: 1.5;          /* 增加行高，多行閱讀更舒適 */
+  color: #00e5ff; text-shadow: 0 2px 6px rgba(0, 229, 255, 0.4);
+  padding: 16px 30px; border-radius: 50px; font-size: 20px; font-weight: 800;
+  white-space: pre-wrap; word-break: break-word; min-width: 260px; text-align: center;
+  z-index: 999999; pointer-events: none; opacity: 0; 
+  transition: opacity 0.5s ease, transform 0.1s ease;
+}
 
-  /* 排版設定 */
-  text-align: center; 
-  z-index: 999999; 
-  pointer-events: none; 
-  opacity: 0; 
-  
-  /* 核心動畫：使用更誇張的阻尼參數 (1.5) 來製造明顯的「Q彈」感，時間拉長至 0.6s */
-  transition: 
-    opacity 0.3s ease, 
-    transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.5), 
-    box-shadow 0.6s ease; 
+#toast.show {
+  opacity: 1; transform: translate(-50%, 50%) scale(1) !important;
+  animation: jellyBounce 0.7s cubic-bezier(0.25, 1.5, 0.5, 1) forwards;
 }
-/* 顯示時的狀態：翻正、放大、觸發呼吸燈 */
-#toast.show { 
-  opacity: 1; 
-  /* 恢復正常大小與 3D 角度，達成往前撲向使用者的錯覺 */
-  transform: translate(-50%, 0) scale(1) perspective(400px) rotateX(0deg) !important; 
-  
-  /* 觸發連續呼吸光暈動畫 */
-  animation: toastGlowPulse 3.5s infinite alternate ease-in-out;
+
+@keyframes jellyBounce {
+  0% { transform: translate(-50%, calc(50% + 50px)) scale(0.5, 1.2); }
+  40% { transform: translate(-50%, calc(50% - 15px)) scale(1.1, 0.8); }
+  70% { transform: translate(-50%, calc(50% + 5px)) scale(0.95, 1.05); }
+  100% { transform: translate(-50%, 50%) scale(1, 1); }
 }
-/* 🌟 新增：連續呼吸光暈動畫 (Breathing Glow) */
-@keyframes toastGlowPulse {
-  0% {
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 15px rgba(59, 130, 246, 0.5);
-  }
-  100% {
-    /* 達到頂點時：光暈放大、顏色變亮，內部還加上微弱的內陰影反光 */
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 35px rgba(96, 165, 250, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.15);
-  }
+
+/* ====================================================
+   🌟 背景模糊連動特效 (排除 Toast 本身)
+   ==================================================== */
+/* 讓 APP 內「除了 Toast 以外」的所有元素都具備模糊漸變能力 */
+#app > *:not(#toast) {
+  transition: filter 0.4s ease;
+}
+
+/* 當 Toast 出現 (.show) 時，只模糊其他的元素，Toast 本身保持清晰！ */
+body:has(#toast.show) #app > *:not(#toast) {
+  filter: blur(5px);
 }
 #confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
 #confirm-overlay.show { display: flex; }
