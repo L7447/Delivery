@@ -125,9 +125,6 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 /* 現金小費表單輸入框專屬顏色 */
 #add-form-cashtip .finp { border: 1.5px solid var(--green); background: rgba(87, 168, 117, 0.05); color: #ff31b4; font-weight: 800; }
 #add-form-cashtip .finp:focus { background: var(--sf); }
-/* 現金小費專屬標籤樣式 */
-.ct-tag { padding: 4px 10px; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: transform 0.2s, filter 0.2s; background: hsl(37, 100%, 91%); color: #1289ff; border: 1.5px solid #008080; }
-.ct-tag:active { transform: scale(0.92); filter: brightness(0.9); }
 /* 打卡工時表單輸入框專屬顏色 */
 #add-form-punch .finp { border: 1.5px solid #0d9488; background: rgba(13, 148, 136, 0.05); color: #0f766e; font-weight: 800; }
 #add-form-punch .finp:focus { background: var(--sf); }
@@ -222,10 +219,33 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .fc-cell.today .fc-date { color: #fff; background: #2563eb; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: -2px 0 0 -2px; }
 
 /* ══ 11. 車輛管理：月份導航與標籤 ══ */
-.veh-month-nav { background: #fff; border-radius: 99px; padding: 4px; display: inline-flex; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid var(--border); }
-.veh-month-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: var(--t2); font-size: 14px; font-weight: 900; cursor: pointer; transition: 0.2s; }
-.veh-month-btn:active { background: var(--sf2); color: var(--t1); }
-.veh-month-text { font-size: 15px; font-weight: 800; color: var(--t1); padding: 0 12px; min-width: 110px; text-align: center; }
+.veh-month-nav { 
+  background: #ffffff; 
+  border-radius: 99px; 
+  padding: 6px; 
+  display: inline-flex; align-items: center; 
+  box-shadow: 0 8px 16px rgba(0,0,0,0.03); 
+  border: 1.5px solid #e2e8f0; 
+}
+.veh-month-btn { 
+  width: 34px; height: 34px; border-radius: 50%; border: none; outline: none;
+  background: #eff6ff; color: #2563eb; font-size: 26px; font-weight: 900; 
+  cursor: pointer; transition: 0.2s; 
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; /* 消除點擊透明方框 */
+}
+@keyframes ripplePulse {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+  100% { box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); }
+}
+.veh-month-btn:active { 
+  background: #2563eb; color: #ffffff; 
+  animation: ripplePulse 0.4s ease-out forwards;
+}
+.veh-month-text { 
+  font-size: 15px; font-weight: 900; color: #1e293b; 
+  padding: 0 16px; min-width: 115px; text-align: center; 
+}
 
 .vr-chip { padding: 4px 8px; font-size: 11px; font-weight: 800; border-radius: 6px; display: inline-flex; align-items: center; white-space: nowrap; }
 .chip-item  { background: #eff6ff; color: #4f46e5; border: 1px solid #c7d2fe; }
@@ -325,9 +345,13 @@ body:has(#toast.show) #app > *:not(#toast) {
 /* ── 1. 共用平台圓角標籤 (Platform Badge) ── */
 .plat-badge{color:#fff;font-size:12px;font-weight:700;padding:5px 5px;border-radius:30px;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
 
-/* ── 2. 天氣標籤模組化 (多彩設計) ── */
-.w-tag{padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:transform 0.2s,filter 0.2s;}
-.w-tag:active { transform: scale(0.92); filter: brightness(0.9); }
+/* ── 2. 天氣標籤模組化 (多彩設計 & 選中特效) ── */
+.w-tag, .ct-tag { padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.3s; opacity: 0.65; filter: grayscale(20%); }
+.ct-tag { font-size: 15px; font-weight: 700; background: hsl(37, 100%, 91%); color: #1289ff; border: 1.5px solid #008080; }
+
+.w-tag:hover, .ct-tag:hover { opacity: 0.85; }
+.w-tag:active, .ct-tag:active { transform: scale(0.92); filter: brightness(0.9); }
+
 /* 各別天氣顏色 */
 .w-rain    { background: #e0f2fe; color: #0284c7; border: 1.5px solid #bae6fd; }
 .w-hot     { background: #ffedd5; color: #ea580c; border: 1.5px solid #fed7aa; }
@@ -335,6 +359,18 @@ body:has(#toast.show) #app > *:not(#toast) {
 .w-cold    { background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; }
 .w-flood   { background: #ccfbf1; color: #0d9488; border: 1.5px solid #99f6e4; }
 .w-typhoon { background: #fce7f3; color: #db2777; border: 1.5px solid #fbcfe8; }
+
+/* 🌟 選中狀態特效 */
+.w-tag.on { 
+  opacity: 1; filter: grayscale(0%);
+  transform: scale(1.05); font-weight: 800;
+  box-shadow: 0 4px 10px currentColor; /* 讓光暈自動符合該天氣的文字顏色 */
+}
+.ct-tag.on { 
+  opacity: 1; filter: grayscale(0%);
+  transform: scale(1.05); background: #1289ff; color: #fff; border-color: #1289ff;
+  box-shadow: 0 4px 12px rgba(18, 137, 255, 0.4); 
+}
 
 /* ── 3. 全新 Auth (登入/註冊) 極限縮小內距版 ── */
 .auth-wrapper{background:#fff;border-radius:20px;padding:5px 16px 16px 16px;/* ⬇️ 上下內距縮小為 5px */
