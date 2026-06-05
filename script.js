@@ -1111,7 +1111,12 @@ function switchVehicleTab(tab, index) {
     document.getElementById(colors[t].textId).classList.toggle('active', t === tab);
   });
   
-  document.getElementById('veh-month-label').textContent = (tab === 'yearly' || tab === 'search') ? `${S.vehY} 年 全年` : `${S.vehY} 年 ${S.vehM} 月`;
+  const labelEl = document.getElementById('veh-month-label');
+  if (labelEl) {
+    labelEl.innerHTML = (tab === 'yearly' || tab === 'search') 
+      ? `<span style="color: #9333ea; font-size: 22px;">${S.vehY}</span> 年 <span style="color: #9333ea; font-size: 22px;">全年</span>` 
+      : `<span style="color: #9333ea; font-size: 22px;">${S.vehY}</span> 年 <span style="color: #9333ea; font-size: 22px;">${S.vehM}</span> 月`;
+  }
 
   renderVehicleContent(); 
 }
@@ -2180,7 +2185,9 @@ function openAddPage(record=null, prefill={}) {
     if (window.checkManualMileage) window.checkManualMileage();
   }
   
-  renderPlatformChips(); calcAddTotal(); goPage('add');
+  renderPlatformChips(); calcAddTotal(); 
+  syncTagsUI(); // 👈 同步標籤亮起狀態
+  goPage('add');
 }
 
 /* ══ 里程自動計算與警告邏輯 ══ */
@@ -2328,6 +2335,7 @@ function resetAddForm() {
   document.getElementById('f-pu-min').value = '';  
   
   S.editingId = null;
+  syncTagsUI(); // 👈 清空表單時，確保標籤燈號熄滅
   switchAddTab('regular', 0); 
 }
 
@@ -2460,14 +2468,41 @@ function calcAutoReward() {
   }
 }
 
-function addWeatherTag(tag) { const noteEl = document.getElementById('f-note'); if (!noteEl.value.includes(tag)) { noteEl.value = (noteEl.value + ' ' + tag).trim(); } }
+/* ══ 智慧同步備註標籤 UI 狀態 ══ */
+function syncTagsUI() {
+  const noteVal = document.getElementById('f-note')?.value || '';
+  document.querySelectorAll('.w-tag').forEach(el => {
+    const txt = el.textContent.trim();
+    if (txt && noteVal.includes(txt)) el.classList.add('on');
+    else el.classList.remove('on');
+  });
 
-// 👇 這是新增的：現金小費標籤寫入功能
+  const ctNoteVal = document.getElementById('f-ct-note')?.value || '';
+  document.querySelectorAll('.ct-tag').forEach(el => {
+    const txt = el.textContent.trim();
+    if (txt && ctNoteVal.includes(txt)) el.classList.add('on');
+    else el.classList.remove('on');
+  });
+}
+
+function addWeatherTag(tag) { 
+  const noteEl = document.getElementById('f-note'); 
+  if (noteEl.value.includes(tag)) { 
+    noteEl.value = noteEl.value.replace(tag, '').replace(/\s{2,}/g, ' ').trim(); 
+  } else { 
+    noteEl.value = (noteEl.value + ' ' + tag).trim(); 
+  }
+  syncTagsUI();
+}
+
 function addCashTipTag(tag) {
   const noteEl = document.getElementById('f-ct-note'); 
-  if (!noteEl.value.includes(tag)) { 
+  if (noteEl.value.includes(tag)) { 
+    noteEl.value = noteEl.value.replace(tag, '').replace(/\s{2,}/g, ' ').trim(); 
+  } else { 
     noteEl.value = (noteEl.value + ' ' + tag).trim(); 
   } 
+  syncTagsUI();
 }
 
 async function confirmAddRecord() {
@@ -3962,9 +3997,9 @@ function changeVehMonth(offset) {
   // 僅更新月份標籤，不重繪車輛圖片清單，解決閃爍問題
   const labelEl = document.getElementById('veh-month-label');
   if (labelEl) {
-    labelEl.textContent = (S.vehicleTab === 'yearly' || S.vehicleTab === 'search') 
-      ? `${S.vehY} 年 全年` 
-      : `${S.vehY} 年 ${S.vehM} 月`;
+    labelEl.innerHTML = (S.vehicleTab === 'yearly' || S.vehicleTab === 'search') 
+      ? `<span style="color: #9333ea; font-size: 22px;">${S.vehY}</span> 年 <span style="color: #9333ea; font-size: 22px;">全年</span>` 
+      : `<span style="color: #9333ea; font-size: 22px;">${S.vehY}</span> 年 <span style="color: #9333ea; font-size: 22px;">${S.vehM}</span> 月`;
   }
   // 僅重繪下方的詳細記錄
   renderVehicleContent(); 
@@ -4061,10 +4096,12 @@ function renderVehicles() {
   container.style.WebkitOverflowScrolling = 'touch';
 
   const labelEl = document.getElementById('veh-month-label');
-  if (S.vehicleTab === 'yearly' || S.vehicleTab === 'search') {
-    labelEl.textContent = `${S.vehY} 年 全年`;
-  } else {
-    labelEl.textContent = `${S.vehY} 年 ${S.vehM} 月`;
+  if (labelEl) {
+    if (S.vehicleTab === 'yearly' || S.vehicleTab === 'search') {
+      labelEl.innerHTML = `<span style="color: #9333ea; font-size: 22px;">${S.vehY}</span> 年 <span style="color: #9333ea; font-size: 22px;">全年</span>`;
+    } else {
+      labelEl.innerHTML = `<span style="color: #9333ea; font-size: 22px;">${S.vehY}</span> 年 <span style="color: #9333ea; font-size: 22px;">${S.vehM}</span> 月`;
+    }
   }
   if (S.vehicles.length === 0) { selectorContainer.innerHTML = ''; container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return; }
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
@@ -4307,7 +4344,7 @@ function renderVehicleContent() {
         
         <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
           <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
-            <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:16px;">🔧</div>
+            <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:24px;">🔧</div>
             保養與維修總額
           </h3>
           <div style="background:#ffffff; padding:4px 12px; border-radius:10px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15); border:1px solid #6ee7b7; display:flex; align-items:baseline;">
@@ -4362,16 +4399,17 @@ function renderVehicleContent() {
       </div>
     </div>`;
 
-    // 5. 洗車美容總額 (水藍色漸層卡片，含次數與底部留白)
+    // 5. 洗車美容總額 (風格 3：動態傾斜折光，次數置中，底部留白)
     if (yWashCount > 0) {
       html += `
       <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:16px;">
-        <!-- 頂部水藍色玻璃感卡 -->
         <div style="background:linear-gradient(180deg, #0891b2 0%, #06b6d4 100%); padding:10px 16px; position:relative; overflow:hidden;">
-          <div style="position:absolute; inset:0; opacity:0.2; background-image: radial-gradient(circle at right 20%, #ffffff 2px, transparent 2px); background-size: 20px 20px;"></div>
+          <!-- 特效：斜向反光線條 -->
+          <div style="position:absolute; top:0; left:-50%; width:200%; height:100%; background: repeating-linear-gradient(135deg, transparent, transparent 15px, rgba(255,255,255,0.1) 15px, rgba(255,255,255,0.1) 30px); pointer-events:none;"></div>
+          
           <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
             <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
-              <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:16px;">🧽</div>
+              <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:24px;">🧽</div>
               洗車美容總額
             </h3>
             <div style="background:#ffffff; padding:4px 12px; border-radius:10px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15); border:1px solid #67e8f9; display:flex; align-items:baseline;">
@@ -4380,31 +4418,28 @@ function renderVehicleContent() {
             </div>
           </div>
         </div>
-        <!-- 下方緊湊立體清單區 -->
-        <div style="padding:12px 16px; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
-           <span style="font-size:14px; font-weight:800; color:#475569;">本年度洗車總計</span>
-           <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:#0891b2; background:#ecfeff; padding:4px 12px; border-radius:8px; border:1px solid #cffafe;">${yWashCount} <span style="font-size:12px; color:#64748b;">次</span></span>
+        <!-- 置中的洗車次數清單區 -->
+        <div style="padding:10px 20px; background:#f8fafc; display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:10px;">
+           <span style="font-size:14px; font-weight:800; color: #202226; margin-top:6px;">本年度洗車總計</span>
+           <span style="font-family:var(--mono); font-size:22px; font-weight:800; color: #e41919; background: #b1faff; padding:3px 12px; border-radius:12px; border:2px solid #68f2ff;">${yWashCount} <span style="font-size:14px; color:#202226;">次</span></span>
         </div>
       </div>`;
     } else {
-      // 若無洗車記錄，顯示空的提示區塊保持版面一致
       html += `
       <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:16px;">
         <div style="background:linear-gradient(180deg, #0891b2 0%, #06b6d4 100%); padding:10px 16px; position:relative; overflow:hidden;">
-          <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
-            <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:16px;">🧽</div>
+          <h3 style="font-size:20px; color: #000000; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
+            <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:24px;">🧽</div>
             洗車美容總額
           </h3>
         </div>
         <div style="padding:16px 0; text-align:center; background:#f8fafc;">
-          <div style="font-size:13px; font-weight:800; color:#94a3b8;">本年度尚無洗車記錄</div>
+          <div style="font-size:14px; font-weight:800; color:#94a3b8;">本年度尚無洗車記錄</div>
         </div>
       </div>`;
     }
 
-    // 👇 底部增加 50px 空白空間
-    html += `<div style="height: 50px;"></div>`;
-
+    html += `<div style="height: 70px;"></div>`;
     container.innerHTML = html;
     return;
   }
@@ -8198,6 +8233,12 @@ async function init() {
     S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
     savePlatforms();
   }
+  
+  // 綁定備註輸入框事件，讓手動打字時標籤也會自動亮燈/熄燈
+  const fNote = document.getElementById('f-note');
+  const ctNote = document.getElementById('f-ct-note');
+  if (fNote) fNote.addEventListener('input', syncTagsUI);
+  if (ctNote) ctNote.addEventListener('input', syncTagsUI);
 
   // 檢查是否因為沒有動畫 (例如重整頁面) 而無法觸發進場
   const splash = document.getElementById('splash');
