@@ -347,10 +347,19 @@ body:has(#toast.show) #app > *:not(#toast) {
 
 /* ── 2. 天氣標籤模組化 (多彩設計 & 選中特效) ── */
 .w-tag, .ct-tag { padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.3s; opacity: 0.65; filter: grayscale(20%); }
-.ct-tag { font-size: 15px; font-weight: 700; background: hsl(37, 100%, 91%); color: #1289ff; border: 1.5px solid #008080; }
+.ct-tag { 
+  font-size: 14px; 
+  font-weight: 800; 
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
+  color: #0369a1; 
+  border: 1.5px solid #bae6fd; 
+  margin-left: 5px; /* 👈 左邊間隔加 5px */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
 
 .w-tag:hover, .ct-tag:hover { opacity: 0.85; }
-.w-tag:active, .ct-tag:active { transform: scale(0.92); filter: brightness(0.9); }
+.w-tag:active { transform: scale(0.92); filter: brightness(0.9); }
+.ct-tag:active { transform: translateY(0) scale(0.92); filter: brightness(0.9); }
 
 /* 各別天氣顏色 */
 .w-rain    { background: #e0f2fe; color: #0284c7; border: 1.5px solid #bae6fd; }
@@ -368,8 +377,13 @@ body:has(#toast.show) #app > *:not(#toast) {
 }
 .ct-tag.on { 
   opacity: 1; filter: grayscale(0%);
-  transform: scale(1.05); background: #1289ff; color: #fff; border-color: #1289ff;
-  box-shadow: 0 4px 12px rgba(18, 137, 255, 0.4); 
+  transform: translateY(-3px) scale(1.05); /* 👈 點亮時稍微往上浮起 */
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); 
+  color: #ffffff; 
+  border-color: #60a5fa;
+  /* 👈 外圈立體藍色光暈 + 內圈反光玻璃感 */
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.4); 
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* ── 3. 全新 Auth (登入/註冊) 極限縮小內距版 ── */
