@@ -59,8 +59,8 @@ function getWageBadge(hours, total) {
 
   // 套用與「首頁狀態圖例」一模一樣的立體膠囊設計
   return `
-    <div style="margin-top:6px;">
-      <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: ${bg}; color: ${color}; border: 1.5px solid ${border}; box-shadow: 0 2px 6px ${shadow}; white-space: nowrap;">
+    <div style="margin-top:3px;">
+      <span style="display: inline-flex; align-items: center; margin-right:-13px; gap: 0px; font-size: 11px; font-weight: 800; padding: 2px 5px; border-radius: 8px; background: ${bg}; color: ${color}; border: 1.5px solid ${border}; white-space: nowrap;">
         ${icon ? `<span style="font-size: 13px;">${icon}</span> ` : ''}${text}
       </span>
     </div>
@@ -269,6 +269,23 @@ function resetWageSettings() {
   });
 }
 /* ════ 基本工資設定區 (預設值)(範圍設定) 結束════ */
+
+/* ══ 解析現金小費備註並賦予專屬顏色標籤 ══ */
+function getCashTipTagsHtml(note) {
+  if (!note) return '';
+  const tags = note.split(' ').filter(t => t.trim() !== '');
+  return tags.map(tag => {
+    let style = 'background:#f8fafc; color:#475569; border:1px solid #cbd5e1;'; // 預設灰白
+    if (tag.includes('不用找') || tag.includes('小費')) style = 'background:#fef08a; color:#854d0e; border:1px solid #facc15;';
+    else if (tag.includes('爬樓梯') || tag.includes('送上樓')) style = 'background:#fbcfe8; color:#9d174d; border:1px solid #f472b6;';
+    else if (tag.includes('大單') || tag.includes('重物')) style = 'background:#f3e8ff; color:#6b21a8; border:1px solid #c084fc;';
+    else if (tag.includes('天氣') || tag.includes('下雨')) style = 'background:#dcfce7; color:#166534; border:1px solid #4ade80;';
+    else if (tag.includes('特殊')) style = 'background:#e0f2fe; color:#0369a1; border:1px solid #60a5fa;';
+    
+    return `<span class="ct-mini-tag" style="${style}">${safeText(tag)}</span>`;
+  }).join('');
+}
+
 
 function normalizePlatforms(rawPlatforms) {
   if (!Array.isArray(rawPlatforms)) return DEFAULT_PLATFORMS.map(p => ({ ...p }));
@@ -511,9 +528,13 @@ function fmtHours(hVal) {
   const h = pf(hVal); if (h <= 0) return '0';
   const totalMins = Math.round(h * 60);
   const hrs = Math.floor(totalMins / 60); const mins = totalMins % 60;
-  if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
-  if (hrs > 0 && mins === 0) return `${hrs}h`;
-  return `${mins}m`;
+  
+  // 定義單位的專屬樣式 (縮小字體、顏色改為黑色、並與數字保持些微間距)
+  const unitStyle = 'font-size: 9px; color: #000000; margin-left: 1.5px; margin-right: 6px; font-weight: 700;';
+  
+  if (hrs > 0 && mins > 0) return `${hrs}<span style="${unitStyle}">h</span>${mins}<span style="${unitStyle}">m</span>`;
+  if (hrs > 0 && mins === 0) return `${hrs}<span style="${unitStyle}">h</span>`;
+  return `${mins}<span style="${unitStyle}">m</span>`;
 }
 
 function toast(msg, ms=3500) {
@@ -668,16 +689,16 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
   if (orders > 0) {
     tagsParts.push(`
       <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${fmt(orders)}</span>
-        <span style="font-size:11px; font-weight:600; color:#f97316;">單</span>
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span>
+        <span style="font-size:10px; font-weight:600; color:#f97316;">單</span>
       </div>
     `);
   }
   if (mileage > 0) {
     tagsParts.push(`
       <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${fmt(mileage)}</span>
-        <span style="font-size:11px; font-weight:800; color:#22c55e;">km</span>
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${fmt(mileage)}</span>
+        <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
       </div>
     `);
   }
@@ -721,63 +742,67 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
         </div>
       </div>
 
-      <div id="${cardId}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease;">
-        <div style="padding: 10px 8px 1px 8px; width: 100%; box-sizing: border-box;">
+      <div id="${cardId}" class="hrc-collapse" style="background: #f0f7ff; overflow:hidden; transition:max-height 0.3s ease;">
+        <div style="padding: 7px 8px 1px 8px; width: 100%; box-sizing: border-box;">
           
           <!-- 淨行程、獎勵、小費方塊區 (強制 3 等分網格) -->
           <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px;">
           
-          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
-            <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: #1f9c4d; font-size:11px; font-weight:700; font-family:var(--mono);">淨行程</span>
-              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
-                <span style="color: #1f9c4d; font-size:12px; font-weight:700;">${incPct}<span style="font-size:8px;">%</span></span>
+          <!-- 淨行程方塊 -->
+          <div style="flex:1; display:flex; flex-direction:column; position:relative; background:#ffffff; border-radius:12px; border:1.5px solid #bbf7d0; overflow:hidden;">
+            <!-- 標題區：下半部微圓角切削 -->
+            <div style="background: rgba(34, 197, 94, 0.12); padding:4px 6px; display:flex; justify-content:center; align-items:center; gap:6px; border-radius:0 0 15px 15px; border-bottom:1px solid rgba(34,197,94,0.2);">
+              <span style="color: #17a44b; font-size:12px; font-weight:650; font-family:var(--mono); padding-left:8px;">淨行程</span>
+              <span style="display:inline-flex; align-items:center; border-radius:6px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
+                <span style="color: #17a44b; font-size:11px; font-weight:750; font-family:var(--mono);">${incPct}<span style="font-size:9px;"> %</span></span>
               </span>
             </div>
-            <div style="background: #ffffff; border-radius:10px; text-align:center;">
-              <span style="color: #1f9c4d; font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(income)}</span>
+            <!-- 數字區：背景微漸層對應上方顏色 -->
+            <div style="padding-top:7px; text-align:center; background:linear-gradient(180deg, rgba(34,197,94,0.03) 0%, transparent 80%);">
+              <span style="color: #17a44b; font-size:17px; font-weight:750; font-family:var(--mono);"><span style="font-size:11px; opacity:0.8;">$ </span>${fmt(income)}</span>
             </div>
           </div>
 
-          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(245, 158, 11, 0.15); border-radius:12px;">
-            <div style="background: rgba(245, 158, 11, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: hsl(25, 100%, 55%); font-size:11px; font-weight:700; font-family:var(--mono);">獎勵</span>
-              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
-                <span style="color: hsl(25, 100%, 55%); font-size:12px; font-weight:700;">${bonPct}<span style="font-size:8px;">%</span></span>
+          <!-- 獎勵方塊 -->
+          <div style="flex:1; display:flex; flex-direction:column; position:relative; background:#ffffff; border-radius:12px; border:1.5px solid #fde047; overflow:hidden;">
+            <div style="background: rgba(245, 158, 11, 0.12); padding:4px 6px; display:flex; justify-content:center; align-items:center; gap:6px; border-radius:0 0 15px 15px; border-bottom:1px solid rgba(245,158,11,0.2);">
+              <span style="color: #ff791a; font-size:12px; font-weight:650; font-family:var(--mono); padding-left:8px;">獎勵</span>
+              <span style="display:inline-flex; align-items:center; border-radius:6px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
+                <span style="color: #ff791a; font-size:11px; font-weight:750; font-family:var(--mono);">${bonPct}<span style="font-size:9px;"> %</span></span>
               </span>
             </div>
-            <div style="background: #ffffff; border-radius:10px; text-align:center;">
-              <span style="color: hsl(25, 100%, 55%); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(totalBonus)}</span>
+            <div style="padding-top:7px; text-align:center; background:linear-gradient(180deg, rgba(245,158,11,0.03) 0%, transparent 80%);">
+              <span style="color: #ff791a; font-size:17px; font-weight:750; font-family:var(--mono);"><span style="font-size:11px; opacity:0.8;">$ </span>${fmt(totalBonus)}</span>
             </div>
           </div>
 
-          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(190, 59, 246, 0.15); border-radius:12px;">
-            <div style="background: rgba(190, 59, 246, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: rgba(137, 43, 226, 0.9); font-size:11px; font-weight:700; font-family:var(--mono);">小費</span>
-              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(190, 59, 246, 0.3);">
-                <span style="color: rgba(137, 43, 226, 0.9); font-size:12px; font-weight:700;">${tipPct}<span style="font-size:8px;">%</span></span>
+          <!-- 小費方塊 -->
+          <div style="flex:1; display:flex; flex-direction:column; position:relative; background:#ffffff; border-radius:12px; border:1.5px solid #d8b4fe; overflow:hidden;">
+            <div style="background: rgba(168, 85, 247, 0.12); padding:4px 6px; display:flex; justify-content:center; align-items:center; gap:6px; border-radius:0 0 15px 15px; border-bottom:1px solid rgba(168,85,247,0.2);">
+              <span style="color: #7e22ce; font-size:12px; font-weight:650; font-family:var(--mono); padding-left:8px;">小費</span>
+              <span style="display:inline-flex; align-items:center; border-radius:6px; padding:1px 4px; background: #ffffff; border:1px solid rgba(168, 85, 247, 0.3);">
+                <span style="color: #9333ea; font-size:11px; font-weight:750; font-family:var(--mono);">${tipPct}<span style="font-size:9px;"> %</span></span>
               </span>
             </div>
-            <div style="background: #ffffff; border-radius:10px; text-align:center;">
-              <span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(tips)}</span>
+            <div style="padding-top:7px; text-align:center; background:linear-gradient(180deg, rgba(168,85,247,0.03) 0%, transparent 80%);">
+              <span style="color: #7e22ce; font-size:17px; font-weight:750; font-family:var(--mono);"><span style="font-size:11px; opacity:0.8;">$ </span>${fmt(tips)}</span>
             </div>
           </div>
         </div>
         
+        <div style="border:1px solid #83c3ff; border-radius:10px; margin: 5px 0px -10px 0px;"></div>
 
-        <div style="border:1px solid #83c3ff; border-radius:10px; margin: 7px 0px -10px 0px;"></div>
-
-        <div style="padding:12px 3px 8px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
-          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span>
+        <div style="padding:5px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
+          <div style="flex:1; text-align:center; padding-top:9px; font-family:var(--mono);">
+            <span style="letter-spacing: 1.5px;">一單</span>： <span style="color: #16a3ca;font-size:19px;font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(avgOrd)}</span>
           </div>
-          <div class="h-div" style="height:35px; align-self:center;"></div>
-          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span>
+          <div class="h-div" style="height:58px; width:3px; margin-top:10px;"></div>
+          <div style="flex:1; text-align:center; padding-top:9px; font-family:var(--mono)">
+            <span style="letter-spacing: 1.5px;">1h</span>： <span style="color: var(--text-red); font-size:19px; font-weight:800;">${ordHr}<small style="color: rgb(185, 56, 255);font-size:10px; font-weight:600;"> 單</small></span>
           </div>
-          <div class="h-div" style="height:35px; align-self:center;"></div>
-          <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span>
+          <div class="h-div" style="height:58px; width:3px; margin-top:10px;"></div>
+          <div style="flex:1; text-align:center; padding-top:9px; font-family:var(--mono)">
+            <span style="letter-spacing: 1.5px;">時薪</span>： <span style="color: var(--text-blue); font-size:19px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(avgHr)}</span>
             ${wageHtml}
           </div>
         </div>
@@ -1435,7 +1460,7 @@ function punchIn() {
   S.records.push(rec);
   saveRecords();
   
-  toast('▶ 已上線打卡 (記錄已建立)');
+  toast('▶ 已上線打卡，(記錄已建立)。');
   renderHome();
 }
 
@@ -1461,7 +1486,7 @@ async function punchOut() {
 
   saveRecords();
   
-  toast('⏹ 已下線，工時已結算');
+  toast('⏹ 已下線打卡，(工時已結算)。');
   renderHome();
   if (S.tab === 'history') renderHistory();
 }
@@ -1503,27 +1528,38 @@ function buildRecItem(r) {
   const dStr = safeText(r.date.replace(/-/g, '/'));
   const tStr = safeText(r.time || '--:--');
   
-  // 1. 現金小費專屬卡片 (極簡濃縮 1 行版)
+  // 1. 現金小費專屬卡片 (與平台標籤合體版)
   if (r.isCashTip) {
     const plat = getPlatform(r.platformId);
     return `
-      <div class="hist-rec-card cashtip-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="border: 1.5px solid #22c55e; box-shadow: 0 2px 6px rgba(34, 197, 94, 0.05); cursor:pointer; position:relative; margin-bottom:5px;">
+      <div class="hist-rec-card cashtip-card" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="border: 1.5px solid ${plat.color};border-radius:13px; cursor:pointer; position:relative; margin-bottom:2px;">
         
-        <!-- 左上角絕對定位標籤 -->
-        <span style="position:absolute; top:0; left:0; background:#22c55e; color:#ffffff; padding:4px 10px; border-radius:0 0 16px 0; font-size:13px; font-weight:700; letter-spacing:1px; z-index:1; line-height:1.4;">💵 現金小費</span>
+        <!-- 左上角絕對定位標籤 (套用平台專屬顏色) -->
+        <div style="position:absolute; top:-2px; left:-3px; z-index:1;">
+          <span style="display:block; background:${plat.color}; color:#ffffff; padding:4px 10px; border-radius:0 0 16px 0; font-size:13px; font-weight:800; letter-spacing:1px; line-height:1.4;">💵 現金小費</span>
+        </div>
         
-        <!-- 右側內容區塊 (利用 padding-left: 105px 避開左上標籤) -->
-        <div style="display:flex; align-items:center; justify-content:space-between; padding: 4px 10px 4px 105px; min-height: 32px;">
+        <!-- 右側內容區塊 (利用 padding-left 避開左上標籤) -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding: 2px 10px 4px 105px; min-height: 28px;">
           
-          <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; padding-right:8px;">
-            <span style="font-size:12px; font-weight:900; color:#15803d; font-family:var(--mono); flex-shrink:0;">${tStr}</span>
-            <span style="background:${plat.color}15; color:${plat.color}; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:900; border:1px solid ${plat.color}30; flex-shrink:0;">${safeText(plat.name)}</span>
-            <!-- 備註過長時會自動變成 ... 省略號 -->
-            ${r.note ? `<span style="font-size:11px; color:#ea580c; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📝 ${safeText(r.note)}</span>` : ''}
+          <div style="display:flex; flex-direction:row; gap:4px; flex:1; overflow:hidden; padding-right:8px; margin-top:2px;">
+            
+            <!-- 上排：雙色日期時間膠囊 -->
+            <div style="display:flex; align-items:center;">
+              <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; flex-shrink:0;">
+                <span style="padding:2px 6px; background:#f1f5f9; font-size:11px; font-weight:800; color:hsl(330, 100%, 56%); font-family:var(--mono); border-right:2px solid #e2e8f0;">${dStr}</span>
+                <span style="padding:2px 6px; background:#ffffff; font-size:11px; font-weight:900; color:#2563eb; font-family:var(--mono);">${tStr}</span>
+              </div>
+            </div>
+
+            <!-- 下排：多彩備註標籤 -->
+            ${r.note ? `<div style="display:flex; align-items:center; flex-wrap:nowrap; overflow:hidden; text-overflow:ellipsis;">${getCashTipTagsHtml(r.note)}</div>` : ''}
+            <div class="h-div" style="margin:0 0 0 7px;height:24px;"></div>
           </div>
           
-          <div style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a; flex-shrink:0;">
-            <span style="font-size:12px; opacity:0.8;">$</span> ${fmt(r.cashTipAmt)}
+          <!-- 最右側：金額 -->
+          <div style="font-family:var(--mono); font-size:18px; font-weight:750; color:#16a34a; flex-shrink:0; text-align:right;">
+            <span style="font-size:11px; opacity:0.8;">$ </span>${fmt(r.cashTipAmt)}
           </div>
           
         </div>
@@ -1584,16 +1620,16 @@ function buildRecItem(r) {
   if (_orders > 0) {
     tagsParts.push(`
       <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${_orders}</span>
-        <span style="font-size:11px; font-weight:600; color:#f97316;">單</span>
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${_orders}</span>
+        <span style="font-size:10px; font-weight:600; color:#f97316;">單</span>
       </div>
     `);
   }
   if (r.mileage > 0) {
     tagsParts.push(`
       <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${r.mileage}</span>
-        <span style="font-size:11px; font-weight:800; color:#22c55e;">km</span>
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${r.mileage}</span>
+        <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
       </div>
     `);
   }
@@ -1678,56 +1714,64 @@ function buildRecItem(r) {
         </div>
       </div>
 
-      <div id="${cid}" class="hrc-collapse" style="background: #ffffff; overflow:hidden; transition:max-height 0.3s ease; margin:4px 0 1px 0px;">
-        <div style="padding: 10px 8px 1px 8px; width: 100%; box-sizing: border-box;">
+      <div id="${cid}" class="hrc-collapse" style="background: #f0f7ff; overflow:hidden; transition:max-height 0.3s ease; margin:4px 0 1px 0px;">
+        <div style="padding: 7px 8px 1px 8px; width: 100%; box-sizing: border-box;">
           <!-- 淨行程、獎勵、小費方塊區 (強制 3 等分網格) -->
           <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px;">
           
-          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
-            <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: #1f9c4d; font-size:11px; font-weight:700; font-family:var(--mono);">淨行程</span>
-              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
-                <span style="color: #1f9c4d; font-size:12px; font-weight:700;">${incPct}<span style="font-size:8px;">%</span></span>
+          <!-- 淨行程方塊 -->
+          <div style="flex:1; display:flex; flex-direction:column; position:relative; background:#ffffff; border-radius:12px; border:1.5px solid #bbf7d0; overflow:hidden;">
+            <div style="background: rgba(34, 197, 94, 0.12); padding:4px 6px; display:flex; justify-content:center; align-items:center; gap:6px; border-radius:0 0 15px 15px; border-bottom:1px solid rgba(34,197,94,0.2);">
+              <span style="color: #17a44b; font-size:12px; font-weight:650; font-family:var(--mono); padding-left:8px;">淨行程</span>
+              <span style="display:inline-flex; align-items:center; border-radius:6px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
+                <span style="color: #17a44b; font-size:11px; font-weight:750; font-family:var(--mono);">${incPct}<span style="font-size:9px;"> %</span></span>
               </span>
             </div>
-            <div style="background: #ffffff; border-radius:10px; text-align:center;">
-              <span style="color: #1f9c4d; font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(income)}</span>
+            <div style="padding-top:7px; text-align:center; background:linear-gradient(180deg, rgba(34,197,94,0.03) 0%, transparent 80%);">
+              <span style="color: #17a44b; font-size:17px; font-weight:750; font-family:var(--mono);"><span style="font-size:11px; opacity:0.8;">$ </span>${fmt(income)}</span>
             </div>
           </div>
 
-          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(245, 158, 11, 0.15); border-radius:12px;">
-            <div style="background: rgba(245, 158, 11, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: hsl(25, 100%, 55%); font-size:11px; font-weight:700; font-family:var(--mono);">獎勵</span>
-              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
-                <span style="color: hsl(25, 100%, 55%); font-size:12px; font-weight:700;">${bonPct}<span style="font-size:8px;">%</span></span>
+          <!-- 獎勵方塊 -->
+          <div style="flex:1; display:flex; flex-direction:column; position:relative; background:#ffffff; border-radius:12px; border:1.5px solid #fde047; overflow:hidden;">
+            <div style="background: rgba(245, 158, 11, 0.12); padding:4px 6px; display:flex; justify-content:center; align-items:center; gap:6px; border-radius:0 0 15px 15px; border-bottom:1px solid rgba(245,158,11,0.2);">
+              <span style="color: #ff791a; font-size:12px; font-weight:650; font-family:var(--mono); padding-left:8px;">獎勵</span>
+              <span style="display:inline-flex; align-items:center; border-radius:6px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
+                <span style="color: #ff791a; font-size:11px; font-weight:750; font-family:var(--mono);">${bonPct}<span style="font-size:9px;"> %</span></span>
               </span>
             </div>
-            <div style="background: #ffffff; border-radius:10px; text-align:center;">
-              <span style="color: hsl(25, 100%, 55%); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(totalBonus)}</span>
+            <div style="padding-top:7px; text-align:center; background:linear-gradient(180deg, rgba(245,158,11,0.03) 0%, transparent 80%);">
+              <span style="color: #ff791a; font-size:17px; font-weight:750; font-family:var(--mono);"><span style="font-size:11px; opacity:0.8;">$ </span>${fmt(totalBonus)}</span>
             </div>
           </div>
 
-          <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(190, 59, 246, 0.15); border-radius:12px;">
-            <div style="background: rgba(190, 59, 246, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: rgba(137, 43, 226, 0.9); font-size:11px; font-weight:700; font-family:var(--mono);">小費</span>
-              <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(190, 59, 246, 0.3);">
-                <span style="color: rgba(137, 43, 226, 0.9); font-size:12px; font-weight:700;">${tipPct}<span style="font-size:8px;">%</span></span>
+          <!-- 小費方塊 -->
+          <div style="flex:1; display:flex; flex-direction:column; position:relative; background:#ffffff; border-radius:12px; border:1.5px solid #d8b4fe; overflow:hidden;">
+            <div style="background: rgba(168, 85, 247, 0.12); padding:4px 6px; display:flex; justify-content:center; align-items:center; gap:6px; border-radius:0 0 15px 15px; border-bottom:1px solid rgba(168,85,247,0.2);">
+              <span style="color: #7e22ce; font-size:12px; font-weight:650; font-family:var(--mono); padding-left:8px;">小費</span>
+              <span style="display:inline-flex; align-items:center; border-radius:6px; padding:1px 4px; background: #ffffff; border:1px solid rgba(168, 85, 247, 0.3);">
+                <span style="color: #9333ea; font-size:11px; font-weight:750; font-family:var(--mono);">${tipPct}<span style="font-size:9px;"> %</span></span>
               </span>
             </div>
-            <div style="background: #ffffff; border-radius:10px; text-align:center;">
-              <span style="color: rgba(137, 43, 226, 0.9); font-size:16px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(pf(r.tips))}</span>
+            <div style="padding-top:7px; text-align:center; background:linear-gradient(180deg, rgba(168,85,247,0.03) 0%, transparent 80%);">
+              <span style="color: #7e22ce; font-size:17px; font-weight:750; font-family:var(--mono);"><span style="font-size:11px; opacity:0.8;">$ </span>${fmt(pf(r.tips))}</span>
             </div>
           </div>
         </div>
 
-        <div style="border:1px solid #83c3ff; border-radius:10px; margin: 7px 0px 0px 0px;"></div>
+        <div style="border:1px solid #83c3ff; border-radius:10px; margin: 5px 0px -10px 0px;"></div>
       
-        <div style="padding:10px 3px 6px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:11px; font-weight:700; color:var(--t2); width:100%;">
-          <div style="flex:1; text-align:center;">一單： <span style="font-family:var(--mono); color: var(--text-cyan); font-size:18px; font-weight:800;">$ ${fmt(avgOrd)}</span></div>
-          <div class="h-div" style="height:30px;"></div>
-          <div style="flex:1; text-align:center;">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:18px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span></div>
-          <div class="h-div" style="height:30px;"></div>
-          <div style="flex:1; text-align:center;">時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:18px; font-weight:800;">$${fmt(avgHr)}</span>
+        <div style="padding:5px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
+          <div style="flex:1; text-align:center; padding-top:9px; font-family:var(--mono);">
+            <span style="letter-spacing: 1.5px;">一單</span>： <span style="color: #16a3ca;font-size:19px;font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(avgOrd)}</span>
+          </div>
+          <div class="h-div" style="height:58px; width:3px; margin-top:10px;"></div>
+          <div style="flex:1; text-align:center; padding-top:9px; font-family:var(--mono)">
+            <span style="letter-spacing: 1.5px;">1h</span>： <span style="color: var(--text-red); font-size:19px; font-weight:800;">${ordHr}<small style="color: #b938ff; font-size:10px; font-weight:600;"> 單</small></span>
+          </div>
+          <div class="h-div" style="height:58px; width:3px; margin-top:10px;"></div>
+          <div style="flex:1; text-align:center; padding-top:9px; font-family:var(--mono)">
+            <span style="letter-spacing: 1.5px;">時薪</span>： <span style="color: var(--text-blue); font-size:19px; font-weight:800;"><span style="font-size:10px;">$ </span>${fmt(avgHr)}</span>
             ${recWageHtml}
           </div>
         </div>
@@ -1779,7 +1823,7 @@ function renderHistory() {
 
 function renderHistDayView() {
   const content = document.getElementById('hist-content'); const { calY:y, calM:m } = S;
-  content.innerHTML = `<div id="hist-header" style="padding:0 16px 6px;">
+  content.innerHTML = `<div id="hist-header" style="padding:6px 16px 6px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px">
         <button class="mbtn" id="hist-prev">◀</button>
@@ -1836,9 +1880,10 @@ function renderHistCalendarGrid() {
   for (let i=0; i<first; i++) { html += `<div class="month-cell"></div>`; col++; }
   for (let day=1; day<=days; day++) {
     const ds  = `${y}-${pad(m)}-${pad(day)}`; 
-    const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); 
+    // 👇 改為：只要當天有任何紀錄 (包含一般、現金小費、打卡)，就顯示圓點
+    const hasRecord = getDayRecs(ds).length > 0; 
     const cls = ['month-cell', ds===todayStr()?'today':'', ds===S.selDate?'sel':''].filter(Boolean).join(' '); 
-    const dotHtml = sum > 0 ? `<div class="has-rec-dot"></div>` : '';
+    const dotHtml = hasRecord ? `<div class="has-rec-dot"></div>` : '';
     html += `<div class="${cls}" data-ds="${ds}">${dotHtml}<div class="day-num">${day}</div></div>`;
     col++; 
     if (col % 7 === 0 && day < days) { html += `</div><div class="month-row">`; }
@@ -1978,10 +2023,11 @@ function renderHistGroupView(mode) {
     rawRecs = rawRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
   }
 
-  // 2. 過濾掉純打卡紀錄，專門用來渲染下方的實體卡片列表
-  let displayRecs = rawRecs.filter(r => !r.isPunchOnly);
+  // 2. 過濾掉純打卡紀錄 與 現金小費，專門用來渲染下方的實體卡片列表
+  // 👇 加上 && !r.isCashTip 排除現金小費
+  let displayRecs = rawRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
   
-  // 計算實際要顯示的卡片數量
+  // 計算實際要顯示的卡片數量 (此時已經不含打卡與現金小費)
   const recCount = displayRecs.length;
 
   let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}" ${S.histFilter===p.id?'selected':''}>${safeText(p.name)}</option>`).join('');
@@ -2098,7 +2144,7 @@ function renderHistRecords(ds) {
             <span style="font-size:14px; font-weight:750; color:#ffffff; letter-spacing:0.5px;">當日現金小費 <span style="font-size:12px; font-weight:700;">(不計入總收入)</span></span>
           </div>
           <div style="background: #ffffff; padding: 3px 16px; display:flex; align-items:center;">
-            <span style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a;"><span style="font-size:13px;">$</span> ${fmt(cashTips)}</span>
+            <span style="font-family:var(--mono); font-size:18px; font-weight:800; color:#16a34a;"><span style="font-size:10px;">$</span> ${fmt(cashTips)}</span>
           </div>
         </div>`;
     }
@@ -2125,11 +2171,58 @@ function openDetailOverlay(id) {
 }
 async function deleteRecord(id) { closeDetailOverlay(); const ok = await customConfirm('確定要刪除這筆記錄嗎？<br><strong>此動作無法復原。</strong>'); if (!ok) return; S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除'); if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory(); }
 
-function openSearch() { openOverlay('search-page'); setTimeout(() => { document.getElementById('search-kw').focus(); }, 350); }
+/* ══ 替換：搜尋功能 (保留快速標籤點擊與過濾) ══ */
+function openSearch() { 
+  openOverlay('search-page'); 
+  setTimeout(() => { document.getElementById('search-kw').focus(); }, 350); 
+}
+
+// 點擊標籤時：自動填入輸入框並觸發搜尋
+window.setSearchKw = function(kw) {
+  document.getElementById('search-kw').value = kw;
+  doSearch();
+}
+
 function doSearch() {
-  const kw = document.getElementById('search-kw').value.trim().toLowerCase(); const from = document.getElementById('search-from').value; const to = document.getElementById('search-to').value; const el = document.getElementById('search-results');
-  let recs = S.records.filter(r => { if (from && r.date < from) return false; if (to && r.date > to) return false; if (!kw) return true; const plat = getPlatform(r.platformId).name.toLowerCase(); return plat.includes(kw) || (r.note||'').toLowerCase().includes(kw) || String(recTotal(r)).includes(kw) || String(r.orders||'').includes(kw); }).sort((a,b)=>b.date.localeCompare(a.date));
-  if (!recs.length) { el.innerHTML = `<div class="empty-tip">找不到符合記錄</div>`; return; }
+  const kw = document.getElementById('search-kw').value.trim().toLowerCase(); 
+  const from = document.getElementById('search-from').value; 
+  const to = document.getElementById('search-to').value; 
+  const el = document.getElementById('search-results');
+  const countEl = document.getElementById('search-count'); // 用來顯示數量的標籤
+  
+  // 👇 防呆：如果完全沒有輸入條件，就清空結果並隱藏數量
+  if (!kw && !from && !to) {
+    el.innerHTML = `<div class="empty-tip">請輸入條件開始搜尋</div>`;
+    if (countEl) countEl.style.display = 'none';
+    return;
+  }
+
+  let recs = S.records.filter(r => { 
+    if (from && r.date < from) return false; 
+    if (to && r.date > to) return false; 
+    if (!kw) return true; 
+    
+    if (kw === '現金小費' && r.isCashTip) return true;
+    if (kw === '線上小費' && !r.isCashTip && !r.isPunchOnly && pf(r.tips) > 0) return true;
+
+    const plat = getPlatform(r.platformId).name.toLowerCase(); 
+    return plat.includes(kw) || 
+           (r.note||'').toLowerCase().includes(kw) || 
+           String(recTotal(r)).includes(kw) || 
+           String(r.orders||'').includes(kw); 
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+  
+  // 👇 更新搜尋數量顯示
+  if (countEl) {
+    countEl.style.display = 'inline-flex';
+    countEl.innerHTML = `找到 <span style="margin:0 4px; font-size:18px; font-family:var(--mono); color: #000000; align-items:center">${recs.length}</span> 筆`;
+  }
+
+  if (!recs.length) { 
+    el.innerHTML = `<div class="empty-tip">找不到符合記錄</div>`; 
+    return; 
+  }
+  
   el.innerHTML = recs.map(r=>buildRecItem(r)).join('');
 }
 
@@ -2137,7 +2230,9 @@ function resetSearch() {
   document.getElementById('search-kw').value = '';
   document.getElementById('search-from').value = '';
   document.getElementById('search-to').value = '';
-  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-results').innerHTML = `<div class="empty-tip">請輸入條件開始搜尋</div>`;
+  const countEl = document.getElementById('search-count');
+  if (countEl) countEl.style.display = 'none'; // 清除條件時隱藏數量
 }
 /* ══ 3. 查看記錄 結束 ════════════════════════════════════ */
 
@@ -2797,16 +2892,16 @@ function renderRptOverview() {
   if (orders > 0) {
     tagsParts.push(`
       <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${fmt(orders)}</span>
-        <span style="font-size:11px; font-weight:600; color:#f97316;">單</span>
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span>
+        <span style="font-size:10px; font-weight:600; color:#f97316;">單</span>
       </div>
     `);
   }
   if (mileage > 0) {
     tagsParts.push(`
       <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${fmt(mileage)}</span>
-        <span style="font-size:11px; font-weight:800; color:#22c55e;">km</span>
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${fmt(mileage)}</span>
+        <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
       </div>
     `);
   }
@@ -2899,25 +2994,25 @@ function renderRptOverview() {
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
 
       <div id="rpt-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
-        <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
+        <div style="padding:5px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            一單：<span style="font-family:var(--mono); color: var(--text-cyan); font-size:20px; font-weight:800;">$ ${fmt(avgOrd)}</span>
+            一單：<span style="font-family:var(--mono); color: var(--text-cyan); font-size:20px; font-weight:800;"><span style="font-size:12px;"> $ </span>${fmt(avgOrd)}</span>
           </div>
           <div class="h-div" style="height:45px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span>
+            1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr}<small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;"> 單</small></span>
           </div>
           <div class="h-div" style="height:45px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
-            時薪 $： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;">${fmt(avgHr)}</span>
+            時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;"><span style="font-size:12px;">$ </span>${fmt(avgHr)}</span>
             ${wageHtml}
           </div>
         </div>
         ${cashTipTotal > 0 ? `
         <div style="border-top:1px dashed var(--border);"></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
-          <span style="background: rgba(22,163,74,0.2); color: var(--green); font-size:11px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);">$${fmt(cashTipTotal)}</span>
+        <div style="display:flex; justify-content:flex-start; align-items:center; padding:5px 16px;">
+          <span style="background: #d6ffe5; color: #129943; font-size:12px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>：
+          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);"><span style="font-size:10px;"> $ </span>${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
@@ -3065,10 +3160,10 @@ function renderRptYearOverview() {
   // 單數、里程、工時膠囊
   let tagsParts = [];
   if (orders > 0) {
-    tagsParts.push(`<div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ff0000;">${fmt(orders)}</span><span style="font-size:11px; font-weight:600; color:#f97316;">單</span></div>`);
+    tagsParts.push(`<div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span><span style="font-size:10px; font-weight:600; color:#f97316;">單</span></div>`);
   }
   if (mileage > 0) {
-    tagsParts.push(`<div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #16a34a;">${fmt(mileage)}</span><span style="font-size:11px; font-weight:800; color:#22c55e;">km</span></div>`);
+    tagsParts.push(`<div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${fmt(mileage)}</span><span style="font-size:10px; font-weight:800; color: #000000;">km</span></div>`);
   }
   if (hours > 0) {
     tagsParts.push(`<div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;"><span style="font-size:11px;">⏱️</span><span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(hours)}</span></div>`);
@@ -3141,7 +3236,7 @@ function renderRptYearOverview() {
         <div style="border-top:1px dashed var(--border);"></div>
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
           <span style="background: rgba(22,163,74,0.2); color: var(--green); font-size:11px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);">$${fmt(cashTipTotal)}</span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);"><span style="font-size:10px;">$</span> ${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
@@ -4255,7 +4350,16 @@ function renderVehicleContent() {
     const fuelImgSrc = isEV ? 'Vehicle/ve2.png' : 'Vehicle/ve1.png';
     const fuelTitle = isEV ? '年度換電與里程' : '年度油資與里程';
     
-    // 計算電動車專屬的每公里成本
+    // 計算電動車專屬資料
+    let yEvFeeTotal = 0, yEvExtraTotal = 0;
+    if (isEV) {
+      yearRecs.forEach(r => {
+        if (r.type === 'fuel' && r.fuelType === 'electric') {
+          yEvFeeTotal += pf(r.evFee !== undefined ? r.evFee : r.amount);
+          yEvExtraTotal += pf(r.evExtra);
+        }
+      });
+    }
     const evCostPerKm = (yDist > 0 && yFuelAmt > 0) ? (yFuelAmt / yDist).toFixed(2) : 0;
 
     html += `
@@ -4296,9 +4400,10 @@ function renderVehicleContent() {
           </div>
           ` : `
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">總月租費</span>
-            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yFuelAmt)}</span>
+            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">月租 + 換電</span>
+            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2); display:flex; flex-direction:column; align-items:center;">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yEvFeeTotal)}</span>
+              <span style="font-family:var(--mono); font-size:10px; font-weight:700; color:#fca5a5;">+ $${fmt(yEvExtraTotal)}</span>
             </div>
           </div>
           <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
@@ -4461,18 +4566,24 @@ function renderVehicleContent() {
     const v = S.vehicles.find(x => x.id === S.selVehicleId);
     const isEV = v && v.defaultFuel === 'electric';
     
-  let totalEVFee = 0;
-    fuelRecs.forEach(r => { if(r.fuelType === 'electric') totalEVFee += pf(r.amount); });
+    let totalEVFee = 0, totalEVExtra = 0, totalEVAmount = 0;
+    fuelRecs.forEach(r => { 
+      if(r.fuelType === 'electric') {
+        totalEVFee += pf(r.evFee !== undefined ? r.evFee : r.amount); 
+        totalEVExtra += pf(r.evExtra);
+        totalEVAmount += pf(r.amount);
+      }
+    });
 
     if (isEV) {
       const evSwapCount = fuelRecs.filter(r => r.fuelType === 'electric').length;
-      const avgCostPerKm = (totalDistance > 0 && totalEVFee > 0) ? (totalEVFee / totalDistance).toFixed(2) : 0;
+      const avgCostPerKm = (totalDistance > 0 && totalEVAmount > 0) ? (totalEVAmount / totalDistance).toFixed(2) : 0;
       
       const evStatsHtml = `
         <div style="display:flex; justify-content:space-between; text-align:center; margin-top: 5px;">
           <div style="flex:1;">
-            <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">電池月租費</div>
-            <div style="font-weight:900; font-size:16px; color:#8b5cf6; font-family:var(--mono);">$ ${fmt(totalEVFee)}</div>
+            <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">月租 + 換電</div>
+            <div style="font-weight:900; font-size:15px; color:#8b5cf6; font-family:var(--mono);">$ ${fmt(totalEVFee)} <span style="font-size:11px; color:#ef4444;">+${fmt(totalEVExtra)}</span></div>
           </div>
           <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
           <div style="flex:1;">
@@ -4494,7 +4605,7 @@ function renderVehicleContent() {
             <div style="display:flex; align-items:center; gap:8px;">
               <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
                 <span style="font-size:14px; font-weight:800; color:#4f46e5; margin-right: 4px;">$</span>
-                <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#3b82f6;">${fmt(totalEVFee)}</span>
+                <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#3b82f6;">${fmt(totalEVAmount)}</span>
               </div>
               <div style="background:rgba(255,255,255,0.6); color:#3b82f6; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                 <div id="veh-ev-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
@@ -4645,7 +4756,8 @@ function renderVehicleContent() {
               let pillsHtml = '';
               if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color:#c026d3;">${diff}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
               if (r.prevKm || r.km) pillsHtml += `<div class="vb-pill"><span style="color:#059669;">${r.prevKm||0} → ${r.km||0}</span></div>`;
-              if (r.amount > 0) pillsHtml += `<div class="vb-pill" style="background:#f3e8ff;"><span style="color:#9333ea;">月租費$ ${fmt(r.amount)}</span></div>`;
+              if (r.evFee > 0) pillsHtml += `<div class="vb-pill" style="background:#f3e8ff;"><span style="color:#9333ea;">月租$ ${fmt(r.evFee)}</span></div>`;
+              if (r.evExtra > 0) pillsHtml += `<div class="vb-pill" style="background:#fee2e2;"><span style="color:#ef4444;">計費換電$ ${fmt(r.evExtra)}</span></div>`;
 
               htmlContent = `
                 <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
@@ -4937,7 +5049,8 @@ window.openAddVehRec = function(recordId = null) {
   const vrCurrKm = document.getElementById('vr-curr-km'); if(vrCurrKm) vrCurrKm.value = (r && r.type === 'fuel') ? (r.km || '') : ''; 
   const vrLiters = document.getElementById('vr-liters'); if(vrLiters) vrLiters.value = (r && r.type === 'fuel') ? (r.liters || '') : ''; 
   const vrPrice = document.getElementById('vr-price'); if(vrPrice) vrPrice.value = (r && r.type === 'fuel') ? (r.price || '') : ''; 
-  const vrEvFee = document.getElementById('vr-ev-fee'); if(vrEvFee) vrEvFee.value = (r && r.type === 'fuel' && isEV) ? (r.amount || '') : ''; 
+  const vrEvFee = document.getElementById('vr-ev-fee'); if(vrEvFee) vrEvFee.value = (r && r.type === 'fuel' && isEV) ? (r.evFee !== undefined ? r.evFee : r.amount) : ''; 
+  const vrEvExtra = document.getElementById('vr-ev-extra'); if(vrEvExtra) vrEvExtra.value = (r && r.type === 'fuel' && isEV) ? (r.evExtra || '') : ''; 
   
   // 觸發運算讓面板數字更新
   calcVehFuel(); 
@@ -4995,9 +5108,17 @@ function switchVehFormTab(type, index) {
         totalPanel.style.border = '2px solid #93c5fd';
         totalPanel.style.boxShadow = '0 4px 16px rgba(59, 130, 246, 0.15)';
         totalPanel.innerHTML = `
+          <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; font-weight:800; color:#64748b;">💰 月租費</span>
+            <span style="font-size:14px; font-weight:900; color:#64748b; font-family:var(--mono);">$ <span id="vr-ev-fee-display">0</span></span>
+          </div>
+          <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px dashed #bfdbfe;">
+            <span style="font-size:12px; font-weight:800; color:#ef4444;">⚡ 計費換電</span>
+            <span style="font-size:14px; font-weight:900; color:#ef4444; font-family:var(--mono);">$ <span id="vr-ev-extra-display">0</span></span>
+          </div>
           <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <span style="font-size:13px; font-weight:800; color:#8b5cf6;">💰 月租費</span>
-            <span style="font-size:16px; font-weight:900; color:#8b5cf6; font-family:var(--mono);">$ <span id="vr-ev-fee-display">0</span></span>
+            <span style="font-size:15px; font-weight:900; color:#8b5cf6;">💵 總金額</span>
+            <span style="font-size:22px; font-weight:900; color:#8b5cf6; font-family:var(--mono);">$ <span id="vr-ev-total-display">0</span></span>
           </div>
           <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:16px; font-weight:900; color:#1e3a8a;">🔋 本次換電行駛</span>
@@ -5051,9 +5172,18 @@ function calcVehFuel() {
   const discount = pf(document.getElementById('vr-discount') ? document.getElementById('vr-discount').value : 0); 
   const before = Math.round(liters * price); 
   const final = Math.round(Math.max(0, before - discount)); 
+  
   if (document.getElementById('vr-before-total')) document.getElementById('vr-before-total').textContent = fmt(before); 
   if (document.getElementById('vr-final-total')) document.getElementById('vr-final-total').textContent = fmt(final); 
-  if (document.getElementById('vr-ev-fee-display') && document.getElementById('vr-ev-fee')) { document.getElementById('vr-ev-fee-display').textContent = fmt(pf(document.getElementById('vr-ev-fee').value)); }
+  
+  // 👇 更新電動車的雙重計費顯示
+  if (document.getElementById('vr-ev-fee')) {
+    const fee = pf(document.getElementById('vr-ev-fee').value);
+    const extra = pf(document.getElementById('vr-ev-extra')?.value || 0);
+    if (document.getElementById('vr-ev-fee-display')) document.getElementById('vr-ev-fee-display').textContent = fmt(fee);
+    if (document.getElementById('vr-ev-extra-display')) document.getElementById('vr-ev-extra-display').textContent = fmt(extra);
+    if (document.getElementById('vr-ev-total-display')) document.getElementById('vr-ev-total-display').textContent = fmt(fee + extra);
+  }
 }
 
 /* ══ 替換：儲存車輛記錄 (處理明細資料寫入，完美支援搜尋) ══ */
@@ -5067,7 +5197,9 @@ function confirmAddVehRec() {
   
   if (S.addVehRecType === 'fuel') { 
     if (isEV) {
-      finalAmount = pf(document.getElementById('vr-ev-fee').value);
+      const fee = pf(document.getElementById('vr-ev-fee').value);
+      const extra = pf(document.getElementById('vr-ev-extra')?.value || 0);
+      finalAmount = fee + extra; // 👈 總額相加
     } else {
       const finalTotalEl = document.getElementById('vr-final-total');
       if (finalTotalEl) {
@@ -5102,7 +5234,9 @@ function confirmAddVehRec() {
         prevKm: pf(document.getElementById('vr-prev-km').value), 
         km: pf(document.getElementById('vr-curr-km').value), 
         liters: isEV ? 0 : pf(document.getElementById('vr-liters').value), 
-        price: isEV ? 0 : pf(document.getElementById('vr-price').value) 
+        price: isEV ? 0 : pf(document.getElementById('vr-price').value),
+        evFee: isEV ? pf(document.getElementById('vr-ev-fee').value) : 0,    // 👈 獨立儲存月租費
+        evExtra: isEV ? pf(document.getElementById('vr-ev-extra')?.value || 0) : 0 // 👈 獨立儲存計費換電
       }; 
     } else if (S.addVehRecType === 'wash') {
       specificData = {
