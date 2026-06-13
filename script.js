@@ -2430,7 +2430,13 @@ function resetAddForm() {
   document.getElementById('f-pu-min').value = '';  
   
   S.editingId = null;
-  syncTagsUI(); // 👈 清空表單時，確保標籤燈號熄滅
+  
+  // 👇 暴力解除：強制拔除畫面上所有標籤的發光狀態，保證萬無一失！
+  document.querySelectorAll('.w-tag, .ct-tag, .search-quick-tag').forEach(el => el.classList.remove('on'));
+  
+  // 還是呼叫一下以防萬一
+  if (typeof syncTagsUI === 'function') syncTagsUI(); 
+
   switchAddTab('regular', 0); 
 }
 
