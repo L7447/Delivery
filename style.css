@@ -200,7 +200,8 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .month-cell.sel .day-num { background: #2563eb; color: #ffffff; font-weight: 800; }
 .month-cell.today:not(.sel) .day-num { background: hsl(32, 100%, 50%); color: #1c1c1c; font-weight: 800; }
 .has-rec-dot { position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: #10b981; z-index: 2; }
-.month-cell.sel .has-rec-dot { background: #60a5fa; }
+/* 👇 當點選該日期時，如果有紀錄，圓點顯示為顯眼的橘色並加上微光暈 */
+.month-cell.sel .has-rec-dot { background: #f97316; box-shadow: 0 0 4px rgba(249,115,22,0.5); }
 
 /* ══ 10. 全螢幕大日曆 (修復補回版) ══ */
 @media screen and (orientation:portrait){#full-calendar-overlay.show{width:100vh;height:100vw;transform:rotate(90deg);transform-origin:top left;position:fixed;top:0;left:100vw;}
@@ -279,16 +280,16 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 
 /* 🌌 銀河極光 (包含背景全螢幕模糊失焦特效 - 修正版) */
 #toast { 
-  position: fixed; bottom: 50% !important; left: 50%; top: auto !important;
+  position: fixed; bottom: 55% !important; left: 50%; top: auto !important;
   transform: translate(-50%, calc(50% + 50px)) scale(0.5) !important;
-  background: linear-gradient(135deg, #141E30, #243B55); 
-  border: 1px solid rgba(0, 229, 255, 0.2);
+  background:#141E30;
+  border: 3.5px solid rgba(0, 229, 255, 0.2);
   
   /* 👇 100vmax rgba(0,0,0,0.5) 會產生無限大的黑色遮罩，完美壓暗背景 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 0 100vmax rgba(0, 0, 0, 0.5); 
   
   color: #00e5ff; text-shadow: 0 2px 6px rgba(0, 229, 255, 0.4);
-  padding: 16px 30px; border-radius: 50px; font-size: 20px; font-weight: 800;
+  padding: 16px 30px; border-radius: 50px; font-size: 24px; font-weight: 700;
   white-space: pre-wrap; word-break: break-word; min-width: 260px; text-align: center;
   z-index: 999999; pointer-events: none; opacity: 0; 
   transition: opacity 0.5s ease, transform 0.1s ease;
@@ -369,22 +370,35 @@ body:has(#toast.show) #app > *:not(#toast) {
 .w-flood   { background: #ccfbf1; color: #0d9488; border: 1.5px solid #99f6e4; }
 .w-typhoon { background: #fce7f3; color: #db2777; border: 1.5px solid #fbcfe8; }
 
-/* 🌟 選中狀態特效 */
+/* 🌟 選中狀態特效 (天氣) */
 .w-tag.on { 
   opacity: 1; filter: grayscale(0%);
   transform: scale(1.05); font-weight: 800;
-  box-shadow: 0 4px 10px currentColor; /* 讓光暈自動符合該天氣的文字顏色 */
+  box-shadow: 0 4px 10px currentColor; 
 }
-.ct-tag.on { 
-  opacity: 1; filter: grayscale(0%);
-  transform: translateY(-3px) scale(1.05); /* 👈 點亮時稍微往上浮起 */
-  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); 
-  color: #ffffff; 
-  border-color: #60a5fa;
-  /* 👈 外圈立體藍色光暈 + 內圈反光玻璃感 */
-  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.4); 
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
+
+/* 🌟 現金小費專屬備註標籤 (色彩豐富版) */
+.ct-tag { font-size: 14px; font-weight: 800; margin-left: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.3s; opacity: 0.65; filter: grayscale(30%); }
+.ct-tag:hover { opacity: 0.85; }
+.ct-tag:active { transform: translateY(0) scale(0.92); filter: brightness(0.9); }
+
+.ct-tag.ct-yellow { background: #fef08a; color: #854d0e; border: 1.5px solid #fde047; }
+.ct-tag.ct-yellow.on { opacity: 1; filter: grayscale(0%); background: linear-gradient(135deg, #eab308, #ca8a04); color: #fff; border-color: #facc15; box-shadow: 0 6px 12px rgba(202, 138, 4, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); transform: translateY(-3px) scale(1.05); }
+
+.ct-tag.ct-pink { background: #fbcfe8; color: #9d174d; border: 1.5px solid #f9a8d4; }
+.ct-tag.ct-pink.on { opacity: 1; filter: grayscale(0%); background: linear-gradient(135deg, #db2777, #be185d); color: #fff; border-color: #f472b6; box-shadow: 0 6px 12px rgba(219, 39, 119, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); transform: translateY(-3px) scale(1.05); }
+
+.ct-tag.ct-purple { background: #f3e8ff; color: #6b21a8; border: 1.5px solid #e9d5ff; }
+.ct-tag.ct-purple.on { opacity: 1; filter: grayscale(0%); background: linear-gradient(135deg, #9333ea, #7e22ce); color: #fff; border-color: #c084fc; box-shadow: 0 6px 12px rgba(147, 51, 234, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); transform: translateY(-3px) scale(1.05); }
+
+.ct-tag.ct-green { background: #dcfce7; color: #166534; border: 1.5px solid #bbf7d0; }
+.ct-tag.ct-green.on { opacity: 1; filter: grayscale(0%); background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border-color: #4ade80; box-shadow: 0 6px 12px rgba(22, 163, 74, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); transform: translateY(-3px) scale(1.05); }
+
+.ct-tag.ct-blue { background: #e0f2fe; color: #0369a1; border: 1.5px solid #bae6fd; }
+.ct-tag.ct-blue.on { opacity: 1; filter: grayscale(0%); background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; border-color: #60a5fa; box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); transform: translateY(-3px) scale(1.05); }
+
+/* 歷史記錄卡片用的微型標籤 (支援多色彩) */
+.ct-mini-tag { padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; font-family: var(--mono); white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-right: 4px; display: inline-block;}
 
 /* ── 3. 全新 Auth (登入/註冊) 極限縮小內距版 ── */
 .auth-wrapper{background:#fff;border-radius:20px;padding:5px 16px 16px 16px;/* ⬇️ 上下內距縮小為 5px */
@@ -487,3 +501,21 @@ input:checked + .slider:before { transform: translateX(20px); }
   border: 1.5px solid #f472b6; 
   box-shadow: 0 0 12px rgba(236, 72, 153, 0.4), inset 0 0 8px rgba(255,255,255,0.8); 
 }
+
+/* ══ 搜尋彈窗：快速標籤樣式 ══ */
+.search-quick-tag {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1.5px solid transparent; /* 邊框顏色由 JS 動態指定 */
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+.search-quick-tag:active {
+  transform: scale(0.9);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-acc:active{transform:scale(0.9);}
