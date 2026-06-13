@@ -1272,20 +1272,32 @@ function renderHome() {
                   else if (ev.name.includes('明細')) titleColor = '#ea580c'; 
                   else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; 
                   
-                  let diffBg = '#f1f5f9', diffColor = '#475569', diffIcon = '⏳', diffText = safeText(ev.diffStr);
-                  if (ev.diff === 0) { diffBg = '#dcfce7'; diffColor = '#16a34a'; diffIcon = '🔥'; diffText = '今天'; } 
-                  else if (ev.diff === 1) { diffBg = '#ffedd5'; diffColor = '#ea580c'; diffIcon = '⚡'; } 
-                  else if (ev.diff <= 3) { diffBg = '#e0f2fe'; diffColor = '#0284c7'; diffIcon = '🔜'; }
+                  let diffBg = '#f1f5f9', diffColor = '#334155', diffIcon = '⏳', diffText = safeText(ev.diffStr);
+                  let cardBorder = '#ffffff'; // 外部卡片預設白色
+                  let tagBorder = '#cbd5e1';  // 小標籤預設灰色
+
+                  if (ev.diff === 0) { 
+                    diffBg = '#dcfce7'; diffColor = '#15803d'; diffIcon = '🔥'; diffText = '今天'; 
+                    cardBorder = '#86efac'; tagBorder = '#86efac'; // 綠色外框
+                  } 
+                  else if (ev.diff === 1) { 
+                    diffBg = '#ffedd5'; diffColor = '#c2410c'; diffIcon = '⚡'; 
+                    cardBorder = '#fdba74'; tagBorder = '#fdba74'; // 橘色外框
+                  } 
+                  else if (ev.diff <= 3) { 
+                    diffBg = '#e0f2fe'; diffColor = '#0369a1'; diffIcon = '🔜'; 
+                    cardBorder = '#7dd3fc'; tagBorder = '#7dd3fc'; // 藍色外框
+                  }
 
                   return `
-                    <div style="flex:1; background:#ffffff; border-radius:12px; text-align:center; border:1.5px solid #ffffff; display:flex; flex-direction:column; overflow:hidden; margin-top:10px;">
+                    <div style="flex:1; background:#ffffff; border-radius:12px; text-align:center; border:2px solid ${cardBorder}; display:flex; flex-direction:column; overflow:hidden; margin-top:10px; transition:0.3s; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
                       <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30;">
                         <span style="font-size:16px; color:${titleColor}; font-weight:750;">${safeText(ev.name)}</span>
                       </div>
                       <div style="padding:10px 2px; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
                         <span style="font-family:var(--mono); font-size:17px; font-weight:900; color:var(--t1); line-height:1;">${safeText(ev.dateStr)}</span>
                         <div style="margin-top:8px;">
-                          <span style="display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:900; padding:4px 6px; border-radius:8px; background:${diffBg}; color:${diffColor}; border:1px solid ${diffColor}30;">
+                          <span style="display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:900; padding:4px 6px; border-radius:8px; background:${diffBg}; color:${diffColor}; border:1.5px solid ${tagBorder};">
                             <span style="font-size:10px;">${diffIcon}</span> ${diffText}
                           </span>
                         </div>
@@ -3047,82 +3059,96 @@ function renderRptOverview() {
     const platData = activePlats.map(p => ({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
     pieLabels = platData.map(p=>p.name); pieData = platData.map(p=>p.val); pieColors = platData.map(p=>p.color);
     
-    // 👇 計算所有平台的精確佔比 (支援陣列無限數量)
     const platPcts = getExactPercentages(pieData);
     
+    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
     listHtml = platData.map((p, idx) => {
-      const pct = platPcts[idx]; // 直接取用精確佔比字串
-      return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
-        <div style="width:12px; height:12px; border-radius:4px; background:${p.color}; margin-right:10px;"></div>
-        <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(p.name)}</span>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct} %</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(p.val)}</span>
-      </div>`;
+      const pct = platPcts[idx];
+      return `
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
+          <div style="display:flex; align-items:center; justify-content:flex-start;">
+            <div style="width:10px; height:10px; border-radius:3px; background:${p.color}; margin-right:8px; flex-shrink:0;"></div>
+            <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(p.name)}</span>
+          </div>
+          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
+            <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(p.val)}
+          </span>
+        </div>`;
     }).join('');
   } else if (!isAll && total > 0) {
     pieLabels = ['行程', '獎勵', '小費']; pieData = [income, bonus, tips]; pieColors = ['#22c55e', '#f59e0b', '#3b82f6'];
     
-    // 👇 直接綁定剛剛算好的精確 % 數
     const details = [
       { name: '行程收入', val: income, color: '#22c55e', pct: incPct }, 
       { name: '獎勵金額', val: bonus, color: '#f59e0b', pct: bonPct }, 
       { name: 'APP小費', val: tips, color: '#3b82f6', pct: tipPct }
     ].filter(d => d.val > 0);
     
+    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
     listHtml = details.map(d => {
-      return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
-        <div style="width:12px; height:12px; border-radius:4px; background:${d.color}; margin-right:10px;"></div>
-        <span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(d.name)}</span>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${d.pct} %</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(d.val)}</span>
-      </div>`;
+      return `
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
+          <div style="display:flex; align-items:center; justify-content:flex-start;">
+            <div style="width:10px; height:10px; border-radius:3px; background:${d.color}; margin-right:8px; flex-shrink:0;"></div>
+            <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(d.name)}</span>
+          </div>
+          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${d.pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
+            <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(d.val)}
+          </span>
+        </div>`;
     }).join('');
   }
 
   if (total > 0) {
     html += `
       <div style="position:relative; height:180px; margin-bottom:16px;">
-        <canvas id="plat-pie"></canvas>
+        <!-- 注意：若是 renderRptYearOverview，請確保下方 ID 為 plat-pie-year -->
+        <canvas id="${S.rptView === 'yearOverview' ? 'plat-pie-year' : 'plat-pie'}"></canvas>
       </div>
       <div style="display:flex; flex-direction:column;">
-        <div style="display:flex; align-items:center; padding:8px 0; border-bottom:2px solid var(--border);">
-          <span style="flex:1; font-size:12px; font-weight:800; color:var(--t3);">項目</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); width:50px; text-align:right;">佔比</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); width:100px; text-align:right;">金額</span>
+        
+        <!-- 👇 三等分表頭 (加入 10px 左右內距) -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid var(--border);">
+          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:left;">項目</span>
+          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">佔比</span>
+          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">金額</span>
         </div>
+        
         ${listHtml}
-            <div style="position:relative; display:flex; align-items:center; padding:10px 14px; margin: 6px -14px 4px -14px; z-index:1;">
-              <!-- 奢華曜金 SVG 長條六邊形背景 -->
-              <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
-                <defs>
-                  <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#3b3b3f" />
-                    <stop offset="40%" stop-color="#353535" />
-                    <stop offset="50%" stop-color="#282828" />
-                    <stop offset="100%" stop-color="#18181b" />
-                  </linearGradient>
-                  <!-- 黃金質感線條漸層 -->
-                  <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#fbbf24" />
-                    <stop offset="50%" stop-color="#fef08a" />
-                    <stop offset="100%" stop-color="#d97706" />
-                  </linearGradient>
-                </defs>
-                <!-- 黑曜石漸層底板 -->
-                <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
-                <!-- 內嵌發亮金線 -->
-                <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
-                <!-- 最內圈的輔助透白暗線 (增加立體溝槽感) -->
-                <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
-              </svg>
-              <!-- 內容區塊 -->
-              <span style="flex:1; font-size:18px; font-weight:500; color: #00eeff; letter-spacing:1px;">🔷 總計</span>
-              <span style="font-family:var(--mono); font-size:13px; font-weight:700; color: #FFD700; width:50px; text-align:right;">100 %</span>
-              <span style="font-family:var(--mono); font-size:15px; font-weight:900; color: #ffffff; width:100px; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5);">$ ${fmt(total)}</span>
-            </div>
+        
+        <!-- 👇 三等分總計列 (加入 10px 左右內距，縮小金錢符號) -->
+        <div style="position:relative; display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:12px 10px; margin: 6px -14px 4px -14px; z-index:1;">
+          <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
+            <defs>
+              <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#3b3b3f" />
+                <stop offset="40%" stop-color="#353535" />
+                <stop offset="50%" stop-color="#282828" />
+                <stop offset="100%" stop-color="#18181b" />
+              </linearGradient>
+              <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fbbf24" />
+                <stop offset="50%" stop-color="#fef08a" />
+                <stop offset="100%" stop-color="#d97706" />
+              </linearGradient>
+            </defs>
+            <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
+            <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
+            <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+          </svg>
+          
+          <span style="font-size:16px; font-weight:800; color: #00eeff; letter-spacing:1px; text-align:left; padding-left:14px;">🔷 總計</span>
+          <span style="font-family:var(--mono); font-size:14px; font-weight:800; color: #FFD700; text-align:right; margin-right:2px;">100 <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color: #ffffff; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5); padding-right:10px;">
+            <span style="font-size:10px; opacity:0.8; margin-right:2px;">$ </span>${fmt(total)}
+          </span>
+        </div>
       </div>`;
+  
   } else {
-    html += `<div class="empty-tip" style="padding:16px 0;">所選平台本區間無記錄</div>`;
+    html += `<div class="empty-tip" style="padding:16px 0;">所選平台，本區間無記錄</div>`;
   }
 
   html += `</div>`; // 結束佔比卡片
@@ -3262,40 +3288,101 @@ function renderRptYearOverview() {
   html += `</div>`;
 
   let pieLabels = [], pieData = [], pieColors = [], listHtml = '';
+  
   if (isAll && total > 0) {
     const platData = activePlats.map(p => ({ name: p.name, color: p.color, val: recs.filter(r=>r.platformId===p.id).reduce((s,r)=>s+recTotal(r),0) })).filter(p=>p.val>0);
     pieLabels = platData.map(p=>p.name); pieData = platData.map(p=>p.val); pieColors = platData.map(p=>p.color);
+    
     const platPcts = getExactPercentages(pieData);
+    
+    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
     listHtml = platData.map((p, idx) => {
       const pct = platPcts[idx];
-      return `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;"><div style="width:12px; height:12px; border-radius:4px; background:${p.color}; margin-right:10px;"></div><span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(p.name)}</span><span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${pct} %</span><span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(p.val)}</span></div>`;
+      return `
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
+          <div style="display:flex; align-items:center; justify-content:flex-start;">
+            <div style="width:10px; height:10px; border-radius:3px; background:${p.color}; margin-right:8px; flex-shrink:0;"></div>
+            <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(p.name)}</span>
+          </div>
+          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
+            <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(p.val)}
+          </span>
+        </div>`;
     }).join('');
   } else if (!isAll && total > 0) {
     pieLabels = ['行程', '獎勵', '小費']; pieData = [income, bonus, tips]; pieColors = ['#22c55e', '#f59e0b', '#3b82f6'];
-    const details = [{ name: '行程收入', val: income, color: '#22c55e', pct: incPct }, { name: '獎勵金額', val: bonus, color: '#f59e0b', pct: bonPct }, { name: 'APP小費', val: tips, color: '#3b82f6', pct: tipPct }].filter(d => d.val > 0);
-    listHtml = details.map(d => `<div style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;"><div style="width:12px; height:12px; border-radius:4px; background:${d.color}; margin-right:10px;"></div><span style="flex:1; font-size:13px; font-weight:700; color:var(--t1);">${safeText(d.name)}</span><span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); width:50px; text-align:right;">${d.pct} %</span><span style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); width:100px; text-align:right;">$ ${fmt(d.val)}</span></div>`).join('');
+    
+    const details = [
+      { name: '行程收入', val: income, color: '#22c55e', pct: incPct }, 
+      { name: '獎勵金額', val: bonus, color: '#f59e0b', pct: bonPct }, 
+      { name: 'APP小費', val: tips, color: '#3b82f6', pct: tipPct }
+    ].filter(d => d.val > 0);
+    
+    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
+    listHtml = details.map(d => {
+      return `
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
+          <div style="display:flex; align-items:center; justify-content:flex-start;">
+            <div style="width:10px; height:10px; border-radius:3px; background:${d.color}; margin-right:8px; flex-shrink:0;"></div>
+            <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(d.name)}</span>
+          </div>
+          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${d.pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
+            <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(d.val)}
+          </span>
+        </div>`;
+    }).join('');
   }
 
   if (total > 0) {
-    // 👇 年總覽專屬 Canvas ID (避免與月總覽衝突)
     html += `
       <div style="position:relative; height:180px; margin-bottom:16px;">
-        <canvas id="plat-pie-year"></canvas>
+        <!-- 注意：若是 renderRptYearOverview，請確保下方 ID 為 plat-pie-year -->
+        <canvas id="${S.rptView === 'yearOverview' ? 'plat-pie-year' : 'plat-pie'}"></canvas>
       </div>
       <div style="display:flex; flex-direction:column;">
-        <div style="display:flex; align-items:center; padding:8px 0; border-bottom:2px solid var(--border);">
-          <span style="flex:1; font-size:12px; font-weight:800; color:var(--t3);">項目</span><span style="font-size:12px; font-weight:800; color:var(--t3); width:50px; text-align:right;">佔比</span><span style="font-size:12px; font-weight:800; color:var(--t3); width:100px; text-align:right;">金額</span>
+        
+        <!-- 👇 三等分表頭 (加入 10px 左右內距) -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid var(--border);">
+          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:left;">項目</span>
+          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">佔比</span>
+          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">金額</span>
         </div>
+        
         ${listHtml}
-        <div style="position:relative; display:flex; align-items:center; padding:10px 14px; margin: 6px -14px 4px -14px; z-index:1;">
-          <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));"><defs><linearGradient id="darkGoldGradY" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b3b3f" /><stop offset="40%" stop-color="#353535" /><stop offset="50%" stop-color="#282828" /><stop offset="100%" stop-color="#18181b" /></linearGradient><linearGradient id="goldLineGradY" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fbbf24" /><stop offset="50%" stop-color="#fef08a" /><stop offset="100%" stop-color="#d97706" /></linearGradient></defs><polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGradY)" /><polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGradY)" stroke-width="1.5" /><polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" /></svg>
-          <span style="flex:1; font-size:18px; font-weight:500; color: #00eeff; letter-spacing:1px;">🔷 總計</span>
-          <span style="font-family:var(--mono); font-size:13px; font-weight:700; color: #FFD700; width:50px; text-align:right;">100 %</span>
-          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color: #ffffff; width:100px; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5);">$ ${fmt(total)}</span>
+        
+        <!-- 👇 三等分總計列 (加入 10px 左右內距，縮小金錢符號) -->
+        <div style="position:relative; display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:12px 10px; margin: 6px -14px 4px -14px; z-index:1;">
+          <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
+            <defs>
+              <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#3b3b3f" />
+                <stop offset="40%" stop-color="#353535" />
+                <stop offset="50%" stop-color="#282828" />
+                <stop offset="100%" stop-color="#18181b" />
+              </linearGradient>
+              <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fbbf24" />
+                <stop offset="50%" stop-color="#fef08a" />
+                <stop offset="100%" stop-color="#d97706" />
+              </linearGradient>
+            </defs>
+            <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
+            <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
+            <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+          </svg>
+          
+          <span style="font-size:16px; font-weight:800; color: #00eeff; letter-spacing:1px; text-align:left; padding-left:14px;">🔷 總計</span>
+          <span style="font-family:var(--mono); font-size:14px; font-weight:800; color: #FFD700; text-align:right; margin-right:2px;">100 <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color: #ffffff; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5); padding-right:10px;">
+            <span style="font-size:10px; opacity:0.8; margin-right:2px;">$ </span>${fmt(total)}
+          </span>
         </div>
       </div>`;
+  
   } else {
-    html += `<div class="empty-tip" style="padding:16px 0;">所選平台本年度無記錄</div>`;
+    html += `<div class="empty-tip" style="padding:16px 0;">所選平台，本年度無記錄</div>`;
   }
 
   html += `</div>`; 
@@ -3379,19 +3466,21 @@ function renderRptTrend() {
           <canvas id="trend-chart"></canvas>
         </div>
         
-        <div style="margin-top:24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 16px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width:42px; height:42px; background:#ffffff; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(16,185,129,0.2); font-size:22px;">🏆</div>
+        <div style="margin-top:14px; background: #ffffff; border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08); position: relative; overflow: hidden;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:6px; background: #3b82f6;"></div>
+          <div style="display: flex; align-items: center; gap: 12px; padding-left: 6px;">
+            <div style="width:40px; height:40px; background:#eff6ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; border: 1.5px solid #93c5fd;">🚀</div>
             <div style="display:flex; flex-direction:column; gap:2px;">
-              <span style="font-size: 15px; font-weight: 900; color: #065f46; letter-spacing: 0.5px;">全年總收入</span>
-              <span style="font-size:11px; font-weight:700; color:#059669; font-family:var(--mono);">${td.getFullYear()} Year</span>
+              <span style="font-size: 15px; font-weight: 900; color: #1e3a8a; letter-spacing: 0.5px;">全年總收入</span>
+              <span style="font-size:11px; font-weight:700; color:#60a5fa; font-family:var(--mono);"><span style="font-size:13px;font-weight:900;color: #ec2c9c;">${td.getFullYear()}</span> Year Total</span>
             </div>
           </div>
-          <div style="display:flex; align-items:baseline; gap:4px;">
-            <span style="font-size:14px; font-weight:900; color:#047857;">$</span>
-            <span style="font-family: var(--mono); font-size: 26px; font-weight: 750; color: #047857;"> ${fmt(allTotal)}</span>
+          <div style="display:flex; align-items:baseline; gap:4px; margin-top: 16px;">
+            <span style="font-size:12px; font-weight:900; color: #3b82f6;">$</span>
+            <span style="font-family: var(--mono); font-size: 22px; font-weight: 800; color: #2563eb;"> ${fmt(allTotal)}</span>
           </div>
         </div>
+
       </div>`;
       
     el.innerHTML = html; drawTrendBar('trend-chart', labels, datasets);
