@@ -208,7 +208,7 @@
             <button type="button" class="w-tag w-typhoon" style="padding:4px 10px; font-size:11px;" onclick="addWeatherTag('🌀颱風')">🌀颱風</button>
           </div>
           <div style="position:relative;">
-            <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事" style="padding:6px 32px 6px 10px;">
+            <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事" oninput="syncTagsUI()" style="padding:6px 32px 6px 10px;">
             <button type="button" onclick="document.getElementById('f-note').value=''" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:var(--border); color: #000000; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; font-weight:900;">✕</button>
           </div>
         </div>
@@ -248,7 +248,7 @@
             </div>
           </div>
           <div style="position:relative;">
-            <input type="text" class="finp finp-ct" id="f-ct-note" placeholder="小費記事" style="padding-right: 36px;">
+            <input type="text" class="finp finp-ct" id="f-ct-note" placeholder="小費記事" oninput="syncTagsUI()" style="padding-right: 36px;">
             <button type="button" onclick="document.getElementById('f-ct-note').value=''" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:29px; height:29px; border-radius:50%; background:var(--border); color: #000000; border:none; display:flex; text-align:center; justify-content:center; cursor:pointer; font-size:22px; font-weight:900;">✕</button>
           </div>
         </div>
@@ -587,16 +587,21 @@
         </div>
       </div>
 
-      <!-- 👇 新增：獨立的電動車月租費白框卡片 -->
-      <div id="vr-ev-fee-card" style="display:none; margin-bottom:16px;">
+      <!-- 👇 新增：獨立的電動車月租費白框卡片 (含立體卡片樣式) -->
+      <div id="vr-ev-fee-card" style="display:none; margin-bottom:16px; background:#ffffff; border:1.5px solid #bfdbfe; border-radius:16px; padding:16px; box-shadow:0 4px 12px rgba(37,99,235,0.06);">
+        <!-- 卡片小標題 -->
+        <div style="font-size:13px; font-weight:800; color:var(--text-blue); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+          <span>🔋</span> 換電費用設定
+        </div>
+        
         <div style="display:flex; gap:10px;">
           <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-weight:700; color:var(--text-blue);">電池月租費</label>
-            <input type="number" class="finp" id="vr-ev-fee" placeholder="" oninput="calcVehFuel()">
+            <label style="font-weight:700; color:var(--t2);">電池月租費</label>
+            <input type="number" class="finp" id="vr-ev-fee" placeholder="" oninput="calcVehFuel()" style="font-weight:800; color:var(--text-blue); border-color:#dbeafe;">
           </div>
           <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-weight:700; color:var(--text-blue);">計費換電</label>
-            <input type="number" class="finp" id="vr-ev-extra" placeholder="" oninput="calcVehFuel()">
+            <label style="font-weight:700; color:var(--t2);">計費換電</label>
+            <input type="number" class="finp" id="vr-ev-extra" placeholder="" oninput="calcVehFuel()" style="font-weight:800; color:var(--red); border-color:#fee2e2; background:#fff1f2;">
           </div>
         </div>
       </div>
