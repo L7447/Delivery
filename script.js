@@ -3240,9 +3240,9 @@ function renderRptYearOverview() {
         </div>
         ${cashTipTotal > 0 ? `
         <div style="border-top:1px dashed var(--border);"></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
-          <span style="background: rgba(22,163,74,0.2); color: var(--green); font-size:11px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);"><span style="font-size:10px;">$</span> ${fmt(cashTipTotal)}</span>
+        <div style="display:flex; justify-content:flex-start; align-items:center; padding:5px 16px;">
+          <span style="background: #d6ffe5; color: #129943; font-size:12px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
+          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);"><span style="font-size:10px;"> $ </span> ${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
@@ -4761,9 +4761,9 @@ function renderVehicleContent() {
               const diff = pf(r.km) - pf(r.prevKm);
               let pillsHtml = '';
               if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color:#c026d3;">${diff}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
-              if (r.prevKm || r.km) pillsHtml += `<div class="vb-pill"><span style="color:#059669;">${r.prevKm||0} → ${r.km||0}</span></div>`;
+              // if (r.prevKm || r.km) pillsHtml += `<div class="vb-pill"><span style="color:#059669;">${r.prevKm||0} → ${r.km||0}</span></div>`;
               if (r.evFee > 0) pillsHtml += `<div class="vb-pill" style="background:#f3e8ff;"><span style="color:#9333ea;">月租$ ${fmt(r.evFee)}</span></div>`;
-              if (r.evExtra > 0) pillsHtml += `<div class="vb-pill" style="background:#fee2e2;"><span style="color:#ef4444;">計費換電$ ${fmt(r.evExtra)}</span></div>`;
+              if (r.evExtra > 0) pillsHtml += `<div class="vb-pill" style="background:#fee2e2;"><span style="color:#ef4444;">計費$ ${fmt(r.evExtra)}</span></div>`;
 
               htmlContent = `
                 <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
