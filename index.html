@@ -184,7 +184,7 @@
             <div class="fg" style="margin-bottom:0;"><label>💰 淨行程 ($)</label><input type="number" class="finp" id="f-income" placeholder="0" inputmode="decimal" oninput="calcAddTotal()" style="padding:6px 8px;"></div>
             <div class="fg" style="margin-bottom:0;"><label>💳 刷卡小費</label><input type="number" class="finp" id="f-tips" placeholder="0" inputmode="decimal" oninput="calcAddTotal()" style="padding:6px 8px;"></div>
           </div>
-          <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:6px;">
+          <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:6px;">
             <div class="fg" style="margin-bottom:0;"><label>🎁 固定獎勵 (熊貓自動帶入)</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()" style="padding:6px 10px;"></div>
             <div class="fg" style="margin-bottom:0;"><label>⚡ 臨時獎勵</label><input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()" style="padding:6px 10px;"></div>
           </div>
@@ -209,7 +209,7 @@
           </div>
           <div style="position:relative;">
             <input type="text" class="finp" id="f-note" placeholder="天氣、路況或其他記事" oninput="syncTagsUI()" style="padding:6px 32px 6px 10px;">
-            <button type="button" onclick="document.getElementById('f-note').value=''" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:var(--border); color: #000000; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; font-weight:900;">✕</button>
+            <button type="button" onclick="document.getElementById('f-note').value=''; syncTagsUI()" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:var(--border); color: #000000; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; font-weight:900;">✕</button>
           </div>
         </div>
       </div>
@@ -249,7 +249,7 @@
           </div>
           <div style="position:relative;">
             <input type="text" class="finp finp-ct" id="f-ct-note" placeholder="小費記事" oninput="syncTagsUI()" style="padding-right: 36px;">
-            <button type="button" onclick="document.getElementById('f-ct-note').value=''" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:29px; height:29px; border-radius:50%; background:var(--border); color: #000000; border:none; display:flex; text-align:center; justify-content:center; cursor:pointer; font-size:22px; font-weight:900;">✕</button>
+            <button type="button" onclick="document.getElementById('f-ct-note').value=''; syncTagsUI()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:29px; height:29px; border-radius:50%; background:var(--border); color: #000000; border:none; display:flex; text-align:center; justify-content:center; cursor:pointer; font-size:22px; font-weight:900;">✕</button>
           </div>
         </div>
       </div>
