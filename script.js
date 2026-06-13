@@ -3241,7 +3241,7 @@ function renderRptYearOverview() {
         ${cashTipTotal > 0 ? `
         <div style="border-top:1px dashed var(--border);"></div>
         <div style="display:flex; justify-content:flex-start; align-items:center; padding:5px 16px;">
-          <span style="background: #d6ffe5; color: #129943; font-size:12px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>
+          <span style="background: #d6ffe5; color: #129943; font-size:12px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>：
           <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);"><span style="font-size:10px;"> $ </span> ${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
@@ -4351,7 +4351,7 @@ function renderVehicleContent() {
     `;
 
     // 3. 燃料與里程卡片 (玻璃反光與科技碳纖維斜紋)
-    const fuelBg = isEV ? 'linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%)' : 'linear-gradient(180deg, #e60000 0%, #ff6666 100%)';
+    const fuelBg = isEV ? 'linear-gradient(180deg, #1e3a8a 0%, #3b82f6 30%, #fff 100%)' : 'linear-gradient(180deg, #e60000 0%, #ff6666 100%)';
     const fuelShadow = isEV ? 'rgba(59,130,246,0.25)' : 'rgba(225,29,72,0.25)';
     const fuelImgSrc = isEV ? 'Vehicle/ve2.png' : 'Vehicle/ve1.png';
     const fuelTitle = isEV ? '年度換電與里程' : '年度油資與里程';
@@ -4369,13 +4369,13 @@ function renderVehicleContent() {
     const evCostPerKm = (yDist > 0 && yFuelAmt > 0) ? (yFuelAmt / yDist).toFixed(2) : 0;
 
     html += `
-      <div style="background:${fuelBg}; border-radius:16px; padding:12px 14px; margin-bottom:10px; box-shadow:0 6px 16px ${fuelShadow}; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.2); background-size:101% 101% ;">
+      <div style="background:${fuelBg}; border-radius:16px; padding:6px 10px; margin-bottom:10px; box-shadow:0 6px 16px ${fuelShadow}; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.2); background-size:101% 101% ;">
         <!-- 碳纖維科技斜紋背景 -->
         <div style="position:absolute; inset:0; opacity:0.1; background-image: repeating-linear-gradient(45deg, #ffffff 0px, #ffffff 1px, transparent 1px, transparent 8px);"></div>
         <!-- 頂部玻璃反光光暈 -->
         <div style="position:absolute; top:0; left:0; right:0; height:30%; background:linear-gradient(to bottom, rgba(255,255,255,0.15), transparent); pointer-events:none;"></div>
 
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; border-bottom:1px dashed rgba(255,255,255,0.3); padding-bottom:8px; position:relative; z-index:1;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; border-bottom:2px dashed rgba(255,255,255,0.3); padding-bottom:3px; position:relative; z-index:1;">
           <div style="width:40px; height:40px; background:rgba(255,255,255,0.2); border-radius:6px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(15px); box-shadow:inset 0 1px 2px rgba(255,255,255,0.4);">
             <img src="${fuelImgSrc}" style="width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.2));">
           </div>
@@ -4390,14 +4390,14 @@ function renderVehicleContent() {
               <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yFuelAmt)}</span>
             </div>
           </div>
-          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
             <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">總油量</span>
             <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
               <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${yLiters.toFixed(1)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">L</span></span>
             </div>
           </div>
-          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
             <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">行駛總里程</span>
             <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
@@ -4408,18 +4408,18 @@ function renderVehicleContent() {
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
             <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">月租 + 換電</span>
             <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2); display:flex; flex-direction:column; align-items:center;">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yEvFeeTotal)}</span>
-              <span style="font-family:var(--mono); font-size:10px; font-weight:700; color:#fca5a5;">+ $${fmt(yEvExtraTotal)}</span>
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;margin-right:20px;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yEvFeeTotal)}</span>
+              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color: #e600ff;margin:4px 0 0 25px ;">+<span style="font-size:8px;">  </span>${fmt(yEvExtraTotal)}</span>
             </div>
           </div>
-          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
             <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">行駛總里程</span>
             <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
               <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${fmt(yDist)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8); letter-spacing:1px;">km</span></span>
             </div>
           </div>
-          <div style="width:2px; height:35px; background:rgba(255,255,255,0.3);"></div>
+          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
             <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">每公里成本</span>
             <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
