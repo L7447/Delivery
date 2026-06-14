@@ -1363,28 +1363,39 @@ function renderHome() {
                   else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; 
                   
                   let diffBg = '#f1f5f9', diffColor = '#334155', diffIcon = '⏳', diffText = safeText(ev.diffStr);
-                  let cardBorder = '#ffffff'; // 外部卡片預設白色
-                  let tagBorder = '#cbd5e1';  // 小標籤預設灰色
+                  let cardBorder = '#ffffff'; // 預設白色外框
+                  let tagBorder = '#cbd5e1';  // 預設灰色標籤框
+                  let isToday = false;        // 判斷是否啟動跑馬燈
 
                   if (ev.diff === 0) { 
                     diffBg = '#dcfce7'; diffColor = '#15803d'; diffIcon = '🔥'; diffText = '今天'; 
-                    cardBorder = '#86efac'; tagBorder = '#86efac'; // 綠色外框
+                    tagBorder = '#86efac';
+                    isToday = true; // 👈 啟動跑馬燈
                   } 
                   else if (ev.diff === 1) { 
                     diffBg = '#ffedd5'; diffColor = '#c2410c'; diffIcon = '⚡'; 
-                    cardBorder = '#fdba74'; tagBorder = '#fdba74'; // 橘色外框
+                    cardBorder = '#fdba74'; tagBorder = '#fdba74'; 
                   } 
                   else if (ev.diff <= 3) { 
                     diffBg = '#e0f2fe'; diffColor = '#0369a1'; diffIcon = '🔜'; 
-                    cardBorder = '#7dd3fc'; tagBorder = '#7dd3fc'; // 藍色外框
+                    cardBorder = '#7dd3fc'; tagBorder = '#7dd3fc'; 
                   }
 
+                  // 依據是否為今天，切換不同的外框樣式
+                  let cardClass = isToday ? 'marquee-today-card' : '';
+                  let cardStyle = isToday 
+                    ? `flex:1; text-align:center; display:flex; flex-direction:column; margin-top:10px; transition:0.3s;`
+                    : `flex:1; background:#ffffff; border-radius:25px; text-align:center; border:2px solid ${cardBorder}; display:flex; flex-direction:column; overflow:hidden; margin-top:10px; transition:0.3s; box-shadow:0 2px 6px rgba(0,0,0,0.02);`;
+                    
+                  // 配合跑馬燈邊框，內部標題區塊需加入微小圓角，才不會蓋掉邊緣的光線
+                  let headerRadius = isToday ? 'border-radius:25px 25px 0 0;' : '';
+
                   return `
-                    <div style="flex:1; background:#ffffff; border-radius:12px; text-align:center; border:2px solid ${cardBorder}; display:flex; flex-direction:column; overflow:hidden; margin-top:10px; transition:0.3s; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
-                      <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30;">
+                    <div class="${cardClass}" style="${cardStyle}">
+                      <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30; ${headerRadius} position:relative; z-index:1;">
                         <span style="font-size:16px; color:${titleColor}; font-weight:750;">${safeText(ev.name)}</span>
                       </div>
-                      <div style="padding:10px 2px; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
+                      <div style="padding:10px 2px; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1; position:relative; z-index:1;">
                         <span style="font-family:var(--mono); font-size:17px; font-weight:900; color:var(--t1); line-height:1;">${safeText(ev.dateStr)}</span>
                         <div style="margin-top:8px;">
                           <span style="display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:900; padding:4px 6px; border-radius:8px; background:${diffBg}; color:${diffColor}; border:1.5px solid ${tagBorder};">
