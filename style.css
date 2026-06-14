@@ -282,17 +282,18 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 #toast { 
   position: fixed; bottom: 55% !important; left: 50%; top: auto !important;
   transform: translate(-50%, calc(50% + 50px)) scale(0.5) !important;
-  background:#141E30;
+  background:#071c44;
   border: 3.5px solid rgba(0, 229, 255, 0.2);
   
   /* 👇 100vmax rgba(0,0,0,0.5) 會產生無限大的黑色遮罩，完美壓暗背景 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 0 100vmax rgba(0, 0, 0, 0.5); 
   
   color: #00e5ff; text-shadow: 0 2px 6px rgba(0, 229, 255, 0.4);
-  padding: 16px 30px; border-radius: 50px; font-size: 24px; font-weight: 700;
-  white-space: pre-wrap; word-break: break-word; min-width: 260px; text-align: center;
+  padding: 16px 30px; border-radius: 50px; font-size: 28px; font-weight: 650;
+  white-space: pre-wrap; word-break: break-word; min-width: 280px; text-align: center;
   z-index: 999999; pointer-events: none; opacity: 0; 
   transition: opacity 0.5s ease, transform 0.1s ease;
+  letter-spacing: 1.2px; line-height: 39px;
 }
 
 #toast.show {
@@ -519,3 +520,33 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 .btn-acc:active{transform:scale(0.9);}
+
+/* ══ 首頁日程表：今日專屬跑馬燈雷射外框 ══ */
+@keyframes spinMarquee { 
+  100% { transform: rotate(360deg); } 
+}
+.marquee-today-card {
+  position: relative;
+  border-radius: 25px;
+  padding: 2px; /* 這裡的 padding 會變成跑馬燈邊框的粗細 */
+  overflow: hidden;
+  z-index: 1;
+}
+/* 旋轉的漸層背景 (放在最底層) */
+.marquee-today-card::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: conic-gradient(transparent, transparent, transparent, #22c55e, #86efac);
+  animation: spinMarquee 2.5s linear infinite;
+  z-index: -2;
+}
+/* 白色的內層遮罩 (擋住中間，只露出邊緣) */
+.marquee-today-card::after {
+  content: '';
+  position: absolute;
+  inset: 2px; /* 必須跟上面的 padding 一樣 */
+  background: #ffffff;
+  border-radius: 25px;
+  z-index: -1;
+}
