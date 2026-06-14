@@ -511,7 +511,62 @@ window.safeEvalMath = function(str) {
   } catch(e) {}
   return parseFloat(s) || 0;
 };
+/* ══ ⚡ 自訂數字計算鍵盤邏輯 ⚡ ══ */
+let kbTargetEl = null;
+// 打開鍵盤
+window.openCustomKeyboard = function() {
+  kbTargetEl = document.getElementById('f-temp-bonus');
+  document.getElementById('math-kb-overlay').classList.add('show');
+  document.getElementById('math-kb-container').classList.add('show');
+  updateKbDisplay();
+};
+// 關閉鍵盤
+window.closeCustomKeyboard = function() {
+  document.getElementById('math-kb-overlay').classList.remove('show');
+  document.getElementById('math-kb-container').classList.remove('show');
+  // 當點擊「完成」或「背景」關閉時，自動執行一次等號結算
+  kbPress('='); 
+};
+// 處理按鍵點擊
+window.kbPress = function(key) {
+  if (!kbTargetEl) return;
+  let val = kbTargetEl.value;
 
+  if (key === 'C') {
+    val = '';
+  } else if (key === 'DEL') {
+    val = val.slice(0, -1);
+  } else if (key === '=') {
+    // 按下等號時計算結果
+    if (val && /[\+\-\*\/]/.test(val)) {
+      let res = safeEvalMath(val);
+      val = String(Math.round(res * 100) / 100);
+    }
+  } else {
+    // 防呆：防止連續輸入符號 (例如打 ++ 變 +)
+    const lastChar = val.slice(-1);
+    if (['+', '-', '.'].includes(key) && ['+', '-', '.'].includes(lastChar)) {
+      val = val.slice(0, -1) + key; 
+    } else {
+      val += key;
+    }
+  }
+
+  kbTargetEl.value = val;
+  updateKbDisplay();
+  
+  // 每次按鍵都即時更新上方的新增記錄總額
+  if(typeof calcAddTotal === 'function') calcAddTotal(); 
+};
+// 更新鍵盤上方的螢幕顯示
+function updateKbDisplay() {
+  const display = document.getElementById('kb-display');
+  if(display) {
+    display.textContent = kbTargetEl.value || '0';
+    // 讓內容過長時自動捲動到最右邊
+    display.scrollLeft = display.scrollWidth;
+  }
+}
 window.handleMathInput = function(el) {
   let val = el.value;
   // 當使用者打出 '=' 時，立刻將輸入框內的算式替換為計算結果
@@ -521,7 +576,6 @@ window.handleMathInput = function(el) {
   }
   calcAddTotal(); // 即時更新總額
 };
-
 window.handleMathBlur = function(el) {
   // 當離開輸入框時，就算沒有打 '=' 也自動幫他算好
   let val = el.value;
@@ -531,6 +585,7 @@ window.handleMathBlur = function(el) {
   }
   calcAddTotal();
 };
+
 
 /* 👇 計算精確佔比 (最大餘數法)，保證加總絕對等於 100% (並自動去除 .0) */
 function getExactPercentages(values, precision = 1) {
