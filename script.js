@@ -497,6 +497,41 @@ const getDayRecs = date => S.records.filter(r=>r.date===date);
 const getMonthRecs = (y,m) => { const prefix = `${y}-${pad(m)}`; return S.records.filter(r => r.date && r.date.startsWith(prefix)); };
 const recTotal = r => r.isCashTip ? 0 : (pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips));
 
+/* ══ 數學算式安全解析器 (供臨時獎勵使用) ══ */
+window.safeEvalMath = function(str) {
+  if (!str) return 0;
+  let s = String(str).replace(/=/g, '').trim();
+  if (!s) return 0;
+  try {
+    // 嚴格限制只能包含數字、小數點及基本運算符號，防止 XSS 安全漏洞
+    if (/^[\d\+\-\*\/\.\s\(\)]+$/.test(s)) {
+      let result = new Function('return ' + s)();
+      return isFinite(result) ? result : 0;
+    }
+  } catch(e) {}
+  return parseFloat(s) || 0;
+};
+
+window.handleMathInput = function(el) {
+  let val = el.value;
+  // 當使用者打出 '=' 時，立刻將輸入框內的算式替換為計算結果
+  if (val.includes('=')) {
+    let result = safeEvalMath(val);
+    el.value = Math.round(result * 100) / 100; // 四捨五入到小數第二位
+  }
+  calcAddTotal(); // 即時更新總額
+};
+
+window.handleMathBlur = function(el) {
+  // 當離開輸入框時，就算沒有打 '=' 也自動幫他算好
+  let val = el.value;
+  if (val && /[\+\-\*\/]/.test(val)) {
+    let result = safeEvalMath(val);
+    el.value = Math.round(result * 100) / 100;
+  }
+  calcAddTotal();
+};
+
 /* 👇 計算精確佔比 (最大餘數法)，保證加總絕對等於 100% (並自動去除 .0) */
 function getExactPercentages(values, precision = 1) {
   const sum = values.reduce((a, b) => a + b, 0);
@@ -2465,7 +2500,11 @@ function calcAddTotal() {
 
   const income = pf(document.getElementById('f-income').value); 
   const bonus = pf(document.getElementById('f-bonus').value); 
-  const tempBonus = pf(document.getElementById('f-temp-bonus').value); 
+  
+  // 👇 使用 safeEvalMath 來支援臨時獎勵的算式動態加總
+  const tempBonusStr = document.getElementById('f-temp-bonus').value;
+  const tempBonus = safeEvalMath(tempBonusStr); 
+  
   const tips = pf(document.getElementById('f-tips').value); 
   const total = income + bonus + tempBonus + tips; 
   document.getElementById('add-total-val').textContent = fmt(total); 
@@ -2645,7 +2684,11 @@ async function confirmAddRecord() {
     if (amt <= 0) { toast('請輸入現金小費金額'); return; }
     rec = { ...rec, isCashTip: true, date: document.getElementById('f-ct-date').value, time: document.getElementById('f-ct-time').value, givenAmt: pf(document.getElementById('f-ct-given').value), costAmt: pf(document.getElementById('f-ct-cost').value), cashTipAmt: amt, note: document.getElementById('f-ct-note').value.trim() };
   } else {
-    const income = pf(document.getElementById('f-income').value); const bonus = pf(document.getElementById('f-bonus').value); const temp = pf(document.getElementById('f-temp-bonus').value); const tips = pf(document.getElementById('f-tips').value);
+    const income = pf(document.getElementById('f-income').value); 
+    const bonus = pf(document.getElementById('f-bonus').value); 
+    // 👇 在儲存時，再次強制確保將算式轉為正確數值
+    const temp = safeEvalMath(document.getElementById('f-temp-bonus').value); 
+    const tips = pf(document.getElementById('f-tips').value);
     if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
     
     const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
