@@ -187,10 +187,10 @@
           <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:6px;">
             <div class="fg" style="margin-bottom:0;"><label>🎁 固定獎勵 (熊貓自動帶入)</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()" style="padding:6px 10px;"></div>
             <div class="fg" style="margin-bottom:0;">
-              <label>⚡ 臨時獎勵</label>
-                <input type="text" class="finp" id="f-temp-bonus" placeholder="例: 100+100=" inputmode="text" oninput="handleMathInput(this)" onblur="handleMathBlur(this)" style="padding:6px 10px; font-family:var(--mono); font-weight:800; color:var(--text-blue);">
-              </div>
-          </div>
+              <label>⚡ 臨時獎勵 <span style="color:var(--text-red); font-size:10px;">(點擊開啟計算盤)</span></label>
+              <input type="text" class="finp" id="f-temp-bonus" placeholder="點此輸入獎金..." readonly onclick="openCustomKeyboard()" style="padding:6px 10px; font-family:var(--mono); font-weight:900; color:var(--text-blue); cursor:pointer; background:#f8fafc; border: 1.5px solid #bfdbfe;">
+            </div>
+          </div> 
         </div>
 
         <!-- 本筆總收入 -->
@@ -826,6 +826,52 @@
     window.addEventListener('DOMContentLoaded', runSplashAnimation); 
   }
 </script>
+
+<!-- ⚡ 專屬數字計算鍵盤 ⚡ -->
+<style>
+  #math-kb-overlay { position:fixed; inset:0; z-index:999990; display:none; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); }
+  #math-kb-overlay.show { display:block; }
+  #math-kb-container { position:fixed; bottom:0; left:0; right:0; background:#f1f5f9; z-index:999991; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding-bottom:calc(10px + env(safe-area-inset-bottom)); border-radius:24px 24px 0 0; box-shadow:0 -4px 24px rgba(0,0,0,0.15); }
+  #math-kb-container.show { transform:translateY(0); }
+  .kb-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:#ffffff; border-radius:24px 24px 0 0; border-bottom:1px solid #e2e8f0; }
+  .kb-header span { font-family:var(--mono); font-size:26px; font-weight:900; color:var(--text-blue); letter-spacing:1px; overflow-x:auto; white-space:nowrap; }
+  .kb-header button { background:var(--acc); color:#fff; border:none; padding:8px 16px; border-radius:12px; font-size:15px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(255,107,53,0.3); }
+  .kb-header button:active { transform: scale(0.92); }
+  .kb-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; padding:16px; }
+  .kb-grid button { background:#ffffff; border:none; border-radius:14px; height:60px; font-size:26px; font-family:var(--mono); font-weight:800; color:var(--t1); box-shadow:0 2px 6px rgba(0,0,0,0.05); cursor:pointer; transition:0.1s; -webkit-tap-highlight-color:transparent; }
+  .kb-grid button:active { transform:scale(0.92); background:#e2e8f0; }
+  .kb-grid .kb-btn-op { background:#e0f2fe; color:#0284c7; font-size:28px; }
+  .kb-grid .kb-btn-eq { background:#dcfce7; color:#16a34a; font-size:28px; }
+  .kb-grid .kb-btn-del { color:var(--red); font-size:22px; }
+</style>
+<div id="math-kb-overlay" onclick="closeCustomKeyboard()"></div>
+<div id="math-kb-container">
+   <div class="kb-header">
+      <span id="kb-display">0</span>
+      <button onclick="closeCustomKeyboard()">✅ 完成</button>
+   </div>
+   <div class="kb-grid">
+       <button onclick="kbPress('7')">7</button>
+       <button onclick="kbPress('8')">8</button>
+       <button onclick="kbPress('9')">9</button>
+       <button class="kb-btn-op kb-btn-del" onclick="kbPress('DEL')">⌫</button>
+       
+       <button onclick="kbPress('4')">4</button>
+       <button onclick="kbPress('5')">5</button>
+       <button onclick="kbPress('6')">6</button>
+       <button class="kb-btn-op" onclick="kbPress('+')">+</button>
+       
+       <button onclick="kbPress('1')">1</button>
+       <button onclick="kbPress('2')">2</button>
+       <button onclick="kbPress('3')">3</button>
+       <button class="kb-btn-op" onclick="kbPress('-')">-</button>
+       
+       <button class="kb-btn-del" onclick="kbPress('C')">C</button>
+       <button onclick="kbPress('0')">0</button>
+       <button onclick="kbPress('.')">.</button>
+       <button class="kb-btn-eq" onclick="kbPress('=')">=</button>
+   </div>
+</div>
 
 </body>
 </html>
