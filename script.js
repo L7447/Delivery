@@ -2366,7 +2366,6 @@ function openAddPage(record=null, prefill={}) {
     document.getElementById('f-pu-hrs').value = h > 0 ? h : '0'; 
     document.getElementById('f-pu-min').value = m > 0 ? m : '0';
   } else if (record && record.isCashTip) {
-    // ... 保持原有 cashtip 邏輯 ...
     switchAddTab('cashtip', 1);
     document.getElementById('f-ct-date').value = record.date || todayStr();
     document.getElementById('f-ct-time').value = record.time || nowTime();
@@ -2375,9 +2374,14 @@ function openAddPage(record=null, prefill={}) {
     document.getElementById('f-ct-amount').value = record.cashTipAmt || '';
     document.getElementById('f-ct-note').value = record.note || '';
   } else {
-    // ... 保持原有 regular 邏輯 ...
     switchAddTab('regular', 0);
-    document.getElementById('f-date').value = record?.date || prefill.date || S.selDate || todayStr();
+    // 👇 精準抓取目標日期 (日曆選取的日期)
+    const targetDate = record?.date || prefill.date || S.selDate || todayStr(); 
+    
+    document.getElementById('f-date').value = targetDate;
+    document.getElementById('f-ct-date').value = targetDate; // 👈 預先同步給小費頁籤
+    document.getElementById('f-pu-date').value = targetDate; // 👈 預先同步給打卡頁籤
+    
     document.getElementById('f-time').value = record?.time || nowTime();
     let totalHours = pf(record?.hours || prefill.hours || 0); let h = Math.floor(totalHours); let m = Math.round((totalHours - h) * 60);
     document.getElementById('f-hrs-val').value = h > 0 ? h : ''; document.getElementById('f-min-val').value = m > 0 ? m : '';
@@ -2394,7 +2398,7 @@ function openAddPage(record=null, prefill={}) {
   }
   
   renderPlatformChips(); calcAddTotal(); 
-  syncTagsUI(); // 👈 同步標籤亮起狀態
+  syncTagsUI(); 
   goPage('add');
 }
 
@@ -2466,10 +2470,14 @@ function switchAddTab(tab, idx) {
   document.getElementById('add-form-punch').style.display = tab === 'punch' ? 'block' : 'none';
   
   if(tab === 'cashtip' && !S.editingId) {
-    document.getElementById('f-ct-date').value = todayStr();
-    document.getElementById('f-ct-time').value = nowTime();
+    // 👇 讓日期跟隨一般表單的日期，避免變回今天
+    document.getElementById('f-ct-date').value = document.getElementById('f-date').value || todayStr();
+    if (!document.getElementById('f-ct-time').value) {
+      document.getElementById('f-ct-time').value = nowTime();
+    }
   } else if (tab === 'punch' && !S.editingId) {
-    document.getElementById('f-pu-date').value = todayStr();
+    // 👇 同上
+    document.getElementById('f-pu-date').value = document.getElementById('f-date').value || todayStr();
   }
 }
 
@@ -2508,7 +2516,10 @@ window.calcPunchHours = function() {
 
 /* ══ 替換：重置新增記錄表單 (加入清除里程) ══ */
 function resetAddForm() {
-  document.getElementById('f-date').value = todayStr();
+  // 👇 讓表單重置時也能吃到當前選取的日期，沒有則帶今天
+  const targetDate = S.selDate || todayStr();
+  
+  document.getElementById('f-date').value = targetDate;
   if (document.getElementById('f-time')) document.getElementById('f-time').value = nowTime();
   
   document.getElementById('f-start-km').value = '';
@@ -2529,14 +2540,15 @@ function resetAddForm() {
   document.getElementById('f-note').value = '';
   document.getElementById('add-total-val').textContent = '0';
   
-  document.getElementById('f-ct-date').value = todayStr();
+  // 👇 一併重置時帶入正確的日期
+  document.getElementById('f-ct-date').value = targetDate;
   document.getElementById('f-ct-time').value = nowTime();
   document.getElementById('f-ct-given').value = '';
   document.getElementById('f-ct-cost').value = '';
   document.getElementById('f-ct-amount').value = '';
   document.getElementById('f-ct-note').value = '';
 
-  document.getElementById('f-pu-date').value = todayStr();
+  document.getElementById('f-pu-date').value = targetDate;
   document.getElementById('f-pu-in').value = '';
   document.getElementById('f-pu-out').value = '';
   document.getElementById('f-pu-hrs').value = '';
@@ -2544,10 +2556,8 @@ function resetAddForm() {
   
   S.editingId = null;
   
-  // 👇 暴力解除：強制拔除畫面上所有標籤的發光狀態，保證萬無一失！
   document.querySelectorAll('.w-tag, .ct-tag, .search-quick-tag').forEach(el => el.classList.remove('on'));
   
-  // 還是呼叫一下以防萬一
   if (typeof syncTagsUI === 'function') syncTagsUI(); 
 
   switchAddTab('regular', 0); 
