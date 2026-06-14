@@ -186,7 +186,10 @@
           </div>
           <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:6px;">
             <div class="fg" style="margin-bottom:0;"><label>🎁 固定獎勵 (熊貓自動帶入)</label><input type="number" class="finp" id="f-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()" style="padding:6px 10px;"></div>
-            <div class="fg" style="margin-bottom:0;"><label>⚡ 臨時獎勵</label><input type="number" class="finp" id="f-temp-bonus" placeholder="0" inputmode="decimal" oninput="calcAddTotal()" style="padding:6px 10px;"></div>
+            <div class="fg" style="margin-bottom:0;">
+              <label>⚡ 臨時獎勵</label>
+                <input type="text" class="finp" id="f-temp-bonus" placeholder="例: 100+100=" inputmode="text" oninput="handleMathInput(this)" onblur="handleMathBlur(this)" style="padding:6px 10px; font-family:var(--mono); font-weight:800; color:var(--text-blue);">
+              </div>
           </div>
         </div>
 
