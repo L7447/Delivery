@@ -1207,15 +1207,15 @@ function switchVehicleTab(tab, index) {
   const currentVeh = S.vehicles.find(x => x.id === S.selVehicleId);
   const isEV = currentVeh && currentVeh.defaultFuel === 'electric';
   
-  // 👉 採用四色漸層，讓顏色變化在小範圍內也能極度明顯
+// 👉 採用現代高飽和雙色漸層，確保每個頁籤顏色完全獨立
   const colors = {
     fuel: isEV 
-      ? { bg: 'linear-gradient(135deg, #4f46e5 20%, #2563eb 60%, #93c5fd 88%, #ffffff 99%)', shadow: 'rgba(59,130,246,0.4)', textId: 'btn-veh-fuel' }
-      : { bg: 'linear-gradient(135deg, #be123c 20%, #dc2626 60%, #fca5a5 88%, #ffffff 99%)', shadow: 'rgba(239,68,68,0.4)', textId: 'btn-veh-fuel' },
-    maintenance: { bg: 'linear-gradient(135deg, #047857 20%, #059669 60%, #6ee7b7 88%, #ffffff 99%)', shadow: 'rgba(16,185,129,0.4)', textId: 'btn-veh-maint' },
-    wash: { bg: 'linear-gradient(135deg, #0891b2 20%, #06b6d4 60%, #a5f3fc 88%, #ffffff 99%)', shadow: 'rgba(6,182,212,0.4)', textId: 'btn-veh-wash' },
-    yearly: { bg: 'linear-gradient(135deg, #be6017 20%, #d97706 60%, #fcd34d 88%, #ffffff 99%)', shadow: 'rgba(245,158,11,0.4)', textId: 'btn-veh-yearly' },
-    search: { bg: 'linear-gradient(135deg, #4c1d95 20%, #7c3aed 60%, #c4b5fd 88%, #ffffff 99%)', shadow: 'rgba(139,92,246,0.4)', textId: 'btn-veh-search' }
+      ? { bg: 'linear-gradient(135deg, #0055ff 0%, #00c6ff 100%)', shadow: 'transparent', textId: 'btn-veh-fuel' } // ⚡ 極光藍
+      : { bg: 'linear-gradient(135deg, #931519 0%, #ff1e00 100%)', shadow: 'transparent', textId: 'btn-veh-fuel' }, // 🔥 賽車純紅 (去除黃/橘色，改為深淺紅色交疊)
+    maintenance: { bg: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', shadow: 'transparent', textId: 'btn-veh-maint' }, // 🔧 翡翠綠
+    wash: { bg: 'linear-gradient(135deg, #209cff 0%, #57efdb 100%)', shadow: 'transparent', textId: 'btn-veh-wash' }, // 🧽 清水青藍
+    yearly: { bg: 'linear-gradient(135deg, #275677 0%, #1a8cff 100%)', shadow: 'transparent', textId: 'btn-veh-yearly' }, // 👑 閃耀純金 (純黃金漸層，與汽油的紅色徹底區分)
+    search: { bg: 'linear-gradient(135deg, #a72399 0%, #f76ae9 100%)', shadow: 'transparent', textId: 'btn-veh-search' } // 🔍 霓虹紫
   };
 
   tabBg.style.background = colors[tab].bg; 
@@ -3135,11 +3135,11 @@ function renderRptOverview() {
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
             一單：<span style="font-family:var(--mono); color: var(--text-cyan); font-size:20px; font-weight:800;"><span style="font-size:12px;"> $ </span>${fmt(avgOrd)}</span>
           </div>
-          <div class="h-div" style="height:45px; align-self:center;"></div>
+          <div class="h-div" style="height:49px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
             1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr}<small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;"> 單</small></span>
           </div>
-          <div class="h-div" style="height:45px; align-self:center;"></div>
+          <div class="h-div" style="height:49px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">
             時薪： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;"><span style="font-size:12px;">$ </span>${fmt(avgHr)}</span>
             ${wageHtml}
@@ -3376,11 +3376,11 @@ function renderRptYearOverview() {
       <div style="border-top:2px dashed var(--blue); margin-bottom:1px;"></div>
 
       <div id="rpt-year-overview-col" style="max-height:0px; overflow:hidden; transition: max-height 0.35s ease; background: #ffffff;">
-        <div style="padding:12px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
+        <div style="padding:5px 3px 5px 3px; display:flex; justify-content:center; align-items:flex-start; font-size:12px; font-weight:700; color: #000000; width:100%;">
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">一單：<span style="font-family:var(--mono); color: var(--text-cyan); font-size:20px; font-weight:800;">$ ${fmt(avgOrd)}</span></div>
-          <div class="h-div" style="height:45px; align-self:center;"></div>
+          <div class="h-div" style="height:49px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">1 h： <span style="font-family:var(--mono); color: var(--text-red); font-size:20px; font-weight:800;">${ordHr} <small style="color: rgb(185, 56, 255);font-size:11px; font-weight:500;">單</small></span></div>
-          <div class="h-div" style="height:45px; align-self:center;"></div>
+          <div class="h-div" style="height:49px; align-self:center;"></div>
           <div style="flex:1; text-align:center; padding-top:2px; font-family:var(--mono)">時薪 $： <span style="font-family:var(--mono); color: var(--text-blue); font-size:20px; font-weight:800;">${fmt(avgHr)}</span>${wageHtml}</div>
         </div>
         ${cashTipTotal > 0 ? `
@@ -4414,7 +4414,7 @@ function renderVehicles() {
   }
   if (S.vehicles.length === 0) { selectorContainer.innerHTML = ''; container.innerHTML = `<div class="empty-tip">請點擊右上角新增車輛</div>`; return; }
   if (!S.selVehicleId || !S.vehicles.find(v => v.id === S.selVehicleId)) { S.selVehicleId = S.vehicles[0].id; }
-  updateCurrentVehInfoDisplay(S.selVehicleId); // 👈 加入這行，保證一進畫面就更新
+  updateCurrentVehInfoDisplay(S.selVehicleId); 
 
   let selectorHtml = `<div style="display:flex; gap:16px; overflow-x:auto; padding:4px 4px 8px;" class="hide-scroll">`;
   const fuelMap = { '92':'92 無鉛', '95':'95 無鉛', '98':'98 無鉛', 'electric':'電動車' };
@@ -4425,7 +4425,7 @@ function renderVehicles() {
     const isEV = v.defaultFuel === 'electric';
     const borderColor = isActive ? (isEV ? '#3b82f6' : 'var(--acc)') : 'transparent';
     const nameColor = isActive ? (isEV ? '#3b82f6' : 'var(--acc)') : 'var(--t2)';
-    // 機車圖片數量
+    
     selectorHtml += `<div data-vid="${v.id}" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; cursor:pointer;" onclick="selectVehicle('${v.id}')">
       <span class="veh-sel-name" style="font-size:12px; font-weight:700; color:${nameColor}; transition:0.2s;">${v.name}</span>
       <div style="position:relative;">
@@ -4435,14 +4435,16 @@ function renderVehicles() {
         </div>
       </div>
       <span style="font-size:11px; font-weight:600; color:var(--t3);">${fName}</span>
-      <!-- 👇 新增車輛資訊按鈕 -->
       <span onclick="event.stopPropagation(); openVehInfo('${v.id}')" style="font-size:10px; color:var(--blue); font-weight:700; background:var(--blue-d); padding:2px 8px; border-radius:10px; margin-top:2px;">車輛資訊</span>
     </div>`;
   });
   selectorHtml += `</div>`; 
   selectorContainer.innerHTML = selectorHtml;
   
-  renderVehicleContent();
+  // 👇 修改這裡：用 switchVehicleTab 取代原本的 renderVehicleContent()
+  // 這樣一進到車輛頁面，就會自動判定目前是油車還是電車，並套用正確的顏色！
+  const tabIndexMap = { 'fuel': 0, 'maintenance': 1, 'wash': 2, 'yearly': 3, 'search': 4 };
+  switchVehicleTab(S.vehicleTab, tabIndexMap[S.vehicleTab] || 0);
 }
 
 function _syncVehSelectorActive(id) {
@@ -5277,6 +5279,29 @@ window.openAddVehRec = function(recordId = null) {
       }
   }
 }
+/* ══ 刪除單筆車輛記錄 ══ */
+window.deleteVehRecFromEdit = async function() {
+  // 確保目前有正在編輯的記錄 ID
+  if (!editingVehRecId) return;
+
+  const ok = await customConfirm('確定要刪除這筆車輛記錄嗎？<br><strong>此動作無法復原。</strong>');
+  if (!ok) return;
+
+  // 1. 從記錄陣列中濾除這筆 ID
+  S.vehicleRecs = S.vehicleRecs.filter(r => r.id !== editingVehRecId);
+  
+  // 2. 執行存檔 (IndexedDB / LocalStorage)
+  saveVehicleRecs();
+  
+  // 3. 清除狀態、關閉彈窗
+  editingVehRecId = null;
+  closeOverlay('veh-rec-add-page');
+  
+  // 4. 重新渲染畫面並提示
+  renderVehicles();
+  toast('✅ 記錄已刪除');
+};
+
 
 /* ══ 替換：車輛表單頁籤切換 (維持原主題色，僅修改輸入框字體顏色) ══ */
 function switchVehFormTab(type, index) {
@@ -7676,7 +7701,7 @@ function doRestore() {
       const text = await file.text(); 
       const data = JSON.parse(text); 
       // 👇 將檔案名稱安全地顯示在確認視窗中
-      const ok = await customConfirm(`確定使用「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><strong>覆蓋</strong>現有資料？`); 
+      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;">覆蓋</span>現有資料？`);
       if (!ok) return; 
       
       if (data.records) { S.records=data.records; saveRecords(); } 
