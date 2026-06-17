@@ -2282,7 +2282,7 @@ function openDetailOverlay(id) {
   document.getElementById('detail-body').innerHTML = `<div style="text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--border)"><div style="font-size:13px;color:var(--t3);margin-bottom:4px">本筆總收入</div><div style="font-family:var(--mono);font-size:38px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div></div><div style="margin-top:12px">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--t3)">${l}</span><span style="font-size:13px;font-weight:500">${v}</span></div>`).join('')}</div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="closeDetailOverlay();openAddPage(${JSON.stringify(r).replace(/"/g,'&quot;')})" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--acc-d);color:var(--acc);border:1px solid rgba(255,107,53,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">✎ 編輯</button><button onclick="deleteRecord('${safeText(r.id)}')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">🗑 刪除</button></div>`;
   document.getElementById('detail-overlay').classList.add('show');
 }
-async function deleteRecord(id) { closeDetailOverlay(); const ok = await customConfirm('確定要刪除這筆記錄嗎？<br><strong>此動作無法復原。</strong>'); if (!ok) return; S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除'); if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory(); }
+async function deleteRecord(id) { closeDetailOverlay(); const ok = await customConfirm('確定要<span style="color:var(--red);">刪除</span>這筆記錄嗎？<br><span style="color:#ff0000;font-weight:800;">此動作無法復原。</span>'); if (!ok) return; S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除'); if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory(); }
 
 /* ══ 替換：搜尋功能 (保留快速標籤點擊與過濾) ══ */
 function openSearch() { 
@@ -5284,7 +5284,7 @@ window.deleteVehRecFromEdit = async function() {
   // 確保目前有正在編輯的記錄 ID
   if (!editingVehRecId) return;
 
-  const ok = await customConfirm('確定要刪除這筆車輛記錄嗎？<br><strong>此動作無法復原。</strong>');
+  const ok = await customConfirm('確定要<span style="color:var(--red);">刪除</span>這筆車輛記錄嗎？<br><span style="color:#ff0000;font-weight:800;">此動作無法復原。</span>');
   if (!ok) return;
 
   // 1. 從記錄陣列中濾除這筆 ID
@@ -6879,7 +6879,7 @@ window.renderAdminUserList = function(keyword) {
 
 /* 3. 刪除會員 (改為重新整理名單，而非跳回帳號頁) */
 window.adminDeleteUser = async function(targetEmail) {
-  const ok = await customConfirm(`確定要強制刪除，並封鎖【 <b>${targetEmail}</b> 】嗎？<br>此動作無法復原！`);
+  const ok = await customConfirm(`確定要<span style="color:var(--red);">強制刪除，並封鎖<br></span>【 <span style="color:var(--green);font-weight:650;">${targetEmail}</span> 】嗎？<br><span style="color:#ff0000;font-weight:800;">此動作無法復原！</span>`);
   if(!ok) return;
   
   showProgress('刪除帳號中...');
