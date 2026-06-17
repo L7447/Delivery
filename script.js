@@ -5535,7 +5535,7 @@ function openAddVehicle() {
 
       <div class="fg" style="margin-bottom:20px">
         <label style="font-weight:700; color:var(--t1);">預設燃料 <span style="color:red">*</span></label>
-        <select class="fsel" id="v-fuel">
+        <select class="fsel" id="v-fuel" onchange="toggleFuelTypeUI()">
           <option value="92" selected>92 無鉛汽油</option>
           <option value="95">95 無鉛汽油</option>
           <option value="98">98 無鉛汽油</option>
@@ -5553,8 +5553,8 @@ function openAddVehicle() {
 
       <div style="display:flex; gap:10px; margin-bottom:16px;">
         <div class="fg" style="flex:1;">
-          <label style="font-weight:700; color:var(--t1);">排氣量 (cc)</label>
-          <input type="number" class="finp" id="v-cc" placeholder="例如：125">
+          <label id="lbl-v-cc" style="font-weight:700; color:var(--t1);">排氣量 (cc)</label>
+          <input type="number" class="finp" id="v-cc" placeholder="例如：125" step="0.1">
         </div>
         <div class="fg" style="flex:1;">
           <label style="font-weight:700; color:var(--t1);">車輛顏色</label>
@@ -5574,6 +5574,7 @@ function openAddVehicle() {
     </div>`;
   document.getElementById('vehicle-add-page').querySelector('h2').textContent = '新增車輛';
   openOverlay('vehicle-add-page');
+  setTimeout(() => toggleFuelTypeUI(), 10); // 載入時觸發一次判斷
 }
 // 機車圖片數量
 function selectNewVehIcon(id) { 
@@ -5829,26 +5830,27 @@ window.doVehSearch = function(isFullScreen = false) {
   resEl.innerHTML = html;
 }
 
-// 顯示車輛詳細資訊彈窗 (全新美化版)
+// 顯示車輛詳細資訊彈窗 (全新美化版：背景裝飾圈變身編輯按鈕)
 window.openVehInfo = function(id) {
   const v = S.vehicles.find(x => x.id === id);
   if(!v) return;
   
   document.getElementById('sub-title').textContent = '車輛詳細資訊';
   
-  // 右上角加入「編輯」按鈕
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openEditVehicle('${id}')" style="background:var(--bg-input); color:var(--text-blue); border:1.5px solid var(--text-blue); padding:6px 14px; border-radius:18px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.15);">✎ 編輯</button>
-  `;
+  // 1. 清空右上角，將編輯按鈕移入卡片內
+  document.getElementById('sub-top-right').innerHTML = '';
   
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <!-- 頂部精美名片卡 -->
-      <div style="background:linear-gradient(135deg, var(--sf), var(--sf2)); border:1px solid var(--border); border-radius:24px; padding:24px 16px; text-align:center; margin-bottom:20px; box-shadow:0 8px 24px rgba(0,0,0,0.04); position:relative; overflow:hidden;">
-        <!-- 裝飾背景圈 -->
-        <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:var(--blue-d); border-radius:50%; z-index:0;"></div>
+      <!-- 頂部精美名片卡 (overflow:hidden 會把超出的圓圈切成扇形) -->
+      <div style="background:linear-gradient(135deg, var(--sf), var(--sf2)); border:1px solid var(--border); border-radius:24px; padding:24px 16px; text-align:center; margin-bottom:20px; position:relative; overflow:hidden;">
         
-        <div style="width:84px; height:84px; border-radius:24px; background:#fff; border:3px solid var(--acc); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 16px rgba(255,107,53,0.2); position:relative; z-index:1;">
+        <!-- 👇 裝飾背景圈 (升級為扇形編輯按鈕) -->
+        <div onclick="openEditVehicle('${id}')" style="position:absolute; top:-25px; right:-25px; width:110px; height:110px; background:var(--blue-d); border-radius:50%; z-index:2; display:flex; align-items:flex-end; justify-content:flex-start; padding: 0 0 28px 24px; cursor:pointer; box-shadow:inset 0 0 15px rgba(37,99,235,0.15); border:1.5px solid #bfdbfe; transition:0.2s;">
+          <span style="color:var(--text-blue); font-size:14px; font-weight:800; display:flex; align-items:center;margin: 0px 0px 18px -3px;"><span style="font-size:20px;">✎&nbsp;</span>編輯</span>
+        </div>
+        
+        <div style="width:84px; height:84px; border-radius:24px; background:#fff; border:2px solid var(--acc); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; position:relative; z-index:1;">
           <img src="scooter/s${v.icon || 1}.png" style="width:64px; height:64px; object-fit:contain;">
         </div>
         <h2 style="font-size:22px; font-weight:900; color:var(--t1); margin:0 0 8px 0; position:relative; z-index:1; line-height:1.3;">${safeText(v.name)}</h2>
@@ -5860,12 +5862,69 @@ window.openVehInfo = function(id) {
       </div>
 
       <!-- 列表資訊 -->
-      <h3 style="font-size:13px; color:var(--hint-color); margin-bottom:12px; font-weight:800; padding-left:4px;">📋 詳細資料</h3>
-      <div class="set-list" style="border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.02); border-radius:16px;">
-        <div class="set-row" style="padding:16px;"><span class="sn" style="color:var(--t3); font-size:13px;">車牌號碼</span><span style="font-family:var(--mono); font-weight:900; font-size:16px; color:var(--t1);">${safeText(v.plate || '未設定')}</span></div>
-        <div class="set-row" style="padding:16px;"><span class="sn" style="color:var(--t3); font-size:13px;">排氣量</span><span style="font-family:var(--mono); font-weight:900; font-size:16px; color:var(--t1);">${safeText(v.cc ? v.cc + ' cc' : '未設定')}</span></div>
-        <div class="set-row" style="padding:16px;"><span class="sn" style="color:var(--t3); font-size:13px;">車輛顏色</span><span style="font-weight:900; font-size:15px; color:var(--t1);">${safeText(v.color || '未設定')}</span></div>
-        <div class="set-row" style="padding:16px;"><span class="sn" style="color:var(--t3); font-size:13px;">出廠年月</span><span style="font-family:var(--mono); font-weight:900; font-size:16px; color:var(--t1);">${v.year || '未設定'}</span></div>
+      <h3 style="font-size:14px; color:var(--hint-color); margin-bottom:10px; font-weight:750; padding-left:4px;">📋 詳細資料</h3>
+      
+      <!-- 白色大框，利用 background 與 gap 創造加深的水平分隔線，border 顏色對應加深 -->
+      <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; overflow:hidden; margin-bottom:16px;">
+        <div style="display:flex; flex-direction:column; gap:1px; background: #cbd5e1;">
+          
+          <!-- 1. 車牌號碼 -->
+          <div style="display:grid; grid-template-columns: 1fr 0.7px 1.6fr; background:#ffffff;">
+            <div style="padding:14px 16px; display:flex; align-items:center; justify-content:flex-start; background: rgba(37, 100, 235, 0.1);">
+              <span style="font-size:12px;">🏷️</span>&nbsp;
+              <span style="font-size:14px; font-weight:650; color: #101010;">車牌號碼</span>
+            </div>
+            <div style="background:#cbd5e1;"></div>
+            <div style="padding:1px 16px; display:flex; align-items:center; justify-content:flex-start;">
+              <span style="font-family:var(--mono); font-size:18px; font-weight:800; color:#2563eb; letter-spacing:1px;">
+                ${safeText(v.plate || '未設定')}
+              </span>
+            </div>
+          </div>
+
+          <!-- 2. 排氣量 -->
+          <div style="display:grid; grid-template-columns: 1fr 0.7px 1.6fr; background:#ffffff;">
+            <div style="padding:14px 16px; display:flex; align-items:center; justify-content:flex-start; background: rgba(234, 90, 12, 0.1);">
+              <span style="font-size:12px;">${v.defaultFuel === 'electric' ? '⚡' : '💨'}</span>&nbsp;
+              <span style="font-size:14px; font-weight:650; color: #101010;">${v.defaultFuel === 'electric' ? '最大功率' : '排氣量'}</span>
+            </div>
+            <div style="background: #cbd5e1;"></div>
+            <div style="padding:1px 16px; display:flex; align-items:center; justify-content:flex-start;">
+              <span style="font-family:var(--mono); font-size:18px; font-weight:800; color:#ea580c; letter-spacing:1px;">
+                ${v.cc ? `${safeText(v.cc)} <span style="color:#000000; font-size:14px; font-weight:750; margin-left:2px;">${v.defaultFuel === 'electric' ? 'kW' : 'cc'}</span>` : '未設定'}
+              </span>
+            </div>
+          </div>
+
+          <!-- 3. 車輛顏色 -->
+          <div style="display:grid; grid-template-columns: 1fr 0.7px 1.6fr; background:#ffffff;">
+            <div style="padding:14px 16px; display:flex; align-items:center; justify-content:flex-start; background: rgba(146, 51, 234, 0.1);">
+              <span style="font-size:12px;">🎨</span>&nbsp;
+              <span style="font-size:14px; font-weight:650; color: #101010;">車輛顏色</span>
+            </div>
+            <div style="background:#cbd5e1;"></div>
+            <div style="padding:1px 16px; display:flex; align-items:center; justify-content:flex-start;">
+              <span style="font-size:18px; font-weight:700; color:#9333ea; letter-spacing:1px;">
+                ${safeText(v.color || '未設定')}
+              </span>
+            </div>
+          </div>
+
+          <!-- 4. 出廠年月 -->
+          <div style="display:grid; grid-template-columns: 1fr 0.7px 1.6fr; background:#ffffff;">
+            <div style="padding:14px 16px; display:flex; align-items:center; justify-content:flex-start; background: rgba(5, 150, 104, 0.1);">
+              <span style="font-size:12px;">📅</span>&nbsp;
+              <span style="font-size:14px; font-weight:650; color: #101010;">出廠年月</span>
+            </div>
+            <div style="background:#cbd5e1;"></div>
+            <div style="padding:1px 16px; display:flex; align-items:center; justify-content:flex-start;">
+              <span style="font-family:var(--mono); font-size:18px; font-weight:800; color:#059669; letter-spacing:1px;">
+                ${v.year ? safeText(v.year).replace('-', ' <span style="color:#000;font-size:15px;">年</span> ') + ' <span style="color:#000;font-size:15px;">月</span>' : '未設定'}
+              </span>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   `;
@@ -5901,7 +5960,7 @@ window.openEditVehicle = function(id) {
 
       <div class="fg" style="margin-bottom:20px">
         <label style="font-weight:700; color:var(--t1);">預設燃料 <span style="color:red">*</span></label>
-        <select class="fsel" id="v-fuel">
+        <select class="fsel" id="v-fuel" onchange="toggleFuelTypeUI()">
           <option value="92" ${v.defaultFuel==='92'?'selected':''}>92 無鉛汽油</option>
           <option value="95" ${v.defaultFuel==='95'?'selected':''}>95 無鉛汽油</option>
           <option value="98" ${v.defaultFuel==='98'?'selected':''}>98 無鉛汽油</option>
@@ -5918,8 +5977,8 @@ window.openEditVehicle = function(id) {
 
       <div style="display:flex; gap:10px; margin-bottom:16px;">
         <div class="fg" style="flex:1;">
-          <label style="font-weight:700; color:var(--t1);">排氣量 (cc)</label>
-          <input type="number" class="finp" id="v-cc" value="${safeText(v.cc||'')}" placeholder="例如：125">
+          <label id="lbl-v-cc" style="font-weight:700; color:var(--t1);">排氣量 (cc)</label>
+          <input type="number" class="finp" id="v-cc" value="${safeText(v.cc||'')}" placeholder="例如：125" step="0.1">
         </div>
         <div class="fg" style="flex:1;">
           <label style="font-weight:700; color:var(--t1);">車輛顏色</label>
@@ -5940,6 +5999,23 @@ window.openEditVehicle = function(id) {
     
   document.getElementById('vehicle-add-page').querySelector('h2').textContent = '編輯車輛';
   openOverlay('vehicle-add-page');
+  setTimeout(() => toggleFuelTypeUI(), 10); // 載入時觸發一次判斷
+}
+
+// 動態切換排氣量與最大功率的顯示
+window.toggleFuelTypeUI = function() {
+  const fuel = document.getElementById('v-fuel')?.value;
+  const ccLabel = document.getElementById('lbl-v-cc');
+  const ccInput = document.getElementById('v-cc');
+  if (!ccLabel || !ccInput) return;
+  
+  if (fuel === 'electric') {
+    ccLabel.innerText = '最大功率 (kW)';
+    ccInput.placeholder = '例如：7.2';
+  } else {
+    ccLabel.innerText = '排氣量 (cc)';
+    ccInput.placeholder = '例如：125';
+  }
 }
 
 // 儲存車輛修改邏輯
