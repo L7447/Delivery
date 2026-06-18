@@ -6772,9 +6772,15 @@ let adminCachedUsers = [];
 /* 1. 開啟獨立的會員名單與搜尋頁面 */
 window.openAdminUserList = async function() {
   document.getElementById('sub-title').textContent = '註冊會員名單';
-  // 加入返回上一頁(帳號資訊)的按鈕
+  
+  // 隱藏左上角關閉按鈕
+  const topBarEl = document.querySelector('.overlay-page .top-bar');
+  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  if (closeBtnEl) closeBtnEl.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回</button>
+    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -6881,18 +6887,33 @@ window.renderAdminUserList = function(keyword) {
   container.innerHTML = html;
 }
 
-/* 3. 刪除會員 (支援獨立詢問是否封鎖) */
+/* 3. 刪除會員 (支援獨立詢問是否封鎖，並加入最後取消防線) */
 window.adminDeleteUser = async function(targetEmail) {
   // 第 1 次確認：刪除帳號
-  const okDelete = await customConfirm(`確定要強制刪除【 <b>${targetEmail}</b> 】嗎？<br>此動作無法復原！`);
+  const okDelete = await customConfirm(`確定要<span style="color:var(--red);"> 刪除 </span>『 <span style="color:var(--green);">${targetEmail}</span> 』嗎？<br><span style="color:var(--text-blue);font-weight:700;">此動作無法復原。</span>`);
   if(!okDelete) return;
 
   // 第 2 次確認：是否加入黑名單
   const isBan = await customConfirm(`
     <div style="font-size:40px; margin-bottom:8px;">🚫</div>
-    是否將【 <b>${targetEmail}</b> 】加入黑名單？<br>
-    <span style="color:var(--red); font-weight:700;">(加入後，該信箱將永遠無法再次註冊)</span>
+    是否將『 <span style="color:var(--green);">${targetEmail}</span> 』加入黑名單？<br>
+    <span style="color:var(--red); font-weight:700;">(按「確認」封鎖，按「取消」則不封鎖)</span>
   `);
+  
+  // 第 3 次確認：最後的「取消刪除」防線
+  const actionText = isBan ? "<span style='color:var(--red);'>刪除並永久封鎖</span>" : "僅單純刪除帳號";
+  const finalCheck = await customConfirm(`
+    <div style="font-size:30px; margin-bottom:8px;">⚠️</div>
+    即將對『 <span style="color:var(--green);">${targetEmail}</span> 』執行：<br>
+    <div style="font-size:18px; font-weight:900; margin:12px 0;">[ ${actionText} ]</div>
+    您確定要執行嗎？<br>
+    <span style="color:var(--t3); font-size:12px;">(按「 取消 」將放棄此次刪除操作)</span>
+  `);
+  
+  if (!finalCheck) {
+    toast('已取消刪除操作');
+    return;
+  }
   
   showProgress('刪除帳號中...');
   try {
@@ -6927,9 +6948,14 @@ window.adminDeleteUser = async function(targetEmail) {
 window.openAdminCreateUser = function() {
   document.getElementById('sub-title').textContent = '手動建立帳號';
   
-  // 改為返回「會員名單」
+  // 隱藏左上角關閉按鈕
+  const topBarEl = document.querySelector('.overlay-page .top-bar');
+  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  if (closeBtnEl) closeBtnEl.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAdminUserList()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回清單</button>
+    <button onclick="openAdminUserList()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回清單</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -6994,8 +7020,15 @@ window.adminCreateUserSubmit = async function() {
    ========================================================= */
 window.openAdminBannedList = async function() {
   document.getElementById('sub-title').textContent = '黑名單 (已封鎖信箱)';
+  
+  // 隱藏左上角關閉按鈕
+  const topBarEl = document.querySelector('.overlay-page .top-bar');
+  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  if (closeBtnEl) closeBtnEl.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回</button>
+    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7087,7 +7120,16 @@ window.adminUnbanUser = async function(targetEmail) {
 /* ✨ 新增：管理員編輯系統存取權限 */
 function openAdminSystemSettings() {
   document.getElementById('sub-title').textContent = '系統權限設定';
-  document.getElementById('sub-top-right').innerHTML = '';
+  
+  // 隱藏左上角關閉按鈕
+  const topBarEl = document.querySelector('.overlay-page .top-bar');
+  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  if (closeBtnEl) closeBtnEl.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+  `;
   
   document.getElementById('sub-body').innerHTML = `
     <div class="card" style="padding:16px;">
@@ -7146,8 +7188,9 @@ async function saveAdminSystemSettings() {
         GLOBAL_REQUIRE_LOGIN = reqLogin;
         GLOBAL_ALLOW_REGISTRATION = allowReg; 
         toast('✅ 系統存取權限已更新');
+        document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; // 恢復左上角按鈕
         document.getElementById('sub-page').style.zIndex = '200';
-        openAccountStats(); 
+        openAccountStats();
       } else {
         toast('⚠️ 同步失敗：' + data.message);
       }
@@ -7160,7 +7203,16 @@ async function saveAdminSystemSettings() {
 /* ✨ 新增：管理員編輯全域油價設定 */
 function openAdminGasPriceEdit() {
   document.getElementById('sub-title').textContent = '全域油價設定';
-  document.getElementById('sub-top-right').innerHTML = '';
+  
+  // 隱藏左上角關閉按鈕
+  const topBarEl = document.querySelector('.overlay-page .top-bar');
+  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  if (closeBtnEl) closeBtnEl.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+  `;
   
   // 預設油價
   let gp = { '92': 29.5, '95': 31.0, '98': 33.0 };
@@ -7220,8 +7272,9 @@ async function saveAdminGasPrice() {
         // 同步成功後，也更新自己手機的本地暫存
         localStorage.setItem('delivery_global_gas_prices', JSON.stringify(gp));
         toast('✅ 全域油價已更新並同步至雲端');
+        document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; // 恢復左上角按鈕
         document.getElementById('sub-page').style.zIndex = '200';
-        openAccountStats(); 
+        openAccountStats();
       } else {
         toast('⚠️ 同步失敗：' + data.message);
       }
@@ -7234,7 +7287,16 @@ async function saveAdminGasPrice() {
 /* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
   document.getElementById('sub-title').textContent = '系統公告設定';
-  document.getElementById('sub-top-right').innerHTML = '';
+  
+  // 隱藏左上角關閉按鈕
+  const topBarEl = document.querySelector('.overlay-page .top-bar');
+  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  if (closeBtnEl) closeBtnEl.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+  `;
   
   let ann = { active: false, text: '' };
   try { ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}'); } catch(e){}
@@ -7276,8 +7338,9 @@ function saveAnnouncement() {
   toast('✅ 公告設定已發布');
   
   // 關閉回到原本的管理員頁面並重新渲染首頁
+  document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; // 恢復左上角按鈕
   document.getElementById('sub-page').style.zIndex = '200';
-  openAccountStats(); 
+  openAccountStats();
   if (S.tab === 'home') renderHome();
 }
 
