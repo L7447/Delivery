@@ -705,7 +705,37 @@ function customConfirm(msg) {
     ov.addEventListener('click', e=>{ if(e.target===ov) done(false); }, {once:true});
   });
 }
-function openOverlay(id)  { document.getElementById(id)?.classList.add('show'); }
+function openOverlay(id) { 
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('show'); 
+    
+    // 👇 針對 sub-page 進行左上角返回按鈕的強制顯隱控制
+    if (id === 'sub-page') {
+      const topBarEl = el.querySelector('.top-bar');
+      const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+      const titleText = document.getElementById('sub-title')?.textContent || '';
+      
+      // 定義哪些頁面「絕對不能」出現左上角返回按鈕
+      const noCloseBtnTitles = [
+        '註冊會員名單', 
+        '手動建立帳號', 
+        '系統權限設定', 
+        '黑名單 (已封鎖信箱)', 
+        '全域油價設定', 
+        '系統公告設定'
+      ];
+      
+      if (closeBtnEl) {
+        if (noCloseBtnTitles.includes(titleText) || el.dataset.forced === 'true') {
+          closeBtnEl.style.display = 'none'; // 強制隱藏
+        } else {
+          closeBtnEl.style.display = ''; // 強制顯示
+        }
+      }
+    }
+  }
+}
 function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -6772,11 +6802,6 @@ let adminCachedUsers = [];
 /* 1. 開啟獨立的會員名單與搜尋頁面 */
 window.openAdminUserList = async function() {
   document.getElementById('sub-title').textContent = '註冊會員名單';
-  
-  // 隱藏左上角關閉按鈕
-  const topBarEl = document.querySelector('.overlay-page .top-bar');
-  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
-  if (closeBtnEl) closeBtnEl.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
@@ -6947,11 +6972,6 @@ window.adminDeleteUser = async function(targetEmail) {
 /* 4. 手動建立新帳號介面 */
 window.openAdminCreateUser = function() {
   document.getElementById('sub-title').textContent = '手動建立帳號';
-  
-  // 隱藏左上角關閉按鈕
-  const topBarEl = document.querySelector('.overlay-page .top-bar');
-  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
-  if (closeBtnEl) closeBtnEl.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
@@ -7020,11 +7040,6 @@ window.adminCreateUserSubmit = async function() {
    ========================================================= */
 window.openAdminBannedList = async function() {
   document.getElementById('sub-title').textContent = '黑名單 (已封鎖信箱)';
-  
-  // 隱藏左上角關閉按鈕
-  const topBarEl = document.querySelector('.overlay-page .top-bar');
-  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
-  if (closeBtnEl) closeBtnEl.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
@@ -7120,11 +7135,6 @@ window.adminUnbanUser = async function(targetEmail) {
 /* ✨ 新增：管理員編輯系統存取權限 */
 function openAdminSystemSettings() {
   document.getElementById('sub-title').textContent = '系統權限設定';
-  
-  // 隱藏左上角關閉按鈕
-  const topBarEl = document.querySelector('.overlay-page .top-bar');
-  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
-  if (closeBtnEl) closeBtnEl.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
@@ -7188,7 +7198,6 @@ async function saveAdminSystemSettings() {
         GLOBAL_REQUIRE_LOGIN = reqLogin;
         GLOBAL_ALLOW_REGISTRATION = allowReg; 
         toast('✅ 系統存取權限已更新');
-        document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; // 恢復左上角按鈕
         document.getElementById('sub-page').style.zIndex = '200';
         openAccountStats();
       } else {
@@ -7203,11 +7212,6 @@ async function saveAdminSystemSettings() {
 /* ✨ 新增：管理員編輯全域油價設定 */
 function openAdminGasPriceEdit() {
   document.getElementById('sub-title').textContent = '全域油價設定';
-  
-  // 隱藏左上角關閉按鈕
-  const topBarEl = document.querySelector('.overlay-page .top-bar');
-  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
-  if (closeBtnEl) closeBtnEl.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
@@ -7272,7 +7276,6 @@ async function saveAdminGasPrice() {
         // 同步成功後，也更新自己手機的本地暫存
         localStorage.setItem('delivery_global_gas_prices', JSON.stringify(gp));
         toast('✅ 全域油價已更新並同步至雲端');
-        document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; // 恢復左上角按鈕
         document.getElementById('sub-page').style.zIndex = '200';
         openAccountStats();
       } else {
@@ -7287,11 +7290,6 @@ async function saveAdminGasPrice() {
 /* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
   document.getElementById('sub-title').textContent = '系統公告設定';
-  
-  // 隱藏左上角關閉按鈕
-  const topBarEl = document.querySelector('.overlay-page .top-bar');
-  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
-  if (closeBtnEl) closeBtnEl.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
@@ -7338,7 +7336,6 @@ function saveAnnouncement() {
   toast('✅ 公告設定已發布');
   
   // 關閉回到原本的管理員頁面並重新渲染首頁
-  document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; // 恢復左上角按鈕
   document.getElementById('sub-page').style.zIndex = '200';
   openAccountStats();
   if (S.tab === 'home') renderHome();
