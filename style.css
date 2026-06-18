@@ -83,7 +83,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   font-family: var(--title); 
   color: #2563eb; /* 統一為藍色 */
   margin: 0;
-  position: absolute;left: 50%;transform: translateX(-50%);
+  position: absolute;left: 50%;transform: translateX(-50%);align-items: center;
 }
 .bar-btn { width: 32px; height: 32px; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; padding: 0; outline: none; }
 .overlay-body { flex: 1; overflow-y: auto; padding: 5px; -webkit-overflow-scrolling: touch; }
