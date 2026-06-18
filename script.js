@@ -709,31 +709,6 @@ function openOverlay(id) {
   const el = document.getElementById(id);
   if (el) {
     el.classList.add('show'); 
-    
-    // 👇 針對 sub-page 進行左上角close1按鈕的強制顯隱控制
-    if (id === 'sub-page') {
-      const topBarEl = el.querySelector('.top-bar');
-      const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
-      const titleText = document.getElementById('sub-title')?.textContent || '';
-      
-      // 定義哪些頁面「絕對不能」出現左上角close1按鈕
-      const noCloseBtnTitles = [
-        '註冊會員名單', 
-        '手動建立帳號', 
-        '系統權限設定', 
-        '黑名單 (已封鎖信箱)', 
-        '全域油價設定', 
-        '系統公告設定'
-      ];
-      
-      if (closeBtnEl) {
-        if (noCloseBtnTitles.includes(titleText) || el.dataset.forced === 'true') {
-          closeBtnEl.style.display = 'none'; // 強制隱藏
-        } else {
-          closeBtnEl.style.display = ''; // 強制顯示
-        }
-      }
-    }
   }
 }
 function closeOverlay(id) {
@@ -6656,7 +6631,7 @@ async function openAccountStats() {
 
   let baseHtml = `
     <div style="padding:16px;">
-      <div class="card" style="text-align:center; padding:24px 16px; background:var(--collapse-bg); border-color:var(--border);">
+      <div class="card" style="text-align:center; padding:24px 16px; background:#fff; border-color:var(--border);">
         ${avatarImg}
         <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">${USER.email}</div>
         <div style="font-size:12px; color:#fff; background:var(--green); display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700;">✓ 已驗證帳號</div>
