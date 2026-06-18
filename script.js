@@ -6697,7 +6697,7 @@ window.openRecordStats = function() {
   
   // 右上角返回按鈕 (回到帳號資訊)
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回</button>
+    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer;">返回</button>
   `;
 
   // 1. 過濾掉純打卡紀錄
@@ -6793,7 +6793,7 @@ window.openAdminUserList = async function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -6967,7 +6967,7 @@ window.openAdminCreateUser = function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAdminUserList()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回清單</button>
+    <button onclick="openAdminUserList()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回清單</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7039,7 +7039,7 @@ window.openAdminBannedList = async function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7138,7 +7138,7 @@ function openAdminSystemSettings() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7219,7 +7219,7 @@ function openAdminGasPriceEdit() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
   `;
   
   // 預設油價
@@ -7301,7 +7301,7 @@ function openAnnouncementEdit() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
   `;
   
   let ann = { active: false, text: '' };
@@ -7753,7 +7753,7 @@ window.openAddReward = function() {
   
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openRewardSettings()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回清單</button>
+    <button onclick="openRewardSettings()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回清單</button>
   `;
   
   tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
@@ -7768,7 +7768,7 @@ window.openEditReward = function(id) {
   
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openRewardSettings()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回清單</button>
+    <button onclick="openRewardSettings()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回清單</button>
   `;
   
   // 深拷貝一份階距陣列，避免直接修改到原始資料
