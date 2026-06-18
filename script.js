@@ -5284,7 +5284,7 @@ window.deleteVehRecFromEdit = async function() {
   // 確保目前有正在編輯的記錄 ID
   if (!editingVehRecId) return;
 
-  const ok = await customConfirm('確定要<span style="color:var(--red);">刪除</span>這筆車輛記錄嗎？<br><span style="color:var(--text-blue);font-weight:700;">此動作無法復原。</span>');
+  const ok = await customConfirm('確定要<span style="color:var(--red);"> 刪除 </span>這筆車輛記錄嗎？<br><span style="color:var(--text-blue);font-weight:700;">此動作無法復原。</span>');
   if (!ok) return;
 
   // 1. 從記錄陣列中濾除這筆 ID
@@ -6661,6 +6661,10 @@ async function openAccountStats() {
       🔒 編輯系統存取權限
     </button>
 
+    <button onclick="openAdminBannedList()" style="width:100%; padding:14px; border-radius:var(--rs); background:#ef4444; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(239,68,68,0.3); cursor:pointer;">
+      🚫 管理黑名單 (已封鎖帳號)
+    </button>
+
     <button onclick="openAdminGasPriceEdit()" style="width:100%; padding:14px; border-radius:var(--rs); background:var(--blue); color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(59,130,246,0.3); cursor:pointer;">
       ⛽ 編輯全域油價設定
     </button>      
@@ -6877,17 +6881,25 @@ window.renderAdminUserList = function(keyword) {
   container.innerHTML = html;
 }
 
-/* 3. 刪除會員 (改為重新整理名單，而非跳回帳號頁) */
+/* 3. 刪除會員 (支援獨立詢問是否封鎖) */
 window.adminDeleteUser = async function(targetEmail) {
-  const ok = await customConfirm(`確定要<span style="color:var(--red);">強制刪除，並封鎖<br></span>【 <span style="color:var(--green);font-weight:650;">${targetEmail}</span> 】嗎？<br><span style="color:var(--text-blue);font-weight:700;">此動作無法復原！</span>`);
-  if(!ok) return;
+  // 第 1 次確認：刪除帳號
+  const okDelete = await customConfirm(`確定要強制刪除【 <b>${targetEmail}</b> 】嗎？<br>此動作無法復原！`);
+  if(!okDelete) return;
+
+  // 第 2 次確認：是否加入黑名單
+  const isBan = await customConfirm(`
+    <div style="font-size:40px; margin-bottom:8px;">🚫</div>
+    是否將【 <b>${targetEmail}</b> 】加入黑名單？<br>
+    <span style="color:var(--red); font-weight:700;">(加入後，該信箱將永遠無法再次註冊)</span>
+  `);
   
   showProgress('刪除帳號中...');
   try {
     const res = await fetch(`${API_BASE_URL}/admin/delete`, { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
-      body: JSON.stringify({ adminEmail: USER.email, targetEmail: targetEmail })
+      body: JSON.stringify({ adminEmail: USER.email, targetEmail: targetEmail, isBan: isBan })
     });
     const data = await res.json();
     
@@ -6977,6 +6989,100 @@ window.adminCreateUserSubmit = async function() {
     finishProgress(() => toast('連線失敗，無法建立帳號'));
   }
 }
+/* =========================================================
+   管理員專區：黑名單系統 (封鎖名單管理)
+   ========================================================= */
+window.openAdminBannedList = async function() {
+  document.getElementById('sub-title').textContent = '黑名單 (已封鎖信箱)';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">返回</button>
+  `;
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px; display:flex; flex-direction:column; height:100%;">
+      <div style="font-size:13px; color:var(--text-red); background:#fef2f2; border:1px solid #fecdd3; padding:12px; border-radius:12px; margin-bottom:16px; font-weight:700; line-height:1.6;">
+        💡 在此列表中的信箱，將永遠無法再次註冊新帳號。<br>若誤鎖，可點擊「解除封鎖」恢復其註冊權利。
+      </div>
+
+      <div class="card" style="padding:0; flex:1; overflow-y:auto; border:1px solid var(--border);" id="adm-banned-list-container">
+        <div style="text-align:center; color:var(--t3); padding:30px; font-weight:700;">📡 載入黑名單中...</div>
+      </div>
+    </div>
+  `;
+
+  // 取得黑名單
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/banned-list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.success) {
+      renderAdminBannedList(data.banned);
+    } else {
+      document.getElementById('adm-banned-list-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 載入失敗：${data.message}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('adm-banned-list-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 連線失敗，無法取得資料</div>`;
+  }
+}
+window.renderAdminBannedList = function(bannedList) {
+  const container = document.getElementById('adm-banned-list-container');
+  if (!container) return;
+
+  if (bannedList.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color:var(--t3); padding:40px; font-weight:700;">目前沒有任何黑名單 🛡️</div>`;
+    return;
+  }
+
+  let html = '';
+  bannedList.forEach(b => {
+    // 轉換時間格式
+    const d = new Date(b.createdAt);
+    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 12px; border-bottom:1px solid var(--border);">
+        <div style="flex:1; overflow:hidden; padding-right:10px;">
+          <div style="font-size:15px; font-weight:900; color:var(--red); margin-bottom:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">🚫 ${b.email}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:6px; font-family:var(--mono); font-weight:700; border:1px solid #e2e8f0;">封鎖時間: ${dateStr}</span>
+          </div>
+        </div>
+        <button onclick="adminUnbanUser('${b.email}')" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:8px 12px; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; flex-shrink:0; box-shadow:0 2px 4px rgba(37,99,235,0.1); transition:0.2s;">解除封鎖</button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+window.adminUnbanUser = async function(targetEmail) {
+  const ok = await customConfirm(`確定要解除封鎖【 <b>${targetEmail}</b> 】嗎？<br><span style="color:var(--t2); font-size:13px;">解除後，該信箱將可再次註冊帳號。</span>`);
+  if(!ok) return;
+  
+  showProgress('解除封鎖中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/unban`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ targetEmail: targetEmail })
+    });
+    const data = await res.json();
+    
+    finishProgress(() => {
+      if(data.success) {
+        toast('✅ 已解除封鎖');
+        openAdminBannedList(); // 重新拉取並渲染名單
+      } else {
+        toast('⚠️ 處理失敗：' + data.message);
+      }
+    });
+  } catch(err) {
+    finishProgress(() => toast('連線失敗'));
+  }
+}
+
+
 
 /* ✨ 新增：管理員編輯系統存取權限 */
 function openAdminSystemSettings() {
