@@ -710,13 +710,13 @@ function openOverlay(id) {
   if (el) {
     el.classList.add('show'); 
     
-    // 👇 針對 sub-page 進行左上角返回按鈕的強制顯隱控制
+    // 👇 針對 sub-page 進行左上角close1按鈕的強制顯隱控制
     if (id === 'sub-page') {
       const topBarEl = el.querySelector('.top-bar');
       const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
       const titleText = document.getElementById('sub-title')?.textContent || '';
       
-      // 定義哪些頁面「絕對不能」出現左上角返回按鈕
+      // 定義哪些頁面「絕對不能」出現左上角close1按鈕
       const noCloseBtnTitles = [
         '註冊會員名單', 
         '手動建立帳號', 
@@ -6623,6 +6623,11 @@ async function verifyAuthCode(email) {
 async function openAccountStats() {
   document.getElementById('sub-title').textContent = '帳號資訊';
   document.getElementById('sub-top-right').innerHTML = '';
+
+  // 👇 確保從管理員頁面返回時，左上角關閉按鈕會恢復顯示
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = '';
+
   document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div>`;
   openOverlay('sub-page');
 
@@ -6710,6 +6715,10 @@ async function openAccountStats() {
 /* ══ 新增：個人記錄統計 (點擊總記錄數開啟) ══ */
 window.openRecordStats = function() {
   document.getElementById('sub-title').textContent = '個人記錄統計';
+
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
   
   // 右上角返回按鈕 (回到帳號資訊)
   document.getElementById('sub-top-right').innerHTML = `
@@ -6802,10 +6811,14 @@ let adminCachedUsers = [];
 /* 1. 開啟獨立的會員名單與搜尋頁面 */
 window.openAdminUserList = async function() {
   document.getElementById('sub-title').textContent = '註冊會員名單';
+  
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -6973,6 +6986,10 @@ window.adminDeleteUser = async function(targetEmail) {
 window.openAdminCreateUser = function() {
   document.getElementById('sub-title').textContent = '手動建立帳號';
 
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="openAdminUserList()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回清單</button>
@@ -7040,10 +7057,14 @@ window.adminCreateUserSubmit = async function() {
    ========================================================= */
 window.openAdminBannedList = async function() {
   document.getElementById('sub-title').textContent = '黑名單 (已封鎖信箱)';
+  
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7135,10 +7156,14 @@ window.adminUnbanUser = async function(targetEmail) {
 /* ✨ 新增：管理員編輯系統存取權限 */
 function openAdminSystemSettings() {
   document.getElementById('sub-title').textContent = '系統權限設定';
+  
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7212,10 +7237,14 @@ async function saveAdminSystemSettings() {
 /* ✨ 新增：管理員編輯全域油價設定 */
 function openAdminGasPriceEdit() {
   document.getElementById('sub-title').textContent = '全域油價設定';
+  
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
   
   // 預設油價
@@ -7290,10 +7319,14 @@ async function saveAdminGasPrice() {
 /* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
   document.getElementById('sub-title').textContent = '系統公告設定';
+  
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="document.querySelector('.overlay-page .top-bar .bar-btn').style.display=''; openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
   
   let ann = { active: false, text: '' };
