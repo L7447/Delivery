@@ -68,6 +68,8 @@
     @keyframes slideDownCloseAnim {
       0%   { transform: translateY(0); opacity: 1; }
       20%  { transform: translateY(-8px); opacity: 0.98; } /* 停留感：微微向上提一下 */
+      50%  { transform: translateY(20px); opacity: 0.9; }  /* 下沉開始：慢慢往下掉落，帶有重量感 */
+      80%  { transform: translateY(60px); opacity: 0.6; }  /* 加速下沉：越掉越快，逐漸變淡 */
       100% { transform: translateY(100vh); opacity: 0; }  /* 順滑下沉至畫面底端 */
     }
   </style>
