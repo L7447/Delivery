@@ -2280,35 +2280,89 @@ window.changeFullCalByPicker = function(val) {
   renderHistory();
 }
 
+/* ══ 全螢幕大日曆 (修復排版 + 收入熱力圖設計) ══ */
 function renderFullCalendar() {
   const { calY:y, calM:m } = S; 
-  // 👇 替換為支援原生下拉選擇的格式
+  
+  // 1. 渲染頂部年月選擇器
   document.getElementById('fc-title').innerHTML = `
     <div style="position:relative; display:inline-block;">
-      <span style="color:var(--text-blue); cursor:pointer;">${y}年 ${pad(m)}月 ▾</span>
+      <span style="color:var(--text-blue); cursor:pointer; letter-spacing:1px;">${y}年 ${pad(m)}月 ▾</span>
       <input type="month" onchange="changeFullCalByPicker(this.value)" value="${y}-${pad(m)}" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
     </div>`;
-  const DOW = ['週日','週一','週二','週三','週四','週五','週六']; document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
-  const grid = document.getElementById('fc-grid'); const first = new Date(y, m-1, 1).getDay(); const days = new Date(y, m, 0).getDate(); const today = todayStr();
-  let html = ``; const prevDays = new Date(y, m-1, 0).getDate();
-  for (let i=first-1; i>=0; i--) { html += `<div class="fc-cell empty"><div class="fc-date">${pad(prevDays - i)}</div></div>`; }
+    
+  const DOW = ['週日','週一','週二','週三','週四','週五','週六']; 
+  document.getElementById('fc-dow').innerHTML = DOW.map(d => `<div class="fc-dow-cell">${d}</div>`).join('');
   
+  const grid = document.getElementById('fc-grid'); 
+  const first = new Date(y, m-1, 1).getDay(); 
+  const days = new Date(y, m, 0).getDate(); 
+  const today = todayStr();
+  
+  let html = ``; 
+  const prevDays = new Date(y, m-1, 0).getDate();
+  
+  // 填補上個月的空白格
+  for (let i=first-1; i>=0; i--) { 
+    html += `<div class="fc-cell empty"><div class="fc-date">${pad(prevDays - i)}</div></div>`; 
+  }
+  
+  // 2. 渲染當月格子 (導入收入熱力圖邏輯)
   for (let day=1; day<=days; day++) {
-    const ds  = `${y}-${pad(m)}-${pad(day)}`; const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); 
+    const ds  = `${y}-${pad(m)}-${pad(day)}`; 
+    const sum = getDayRecs(ds).reduce((s,r)=>s+recTotal(r), 0); 
     const isToday = ds === today;
     
     let cls = 'fc-cell'; 
     if(isToday) cls+=' today';
     
     let contentHtml = `<div class="fc-date">${pad(day)}</div>`;
+    
+    // 👇 根據收入多寡，賦予不同的背景色層級 (熱力圖概念)
     if(sum > 0) {
       cls += ' has-income';
-      contentHtml += `<div class="fc-amt">${fmt(sum)}</div>`;
+      
+      let levelStyle = '';
+      let textColor = '#ffffff';
+      
+      if (sum < 1000) {
+        // 等級 1：0 ~ 999 (淺藍色)
+        levelStyle = 'background: #bfdbfe; border: 1.5px solid #93c5fd;';
+        textColor = '#1d4ed8'; // 深藍字
+      } else if (sum < 1600) {
+        // 等級 2：1000 ~ 1599 (翠綠色)
+        levelStyle = 'background: #34d399; border: 1.5px solid #10b981;';
+        textColor = '#ffffff';
+      } else if (sum < 2400) {
+        // 等級 3：1600 ~ 2399 (活力橘)
+        levelStyle = 'background: #fb923c; border: 1.5px solid #f97316;';
+        textColor = '#ffffff';
+      } else if (sum < 3000) {
+        // 等級 4：2400 ~ 2999 (熱情紅)
+        levelStyle = 'background: #ef4444; border: 1.5px solid #dc2626;';
+        textColor = '#ffffff';
+      } else {
+        // 等級 5：3000 以上 (爆單尊貴紫帶陰影)
+        levelStyle = 'background: #a855f7; border: 1.5px solid #7e22ce; box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);';
+        textColor = '#ffffff';
+        contentHtml += `<div style="position:absolute; top:2px; right:2px; font-size:18px;">🔥</div>`; // 爆單火焰小圖示
+      }
+
+      contentHtml += `
+        <div class="fc-amt" style="${levelStyle} color:${textColor}; padding:2px 4px; border-radius:6px; font-weight:800; text-shadow:none; margin-top:auto;">
+          ${fmt(sum)}
+        </div>`;
     }
-    html += `<div class="${cls}">${contentHtml}</div>`;
+    html += `<div class="${cls}" style="position:relative; display:flex; flex-direction:column;">${contentHtml}</div>`;
   }
-  const totalCells = first + days; const remain = totalCells % 7 === 0 ? 0 : (Math.ceil(totalCells/7)*7) - totalCells;
-  for (let i=1; i<=remain; i++) { html += `<div class="fc-cell empty"><div class="fc-date">${pad(i)}</div></div>`; }
+  
+  // 填補下個月的空白格
+  const totalCells = first + days; 
+  const remain = totalCells % 7 === 0 ? 0 : (Math.ceil(totalCells/7)*7) - totalCells;
+  for (let i=1; i<=remain; i++) { 
+    html += `<div class="fc-cell empty"><div class="fc-date">${pad(i)}</div></div>`; 
+  }
+  
   grid.innerHTML = html;
 }
 
