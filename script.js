@@ -772,6 +772,39 @@ window.animateReturnClose = function(btn, action) {
     btn.style.pointerEvents = 'auto';
   }, 700);
 }
+/* 子頁面內部切換專用：內容向下滑出並淡入新內容 (解決背景閃爍破綻) */
+window.animateSubPageReturn = function(btn, action) {
+  btn.style.pointerEvents = 'none';
+
+  const subBody = document.getElementById('sub-body');
+  const subTitle = document.getElementById('sub-title');
+
+  // 1. 讓框內的內容向下滑出並淡出
+  subBody.style.transition = 'transform 0.25s ease-in, opacity 0.25s ease-in';
+  subBody.style.transform = 'translateY(30px)';
+  subBody.style.opacity = '0';
+  subTitle.style.transition = 'opacity 0.25s ease-in';
+  subTitle.style.opacity = '0';
+
+  setTimeout(() => {
+    action(); // 2. 執行返回指令，此時內容會被替換
+
+    // 3. 瞬間把新內容的位置拉到稍微偏上，準備滑入
+    subBody.style.transition = 'none';
+    subBody.style.transform = 'translateY(-15px)';
+    void subBody.offsetWidth; // 強制重繪
+
+    // 4. 加上滑順的淡入特效
+    subBody.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease-out';
+    subTitle.style.transition = 'opacity 0.35s ease-out';
+
+    subBody.style.transform = 'translateY(0)';
+    subBody.style.opacity = '1';
+    subTitle.style.opacity = '1';
+
+    btn.style.pointerEvents = 'auto';
+  }, 250);
+}
 /* 專屬：向右翻頁並停留 2 秒的關閉動畫 */
 window.flipCloseOverlay = function(btn, overlayId) {
   const overlay = document.getElementById(overlayId);
@@ -6732,9 +6765,9 @@ window.openRecordStats = function() {
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
 
-  // 👇 高辨識度漸層返回按鈕 + 向下滑出特效
+  // 👇 使用新的 animateSubPageReturn 來解決閃爍問題
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => openAccountStats())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">
+    <button onclick="animateSubPageReturn(this, () => openAccountStats())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">
       🔙 返回
     </button>
   `;
@@ -6756,9 +6789,7 @@ window.openRecordStats = function() {
   validRecs.forEach(r => {
     const pId = r.platformId || 'unknown';
     const y = (r.date && r.date.substring(0,4)) || '未知';
-    
     platCounts[pId] = (platCounts[pId] || 0) + 1;
-    
     if (!yearStats[y]) yearStats[y] = { total: 0, plats: {} };
     yearStats[y].total++;
     yearStats[y].plats[pId] = (yearStats[y].plats[pId] || 0) + 1;
@@ -6770,41 +6801,50 @@ window.openRecordStats = function() {
   let html = `<div style="padding:16px; padding-bottom:40px; display:flex; flex-direction:column; gap:20px;">`;
 
   // ==========================================
-  // 【風格 1 全新設計】立體玻璃質感 (Glassmorphism)
+  // 【風格 1 全新炫麗版】傳奇全息黑卡 (Holographic VIP)
   // ==========================================
   html += `
-    <div style="background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(248,250,252,0.9) 100%); border-radius: 24px; padding: 24px 20px; position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(148, 163, 184, 0.15), inset 0 2px 4px rgba(255,255,255,1); border: 1.5px solid #e2e8f0; backdrop-filter: blur(10px);">
+    <style>
+      @keyframes holoGlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+      @keyframes floatStar { 0%, 100% { transform: translateY(0) scale(1); opacity:0.8; } 50% { transform: translateY(-8px) scale(1.1); opacity:1; } }
+    </style>
+    
+    <div style="background: linear-gradient(125deg, #0f172a, #1e1b4b, #2d103b, #0f172a); background-size: 300% 300%; animation: holoGlow 8s ease infinite; border-radius: 24px; padding: 28px 20px; position: relative; overflow: hidden; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.6), inset 0 0 0 1.5px rgba(255,255,255,0.15);">
       
-      <!-- 裝飾光影幾何 -->
-      <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: linear-gradient(135deg, #60a5fa, #a78bfa); border-radius: 50%; filter: blur(30px); opacity: 0.3;"></div>
-      <div style="position: absolute; bottom: -30px; left: -20px; width: 120px; height: 120px; background: linear-gradient(135deg, #34d399, #3b82f6); border-radius: 50%; filter: blur(40px); opacity: 0.2;"></div>
+      <!-- 漂浮的光暈球體 -->
+      <div style="position:absolute; top:-30px; right:-30px; width:150px; height:150px; background:radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%); animation: floatStar 4s ease-in-out infinite;"></div>
+      <div style="position:absolute; bottom:-40px; left:-40px; width:160px; height:160px; background:radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%); animation: floatStar 6s ease-in-out infinite alternate-reverse;"></div>
       
+      <!-- 雜訊質感網格覆蓋層 -->
+      <div style="position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 10px 10px; opacity: 0.3; pointer-events:none;"></div>
+
       <div style="position: relative; z-index: 1;">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-          <span style="background:#ffffff; padding:6px 12px; border-radius:12px; font-size:13px; color:#334155; font-weight:900; border:1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.04); letter-spacing:0.5px;">🏆 你的外送生涯</span>
-        </div>
         
-        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:16px;">
-          <div style="display:flex; flex-direction:column; gap:2px;">
-            <span style="font-size:13px; color:#64748b; font-weight:800;">累計完成記錄</span>
-            <div style="display:flex; align-items:baseline; gap:6px;">
-              <span style="font-family:var(--mono); font-size:48px; font-weight:900; color:#0f172a; line-height:1; letter-spacing:-1px;">
-                ${fmt(totalCount)}
-              </span>
-              <span style="color:#64748b; font-size:15px; font-weight:800;">筆</span>
-            </div>
-          </div>
-          <div style="width:48px; height:48px; background:#eff6ff; border:2px solid #bfdbfe; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:0 4px 10px rgba(59,130,246,0.15); transform:rotate(10deg);">🚀</div>
-        </div>
-        
-        <div style="background: rgba(255,255,255,0.6); border: 1.5px solid #ffffff; padding: 12px 14px; border-radius: 16px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div style="width:8px; height:8px; background:#10b981; border-radius:50%; box-shadow:0 0 0 3px #dcfce7;"></div>
-            <span style="color:#475569; font-size:13px; font-weight:750;">這趟旅程已陪伴你</span>
-          </div>
-          <span style="color:#0f172a; font-size:16px; font-weight:900; font-family:var(--mono);">
-            ${daysAcc} <span style="font-size:12px; color:#64748b; font-weight:700;">天</span>
+        <!-- 標題區 -->
+        <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 24px;">
+          <span style="background: linear-gradient(90deg, #fcd34d, #f59e0b, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 16px; font-weight: 900; letter-spacing: 2.5px; text-shadow: 0 2px 15px rgba(245,158,11,0.4); border-bottom: 1.5px solid rgba(245,158,11,0.3); padding-bottom: 6px;">
+            ✨ 傳奇外送生涯 ✨
           </span>
+        </div>
+
+        <!-- 核心大數據 -->
+        <div style="text-align:center; margin-bottom: 28px;">
+          <div style="font-size: 12px; color: #cbd5e1; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px;">累計完成總記錄</div>
+          <div style="font-family: var(--mono); font-size: 64px; font-weight: 900; color: #ffffff; line-height: 1; text-shadow: 0 0 20px rgba(255,255,255,0.4), 0 0 40px rgba(56,189,248,0.8); margin-bottom: 6px; letter-spacing:-2px;">
+            ${fmt(totalCount)}
+          </div>
+          <div style="font-size: 12px; color: #64748b; font-weight: 900; text-transform: uppercase; letter-spacing: 3px;">Total Records</div>
+        </div>
+
+        <!-- 底部微透資訊列 -->
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 12px 16px; display:flex; justify-content:space-between; align-items:center; backdrop-filter: blur(12px);">
+          <div style="display:flex; align-items:center; gap: 8px;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #34d399; box-shadow: 0 0 12px #34d399; animation: floatStar 2s infinite;"></div>
+            <span style="color: #94a3b8; font-size: 12px; font-weight: 800; letter-spacing:0.5px;">這趟旅程陪伴你</span>
+          </div>
+          <div style="font-family: var(--mono); font-size: 18px; font-weight: 900; color: #34d399; text-shadow: 0 0 12px rgba(52,211,153,0.5);">
+            ${daysAcc} <span style="font-size:11px; color:#cbd5e1; font-weight:700;">Days</span>
+          </div>
         </div>
       </div>
     </div>
@@ -6821,9 +6861,7 @@ window.openRecordStats = function() {
         </div>
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
     `;
-    
     const maxPlatCount = sortedPlats[0][1];
-
     sortedPlats.forEach(([pid, count]) => {
       const pInfo = getPlatform(pid);
       const color = pInfo.color || '#94a3b8';
@@ -6865,9 +6903,7 @@ window.openRecordStats = function() {
       const isLatest = idx === 0;
       const dotColor = isLatest ? '#3b82f6' : '#cbd5e1';
       const dotBorder = isLatest ? '#eff6ff' : '#f8fafc';
-      
       const yearPlats = Object.entries(yearStats[y].plats).sort((a,b) => b[1] - a[1]);
-      
       const tagsHtml = yearPlats.map(([pid, count]) => {
         const pInfo = getPlatform(pid);
         return `<div style="background:${pInfo.color}15; color:${pInfo.color}; border:1px solid ${pInfo.color}30; font-size:11px; font-weight:800; padding:3px 8px; border-radius:8px; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
@@ -6878,22 +6914,18 @@ window.openRecordStats = function() {
       html += `
         <div style="position: relative; margin-bottom: 16px; background: #ffffff; border-radius: 16px; padding: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1.5px solid #e2e8f0;">
           <div style="position: absolute; left: -26.5px; top: 18px; width: 16px; height: 16px; border-radius: 50%; background: ${dotColor}; border: 4px solid ${dotBorder}; box-shadow: 0 0 0 1px #e2e8f0;"></div>
-          
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="font-size:18px; font-weight:900; color:var(--t1);">${y} <span style="font-size:12px; font-weight:700; color:#64748b;">年</span></div>
-            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].total)} <span style="font-size:11px; color: #94a3b8;">筆</span></div>
+            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].total)} <span style="font-size:11px; color:#94a3b8;">筆</span></div>
           </div>
-          
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             ${tagsHtml}
           </div>
         </div>
       `;
     });
-
     html += `</div></div>`;
   }
-
   html += `</div>`;
   document.getElementById('sub-body').innerHTML = html;
   openOverlay('sub-page');
@@ -6916,7 +6948,7 @@ window.openAdminUserList = async function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7090,7 +7122,7 @@ window.openAdminCreateUser = function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => openAdminUserList())" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff; border:1px solid #047857; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
+    <button onclick="animateSubPageReturn(this, () => openAdminUserList())" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff; border:1px solid #047857; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7162,7 +7194,7 @@ window.openAdminBannedList = async function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7261,7 +7293,7 @@ function openAdminSystemSettings() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7342,7 +7374,7 @@ function openAdminGasPriceEdit() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   // 預設油價
@@ -7424,7 +7456,7 @@ function openAnnouncementEdit() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   let ann = { active: false, text: '' };
@@ -7876,7 +7908,7 @@ window.openAddReward = function() {
   
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => openRewardSettings())" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#ffffff; border:1px solid #6d28d9; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(139,92,246,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
+    <button onclick="animateSubPageReturn(this, () => openRewardSettings())" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#ffffff; border:1px solid #6d28d9; padding:6px 8px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(139,92,246,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
@@ -7891,7 +7923,7 @@ window.openEditReward = function(id) {
   
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   // 深拷貝一份階距陣列，避免直接修改到原始資料
@@ -8579,7 +8611,7 @@ window.showForcePasswordChange = function(isForced = false) {
   } else {
     // 主動修改狀態，右上角加入返回按鈕
     document.getElementById('sub-top-right').innerHTML = `
-      <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+      <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
     `;
     document.getElementById('sub-page').dataset.forced = 'false';
   }
