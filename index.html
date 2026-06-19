@@ -60,6 +60,17 @@
       100% { transform: translateX(-100vw); opacity: 0; }   /* 第四段：完全抽離畫面 */
     }
   </style>
+  <!-- 由上而下關閉特效 (帶有停留與下沉感) -->
+  <style>
+    .slide-down-out {
+      animation: slideDownCloseAnim 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    }
+    @keyframes slideDownCloseAnim {
+      0%   { transform: translateY(0); opacity: 1; }
+      20%  { transform: translateY(-8px); opacity: 0.98; } /* 停留感：微微向上提一下 */
+      100% { transform: translateY(100vh); opacity: 0; }  /* 順滑下沉至畫面底端 */
+    }
+  </style>
 
 </head>
 <body data-tab="home" ontouchstart="">
