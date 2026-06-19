@@ -83,7 +83,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
   font-family: var(--title); 
   color: #2563eb; /* 統一為藍色 */
   margin: 0;
-  position: absolute;left: 50%;transform: translateX(-50%);align-items: center;
+  position: absolute;left: 50%;transform: translateX(-50%);padding: 0 40px;text-align: center;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;
 }
 .bar-btn { width: 32px; height: 32px; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; padding: 0; outline: none; }
 .overlay-body { flex: 1; overflow-y: auto; padding: 5px; -webkit-overflow-scrolling: touch; }
@@ -205,21 +205,79 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 /* 👇 當點選該日期時，如果有紀錄，圓點顯示為顯眼的橘色並加上微光暈 */
 .month-cell.sel .has-rec-dot { background: #f97316; box-shadow: 0 0 4px rgba(249,115,22,0.5); }
 
-/* ══ 10. 全螢幕大日曆 (修復補回版) ══ */
-@media screen and (orientation:portrait){#full-calendar-overlay.show{width:100vh;height:100vw;transform:rotate(90deg);transform-origin:top left;position:fixed;top:0;left:100vw;}
-#fc-body{padding-bottom:5px !important;}
+/* ══ 10. 全螢幕大日曆 (熱力圖與排版優化版) ══ */
+/* 強制橫向顯示的設定 (手機轉向用) */
+@media screen and (orientation: portrait) {
+  #full-calendar-overlay.show {
+    width: 100vh;
+    height: 100vw;
+    transform: rotate(90deg);
+    transform-origin: top left;
+    position: fixed;
+    top: 0;
+    left: 100vw;
+  }
+  #fc-body { padding-bottom: 5px !important; }
 }
+/* 日曆主體與表頭 (日一二三四五六) */
 #fc-body { background: var(--sf); }
 #fc-dow { padding-top: 4px; }
 .fc-dow-cell { text-align: center; font-size: 12px; font-weight: 700; color: #ff5900; padding: 8px 0; }
-#fc-grid { background: var(--border); display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0; grid-auto-rows: 1fr; }
-.fc-cell { background: var(--sf); display: flex; flex-direction: column; padding: 6px; min-height: 54px; position: relative; }
+/* 日曆網格底板 */
+#fc-grid { 
+  background: var(--border); 
+  display: grid; 
+  grid-template-columns: repeat(7, 1fr); 
+  gap: 1px; 
+  border-top: 1px solid var(--border); 
+  border-bottom: 1px solid var(--border); 
+  padding: 0; 
+  grid-auto-rows: 1fr; 
+}
+/* 單個日曆格子 */
+.fc-cell { 
+  background: var(--sf); 
+  display: flex; 
+  flex-direction: column; 
+  padding: 4px; 
+  min-height: 80px; /* 拉高格子，確保底部的色塊不會擠壓到日期 */
+  position: relative; 
+}
 .fc-cell.empty { background: transparent; }
-.fc-date { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--t1); margin-bottom: auto; line-height: 1; }
-.fc-cell.empty .fc-date { color: var(--t3); }
-.fc-cell.has-income { background: #ecfdf5; }
-.fc-cell.has-income .fc-amt { font-family: var(--sans); font-size: 13px; font-weight: 800; color: #059669; text-align: right; margin-top: auto; position: absolute; bottom: 6px; right: 6px; }
-.fc-cell.today .fc-date { color: #fff; background: #2563eb; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: -2px 0 0 -2px; }
+/* 日期數字 */
+.fc-date { 
+  font-family: var(--sans); 
+  font-size: 13px; 
+  font-weight: 700; 
+  color: var(--t2); 
+  margin-bottom: auto; 
+  line-height: 1; 
+  padding: 2px;
+}
+.fc-cell.empty .fc-date { color: var(--t3); opacity: 0.5; }
+/* 標記「今天」的日期圓圈與背景 */
+.fc-cell.today { background: var(--bg-input); }
+.fc-cell.today .fc-date { 
+  color: #fff; 
+  background: #2563eb; 
+  width: 24px; 
+  height: 24px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  border-radius: 50%; 
+  margin: -2px 0 0 -2px; 
+}
+/* 收入熱力圖色塊 (置底滿版) */
+.fc-amt { 
+  font-family: var(--mono); 
+  font-size: 13px; 
+  margin-top: auto; /* 自動把色塊推到格子最底部 */
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.2;
+}
 
 /* ══ 11. 車輛管理：月份導航與標籤 ══ */
 .veh-month-nav { 
