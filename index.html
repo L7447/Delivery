@@ -46,6 +46,21 @@
   <!-- [修復4] 移除 ios-pwa-splash CDN（被內容阻擋器封鎖時會卡住）-->
   <link rel="stylesheet" href="/style.css?v=1.6.0">
 
+  <!-- 多段殘留、緩慢向左抽離特效 -->
+  <style>
+    .drawer-slide-out {
+      /* 總時長拉長至 0.9 秒，並使用平滑的 ease-in-out 曲線 */
+      animation: drawerCloseAnim 0.9s ease-in-out forwards !important;
+    }
+    @keyframes drawerCloseAnim {
+      0%   { transform: translateX(0); opacity: 1; }
+      20%  { transform: translateX(-12px); opacity: 0.95; } /* 第一段：微微拉扯、卡住的感覺 */
+      45%  { transform: translateX(-35px); opacity: 0.85; } /* 第二段：殘留感，非常緩慢地拖行 */
+      75%  { transform: translateX(-50vw); opacity: 0.4; }  /* 第三段：逐漸失去阻力，開始加速 */
+      100% { transform: translateX(-100vw); opacity: 0; }   /* 第四段：完全抽離畫面 */
+    }
+  </style>
+
 </head>
 <body data-tab="home" ontouchstart="">
 
@@ -728,14 +743,25 @@
     <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px; margin-top:24px;">黒崎製作 2026 © v1.15.116.12157</div>
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
+      
+      <!-- 👇 新增：官方網站 -->
+      <a href="https://delivery-2ws.pages.dev/intro" target="_blank" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; text-decoration:none; cursor:pointer;">
+        <span style="font-size:15px; font-weight:500; color:var(--t1);">官方網站</span>
+        <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
+      </a>
+
+      <!-- 👇 修改：禁止條款、隱私權政策 (移到聯絡我們上方) -->
+      <div onclick="openPrivacyPolicy()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <span style="font-size:15px; font-weight:500; color:var(--t1);">禁止條款、隱私權政策</span>
+        <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
+      </div>
+
+      <!-- 👇 聯絡我們 (移到下面) -->
       <div onclick="openContactUs()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <span style="font-size:15px; font-weight:500; color:var(--t1);">聯絡我們</span>
         <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
       </div>
-      <div onclick="openPrivacyPolicy()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <span style="font-size:15px; font-weight:500; color:var(--t1);">隱私權政策</span>
-        <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
-      </div>
+
       <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT0201.aspx?id=FL105973" target="_blank" style="display:block; padding:16px 0; border-bottom:1px solid var(--border); text-decoration:none;">
         <div style="font-size:17px; font-weight:600; color:var(--t1); margin-bottom:6px; line-height:1.4;">外送員權益保障及外送平臺管理法</div>
         <div style="font-size:15px; font-weight:400; color:var(--t2);">勞動部 官方法規網站</div>
@@ -747,11 +773,11 @@
   
 <div class="overlay-page" id="privacy-page" style="z-index:1200;">
   <div class="top-bar">
-    <!-- 👇 改綁定 flipCloseOverlay -->
     <button class="bar-btn" onclick="flipCloseOverlay(this, 'privacy-page')">
       <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
     </button>
-    <h2>隱私權政策</h2>
+    <!-- 👇 修改標題 -->
+    <h2>禁止條款、隱私權政策</h2>
     <div style="min-width:36px; text-align:right;"></div>
   </div>
   <div class="overlay-body" id="privacy-body"></div>
