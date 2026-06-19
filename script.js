@@ -6801,49 +6801,49 @@ window.openRecordStats = function() {
   let html = `<div style="padding:16px; padding-bottom:40px; display:flex; flex-direction:column; gap:20px;">`;
 
   // ==========================================
-  // 【風格 1 全新炫麗版】傳奇全息黑卡 (Holographic VIP)
+  // 【風格 1 亮麗炫彩版】晨光極光與動態反光 (Vibrant Sunrise)
   // ==========================================
   html += `
     <style>
-      @keyframes holoGlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-      @keyframes floatStar { 0%, 100% { transform: translateY(0) scale(1); opacity:0.8; } 50% { transform: translateY(-8px) scale(1.1); opacity:1; } }
+      @keyframes sunriseFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+      @keyframes glassShine { 0% { transform: translateX(-150%) rotate(25deg); } 100% { transform: translateX(150%) rotate(25deg); } }
     </style>
     
-    <div style="background: linear-gradient(125deg, #0f172a, #1e1b4b, #2d103b, #0f172a); background-size: 300% 300%; animation: holoGlow 8s ease infinite; border-radius: 24px; padding: 28px 20px; position: relative; overflow: hidden; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.6), inset 0 0 0 1.5px rgba(255,255,255,0.15);">
+    <div style="background: linear-gradient(125deg, #FF416C, #FF4B2B, #F9D423, #FF4B2B, #FF416C); background-size: 300% 300%; animation: sunriseFlow 6s ease infinite; border-radius: 24px; padding: 28px 20px; position: relative; overflow: hidden; box-shadow: 0 12px 30px rgba(255, 75, 43, 0.4), inset 0 0 0 2px rgba(255,255,255,0.4);">
       
-      <!-- 漂浮的光暈球體 -->
-      <div style="position:absolute; top:-30px; right:-30px; width:150px; height:150px; background:radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%); animation: floatStar 4s ease-in-out infinite;"></div>
-      <div style="position:absolute; bottom:-40px; left:-40px; width:160px; height:160px; background:radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%); animation: floatStar 6s ease-in-out infinite alternate-reverse;"></div>
+      <!-- 動態玻璃反光掃過特效 -->
+      <div style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%); transform:rotate(25deg); animation: glassShine 4s infinite ease-in-out; pointer-events:none;"></div>
       
-      <!-- 雜訊質感網格覆蓋層 -->
-      <div style="position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 10px 10px; opacity: 0.3; pointer-events:none;"></div>
+      <!-- 幾何圓形點綴 -->
+      <div style="position:absolute; top:-20px; right:-20px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.2); filter:blur(20px);"></div>
+      <div style="position:absolute; bottom:-30px; left:-30px; width:150px; height:150px; border-radius:50%; background:rgba(255,212,35,0.4); filter:blur(30px);"></div>
 
       <div style="position: relative; z-index: 1;">
         
         <!-- 標題區 -->
         <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 24px;">
-          <span style="background: linear-gradient(90deg, #fcd34d, #f59e0b, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 16px; font-weight: 900; letter-spacing: 2.5px; text-shadow: 0 2px 15px rgba(245,158,11,0.4); border-bottom: 1.5px solid rgba(245,158,11,0.3); padding-bottom: 6px;">
-            ✨ 傳奇外送生涯 ✨
+          <span style="background: rgba(255,255,255,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 14px; font-weight: 900; letter-spacing: 1.5px; border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            ✨ 輝煌外送生涯 ✨
           </span>
         </div>
 
         <!-- 核心大數據 -->
         <div style="text-align:center; margin-bottom: 28px;">
-          <div style="font-size: 12px; color: #cbd5e1; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px;">累計完成總記錄</div>
-          <div style="font-family: var(--mono); font-size: 64px; font-weight: 900; color: #ffffff; line-height: 1; text-shadow: 0 0 20px rgba(255,255,255,0.4), 0 0 40px rgba(56,189,248,0.8); margin-bottom: 6px; letter-spacing:-2px;">
+          <div style="font-size: 13px; color: rgba(255,255,255,0.9); font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">累計完成總記錄</div>
+          <div style="font-family: var(--mono); font-size: 64px; font-weight: 900; color: #ffffff; line-height: 1; text-shadow: 0 4px 15px rgba(0,0,0,0.2), 0 0 40px rgba(255,255,255,0.6); margin-bottom: 6px; letter-spacing:-2px;">
             ${fmt(totalCount)}
           </div>
-          <div style="font-size: 12px; color: #64748b; font-weight: 900; text-transform: uppercase; letter-spacing: 3px;">Total Records</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 900; text-transform: uppercase; letter-spacing: 3px;">Total Records</div>
         </div>
 
         <!-- 底部微透資訊列 -->
-        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 12px 16px; display:flex; justify-content:space-between; align-items:center; backdrop-filter: blur(12px);">
+        <div style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 16px; padding: 12px 16px; display:flex; justify-content:space-between; align-items:center; backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
           <div style="display:flex; align-items:center; gap: 8px;">
-            <div style="width: 10px; height: 10px; border-radius: 50%; background: #34d399; box-shadow: 0 0 12px #34d399; animation: floatStar 2s infinite;"></div>
-            <span style="color: #94a3b8; font-size: 12px; font-weight: 800; letter-spacing:0.5px;">這趟旅程陪伴你</span>
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 10px #ffffff;"></div>
+            <span style="color: #ffffff; font-size: 13px; font-weight: 800; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">這趟旅程陪伴你</span>
           </div>
-          <div style="font-family: var(--mono); font-size: 18px; font-weight: 900; color: #34d399; text-shadow: 0 0 12px rgba(52,211,153,0.5);">
-            ${daysAcc} <span style="font-size:11px; color:#cbd5e1; font-weight:700;">Days</span>
+          <div style="font-family: var(--mono); font-size: 18px; font-weight: 900; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            ${daysAcc} <span style="font-size:11px; color:rgba(255,255,255,0.9); font-weight:800;">天</span>
           </div>
         </div>
       </div>
@@ -6887,7 +6887,7 @@ window.openRecordStats = function() {
   }
 
   // ==========================================
-  // 【風格 3】極簡彩色時間軸 (歷年時光軌跡)
+  // 【風格 3】極簡彩色時間軸 (歷年時光軌跡 - 橫向滑動防擠壓)
   // ==========================================
   if (sortedYears.length > 0) {
     html += `
@@ -6904,9 +6904,11 @@ window.openRecordStats = function() {
       const dotColor = isLatest ? '#3b82f6' : '#cbd5e1';
       const dotBorder = isLatest ? '#eff6ff' : '#f8fafc';
       const yearPlats = Object.entries(yearStats[y].plats).sort((a,b) => b[1] - a[1]);
+      
       const tagsHtml = yearPlats.map(([pid, count]) => {
         const pInfo = getPlatform(pid);
-        return `<div style="background:${pInfo.color}15; color:${pInfo.color}; border:1px solid ${pInfo.color}30; font-size:11px; font-weight:800; padding:3px 8px; border-radius:8px; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+        // 👇 重點：加入 flex-shrink:0 保證膠囊絕對不被擠壓變形
+        return `<div style="flex-shrink:0; background:${pInfo.color}15; color:${pInfo.color}; border:1px solid ${pInfo.color}30; font-size:11px; font-weight:800; padding:3px 8px; border-radius:8px; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
           ${safeText(pInfo.name)} <span style="background:${pInfo.color}; color:#fff; padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:10px;">${count}</span>
         </div>`;
       }).join('');
@@ -6916,9 +6918,12 @@ window.openRecordStats = function() {
           <div style="position: absolute; left: -26.5px; top: 18px; width: 16px; height: 16px; border-radius: 50%; background: ${dotColor}; border: 4px solid ${dotBorder}; box-shadow: 0 0 0 1px #e2e8f0;"></div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="font-size:18px; font-weight:900; color:var(--t1);">${y} <span style="font-size:12px; font-weight:700; color:#64748b;">年</span></div>
-            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].total)} <span style="font-size:11px; color:#94a3b8;">筆</span></div>
+            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].total)} <span style="font-size:11px;font-weight:650;color:#94a3b8;">筆</span></div>
           </div>
-          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          
+          <!-- 👇 重點：改為 nowrap 並開啟橫向滾動 (overflow-x: auto) -->
+          <style>.hide-scroll-bar::-webkit-scrollbar { display: none; }</style>
+          <div class="hide-scroll-bar" style="display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;">
             ${tagsHtml}
           </div>
         </div>
