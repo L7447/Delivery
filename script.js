@@ -749,7 +749,29 @@ window.animateClose = function(btn, action) {
     btn.style.pointerEvents = 'auto';
   }, 850);
 }
+/* 返回按鈕專用：由上而下關閉動畫 (向下滑出) */
+window.animateReturnClose = function(btn, action) {
+  btn.style.pointerEvents = 'none'; // 鎖定按鈕防止連點
 
+  // 自動往上尋找最外層的頁面容器
+  const targetWrap = btn.closest('.overlay-page, #sub-page');
+  
+  // 套用向下滑出特效
+  if (targetWrap) {
+    targetWrap.classList.add('slide-down-out');
+  }
+
+  // 設定 700ms 延遲，配合 CSS 動畫播完後再執行關閉
+  setTimeout(() => {
+    action(); // 執行返回指令
+    
+    // 動作執行完畢後，移除動畫 Class
+    if (targetWrap) {
+      targetWrap.classList.remove('slide-down-out');
+    }
+    btn.style.pointerEvents = 'auto';
+  }, 700);
+}
 /* 專屬：向右翻頁並停留 2 秒的關閉動畫 */
 window.flipCloseOverlay = function(btn, overlayId) {
   const overlay = document.getElementById(overlayId);
@@ -6707,20 +6729,19 @@ async function openAccountStats() {
 window.openRecordStats = function() {
   document.getElementById('sub-title').textContent = '個人記錄統計';
   
-  // 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
 
-  // 右上角返回按鈕
+  // 👇 高辨識度漸層返回按鈕 + 向下滑出特效
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    <button onclick="animateReturnClose(this, () => openAccountStats())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">
+      🔙 返回
+    </button>
   `;
 
-  // 1. 過濾掉純打卡紀錄
   const validRecs = S.records.filter(r => !r.isPunchOnly);
   const totalCount = validRecs.length;
   
-  // 計算開始使用天數
   let daysAcc = 0;
   if (totalCount > 0) {
     const dates = validRecs.map(r => new Date(r.date)).sort((a, b) => a - b);
@@ -6729,7 +6750,6 @@ window.openRecordStats = function() {
     daysAcc = Math.ceil((today - firstDate) / 86400000) || 1;
   }
   
-  // 2. 準備統計資料結構
   const platCounts = {}; 
   const yearStats = {};  
 
@@ -6750,29 +6770,40 @@ window.openRecordStats = function() {
   let html = `<div style="padding:16px; padding-bottom:40px; display:flex; flex-direction:column; gap:20px;">`;
 
   // ==========================================
-  // 【風格 1】深色科技星空 (生涯總覽)
+  // 【風格 1 全新設計】立體玻璃質感 (Glassmorphism)
   // ==========================================
   html += `
-    <div style="background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 100%); border-radius: 24px; padding: 24px 20px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(30,27,75,0.3); border: 1px solid rgba(255,255,255,0.1);">
-      <!-- 裝飾光暈 -->
-      <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: #8b5cf6; filter: blur(50px); opacity: 0.6;"></div>
-      <div style="position: absolute; bottom: -40px; left: -20px; width: 100px; height: 100px; background: #3b82f6; filter: blur(60px); opacity: 0.4;"></div>
+    <div style="background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(248,250,252,0.9) 100%); border-radius: 24px; padding: 24px 20px; position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(148, 163, 184, 0.15), inset 0 2px 4px rgba(255,255,255,1); border: 1.5px solid #e2e8f0; backdrop-filter: blur(10px);">
+      
+      <!-- 裝飾光影幾何 -->
+      <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: linear-gradient(135deg, #60a5fa, #a78bfa); border-radius: 50%; filter: blur(30px); opacity: 0.3;"></div>
+      <div style="position: absolute; bottom: -30px; left: -20px; width: 120px; height: 120px; background: linear-gradient(135deg, #34d399, #3b82f6); border-radius: 50%; filter: blur(40px); opacity: 0.2;"></div>
       
       <div style="position: relative; z-index: 1;">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-          <span style="background:rgba(255,255,255,0.15); backdrop-filter:blur(4px); padding:4px 8px; border-radius:8px; font-size:12px; color:#e2e8f0; font-weight:800; border:1px solid rgba(255,255,255,0.1);">🏆 生涯總覽</span>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+          <span style="background:#ffffff; padding:6px 12px; border-radius:12px; font-size:13px; color:#334155; font-weight:900; border:1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.04); letter-spacing:0.5px;">🏆 你的外送生涯</span>
         </div>
-        <div style="font-size:13px; color:#94a3b8; font-weight:700; margin-bottom:4px;">累計完成記錄</div>
-        <div style="display:flex; align-items:baseline; gap:8px;">
-          <span style="font-family:var(--mono); font-size:48px; font-weight:900; background:linear-gradient(to right, #38bdf8, #818cf8, #c084fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1;">
-            ${fmt(totalCount)}
-          </span>
-          <span style="color:#64748b; font-size:16px; font-weight:800;">筆</span>
+        
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:16px;">
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <span style="font-size:13px; color:#64748b; font-weight:800;">累計完成記錄</span>
+            <div style="display:flex; align-items:baseline; gap:6px;">
+              <span style="font-family:var(--mono); font-size:48px; font-weight:900; color:#0f172a; line-height:1; letter-spacing:-1px;">
+                ${fmt(totalCount)}
+              </span>
+              <span style="color:#64748b; font-size:15px; font-weight:800;">筆</span>
+            </div>
+          </div>
+          <div style="width:48px; height:48px; background:#eff6ff; border:2px solid #bfdbfe; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:0 4px 10px rgba(59,130,246,0.15); transform:rotate(10deg);">🚀</div>
         </div>
-        <div style="margin-top:16px; border-top:1px dashed rgba(255,255,255,0.15); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
-          <span style="color:#94a3b8; font-size:12px; font-weight:600;">這趟旅程已陪伴您</span>
-          <span style="color:#e2e8f0; font-size:14px; font-weight:800; font-family:var(--mono);">
-            ${daysAcc} <span style="font-size:11px; color:#64748b;">天</span>
+        
+        <div style="background: rgba(255,255,255,0.6); border: 1.5px solid #ffffff; padding: 12px 14px; border-radius: 16px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:8px; height:8px; background:#10b981; border-radius:50%; box-shadow:0 0 0 3px #dcfce7;"></div>
+            <span style="color:#475569; font-size:13px; font-weight:750;">這趟旅程已陪伴你</span>
+          </div>
+          <span style="color:#0f172a; font-size:16px; font-weight:900; font-family:var(--mono);">
+            ${daysAcc} <span style="font-size:12px; color:#64748b; font-weight:700;">天</span>
           </span>
         </div>
       </div>
@@ -6791,14 +6822,13 @@ window.openRecordStats = function() {
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
     `;
     
-    // 找出最高單數作為進度條 100% 基準
     const maxPlatCount = sortedPlats[0][1];
 
     sortedPlats.forEach(([pid, count]) => {
       const pInfo = getPlatform(pid);
       const color = pInfo.color || '#94a3b8';
       const pct = Math.round((count / maxPlatCount) * 100);
-      const totalPct = Math.round((count / totalCount) * 100); // 佔整體百分比
+      const totalPct = Math.round((count / totalCount) * 100);
 
       html += `
         <div style="background:${color}10; border: 1.5px solid ${color}30; border-radius: 16px; padding: 14px; position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
@@ -6809,7 +6839,6 @@ window.openRecordStats = function() {
           <div style="font-family:var(--mono); font-size:24px; font-weight:900; color:${color}; margin-bottom:10px; line-height:1;">
             ${fmt(count)}
           </div>
-          <!-- 進度條 -->
           <div style="height:6px; background:${color}20; border-radius:4px; overflow:hidden;">
             <div style="height:100%; width:${pct}%; background:${color}; border-radius:4px;"></div>
           </div>
@@ -6829,7 +6858,6 @@ window.openRecordStats = function() {
           <span style="font-size:18px;">⏳</span> 歷年時光軌跡
         </div>
         <div style="position: relative; padding-left: 20px; margin-left: 8px;">
-          <!-- 貫穿時間軸背景線 -->
           <div style="position: absolute; top: 10px; bottom: 20px; left: 0; width: 3px; background: linear-gradient(to bottom, #3b82f6, #8b5cf6, #ec4899); border-radius: 2px;"></div>
     `;
 
@@ -6849,15 +6877,13 @@ window.openRecordStats = function() {
 
       html += `
         <div style="position: relative; margin-bottom: 16px; background: #ffffff; border-radius: 16px; padding: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1.5px solid #e2e8f0;">
-          <!-- 時間軸圓點 -->
           <div style="position: absolute; left: -26.5px; top: 18px; width: 16px; height: 16px; border-radius: 50%; background: ${dotColor}; border: 4px solid ${dotBorder}; box-shadow: 0 0 0 1px #e2e8f0;"></div>
           
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="font-size:18px; font-weight:900; color:var(--t1);">${y} <span style="font-size:12px; font-weight:700; color:#64748b;">年</span></div>
-            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-cyan);">${fmt(yearStats[y].total)} <span style="font-size:11px; color:#94a3b8;">筆</span></div>
+            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].total)} <span style="font-size:11px; color: #94a3b8;">筆</span></div>
           </div>
           
-          <!-- 平台彩色微膠囊 -->
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             ${tagsHtml}
           </div>
@@ -6890,7 +6916,7 @@ window.openAdminUserList = async function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background: rgba(0, 204, 255, 0.34); color: #000000; border:1px solid #0044ff; padding:6px 14px; border-radius:16px; font-size:16px; font-weight:850; cursor:pointer;margin:16px;">返回</button>
+    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7064,7 +7090,7 @@ window.openAdminCreateUser = function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAdminUserList()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回清單</button>
+    <button onclick="animateReturnClose(this, () => openAdminUserList())" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff; border:1px solid #047857; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7136,7 +7162,7 @@ window.openAdminBannedList = async function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
+    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7235,7 +7261,7 @@ function openAdminSystemSettings() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
+    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -7316,7 +7342,7 @@ function openAdminGasPriceEdit() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
+    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   // 預設油價
@@ -7398,7 +7424,7 @@ function openAnnouncementEdit() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
+    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
   
   let ann = { active: false, text: '' };
@@ -7850,7 +7876,7 @@ window.openAddReward = function() {
   
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openRewardSettings()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回清單</button>
+    <button onclick="animateReturnClose(this, () => openRewardSettings())" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#ffffff; border:1px solid #6d28d9; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(139,92,246,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
@@ -7865,7 +7891,7 @@ window.openEditReward = function(id) {
   
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openRewardSettings()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回清單</button>
+    <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   // 深拷貝一份階距陣列，避免直接修改到原始資料
@@ -8553,7 +8579,7 @@ window.showForcePasswordChange = function(isForced = false) {
   } else {
     // 主動修改狀態，右上角加入返回按鈕
     document.getElementById('sub-top-right').innerHTML = `
-      <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+      <button onclick="animateReturnClose(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
     `;
     document.getElementById('sub-page').dataset.forced = 'false';
   }
