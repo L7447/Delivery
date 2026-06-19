@@ -8397,7 +8397,7 @@ function openPrivacyPolicy(fromRegister = false) {
       <!-- 👇 2. 禁止條款內容框 (左上角不再有圓角，與上方標題無縫接合) -->
       <div style="background:rgba(239, 68, 68, 0.9); border:2px solid #be2323; border-radius:16px; padding:16px 14px; margin-bottom:40px;">
         <div style="color:#ffffff; font-size:16px; font-weight:800; line-height:1.6; letter-spacing:0.5px;">
-          禁止使用此 APP 資訊，在臉書社團或社群平台上，炫耀多厲害、多會跑單、薪水有多高！
+          禁止使用此 APP 資訊，在【 所有 】社群平台上，炫耀或分享跑外送數據有多強、均幾多厲害、薪水賺得有多高！
         </div>
       </div>
 
