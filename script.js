@@ -721,17 +721,33 @@ function closeOverlay(id) {
 }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
-/* 退出按鈕點擊動畫：換圖、延遲 1.5 秒後執行動作 */
-function animateClose(btn, action) {
+/* 退出按鈕點擊動畫：抽屜式向右慢慢抽離 (附帶停留感) */
+window.animateClose = function(btn, action) {
   const img = btn.querySelector('img');
-  if (!img) { action(); return; }
-  img.src = 'images/close2.png';
+  if (img) img.src = 'images/close2.png';
   btn.style.pointerEvents = 'none'; // 鎖定按鈕防止連點
+
+  // 自動往上尋找最外層的頁面或彈窗容器
+  const targetWrap = btn.closest('.overlay-page, #detail-overlay, #full-calendar-overlay, .page');
+  
+  // 套用抽屜向右滑出特效
+  if (targetWrap) {
+    targetWrap.classList.add('drawer-slide-out');
+  }
+
+  // 設定 600ms 延遲，配合 CSS 動畫播完後再執行關閉
   setTimeout(() => {
-    action();
-    img.src = 'images/close1.png'; // 恢復原狀以供下次開啟
+    action(); // 執行原本的關閉指令
+    
+    // 動作執行完畢後，移除動畫 Class，確保下次開啟時畫面不會躲在右邊
+    if (targetWrap) {
+      targetWrap.classList.remove('drawer-slide-out');
+    }
+    
+    // 恢復原狀以供下次開啟
+    if (img) img.src = 'images/close1.png';
     btn.style.pointerEvents = 'auto';
-  }, 400);
+  }, 850);
 }
 
 /* 專屬：向右翻頁並停留 2 秒的關閉動畫 */
@@ -6088,7 +6104,7 @@ function renderSettings() {
   </div></div>
   
   <!-- 將關於我們往上提，縮小字體讓比例更精緻 -->
-  <div style="margin-top:0px; padding-bottom:8px; text-align:center;">
+  <div style="margin:20px 0 150px 0; padding-bottom:8px; text-align:center;">
       <span onclick="openOverlay('about-page')" style="font-size:15px; color:var(--text-blue); font-weight:800; cursor:pointer; padding:6px 16px; display:inline-block;">關於我們</span>
   </div>`;
   
@@ -6396,7 +6412,7 @@ function renderAuthContent() {
             ${privacyAgreed ? '<span style="color:#fff; font-size:12px; font-weight:900;">✓</span>' : ''}
           </div>
           <span id="privacy-chk-text" style="font-size:12px; font-weight:600; color:${privacyAgreed ? '#0f172a' : '#64748b'}; line-height:1.5;">
-            建立帳號即代表您同意我們的 <span style="color:#2563eb; font-weight:800;">服務條款與隱私權政策</span>
+            建立帳號即代表您同意我們的 <span style="color:#2563eb; font-weight:800;">「禁止條款」與「隱私權政策」</span>
           </span>
         </div>
 
@@ -6495,7 +6511,7 @@ async function requestLogin() {
   }
 
   if (authMode === 'register' && !privacyAgreed) {
-    toast('⚠️ 請點擊上方並閱讀同意隱私權政策');
+    toast('⚠️ 請點擊上方，並閱讀同意「禁止條款」與「隱私權政策」');
     return;
   }
 
@@ -6687,88 +6703,169 @@ async function openAccountStats() {
   </div>`;
 }
 
-/* ══ 新增：個人記錄統計 (點擊總記錄數開啟) ══ */
+/* ══ 新增：個人記錄統計 (三種不同風格混合設計) ══ */
 window.openRecordStats = function() {
   document.getElementById('sub-title').textContent = '個人記錄統計';
-
-  // 👇 強制隱藏左上角的 X 按鈕
+  
+  // 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-  
-  // 右上角返回按鈕 (回到帳號資訊)
+
+  // 右上角返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer;">返回</button>
+    <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
   `;
 
   // 1. 過濾掉純打卡紀錄
   const validRecs = S.records.filter(r => !r.isPunchOnly);
+  const totalCount = validRecs.length;
+  
+  // 計算開始使用天數
+  let daysAcc = 0;
+  if (totalCount > 0) {
+    const dates = validRecs.map(r => new Date(r.date)).sort((a, b) => a - b);
+    const firstDate = dates[0];
+    const today = new Date();
+    daysAcc = Math.ceil((today - firstDate) / 86400000) || 1;
+  }
   
   // 2. 準備統計資料結構
-  const platCounts = {}; // 總平台計數
-  const yearStats = {};  // 每年計數與其平台細分
+  const platCounts = {}; 
+  const yearStats = {};  
 
   validRecs.forEach(r => {
     const pId = r.platformId || 'unknown';
     const y = (r.date && r.date.substring(0,4)) || '未知';
     
-    // 總計累加
     platCounts[pId] = (platCounts[pId] || 0) + 1;
     
-    // 歷年累加
     if (!yearStats[y]) yearStats[y] = { total: 0, plats: {} };
     yearStats[y].total++;
     yearStats[y].plats[pId] = (yearStats[y].plats[pId] || 0) + 1;
   });
 
   const sortedYears = Object.keys(yearStats).sort((a,b) => b.localeCompare(a));
+  const sortedPlats = Object.entries(platCounts).sort((a,b) => b[1] - a[1]);
 
-  // 輔助函式：渲染平台清單 (依照數量由大到小排序)
-  const renderPlatRows = (platsObj) => {
-    const sortedPlats = Object.entries(platsObj).sort((a,b) => b[1] - a[1]);
-    if (sortedPlats.length === 0) return '';
-    
-    return sortedPlats.map(([pid, count], idx) => {
-      const pInfo = getPlatform(pid);
-      const isLast = idx === sortedPlats.length - 1;
-      return `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:${isLast ? 'none' : '1px dashed var(--border)'};">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="width:12px; height:12px; border-radius:4px; background:${pInfo.color}; box-shadow:0 2px 4px ${pInfo.color}40;"></span>
-            <span style="font-size:14px; font-weight:800; color:var(--t1);">${safeText(pInfo.name)}</span>
-          </div>
-          <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--text-blue);">${fmt(count)} <span style="font-size:11px; color:var(--t3);">筆</span></span>
-        </div>
-      `;
-    }).join('');
-  };
+  let html = `<div style="padding:16px; padding-bottom:40px; display:flex; flex-direction:column; gap:20px;">`;
 
-  let html = `<div style="padding:16px;">`;
-
-  // 生涯總計卡片
+  // ==========================================
+  // 【風格 1】深色科技星空 (生涯總覽)
+  // ==========================================
   html += `
-    <div class="card" style="box-shadow:0 8px 20px rgba(0,0,0,0.03); border:2px solid var(--border); padding-bottom:8px;">
-      <div style="text-align:center; margin-bottom:12px; padding-bottom:12px; border-bottom:2px solid var(--border);">
-        <div style="font-size:13px; color:var(--t3); font-weight:800; margin-bottom:6px; letter-spacing:1px;">🏆 生涯累積總記錄數</div>
-        <div style="font-family:var(--mono); font-size:36px; font-weight:900; color:var(--acc); line-height:1;">${fmt(validRecs.length)} <span style="font-size:16px; color:var(--t2);">筆</span></div>
+    <div style="background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 100%); border-radius: 24px; padding: 24px 20px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(30,27,75,0.3); border: 1px solid rgba(255,255,255,0.1);">
+      <!-- 裝飾光暈 -->
+      <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: #8b5cf6; filter: blur(50px); opacity: 0.6;"></div>
+      <div style="position: absolute; bottom: -40px; left: -20px; width: 100px; height: 100px; background: #3b82f6; filter: blur(60px); opacity: 0.4;"></div>
+      
+      <div style="position: relative; z-index: 1;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <span style="background:rgba(255,255,255,0.15); backdrop-filter:blur(4px); padding:4px 8px; border-radius:8px; font-size:12px; color:#e2e8f0; font-weight:800; border:1px solid rgba(255,255,255,0.1);">🏆 生涯總覽</span>
+        </div>
+        <div style="font-size:13px; color:#94a3b8; font-weight:700; margin-bottom:4px;">累計完成記錄</div>
+        <div style="display:flex; align-items:baseline; gap:8px;">
+          <span style="font-family:var(--mono); font-size:48px; font-weight:900; background:linear-gradient(to right, #38bdf8, #818cf8, #c084fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1;">
+            ${fmt(totalCount)}
+          </span>
+          <span style="color:#64748b; font-size:16px; font-weight:800;">筆</span>
+        </div>
+        <div style="margin-top:16px; border-top:1px dashed rgba(255,255,255,0.15); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#94a3b8; font-size:12px; font-weight:600;">這趟旅程已陪伴您</span>
+          <span style="color:#e2e8f0; font-size:14px; font-weight:800; font-family:var(--mono);">
+            ${daysAcc} <span style="font-size:11px; color:#64748b;">天</span>
+          </span>
+        </div>
       </div>
-      ${renderPlatRows(platCounts)}
     </div>
   `;
 
-  // 歷年分佈卡片
-  if (sortedYears.length > 0) {
-    html += `<h3 style="font-size:13px; color:var(--hint-color); margin:20px 0 12px 0; font-weight:800; padding-left:4px;">📅 歷年記錄分佈</h3>`;
-    sortedYears.forEach(y => {
+  // ==========================================
+  // 【風格 2】馬卡龍 Bento Grid (平台戰力分析)
+  // ==========================================
+  if (sortedPlats.length > 0) {
+    html += `
+      <div>
+        <div style="font-size:14px; color:var(--t1); font-weight:900; margin-bottom:12px; padding-left:4px; display:flex; align-items:center; gap:6px;">
+          <span style="font-size:18px;">📊</span> 平台戰力分析
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+    `;
+    
+    // 找出最高單數作為進度條 100% 基準
+    const maxPlatCount = sortedPlats[0][1];
+
+    sortedPlats.forEach(([pid, count]) => {
+      const pInfo = getPlatform(pid);
+      const color = pInfo.color || '#94a3b8';
+      const pct = Math.round((count / maxPlatCount) * 100);
+      const totalPct = Math.round((count / totalCount) * 100); // 佔整體百分比
+
       html += `
-        <div class="card" style="margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:2px solid var(--border); padding-bottom:10px;">
-            <span style="font-size:16px; font-weight:900; color:var(--t1); background:var(--sf2); padding:4px 10px; border-radius:8px;">${y} 年</span>
-            <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:var(--text-cyan);">${fmt(yearStats[y].total)} <span style="font-size:12px; color:var(--t3);">筆</span></span>
+        <div style="background:${color}10; border: 1.5px solid ${color}30; border-radius: 16px; padding: 14px; position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <span style="font-size:13px; font-weight:900; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px;">${safeText(pInfo.name)}</span>
+            <span style="background:${color}20; color:${color}; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; font-family:var(--mono);">${totalPct}%</span>
           </div>
-          ${renderPlatRows(yearStats[y].plats)}
+          <div style="font-family:var(--mono); font-size:24px; font-weight:900; color:${color}; margin-bottom:10px; line-height:1;">
+            ${fmt(count)}
+          </div>
+          <!-- 進度條 -->
+          <div style="height:6px; background:${color}20; border-radius:4px; overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:${color}; border-radius:4px;"></div>
+          </div>
         </div>
       `;
     });
+    html += `</div></div>`;
+  }
+
+  // ==========================================
+  // 【風格 3】極簡彩色時間軸 (歷年時光軌跡)
+  // ==========================================
+  if (sortedYears.length > 0) {
+    html += `
+      <div>
+        <div style="font-size:14px; color:var(--t1); font-weight:900; margin-bottom:12px; padding-left:4px; display:flex; align-items:center; gap:6px;">
+          <span style="font-size:18px;">⏳</span> 歷年時光軌跡
+        </div>
+        <div style="position: relative; padding-left: 20px; margin-left: 8px;">
+          <!-- 貫穿時間軸背景線 -->
+          <div style="position: absolute; top: 10px; bottom: 20px; left: 0; width: 3px; background: linear-gradient(to bottom, #3b82f6, #8b5cf6, #ec4899); border-radius: 2px;"></div>
+    `;
+
+    sortedYears.forEach((y, idx) => {
+      const isLatest = idx === 0;
+      const dotColor = isLatest ? '#3b82f6' : '#cbd5e1';
+      const dotBorder = isLatest ? '#eff6ff' : '#f8fafc';
+      
+      const yearPlats = Object.entries(yearStats[y].plats).sort((a,b) => b[1] - a[1]);
+      
+      const tagsHtml = yearPlats.map(([pid, count]) => {
+        const pInfo = getPlatform(pid);
+        return `<div style="background:${pInfo.color}15; color:${pInfo.color}; border:1px solid ${pInfo.color}30; font-size:11px; font-weight:800; padding:3px 8px; border-radius:8px; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+          ${safeText(pInfo.name)} <span style="background:${pInfo.color}; color:#fff; padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:10px;">${count}</span>
+        </div>`;
+      }).join('');
+
+      html += `
+        <div style="position: relative; margin-bottom: 16px; background: #ffffff; border-radius: 16px; padding: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1.5px solid #e2e8f0;">
+          <!-- 時間軸圓點 -->
+          <div style="position: absolute; left: -26.5px; top: 18px; width: 16px; height: 16px; border-radius: 50%; background: ${dotColor}; border: 4px solid ${dotBorder}; box-shadow: 0 0 0 1px #e2e8f0;"></div>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:18px; font-weight:900; color:var(--t1);">${y} <span style="font-size:12px; font-weight:700; color:#64748b;">年</span></div>
+            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-cyan);">${fmt(yearStats[y].total)} <span style="font-size:11px; color:#94a3b8;">筆</span></div>
+          </div>
+          
+          <!-- 平台彩色微膠囊 -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${tagsHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
   }
 
   html += `</div>`;
@@ -6793,7 +6890,7 @@ window.openAdminUserList = async function() {
 
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAccountStats()" style="background: rgba(29, 79, 216, 0.15); color: #3b82f6; border:1px solid #ff7171; padding:6px 14px; border-radius:16px; font-size:15px; font-weight:900; cursor:pointer;">返回</button>
+    <button onclick="openAccountStats()" style="background: rgba(0, 204, 255, 0.34); color: #000000; border:1px solid #0044ff; padding:6px 14px; border-radius:16px; font-size:16px; font-weight:850; cursor:pointer;margin:16px;">返回</button>
   `;
   
   document.getElementById('sub-body').innerHTML = `
@@ -8223,28 +8320,7 @@ function fallbackCopyTextToClipboard(text) {
   document.body.removeChild(textArea);
 }
 
-/* ══ 關於我們：彈窗內容渲染函式 ══ */
-function openSpecialThanks() {
-  document.getElementById('sub-title').textContent = '特別感謝';
-  document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px 8px; font-size:14px; color:var(--t1); line-height:1.6;">
-      <p style="margin-bottom:16px; font-weight:700;">💡 特別感謝【 心酸熊貓人 】提供「 外送薪資記錄 」的想法。</p>
-      <hr style="border-color:2px; border-color: #000000;"></hr></br>
-      <p style="margin-bottom:16px; font-weight:500;">之前看過運轉手帳本APP，那時就在想「外送員要是也有這種APP就好了」，只是當時我在忙，就沒放在心上；</p>
-      <p style="margin-bottom:16px; font-weight:500;">這時剛好遇到【 心酸熊貓人 】提出做「 外送薪資記錄 」的想法，因此也想做看看；開發過程不斷地有新想法，一直加入新功能，修改了數不清次，終於把『 外送記錄與分析APP 』做出來！</p>
-      <hr style="border-color:2px; border-color: #000000;"></hr></br>
-      <p style="margin-bottom:16px; font-weight:800;">真的非常感謝【 心酸熊貓人 】的這個想法，沒有這個想法，就沒有這個APP！🙏</p>
-      <a href="https://www.facebook.com/share/1LjsAm2Afv/" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; background: #DB2A75; color:var(--schedule-bg); text-decoration:none; border-radius:18px; font-weight:800; font-size:18px;">
-        f  按讚 心酸熊貓人 🐼
-      </a>
-    </div>
-  `;
-  // 動態提高 sub-page 的 z-index，使其能完美覆蓋在 about-page 之上
-  document.getElementById('sub-page').style.zIndex = '1100';
-  openOverlay('sub-page');
-}
-
-/* ══ 替換：隱私權政策彈窗 (全螢幕獨立視窗與返回按鈕) ══ */
+/* ══ 替換：隱私權政策彈窗 (加入禁止條款與全螢幕獨立視窗) ══ */
 function openPrivacyPolicy(fromRegister = false) {
   let btnHtml = '';
   if (fromRegister) {
@@ -8252,20 +8328,40 @@ function openPrivacyPolicy(fromRegister = false) {
   }
 
   document.getElementById('privacy-body').innerHTML = `
-    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:5px 10px; background: hsl(0, 0%, 100%); border-radius:12px; margin-top:8px;">
+    <div style="font-size:13px; color:var(--t1); line-height:1.8; padding:15px 12px; background: hsl(0, 0%, 100%); border-radius:12px; margin:8px;">
+      
+      <!-- 👇 1. 新增「禁止條款」獨立小標題 -->
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; padding-bottom:3px;">
+        <div style="width:7px; height:31px; background:#ff0000; border-radius:4px;"></div>
+        <span style="background:rgba(255, 0, 0, 0.2);font-size:18px;font-weight:800;color:#000;letter-spacing:1px;padding:0px 14px;border-radius:8px;margin-left:-15.5px;">&nbsp;禁止條款</span>
+      </div>
+      
+      <!-- 👇 2. 禁止條款內容框 (左上角不再有圓角，與上方標題無縫接合) -->
+      <div style="background:rgba(239, 68, 68, 0.9); border:2px solid #be2323; border-radius:16px; padding:16px 14px; margin-bottom:40px;">
+        <div style="color:#ffffff; font-size:16px; font-weight:800; line-height:1.6; letter-spacing:0.5px;">
+          禁止使用此 APP 資訊，在臉書社團或社群平台上，炫耀多厲害、多會跑單、薪水有多高！
+        </div>
+      </div>
+
+      <!-- 👇 3. 新增「隱私權政策」獨立小標題 -->
+      <div style="display:flex; align-items:center; gap:8px; margin:5px 0; border-top:3.5px dashed #ff2d2d; padding-top:10px;">
+        <div style="width:7px; height:31px; background:#2563eb; border-radius:4px;"></div>
+        <span style="background:rgba(37,99,235,0.2);font-size:18px;font-weight:800;color:#000;letter-spacing:1px;padding:0px 14px;border-radius:8px;margin-left:-15.5px;">&nbsp;隱私權政策</span>
+      </div>
       
       <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">1. 我們使用到的資料</div>
-      <div style="background: #ffffff; padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
-        • 您的【電子郵件】，僅作為「註冊的帳號」與「收驗證碼」使用。
+      <div style="background: #ffffff; padding:0px 0px 5px 12px; border-radius:12px; margin-bottom:8px;">
+        • 您的【 電子郵件信箱 】。<br>
       </div>
 
       <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">2. 我們如何使用資料</div>
-      <div style="background: #ffffff; padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:8px;">
-        • 僅用於統計「總使用人數」，不做任何商業或其它用途。
+      <div style="background: #ffffff; padding:0px 0px 5px 12px; border-radius:12px; margin-bottom:8px;">
+        • 作為「註冊帳號」與「登入驗證」使用。<br>
+        • 用於統計「總使用人數」，不做任何商業或其它用途。
       </div>
 
       <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">3. 資料及使用安全</div>
-      <div style="background: rgba(140, 255, 167, 0.3); padding:10px 6px 10px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="background: rgba(140, 255, 167, 0.3); padding:10px 6px 10px 6px; border-radius:12px; border:1.5px solid rgb(54, 139, 27); margin-bottom:8px;">
         
         <div style="display:flex; align-items:center; gap:6px; color: #c300ff; font-weight:700; font-size:14px; margin-bottom:6px;">
           <span>🛡️</span> 基礎防禦與本機隱私
@@ -8288,9 +8384,10 @@ function openPrivacyPolicy(fromRegister = false) {
       </div>
 
       <div style="color:var(--text-blue); font-size:16px; font-weight:700; margin-bottom:3px;">4. 您的權利與聯絡方式</div>
-      <div style="background: #ffffff; padding:3px 6px 5px 6px; border-radius:12px; margin-bottom:16px;">
+      <div style="background: #ffffff; padding:0px 0px 5px 12px; border-radius:12px; margin-bottom:16px;">
         • 您可隨時聯繫我們，要求永久刪除您的註冊帳號。<br>
-        • 如有任何問題，請透過【設定】→「關於我們」→『聯絡我們』與我們聯繫。
+        • 如有任何問題，請透過【設定】↓<br>
+        &nbsp;&nbsp;&nbsp;→「關於我們」→『聯絡我們』，與我們聯繫。
       </div>
 
       ${btnHtml}
@@ -8443,23 +8540,21 @@ function applyBackground() {
 window.showForcePasswordChange = function(isForced = false) {
   document.getElementById('sub-title').textContent = isForced ? '⚠️ 安全要求：請立即更改密碼' : '安全設定：更改密碼';
   
-  const topBarEl = document.querySelector('.overlay-page .top-bar');
-  const closeBtnEl = topBarEl ? topBarEl.querySelector('.bar-btn') : null;
+  // 👇 不論是否強制，統一隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
   
-  // 👇 真正的強制鎖定機制
+  // 👇 根據是否強制，決定右上角要不要放「返回」按鈕
   if (isForced) {
-    document.getElementById('sub-top-right').innerHTML = '';
-    // 隱藏左上角的 X 按鈕
-    if (closeBtnEl) closeBtnEl.style.display = 'none';
-    // 阻擋點擊背景關閉
-    document.getElementById('sub-page').style.pointerEvents = 'auto'; // 確保本體可點
-    document.getElementById('sub-page').dataset.forced = 'true'; // 給個標記
-    
-    // 提示強制狀態
+    document.getElementById('sub-top-right').innerHTML = ''; // 強制狀態，不給退路
+    document.getElementById('sub-page').style.pointerEvents = 'auto'; 
+    document.getElementById('sub-page').dataset.forced = 'true'; 
     toast('⚠️ 您的密碼強度過低或為初始密碼，請立即更改！', 5000);
   } else {
-    document.getElementById('sub-top-right').innerHTML = '';
-    if (closeBtnEl) closeBtnEl.style.display = ''; // 恢復顯示
+    // 主動修改狀態，右上角加入返回按鈕
+    document.getElementById('sub-top-right').innerHTML = `
+      <button onclick="openAccountStats()" style="background:#eff6ff; color:#1d4ed8; border:2px solid #3b82f6; padding:6px 14px; border-radius:16px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.15);">返回</button>
+    `;
     document.getElementById('sub-page').dataset.forced = 'false';
   }
 
