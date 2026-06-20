@@ -679,14 +679,14 @@
 
   <footer>
     <div style="margin-bottom: 8px;">外送記錄與分析 APP © 2026</div>
-    <div>由 黒崎 為外送員專屬開發 🛵</div>
+    <div style="margin-bottom: 30px;">由 黒崎 為外送員專屬開發 🛵</div>
   </footer>
 
   <script>
     // --- 定義展示資料結構 ---
     const appData = {
       'home': { name: '今日概況', color: 'var(--c-blue-text)', sections: [ { title: '1.打卡系統', steps: [ { desc: '1-1. 同時多開平台，計算「總工時」。', img: 'intro/int1.png' }, { desc: '1-2. 打卡後，顯示「綠色轉圈」執行中。', img: 'intro/int2.png' }, { desc: '1-3. 打卡後，馬上加入打卡記錄。', img: 'intro/int3.png' }, { desc: '1-4. 上線時間持續累積，即使關閉APP也不中斷。', img: 'intro/int4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/int5.png' } ] }, { title: '2.平台日程表', steps: [ { desc: '結算與發薪提醒<br>（今天的外框，會顯示跑馬燈繞圈）', img: 'intro/int6-1.png' } ] }, { title: '3.目標進度', steps: [ { desc: '目標進度追蹤', img: 'intro/int7.png' } ] }, { title: '4.獎勵進度', steps: [ { desc: '4-1. 目前達標進度。', img: 'intro/int8.png' }, { desc: '4-2. 最高階獎勵完成。', img: 'intro/int9.png' }, { desc: '4-3. 「即將到來」獎勵預覽。', img: 'intro/int10.png' } ] } ] },
-      'history': { name: '查看紀錄', color: 'var(--c-green-text)', sections: [ { title: '1.「日歷查閱、搜尋」記錄列表', steps: [ { desc: '1-1. 「現金小費」記錄。', img: 'intro/int1.png' }, { desc: '1-2. 打卡後，顯示「綠色轉圈」執行中。', img: 'intro/int2.png' }, { desc: '1-3. 全螢幕日曆。', img: 'intro/int3.png' }, { desc: '1-4. 上線時間持續累積，即使關閉APP也不中斷。', img: 'intro/int4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/int5.png' } ] }, { title: '週～年記錄表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist2.png' }] } ] },
+      'history': { name: '查看紀錄', color: 'var(--c-green-text)', sections: [ { title: '1.「日曆查閱、搜尋」記錄列表', steps: [ { desc: '1-1. 「現金小費」記錄。', img: 'intro/int11.png' }, { desc: '1-2. 打卡後，顯示「綠色轉圈」執行中。', img: 'intro/int2.png' }, { desc: '1-3. 全螢幕日曆。', img: 'intro/int3.png' }, { desc: '1-4. 上線時間持續累積，即使關閉APP也不中斷。', img: 'intro/int4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/int5.png' } ] }, { title: '週～年記錄表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist2.png' }] } ] },
       'analysis': { name: '收入分析', color: 'var(--c-yellow-text)', sections: [ { title: '各種分析圖表', steps: [{ desc: '收入結構與佔比圓餅圖', img: 'intro/ana1.png' }, { desc: '歷史趨勢柱狀圖', img: 'intro/ana2.png' }] }, { title: 'TOP 5 排行榜', steps: [{ desc: '單月最佳收入排行', img: 'intro/ana3.png' }] } ] },
       'vehicle': { name: '車輛管理', color: 'var(--c-purple-text)', sections: [ { title: '車輛燃料記錄', steps: [{ desc: '油耗計算與油資統計', img: 'intro/veh1.png' }] }, { title: '保養花費記錄', steps: [{ desc: '保養時間軸與里程追蹤', img: 'intro/veh2.png' }] } ] }
     };
