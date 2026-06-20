@@ -862,8 +862,8 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
   }
   if (mileage > 0) {
     tagsParts.push(`
-      <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${fmt(mileage)}</span>
+      <div style="background:#e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #b23dff;">${fmt(mileage)}</span>
         <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
       </div>
     `);
@@ -1816,8 +1816,8 @@ function buildRecItem(r) {
   }
   if (r.mileage > 0) {
     tagsParts.push(`
-      <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${r.mileage}</span>
+      <div style="background:#e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #b23dff;">${r.mileage}</span>
         <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
       </div>
     `);
@@ -2414,10 +2414,68 @@ function openDetailOverlay(id) {
 }
 async function deleteRecord(id) { closeDetailOverlay(); const ok = await customConfirm('確定要<span style="color:var(--red);"> 刪除 </span>這筆記錄嗎？<br><span style="color:var(--text-blue);font-weight:700;">此動作無法復原。</span>'); if (!ok) return; S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除'); if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory(); }
 
-/* ══ 替換：搜尋功能 (保留快速標籤點擊與過濾) ══ */
+/* ══ 替換：搜尋功能 (保留快速標籤點擊與過濾，新增動態年份區間) ══ */
 function openSearch() { 
   openOverlay('search-page'); 
+
+  // 動態生成「年份快速選擇」標籤 (自動抓取記錄中的所有年份)
+  let yearContainer = document.getElementById('dynamic-year-tags');
+  if (!yearContainer) {
+    // 安全地將年份按鈕區塊插入到搜尋結果列表的「正上方」
+    const resultsDiv = document.getElementById('search-results');
+    if (resultsDiv) {
+      yearContainer = document.createElement('div');
+      yearContainer.id = 'dynamic-year-tags';
+      yearContainer.innerHTML = `
+        <div style="font-size:12px; color:var(--t3); font-weight:800; margin-bottom:6px; margin-top:4px;">📅 快速選擇年份區間</div>
+        <style>.hide-scroll-bar::-webkit-scrollbar { display: none; }</style>
+        <div id="year-btn-wrap" class="hide-scroll-bar" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;"></div>
+      `;
+      resultsDiv.parentNode.insertBefore(yearContainer, resultsDiv);
+    }
+  }
+
+  // 抓取記錄中含有的所有年份並渲染按鈕
+  if (yearContainer) {
+    let years = new Set();
+    S.records.forEach(r => { if(r.date) years.add(r.date.substring(0,4)); });
+    let yearArr = Array.from(years).sort((a,b) => b.localeCompare(a)); // 由大到小排列
+
+    const wrap = document.getElementById('year-btn-wrap');
+    if (wrap) {
+      if (yearArr.length > 0) {
+        wrap.innerHTML = yearArr.map(y =>
+          `<div onclick="setSearchYear('${y}', this)" class="year-quick-btn" style="flex-shrink:0; padding:6px 16px; background:#f1f5f9; color:#475569; border:1.5px solid #cbd5e1; border-radius:12px; font-size:14px; font-family:var(--mono); font-weight:900; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.02); transition:0.2s;">${y} 年</div>`
+        ).join('');
+      } else {
+        wrap.innerHTML = '';
+      }
+    }
+  }
+
   setTimeout(() => { document.getElementById('search-kw').focus(); }, 350); 
+}
+
+// 👇 點擊年份標籤時：自動填入全年的起迄日期並觸發搜尋
+window.setSearchYear = function(year, el) {
+  // 視覺反饋：將所有按鈕恢復預設，並將當前點擊的按鈕亮起 (藍色)
+  document.querySelectorAll('.year-quick-btn').forEach(btn => {
+    btn.style.background = '#f1f5f9';
+    btn.style.color = '#475569';
+    btn.style.borderColor = '#cbd5e1';
+  });
+  if (el) {
+    el.style.background = '#eff6ff';
+    el.style.color = '#2563eb';
+    el.style.borderColor = '#93c5fd';
+  }
+
+  // 自動填入該年度的 1/1 到 12/31
+  document.getElementById('search-from').value = `${year}-01-01`;
+  document.getElementById('search-to').value = `${year}-12-31`;
+  
+  // 觸發搜尋
+  doSearch();
 }
 
 // 點擊標籤時：自動填入輸入框並觸發搜尋
@@ -2433,7 +2491,7 @@ function doSearch() {
   const el = document.getElementById('search-results');
   const countEl = document.getElementById('search-count'); // 用來顯示數量的標籤
   
-  // 👇 防呆：如果完全沒有輸入條件，就清空結果並隱藏數量
+  // 防呆：如果完全沒有輸入條件，就清空結果並隱藏數量
   if (!kw && !from && !to) {
     el.innerHTML = `<div class="empty-tip">請輸入條件開始搜尋</div>`;
     if (countEl) countEl.style.display = 'none';
@@ -2455,7 +2513,7 @@ function doSearch() {
            String(r.orders||'').includes(kw); 
   }).sort((a,b)=>b.date.localeCompare(a.date));
   
-  // 👇 更新搜尋數量顯示
+  // 更新搜尋數量顯示
   if (countEl) {
     countEl.style.display = 'inline-flex';
     countEl.innerHTML = `找到 <span style="margin:0 4px; font-size:18px; font-family:var(--mono); color: #000000; align-items:center">${recs.length}</span> 筆`;
@@ -2476,6 +2534,13 @@ function resetSearch() {
   document.getElementById('search-results').innerHTML = `<div class="empty-tip">請輸入條件開始搜尋</div>`;
   const countEl = document.getElementById('search-count');
   if (countEl) countEl.style.display = 'none'; // 清除條件時隱藏數量
+
+  // 清除年份按鈕的亮起狀態
+  document.querySelectorAll('.year-quick-btn').forEach(btn => {
+    btn.style.background = '#f1f5f9';
+    btn.style.color = '#475569';
+    btn.style.borderColor = '#cbd5e1';
+  });
 }
 /* ══ 3. 查看記錄 結束 ════════════════════════════════════ */
 
@@ -3166,8 +3231,8 @@ function renderRptOverview() {
   }
   if (mileage > 0) {
     tagsParts.push(`
-      <div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${fmt(mileage)}</span>
+      <div style="background:#e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #b23dff;">${fmt(mileage)}</span>
         <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
       </div>
     `);
@@ -3444,7 +3509,7 @@ function renderRptYearOverview() {
     tagsParts.push(`<div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span><span style="font-size:10px; font-weight:600; color:#f97316;">單</span></div>`);
   }
   if (mileage > 0) {
-    tagsParts.push(`<div style="background:#f0fdf4; padding:2px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #22c55e;">${fmt(mileage)}</span><span style="font-size:10px; font-weight:800; color: #000000;">km</span></div>`);
+    tagsParts.push(`<div style="background: #e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #b23dff;">${fmt(mileage)}</span><span style="font-size:10px; font-weight:800; color: #000000;">km</span></div>`);
   }
   if (hours > 0) {
     tagsParts.push(`<div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;"><span style="font-size:11px;">⏱️</span><span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(hours)}</span></div>`);
@@ -4934,7 +4999,7 @@ function renderVehicleContent() {
           <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
           <div style="flex:1;">
             <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">總里程</div>
-            <div style="font-weight:900; font-size:16px; color:#ea580c; font-family:var(--mono);">${fmt(totalDistance)} <span style="font-size:12px; color:#64748b;">km</span></div>
+            <div style="font-weight:900; font-size:16px; color: #ea580c; font-family:var(--mono);">${fmt(totalDistance)} <span style="font-size:12px; color:#64748b;">km</span></div>
           </div>
           <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
           <div style="flex:1;">
@@ -4974,12 +5039,12 @@ function renderVehicleContent() {
           <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
           <div style="flex:1;">
             <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">總里程</div>
-            <div style="font-weight:900; font-size:16px; color:#2563eb; font-family:var(--mono);">${fmt(totalDistance)} <span style="font-size:12px; color:#64748b;">km</span></div>
+            <div style="font-weight:900; font-size:16px; color: #2563eb; font-family:var(--mono);">${fmt(totalDistance)} <span style="font-size:12px; color:#64748b;">km</span></div>
           </div>
           <div style="width:1.5px; background:rgba(226, 232, 240, 0.8); margin:0 8px;"></div>
           <div style="flex:1;">
             <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">平均油耗</div>
-            <div style="font-weight:900; font-size:16px; color:#0d9488; font-family:var(--mono);">${avgKmL} <span style="font-size:12px; color:#64748b;">km/L</span></div>
+            <div style="font-weight:900; font-size:16px; color: #0d9488; font-family:var(--mono);">${avgKmL} <span style="font-size:12px; color:#64748b;">km/L</span></div>
           </div>
         </div>`;
 
@@ -5077,9 +5142,9 @@ function renderVehicleContent() {
               const kmL = (r.liters > 0 && diff > 0) ? (diff / r.liters).toFixed(2) : 0;
               
               let pillsHtml = '';
-              if (r.liters) pillsHtml += `<div class="vb-pill"><span style="color:#0ea5e9;">${r.liters}</span><span style="color:#64748b; font-size:10px;">L</span></div>`;
-              if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color:#2563eb;">${diff}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
-              if (kmL > 0)  pillsHtml += `<div class="vb-pill"><span style="color:#0d9488;">${kmL}</span><span style="color:#64748b; font-size:10px;">km/L</span></div>`;
+              if (r.liters) pillsHtml += `<div class="vb-pill"><span style="color: #0ea5e9;">${r.liters}</span><span style="color:#64748b; font-size:10px;">L</span></div>`;
+              if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color: #2563eb;">${diff}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
+              if (kmL > 0)  pillsHtml += `<div class="vb-pill"><span style="color: #0d9488;">${kmL}</span><span style="color:#64748b; font-size:10px;">km/L</span></div>`;
 
               htmlContent = `
                 <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
@@ -5100,7 +5165,7 @@ function renderVehicleContent() {
               // ── 🔋 電池紀錄卡片 ──
               const diff = pf(r.km) - pf(r.prevKm);
               let pillsHtml = '';
-              if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color:#c026d3;">${diff}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
+              if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color: #c026d3;">${diff}</span><span style="color: #64748b; font-size:10px;">km</span></div>`;
               // if (r.prevKm || r.km) pillsHtml += `<div class="vb-pill"><span style="color:#059669;">${r.prevKm||0} → ${r.km||0}</span></div>`;
               if (r.evFee > 0) pillsHtml += `<div class="vb-pill" style="background:#f3e8ff;"><span style="color:#9333ea;">月租$ ${fmt(r.evFee)}</span></div>`;
               if (r.evExtra > 0) pillsHtml += `<div class="vb-pill" style="background:#fee2e2;"><span style="color:#ef4444;">計費$ ${fmt(r.evExtra)}</span></div>`;
@@ -5117,7 +5182,7 @@ function renderVehicleContent() {
                   </div>
                   <div class="vc-right">
                     <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:2px;">行駛</span>
-                    <span class="vc-right-val"><span style="color:#ea580c;">${diff > 0 ? diff : 0}</span> <span style="color:#64748b; font-size:12px; letter-spacing:1px;">km</span></span>
+                    <span class="vc-right-val"><span style="color: #ea580c;">${diff > 0 ? diff : 0}</span> <span style="color:#64748b; font-size:12px; letter-spacing:1px;">km</span></span>
                   </div>
                 </div>`;
           }
@@ -6812,45 +6877,53 @@ async function openAccountStats() {
   </div>`;
 }
 
-/* ══ 新增：個人記錄統計 (三種不同風格混合設計) ══ */
+/* ══ 新增：個人記錄統計 (三種不同風格混合設計，改為計算「總單量」) ══ */
 window.openRecordStats = function() {
   document.getElementById('sub-title').textContent = '個人記錄統計';
   
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
 
-  // 👇 使用新的 animateSubPageReturn 來解決閃爍問題
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => openAccountStats())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">
       🔙 返回
     </button>
   `;
 
+  // 1. 過濾出所有非純打卡的有效記錄
   const validRecs = S.records.filter(r => !r.isPunchOnly);
-  const totalCount = validRecs.length;
+  
+  // 2. 👇 核心修改：計算全部記錄中的「總接單數 (orders)」
+  const totalOrders = validRecs.reduce((sum, r) => sum + (parseFloat(r.orders) || 0), 0);
   
   let daysAcc = 0;
-  if (totalCount > 0) {
+  if (validRecs.length > 0) {
     const dates = validRecs.map(r => new Date(r.date)).sort((a, b) => a - b);
     const firstDate = dates[0];
     const today = new Date();
     daysAcc = Math.ceil((today - firstDate) / 86400000) || 1;
   }
   
-  const platCounts = {}; 
+  // 3. 👇 修改平台與年份的統計，改為累加 orders 
+  const platOrderCounts = {}; 
   const yearStats = {};  
 
   validRecs.forEach(r => {
     const pId = r.platformId || 'unknown';
     const y = (r.date && r.date.substring(0,4)) || '未知';
-    platCounts[pId] = (platCounts[pId] || 0) + 1;
-    if (!yearStats[y]) yearStats[y] = { total: 0, plats: {} };
-    yearStats[y].total++;
-    yearStats[y].plats[pId] = (yearStats[y].plats[pId] || 0) + 1;
+    const ord = parseFloat(r.orders) || 0; // 取得該筆單數
+
+    // 平台累加單數
+    platOrderCounts[pId] = (platOrderCounts[pId] || 0) + ord;
+    
+    // 年份累加單數
+    if (!yearStats[y]) yearStats[y] = { totalOrders: 0, plats: {} };
+    yearStats[y].totalOrders += ord;
+    yearStats[y].plats[pId] = (yearStats[y].plats[pId] || 0) + ord;
   });
 
   const sortedYears = Object.keys(yearStats).sort((a,b) => b.localeCompare(a));
-  const sortedPlats = Object.entries(platCounts).sort((a,b) => b[1] - a[1]);
+  const sortedPlats = Object.entries(platOrderCounts).sort((a,b) => b[1] - a[1]);
 
   let html = `<div style="padding:16px; padding-bottom:40px; display:flex; flex-direction:column; gap:20px;">`;
 
@@ -6865,32 +6938,30 @@ window.openRecordStats = function() {
     
     <div style="background: linear-gradient(125deg, #FF416C, #FF4B2B, #F9D423, #FF4B2B, #FF416C); background-size: 300% 300%; animation: sunriseFlow 6s ease infinite; border-radius: 24px; padding: 28px 20px; position: relative; overflow: hidden; box-shadow: 0 12px 30px rgba(255, 75, 43, 0.4), inset 0 0 0 2px rgba(255,255,255,0.4);">
       
-      <!-- 動態玻璃反光掃過特效 -->
       <div style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%); transform:rotate(25deg); animation: glassShine 4s infinite ease-in-out; pointer-events:none;"></div>
       
-      <!-- 幾何圓形點綴 -->
       <div style="position:absolute; top:-20px; right:-20px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.2); filter:blur(20px);"></div>
       <div style="position:absolute; bottom:-30px; left:-30px; width:150px; height:150px; border-radius:50%; background:rgba(255,212,35,0.4); filter:blur(30px);"></div>
 
       <div style="position: relative; z-index: 1;">
         
-        <!-- 標題區 -->
         <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 24px;">
           <span style="background: rgba(255,255,255,0.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 14px; font-weight: 900; letter-spacing: 1.5px; border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
             ✨ 輝煌外送生涯 ✨
           </span>
         </div>
 
-        <!-- 核心大數據 -->
         <div style="text-align:center; margin-bottom: 28px;">
-          <div style="font-size: 13px; color: rgba(255,255,255,0.9); font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">累計完成總記錄</div>
+          <!-- 👇 修改文字為「累計完成總單量」 -->
+          <div style="font-size: 13px; color: rgba(255,255,255,0.9); font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">累計完成總單量</div>
+          <!-- 👇 填入的是 totalOrders -->
           <div style="font-family: var(--mono); font-size: 64px; font-weight: 900; color: #ffffff; line-height: 1; text-shadow: 0 4px 15px rgba(0,0,0,0.2), 0 0 40px rgba(255,255,255,0.6); margin-bottom: 6px; letter-spacing:-2px;">
-            ${fmt(totalCount)}
+            ${fmt(totalOrders)}
           </div>
-          <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 900; text-transform: uppercase; letter-spacing: 3px;">Total Records</div>
+          <!-- 👇 修改英文為 Total Orders -->
+          <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 900; text-transform: uppercase; letter-spacing: 3px;">Total Orders</div>
         </div>
 
-        <!-- 底部微透資訊列 -->
         <div style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 16px; padding: 12px 16px; display:flex; justify-content:space-between; align-items:center; backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
           <div style="display:flex; align-items:center; gap: 8px;">
             <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 10px #ffffff;"></div>
@@ -6915,12 +6986,13 @@ window.openRecordStats = function() {
         </div>
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
     `;
-    const maxPlatCount = sortedPlats[0][1];
-    sortedPlats.forEach(([pid, count]) => {
+    const maxPlatOrders = sortedPlats[0][1];
+    sortedPlats.forEach(([pid, orderCount]) => {
       const pInfo = getPlatform(pid);
       const color = pInfo.color || '#94a3b8';
-      const pct = Math.round((count / maxPlatCount) * 100);
-      const totalPct = Math.round((count / totalCount) * 100);
+      // 👇 使用單數來計算百分比
+      const pct = maxPlatOrders > 0 ? Math.round((orderCount / maxPlatOrders) * 100) : 0;
+      const totalPct = totalOrders > 0 ? Math.round((orderCount / totalOrders) * 100) : 0;
 
       html += `
         <div style="background:${color}10; border: 1.5px solid ${color}30; border-radius: 16px; padding: 14px; position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
@@ -6928,8 +7000,10 @@ window.openRecordStats = function() {
             <span style="font-size:13px; font-weight:900; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px;">${safeText(pInfo.name)}</span>
             <span style="background:${color}20; color:${color}; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; font-family:var(--mono);">${totalPct}%</span>
           </div>
-          <div style="font-family:var(--mono); font-size:24px; font-weight:900; color:${color}; margin-bottom:10px; line-height:1;">
-            ${fmt(count)}
+          <!-- 👇 顯示單數 -->
+          <div style="display:flex; align-items:baseline; gap:4px; margin-bottom:10px;">
+            <span style="font-family:var(--mono); font-size:24px; font-weight:900; color:${color}; line-height:1;">${fmt(orderCount)}</span>
+            <span style="font-size:11px; font-weight:700; color:${color};">單</span>
           </div>
           <div style="height:6px; background:${color}20; border-radius:4px; overflow:hidden;">
             <div style="height:100%; width:${pct}%; background:${color}; border-radius:4px;"></div>
@@ -6959,11 +7033,10 @@ window.openRecordStats = function() {
       const dotBorder = isLatest ? '#eff6ff' : '#f8fafc';
       const yearPlats = Object.entries(yearStats[y].plats).sort((a,b) => b[1] - a[1]);
       
-      const tagsHtml = yearPlats.map(([pid, count]) => {
+      const tagsHtml = yearPlats.map(([pid, orderCount]) => {
         const pInfo = getPlatform(pid);
-        // 👇 重點：加入 flex-shrink:0 保證膠囊絕對不被擠壓變形
         return `<div style="flex-shrink:0; background:${pInfo.color}15; color:${pInfo.color}; border:1px solid ${pInfo.color}30; font-size:11px; font-weight:800; padding:3px 8px; border-radius:8px; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
-          ${safeText(pInfo.name)} <span style="background:${pInfo.color}; color:#fff; padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:10px;">${count}</span>
+          ${safeText(pInfo.name)} <span style="background:${pInfo.color}; color:#fff; padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:10px;">${fmt(orderCount)} 單</span>
         </div>`;
       }).join('');
 
@@ -6972,10 +7045,10 @@ window.openRecordStats = function() {
           <div style="position: absolute; left: -26.5px; top: 18px; width: 16px; height: 16px; border-radius: 50%; background: ${dotColor}; border: 4px solid ${dotBorder}; box-shadow: 0 0 0 1px #e2e8f0;"></div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="font-size:18px; font-weight:900; color:var(--t1);">${y} <span style="font-size:12px; font-weight:700; color:#64748b;">年</span></div>
-            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].total)} <span style="font-size:11px;font-weight:650;color:#94a3b8;">筆</span></div>
+            <!-- 👇 顯示年度總單量 -->
+            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].totalOrders)} <span style="font-size:11px;font-weight:650;color:#94a3b8;">單</span></div>
           </div>
           
-          <!-- 👇 重點：改為 nowrap 並開啟橫向滾動 (overflow-x: auto) -->
           <style>.hide-scroll-bar::-webkit-scrollbar { display: none; }</style>
           <div class="hide-scroll-bar" style="display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;">
             ${tagsHtml}
