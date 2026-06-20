@@ -168,10 +168,7 @@
     
     
     
-    /* 進度點點 */
-    .dots-wrap { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; transition: 0.3s; }
-    .dot.active { background: #3b82f6; width: 28px; }
+
 
     /* --- 動畫過場 --- */
     .anim-wrap { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -179,11 +176,34 @@
     .slide-in-right { transform: translateX(40px); opacity: 0; }
     .show-normal { transform: translateX(0); opacity: 1; }
 
-    /* 左右滑動提示 */
-    .swipe-hint { font-size: 13px; color: #94a3b8; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; background: #f8fafc; padding: 10px; border-radius: 16px; max-width: 300px; margin-left: auto; margin-right: auto; }
+    /* 左右/點擊提示 (放置於滑動條上方) */
+    .swipe-hint { 
+      font-size: 14px; color: #94a3b8; font-weight: 700; 
+      background: #ffffff; padding: 8px 10px; border-radius: 99px; 
+      max-width: max-content; margin: 0 auto; 
+      display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1.5px solid #e2e8f0;
+    }
+    .hint-mobile { display: none; }
+    .hint-desktop { display: inline; color: #3b82f6; letter-spacing: 1px; }
+    
+    /* 針對電腦版：將提示文字往上拉，蓋在原生滑動條的上方 */
+    @media (min-width: 769px) {
+      .swipe-hint {
+        margin-top: -50px; /* 向上拉進卡片底部的空白區 */
+        margin-bottom: 30px;
+      }
+    }
 
     /* 頁尾 */
-    footer { padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 13px; font-weight: 600; background: var(--bg); }
+    footer{padding:60px 20px 40px 20px;text-align:center;/* 深邃藍黑背景 */
+      background:#0f172a;/* 乾淨明亮的文字顏色 */
+      color:#94a3b8;font-size:13px;font-weight:600;letter-spacing:1px;/* 頂部加入一條微光線條 */
+      border-top:1px solid #1e293b;}
+    footer div:first-child{color:#f1f5f9;/* 標題稍微亮一點 */
+      font-weight:800;font-size:14px;margin-bottom:12px !important;}
+
 
     /* RWD */
     @media (max-width: 768px) {
@@ -191,6 +211,11 @@
       .hero-text { text-align: center; }
       .hero-image img { max-width: 280px; }
       
+      /* 手機版提示文字切換與間距微調 */
+      .hint-desktop { display: none; }
+      .hint-mobile { display: inline; color: #d946ef; letter-spacing: 0.5px; }
+      .swipe-hint { margin-top: -39px; margin-bottom: 26px; }
+
       /* 👇 在手機上，強迫使用 2x2，並大幅縮小字體與內距，避免破版 */
       .grid-blocks { 
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important; 
@@ -236,23 +261,42 @@
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
     }
-    /* 👇 自訂底部滑動條 (Scrollbar) 樣式 */
-    .scroll-track::-webkit-scrollbar {
-      height: 12px; /* 滑動條粗細 */
+    /* 👇 自訂底部滑動條 (Scrollbar) 樣式 - 電腦版維持原設計 */
+    .scroll-track::-webkit-scrollbar { height: 12px; }
+    .scroll-track::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 100px; margin: 0 5%; }
+    .scroll-track::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 100px; border: 3px solid #e2e8f0; }
+    .scroll-track::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+    /* 電腦版隱藏實體滑動條 */
+    .mobile-custom-scrollbar { display: none; }
+
+    /* 👇 手機版專屬：徹底隱藏系統原生條，改用我們自己刻的實體滑塊 */
+    @media (max-width: 768px) {
+      /* 強制隱藏手機系統原生滑動條 */
+      .scroll-track::-webkit-scrollbar { display: none; }
+      .scroll-track { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* 顯示我們自製的實體軌道 */
+      .mobile-custom-scrollbar {
+        display: block;
+        height: 10px;
+        background: #e2e8f0;
+        border-radius: 10px;
+        margin: -24px 5% 16px 5%; /* 放在卡片與提示文字中間 */
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+      }
+      /* 實體滑塊本體：亮紫紅漸層 */
+      .mobile-custom-thumb {
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        background: linear-gradient(90deg, #d946ef 0%, #8b5cf6 100%);
+        border-radius: 10px;
+        transition: left 0.1s linear; /* 讓跟隨效果稍微平滑 */
+      }
     }
-    .scroll-track::-webkit-scrollbar-track {
-      background: #e2e8f0; /* 滑動條軌道背景色 */
-      border-radius: 100px;
-      margin: 0 5%; /* 讓軌道不貼邊 */
-    }
-    .scroll-track::-webkit-scrollbar-thumb {
-      background: #94a3b8; /* 滑動塊的顏色 */
-      border-radius: 100px;
-      border: 3px solid #e2e8f0; /* 製作內縮效果 */
-    }
-    .scroll-track::-webkit-scrollbar-thumb:hover {
-      background: #64748b; /* 滑鼠移上去變深 */
-    }
+
 
     /* 單張卡片容器 */
     .scroll-card {
@@ -267,41 +311,213 @@
     .device-frame.hide-hint::after { display: none; }
 
     
-.device-frame { 
-  background: #ffffff; 
-  /* 👇 將上方的 padding 改為 48px (原本是 16px) */
-  padding: 48px 16px 16px 16px; 
-  border-radius: 36px; box-shadow: 0 24px 48px rgba(0,0,0,0.08), inset 0 0 0 4px #09b794; 
-  border: 8px solid #ffffff; cursor: pointer;
-  position: relative; transition: all 0.3s;
-}
-.device-frame:active { transform: scale(0.98); }
 
     
-    .img-container { border-radius: 20px; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
-    .img-container img { width: 100%; height: auto; display: block; }
 
-    /* 👇 卡片內部的進度點點 */
-    .card-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
-    .card-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: 0.3s; }
-    .card-dots .dot.active { background: #3b82f6; width: 24px; }
+    /* 改回不裁切、不扭曲的自然圖片容器，並保留 3D 透視效果 */
+    .img-container { 
+      border-radius: 20px; overflow: hidden; background: transparent; 
+      display: flex; align-items: center; justify-content: center; 
+      perspective: 1500px; 
+      position: relative;
+    }
+    .img-container img { 
+      width: auto; height: auto; /* 維持圖片原始長寬比，不變形 */
+      display: block; 
+      backface-visibility: hidden; 
+      position: relative; 
+      max-height: 500px;
+    }
 
-    /* 👇 卡片右下角的動態提示標籤 */
-.click-hint {
-  position: absolute; 
-  top: 12px;     /* 👇 放置在上方空出來的區域 */
-  right: 16px;   /* 👇 與圖片右側邊緣對齊 */
-  background: #1e293b; color: #fff; font-size: 14px; font-weight: 800; 
-  padding: 6px 14px; border-radius: 12px; 
-  pointer-events: none; transition: 0.3s; z-index: 10;
 
-  /* 加入一個輕微的上下浮動動畫 */
-  animation: floatHint 2s ease-in-out infinite;
-}
-@keyframes floatHint {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
+    /* 👇 書本翻頁動畫：向左掀開 (Next) */
+    @keyframes turnPageLeftOut {
+      0%   { transform: rotateY(0deg) skewY(0deg); filter: brightness(1); }
+      100% { transform: rotateY(-90deg) skewY(-3deg); filter: brightness(0.2); }
+    }
+
+    /* 👇 書本翻頁動畫：向右掀開 (Prev) */
+    @keyframes turnPageRightOut {
+      0%   { transform: rotateY(0deg) skewY(0deg); filter: brightness(1); }
+      100% { transform: rotateY(90deg) skewY(3deg); filter: brightness(0.2); }
+    }
+
+    /* 👇 到底了！「撞牆彈跳閃爍」提示特效 (向左扯) */
+    .bounce-end-left {
+      animation: bounceEndLeft 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transform-origin: left center;
+    }
+    @keyframes bounceEndLeft {
+      0%   { transform: rotateY(0deg); filter: brightness(1); }
+      25%  { transform: rotateY(-18deg); filter: brightness(1.2); } 
+      50%  { transform: rotateY(6deg); filter: brightness(1.1); }   
+      75%  { transform: rotateY(-6deg); filter: brightness(1.05); }
+      100% { transform: rotateY(0deg); filter: brightness(1); }
+    }
+
+    /* 👇 到底了！「撞牆彈跳閃爍」提示特效 (向右扯) */
+    .bounce-end-right {
+      animation: bounceEndRight 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transform-origin: right center;
+    }
+    @keyframes bounceEndRight {
+      0%   { transform: rotateY(0deg); filter: brightness(1); }
+      25%  { transform: rotateY(18deg); filter: brightness(1.2); } 
+      50%  { transform: rotateY(-6deg); filter: brightness(1.1); }   
+      75%  { transform: rotateY(6deg); filter: brightness(1.05); }
+      100% { transform: rotateY(0deg); filter: brightness(1); }
+    }
+
+
+
+
+    /* =========================================
+       新版交替風格 (單數：P / 雙數：Q) - 寬標題外框
+       ========================================= */
+       
+    .card-title-wrapper {
+      width: 100%; /* 需求2: 比下方圖片框寬 */
+      margin: 0 auto 0 auto; /* 下方間距設為0，緊貼下方框 */
+      border-radius: 20px 20px 0 0; /* 只保留上方圓角 */
+      overflow: hidden;
+      display: flex; 
+      flex-direction: column;
+      position: relative;
+      z-index: 2; /* 確保蓋在下方框的上面 */
+    }
+
+    /* 方案 P - 淡藍背景，藍字 */
+    .card-title-wrapper.style-p {
+      background: #ffffff; 
+      border: 4px solid #bfdbfe; 
+      border-bottom: 4px solid var(--theme-color); /* 底部接合線 */
+    }
+    .card-title-wrapper.style-p .card-title {
+      font-size: 18px; font-weight: 900; letter-spacing: 2px; padding: 8px 12px; 
+      background: #eff6ff; color: var(--theme-color); 
+      text-align: center;
+    }
+
+    /* 方案 Q - 工業撞色拼接風 */
+    .card-title-wrapper.style-q {
+      background: var(--theme-color); 
+      border: 4px solid #1e293b; 
+      border-bottom: 4px solid #1e293b; /* 底部接合線 */
+    }
+    .card-title-wrapper.style-q .card-title {
+      font-size: 18px; font-weight: 900; letter-spacing: 2px; padding: 8px 12px; 
+      background: var(--theme-color); color: #ffffff;
+      text-align: center;
+    }
+
+    /* =========================================
+       新版下方圖片外框 (較窄，與上方間隙為 0)
+       ========================================= */
+       
+    .device-frame { 
+      background: #ffffff; 
+      width: 95%; /* 需求2: 比上方標題框窄 */
+      margin: 0 auto; /* 置中對齊 */
+      /* 頂部 padding 留給附標題，取消圓角以平貼上方 */
+      padding: 0 14px 14px 14px; 
+      border-radius: 0 0 36px 36px; 
+      box-shadow: 0 24px 48px rgba(0,0,0,0.08), inset 0 0 0 4px #09b794; 
+      border: 8px solid #ffffff; 
+      border-top-width: 0; /* 需求2: 確保上下間隔完全為 0 */
+      cursor: pointer;
+      position: relative; 
+      transition: all 0.3s;
+      z-index: 1;
+    }
+    .device-frame:active { transform: scale(0.98); }
+
+    /* 方案 4：優雅緞帶風 */
+    .device-frame .card-subtitle {
+      font-size: 16px; font-weight: 800; color: #0f172a;
+      padding: 8px 4px; 
+      /* 負 margin 讓它左右貼齊外框 */
+      margin: 5px -14px 2px -14px;
+      text-align: left; display: flex; align-items: flex-start; line-height: 1.5; letter-spacing: 1px;
+      background: #1e293b; color: #f1f5f9;
+      border-top: 3.5px solid #cbd5e1;
+      border-bottom: 3.5px solid #cbd5e1;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    /* 👇 新增這段：保護數字標籤 (numPart) 絕對不變形、不換行 */
+    .device-frame .card-subtitle span:first-child {
+      flex-shrink: 0;         /* 絕對不允許被壓縮 */
+      white-space: nowrap;    /* 強制文字不換行 */
+      margin-top: 2px;        /* 微調與右側文字的垂直對齊 */
+    }
+
+    /* 圖片與右側提示的橫向排列容器 */
+    .device-body {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      /* 需求3: 靠右對齊。當空間不足時，會自動向左邊擠壓(縮小左側空間) */
+      justify-content: flex-end; 
+      width: 100%;
+      position: relative;
+    }
+
+    /* 改回不裁切、不扭曲的自然圖片容器 */
+    .img-container { 
+      border-radius: 20px; overflow: hidden; background: transparent; 
+      display: flex; align-items: center; justify-content: center; 
+      perspective: 1500px; 
+      position: relative;
+      flex: 0 1 auto; /* 允許被擠壓，但會盡量維持大小 */
+      margin-right: 42px; /* 與右側標籤的間距 */
+    }
+    .img-container img { 
+      width: auto; height: auto; /* 維持圖片原始長寬比，不變形 */
+      display: block; 
+      backface-visibility: hidden; 
+      position: relative; 
+      max-height: 450px; /* 避免圖片過長 */
+    }
+
+    /* 需求3: 卡片右上角的動態提示標籤，改為右側直寫 */
+    .vertical-hint {
+      flex: 0 0 auto; /* 鎖死寬度，保證標籤不會被縮小變形 */
+      writing-mode: vertical-rl; /* 直寫由上而下 */
+      text-orientation: upright; /* 文字保持正立 (中文與符號) */
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); 
+      color: #fff; font-size: 18px; font-weight: 700; letter-spacing: 2px;
+      padding: 16px 8px; border-radius: 12px; 
+      pointer-events: none; transition: 0.3s; z-index: 10;
+      text-align: center;
+      top: 16px; right: -10px; position: absolute;
+
+      /* 改為左右輕微浮動動畫 */
+      animation: floatHintVertical 1s ease-in-out infinite;
+    }
+    @keyframes floatHintVertical {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(-8px); }
+    }
+
+    /* --- 左右切換懸浮按鈕調整 --- */
+    .nav-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px; height: 48px;
+      background: rgba(255, 255, 255, 0.95); color: #334155;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: pointer; z-index: 20; transition: all 0.2s;
+      border: 3px solid #bcc1c7;
+    }
+    .nav-arrow:active { transform: translateY(-50%) scale(0.85); background: #f1f5f9; }
+    /* 因為放入了 flex 容器，微調按鈕超出外框的距離 */
+    .nav-arrow.prev { left: -16px; }
+    .nav-arrow.next { right: -24px; }
+    
+
+
+
 
     /* 👇 軌道最右側的「巨大回總覽按鈕」卡片 */
     .end-card {
@@ -318,70 +534,51 @@
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      width: 36px;
-      height: 36px;
+      width: 52px;
+      height: 52px;
       background: rgba(255, 255, 255, 0.95);
       color: #334155;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 26px;
       font-weight: 900;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       cursor: pointer;
       z-index: 20;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1.5px solid #e2e8f0;
+      border: 3px solid #bcc1c7;
     }
     .nav-arrow:active { transform: translateY(-50%) scale(0.85); background: #f1f5f9; }
     /* 讓按鈕凸出一半在框外，看起來更有立體感 */
-    .nav-arrow.prev { left: -14px; }
-    .nav-arrow.next { right: -14px; }
+    .nav-arrow.prev { left: -20px; }
+    .nav-arrow.next { right: -20px; }
 
 
-.card-title {
-  font-size: 20px; font-weight: 900; margin: 0 auto 1px -15px; letter-spacing: 2.5px;
-  padding: 10px 24px 16px 24px; width: max-content; min-width: 180px;
-  position: relative; z-index: 3; text-align: center;
-  /* 👇 底部中央切出箭頭形狀 */
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), 50% 100%, 0 calc(100% - 12px));
-}
-.card-title::before { content:''; position:absolute; inset:0; background:currentColor; opacity:0.15; z-index:-1; }
-.card-subtitle {
-  font-size: 18px; font-weight: 700; color: #ffffff; margin: 0 auto 8px auto; letter-spacing: 1.5px;
-  background: #334155; width: 90%; /* 比上半部寬 */
-  padding: 6px 10px; border-radius: 0 25px 0px 20px;
-  display: flex; align-items: flex-start; justify-content: flex-start; text-align: left; line-height: 1.5; max-width: 100%;
-  box-shadow: 4px 4px 0 #94a3b8;
-}
-/* 鎖定第一個 span（即 1-1. 數字膠囊） */
-.card-subtitle span:first-child {
-  flex-shrink: 0;          /* 絕對不允許被壓縮 */
-  white-space: nowrap;     /* 絕對不允許文字換行 */
-  margin-top: 2px;         /* 微調位置，讓它與右邊文字的視覺重心對齊 */
-}
+    
 
-.da-top-bar {
-  display: inline-flex; align-items: center; gap: 12px;
-  background: #ffffff; padding: 2px 6px 2px 20px;
-  border-radius: 99px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  margin: 0 auto -5px 15px; /* 置中 */
-  border: 1px solid #e2e8f0;
-}
-.da-category-title {
-  font-size: 18px; font-weight: 900; color: #0f172a; 
-  display: flex; align-items: center; gap: 8px;
-}
-/* 中間的分隔線 */
-.da-category-title::after {
-  content: ''; display: inline-block; width: 4px; height: 33px; background: #e2e8f0; margin-left: 12px;
-}
-.btn-back-overview {
-  background: #334155; color: #ffffff; padding: 6px 14px; border-radius: 8px 20px 8px 20px; font-size: 14px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 0 #0f172a; transform: translateY(4px); margin: 0 8px 12px 0;
-}
-.btn-back-overview:hover { background: #475569; }
-.btn-back-overview:active { box-shadow: 0 0 0 #0f172a; transform: translateY(18px); transition: 0.01s; }
+
+    .da-top-bar {
+      display: inline-flex; align-items: center; gap: 12px;
+      background: #ffffff; padding: 2px 6px 2px 20px;
+      border-radius: 99px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      margin: 0 auto -5px 15px; /* 置中 */
+      border: 1px solid #e2e8f0;
+    }
+    .da-category-title {
+      font-size: 18px; font-weight: 900; color: #0f172a; 
+      display: flex; align-items: center; gap: 8px;
+    }
+    /* 中間的分隔線 */
+    .da-category-title::after {
+      content: ''; display: inline-block; width: 4px; height: 33px; background: #e2e8f0; margin-left: 12px;
+    }
+    .btn-back-overview {
+      background: #5fffea; color: #000000; padding: 6px 14px; border-radius: 8px 20px 8px 20px; font-size: 16px; font-weight: 700; border: none; cursor: pointer; transition: 2.0s; box-shadow: 0 4px 0 #0f172a; transform: translateY(4px); margin: 0 8px 12px 0;
+    }
+    .btn-back-overview:hover { background: #3665ff; color: #ffffff; }
+    .btn-back-overview:active { box-shadow: 0 0 0 #0f172a; transform: translateY(18px); transition: 0.1s; }
   </style>
 </head>
 <body>
@@ -430,7 +627,7 @@
           <div class="b-title">查看紀錄</div>
           <div class="b-desc">歷史資料精準查詢</div>
         </div>
-        <div class="b-tag">全螢幕日曆 / 區間列表</div>
+        <div class="b-tag">全螢幕日曆 / 各區間列表</div>
       </div>
 
       <div class="block-card c-yellow" onclick="loadMainCategory('analysis')">
@@ -467,9 +664,15 @@
       <!-- 這裡的卡片會由 JavaScript 動態生成塞入 -->
     </div>
 
-    <!-- 底部提示文字 -->
+    <!-- 👇 提示文字 (移到滑動條上方，並加入電腦/手機專屬文字) -->
     <div class="swipe-hint">
-      <span>⟵</span> 拖曳下方滑動條，或在畫面上左右滑動 <span>⟶</span>
+      <span class="hint-desktop">⟵ 點擊上方『圖片 或 按鈕』 ⟶</span>
+      <span class="hint-mobile">⟵ 點擊上方『圖片 或 按鈕』；或左右滑動（快速瀏覽） ⟶</span>
+    </div>
+
+    <!-- 手機版專屬的實體滑動進度條 -->
+    <div class="mobile-custom-scrollbar">
+      <div class="mobile-custom-thumb" id="mobile-thumb"></div>
     </div>
 
   </div>
@@ -482,8 +685,8 @@
   <script>
     // --- 定義展示資料結構 ---
     const appData = {
-      'home': { name: '今日概況', color: 'var(--c-blue-text)', sections: [ { title: '1.打卡系統', steps: [ { desc: '1-1. 打卡前。', img: 'intro/in1.png' }, { desc: '1-2. 打卡後。', img: 'intro/in2.png' }, { desc: '1-3. 打卡後，馬上顯示記錄。', img: 'intro/in3.png' }, { desc: '1-4. 上線時間，持續累積不中斷。', img: 'intro/in4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/in5.png' } ] }, { title: '2.平台日程表', steps: [ { desc: '結算與發薪提醒', img: 'intro/in6.png' } ] }, { title: '3.目標進度', steps: [ { desc: '目標進度追蹤', img: 'intro/in7.png' } ] }, { title: '4.獎勵進度', steps: [ { desc: '4-1. 目前達標進度。', img: 'intro/in8.png' }, { desc: '4-2. 最高階獎勵完成。', img: 'intro/in9.png' }, { desc: '4-3. 「即將到來」獎勵預覽。', img: 'intro/in10.png' } ] } ] },
-      'history': { name: '查看紀錄', color: 'var(--c-green-text)', sections: [ { title: '全螢幕日曆', steps: [{ desc: '掌握每日出勤狀況', img: 'intro/hist1.png' }] }, { title: '週～年記錄表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist2.png' }] } ] },
+      'home': { name: '今日概況', color: 'var(--c-blue-text)', sections: [ { title: '1.打卡系統', steps: [ { desc: '1-1. 同時多開平台，計算「總工時」。', img: 'intro/int1.png' }, { desc: '1-2. 打卡後，顯示「綠色轉圈」執行中。', img: 'intro/int2.png' }, { desc: '1-3. 打卡後，馬上加入打卡記錄。', img: 'intro/int3.png' }, { desc: '1-4. 上線時間持續累積，即使關閉APP也不中斷。', img: 'intro/int4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/int5.png' } ] }, { title: '2.平台日程表', steps: [ { desc: '結算與發薪提醒<br>（今天的外框，會顯示跑馬燈繞圈）', img: 'intro/int6-1.png' } ] }, { title: '3.目標進度', steps: [ { desc: '目標進度追蹤', img: 'intro/int7.png' } ] }, { title: '4.獎勵進度', steps: [ { desc: '4-1. 目前達標進度。', img: 'intro/int8.png' }, { desc: '4-2. 最高階獎勵完成。', img: 'intro/int9.png' }, { desc: '4-3. 「即將到來」獎勵預覽。', img: 'intro/int10.png' } ] } ] },
+      'history': { name: '查看紀錄', color: 'var(--c-green-text)', sections: [ { title: '1.「日歷查閱、搜尋」記錄列表', steps: [ { desc: '1-1. 「現金小費」記錄。', img: 'intro/int1.png' }, { desc: '1-2. 打卡後，顯示「綠色轉圈」執行中。', img: 'intro/int2.png' }, { desc: '1-3. 全螢幕日曆。', img: 'intro/int3.png' }, { desc: '1-4. 上線時間持續累積，即使關閉APP也不中斷。', img: 'intro/int4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/int5.png' } ] }, { title: '週～年記錄表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist2.png' }] } ] },
       'analysis': { name: '收入分析', color: 'var(--c-yellow-text)', sections: [ { title: '各種分析圖表', steps: [{ desc: '收入結構與佔比圓餅圖', img: 'intro/ana1.png' }, { desc: '歷史趨勢柱狀圖', img: 'intro/ana2.png' }] }, { title: 'TOP 5 排行榜', steps: [{ desc: '單月最佳收入排行', img: 'intro/ana3.png' }] } ] },
       'vehicle': { name: '車輛管理', color: 'var(--c-purple-text)', sections: [ { title: '車輛燃料記錄', steps: [{ desc: '油耗計算與油資統計', img: 'intro/veh1.png' }] }, { title: '保養花費記錄', steps: [{ desc: '保養時間軸與里程追蹤', img: 'intro/veh2.png' }] } ] }
     };
@@ -501,11 +704,11 @@
         // 如果有抓到數字，就切成雙色膠囊
         const numPart = match[1];  // 例如 "1-1."
         const textPart = match[2]; // 例如 "打卡前"
-        return `<span style="background:${color}; color:#fff; padding:2px 8px; border-radius:6px; font-family:monospace; margin-right:6px; font-weight:900;">${numPart}</span><span>${textPart}</span>`;
+        return `<span style="background:${color}; color:#fff; padding:2px 6px; border-radius:6px; font-family:monospace; margin-right:6px; font-weight:900;">${numPart}</span><span>${textPart}</span>`;
       }
       
       // 如果沒有數字 (例如「結算與發薪提醒」)，就維持原本的樣式
-      return `<span style="margin-right:4px;">🔖 </span><span>${desc}</span>`;
+      return `<span style="margin-right:6px;">🔖 </span><span>${desc}</span>`;
     }
 
     // 記錄每個大分類(Card)內部目前的步驟索引
@@ -526,23 +729,14 @@
       let htmlContent = '';
 
       data.sections.forEach((sec, sIdx) => {
-        // 將該區塊的步驟資料編碼，藏在 HTML 中方便點擊時讀取
         const stepsJson = encodeURIComponent(JSON.stringify(sec.steps));
-        
-        // 判斷是否需要畫點點
-        let dotsHtml = '';
-        if (sec.steps.length > 1) {
-          dotsHtml = '<div class="card-dots">';
-          sec.steps.forEach((_, i) => dotsHtml += `<div class="dot ${i === 0 ? 'active' : ''}"></div>`);
-          dotsHtml += '</div>';
-        }
 
-        // 判斷初始提示文字
+        // 判斷初始提示文字 (配合放在右側直寫，箭頭改為向左👈)
         const isLastCard = (sIdx === data.sections.length - 1);
-        let hintText = sec.steps.length > 1 ? '👇 點圖看下一張' : (isLastCard ? '👇 點擊完成' : '👇 點圖看下個功能');
-        let hintColor = sec.steps.length > 1 ? '#1e293b' : '#3b82f6';
+        let hintText = sec.steps.length > 1 ? '👈 點擊換圖' : (isLastCard ? '👈 點擊完成' : '👈 下個功能');
+        let hintColor = sec.steps.length > 1 ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : '#3b82f6';
 
-        // 👇 動態判斷：如果圖片大於 1 張，就生成左右切換按鈕
+        // 動態判斷：如果圖片大於 1 張，就生成左右切換按鈕
         let navArrows = '';
         if (sec.steps.length > 1) {
           navArrows = `
@@ -551,27 +745,42 @@
           `;
         }
 
+        // 判斷套用哪一種風格：單數套用 P，雙數套用 Q
+        const styleClass = (sIdx % 2 === 1) ? 'style-q' : 'style-p';
+
+        // 全新 HTML 結構組合
         htmlContent += `
-          <div class="scroll-card" id="card-${sIdx}">
-            <div style="text-align: center;">
-              <div class="card-title" style="color: ${data.color}">${sec.title}</div>
-              <div class="card-subtitle" id="sub-${sIdx}">${getDualColorDesc(sec.steps[0].desc, data.color)}</div>
+          <div class="scroll-card" id="card-${sIdx}" style="--theme-color: ${data.color};">
+            
+            <!-- 上方標題框 (較寬，無下邊界) -->
+            <div class="card-title-wrapper ${styleClass}">
+              <div class="card-title">${sec.title}</div>
             </div>
             
-            <!-- 👇 onclick 改綁定給新的 changeCardStep 函式 -->
+            <!-- 下方圖片外框 (較窄，與上方緊貼) -->
             <div class="device-frame" onclick="changeCardStep(event, ${sIdx}, 1, '${stepsJson}')">
-              ${navArrows} <!-- 插入左右按鈕 -->
-              <div class="img-container">
-                <img id="img-${sIdx}" src="${sec.steps[0].img}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100%\\\' height=\\\'500\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23f8fafc\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%2394a3b8\\\'>圖片</text></svg>'">
+              
+              <!-- 需求1：副標題移至下方框內、圖片之上 -->
+              <div class="card-subtitle" id="sub-${sIdx}">
+                ${getDualColorDesc(sec.steps[0].desc, data.color)}
               </div>
-              ${dotsHtml}
-              <div class="click-hint" id="hint-${sIdx}" style="background: ${hintColor}">${hintText}</div>
+              
+              <!-- 需求3：圖片與右側標籤的 Flex 並排容器 -->
+              <div class="device-body">
+                ${navArrows}
+                <div class="img-container">
+                  <img id="img-${sIdx}" src="${sec.steps[0].img}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100%\\\' height=\\\'500\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23f8fafc\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%2394a3b8\\\'>圖片</text></svg>'">
+                </div>
+                <!-- 改為垂直樣式 class="vertical-hint" -->
+                <div class="vertical-hint" id="hint-${sIdx}" style="background: ${hintColor}">${hintText}</div>
+              </div>
+
             </div>
           </div>
         `;
       });
 
-      // 👇 軌道最後加入「巨大回總覽按鈕卡片」
+      // 軌道最後加入「巨大回總覽按鈕卡片」
       htmlContent += `
         <div class="end-card" id="card-end">
           <button class="btn-giant-back" onclick="backToBlocks()">
@@ -583,91 +792,147 @@
 
       scrollTrack.innerHTML = htmlContent;
       displayArea.style.display = 'block';
-      scrollTrack.scrollLeft = 0; // 重置捲軸
+      scrollTrack.scrollLeft = 0;
 
-      // 平滑滾動到展示區並微調位置
+      setTimeout(updateMobileScrollbar, 50);
       setTimeout(() => {
-        // 取得 A 區塊距離網頁最頂部的絕對位置
         const targetY = displayArea.getBoundingClientRect().top + window.scrollY;
-        
-        // 👇 這裡就是微調的魔法數字！
-        // 數字越大，畫面停的位置就越「高」（預留更多上方空間給導覽列）
-        // 您可以試著改成 60, 80, 100 來抓您最喜歡的高度
         const offset = 30; 
-        
-        window.scrollTo({ 
-          top: targetY - offset, 
-          behavior: 'smooth' 
-        });
+        window.scrollTo({ top: targetY - offset, behavior: 'smooth' });
       }, 100);
     };
 
-    // 核心邏輯：處理卡片內的「上一張 / 下一張」點擊事件
+    // 👇 新增：計算並更新手機版自製滑動條的位置
+    function updateMobileScrollbar() {
+      const track = document.getElementById('scroll-track');
+      const thumb = document.getElementById('mobile-thumb');
+      if (!track || !thumb || window.innerWidth > 768) return;
+      
+      // 計算滑塊應該有多長 (依據畫面可見範圍的比例)
+      const scrollRatio = track.clientWidth / track.scrollWidth;
+      const thumbWidthPercent = Math.max(scrollRatio * 100, 15); // 最少維持 15% 寬度
+      thumb.style.width = thumbWidthPercent + '%';
+      
+      // 計算目前滑塊應該位移多少
+      const maxScrollLeft = track.scrollWidth - track.clientWidth;
+      if (maxScrollLeft > 0) {
+        const scrollProgress = track.scrollLeft / maxScrollLeft;
+        // 100% 減去自己寬度，就是它可以移動的最大左側百分比
+        const maxThumbMove = 100 - thumbWidthPercent;
+        thumb.style.left = (scrollProgress * maxThumbMove) + '%';
+      } else {
+        thumb.style.left = '0%';
+      }
+    }
+
+    // 綁定原生軌道的捲動事件，讓自製滑塊同步移動
+    scrollTrack.addEventListener('scroll', updateMobileScrollbar);
+    // 螢幕大小改變時也重新計算
+    window.addEventListener('resize', updateMobileScrollbar);
+
+    // 全域變數：防連點鎖，避免動畫錯亂
+    let isFlipping = false;
+
+    // 核心邏輯：實時分身 (Clone) 雙向書本翻頁 & 左右撞牆提示
     window.changeCardStep = function(event, sIdx, direction, stepsJsonEncoded) {
-      // 阻止事件冒泡，以免點擊箭頭時又觸發了底層外框的點擊事件
       if (event) event.stopPropagation();
+      if (isFlipping) return; 
 
       if (cardStepState[sIdx] === undefined) cardStepState[sIdx] = 0;
       
       const steps = JSON.parse(decodeURIComponent(stepsJsonEncoded));
       let currStep = cardStepState[sIdx];
+      const imgEl = document.getElementById(`img-${sIdx}`);
+      const imgContainer = imgEl.parentElement;
 
-      if (direction === -1) {
-        // 👉 動作：上一張
-        if (currStep > 0) {
-          currStep--;
-          cardStepState[sIdx] = currStep;
-        }
-      } else {
-        // 👉 動作：下一張
-        if (currStep < steps.length - 1) {
-          currStep++;
-          cardStepState[sIdx] = currStep;
-        } else {
-          // 如果已是最後一張圖，向右捲動到下一張卡片
+      // 👇 【情境 1】：已經在最後一張，向左拉扯 (Next)
+      if (direction === 1 && currStep === steps.length - 1) {
+        isFlipping = true;
+        imgEl.classList.add('bounce-end-left');
+        setTimeout(() => {
+          imgEl.classList.remove('bounce-end-left');
+          isFlipping = false;
+          
+          // 動畫結束後，平滑滾動到下一個區塊
           const currentCard = document.getElementById(`card-${sIdx}`);
           const nextCard = currentCard.nextElementSibling;
-          
           if (nextCard) {
             const scrollTarget = nextCard.offsetLeft - scrollTrack.offsetLeft - 10;
             scrollTrack.scrollTo({ left: scrollTarget, behavior: 'smooth' });
           }
-          return; // 捲動後就直接結束，不更新 UI
-        }
+        }, 400);
+        return; 
       }
 
-      // === 執行 UI 視覺更新 ===
+      // 👇 【情境 2】：已經在第一張，向右拉扯 (Prev)
+      if (direction === -1 && currStep === 0) {
+        isFlipping = true;
+        imgEl.classList.add('bounce-end-right');
+        setTimeout(() => {
+          imgEl.classList.remove('bounce-end-right');
+          isFlipping = false;
+        }, 400);
+        return;
+      }
+
+      // 👇 【正常翻頁流程】：更新步驟
+      currStep += direction;
+      cardStepState[sIdx] = currStep;
+      isFlipping = true; 
+
+      // ── 實時分身 (Clone) 雙向對稱技術核心 ──
+      // 1. 製造一個當前畫面的「替身」
+      const clone = imgEl.cloneNode(true);
+      clone.classList.remove('bounce-end-left', 'bounce-end-right'); 
+      clone.style.position = 'absolute';
+      clone.style.top = '0';
+      clone.style.left = '0';
+      clone.style.width = '100%';
+      clone.style.height = '100%';
       
-      // 1. 更新標題與圖片 (維持您的雙色標籤)
+      // 替身 (舊畫面) 永遠蓋在最上面
+      clone.style.zIndex = '10';
+      imgEl.style.zIndex = '1';
+      imgContainer.appendChild(clone);
+
+      // 本尊 (新畫面) 瞬間換圖，乖乖躺在底層等著被看見
+      imgEl.src = steps[currStep].img;
+
+      if (direction === 1) {
+        // ⏩ 動作：往下一頁翻 (Next)
+        clone.style.transformOrigin = 'left center'; // 軸心在左邊
+        // 👈 將動畫時間加長為 0.6s，曲線調整得更平滑
+        clone.style.animation = 'turnPageLeftOut 0.6s forwards cubic-bezier(0.25, 0.1, 0.25, 1)';
+      } else {
+        // ⏪ 動作：往上一頁翻 (Prev)
+        clone.style.transformOrigin = 'right center'; // 軸心在右邊
+        // 👈 將動畫時間加長為 0.6s，曲線調整得更平滑
+        clone.style.animation = 'turnPageRightOut 0.6s forwards cubic-bezier(0.25, 0.1, 0.25, 1)';
+      }
+
+      // ── UI 介面立即同步更新 ──
       document.getElementById(`sub-${sIdx}`).innerHTML = getDualColorDesc(steps[currStep].desc, appData[currentMainTab].color);
-      document.getElementById(`img-${sIdx}`).src = steps[currStep].img;
       
-      // 2. 更新進度點點
-      const dotContainer = document.getElementById(`card-${sIdx}`).querySelector('.card-dots');
-      if (dotContainer) {
-        Array.from(dotContainer.children).forEach((dot, i) => {
-          dot.className = i === currStep ? 'dot active' : 'dot';
-        });
-      }
-
-      // 3. 更新右下角的文字提示
       const hint = document.getElementById(`hint-${sIdx}`);
       if (hint) {
         if (currStep === steps.length - 1) {
           const isLastCard = (sIdx === appData[currentMainTab].sections.length - 1);
-          hint.innerText = isLastCard ? '👇 點擊完成' : '👇 點圖看下個功能';
+          hint.innerText = isLastCard ? '👈 點擊完成' : '👈 下個功能';
           hint.style.background = '#3b82f6'; 
         } else {
-          hint.innerText = '👇 點圖看下一張';
-          hint.style.background = '#1e293b'; 
+          hint.innerText = '👈 點擊換圖';
+          hint.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'; 
         }
       }
-
-      // 4. 動態隱藏/顯示「左箭頭」 (第一張時隱藏左箭頭)
+      
       const btnPrev = document.getElementById(`btn-prev-${sIdx}`);
-      if (btnPrev) {
-        btnPrev.style.display = currStep > 0 ? 'flex' : 'none';
-      }
+      if (btnPrev) btnPrev.style.display = currStep > 0 ? 'flex' : 'none';
+
+      // ── 動畫結束後的清潔工作 ──
+      setTimeout(() => {
+        clone.remove(); // 刪除替身
+        isFlipping = false; // 解鎖，允許下次點擊
+      }, 600); // 👈 配合 CSS 將清理時間延後至 600ms
     };
 
     // 返回總覽按鈕 (平滑滾動回上方)
