@@ -9229,9 +9229,11 @@ window.openOfficialWebsite = function() {
   document.getElementById('website-body').innerHTML = `
     <div style="padding:24px 16px; text-align:center;">
       <div style="font-size:54px; margin-bottom:16px;">🌐</div>
-      <div style="font-size:16px; font-weight:900; color:var(--red); margin-bottom:8px;">⚠️ 系統限制提醒</div>
-      <div style="font-size:14px; font-weight:700; color:var(--t1); margin-bottom:24px; line-height:1.6;">
-        請 <span style="color:var(--text-blue); font-size:16px; font-weight:900;">長按</span> 下方網址，<br>並選擇<span style="background:var(--sf2); padding:2px 8px; border-radius:6px; margin:0 4px; border:1px solid var(--border);">在 Safari 中開啟</span>
+      <div style="font-size:16px; font-weight:850; color:var(--red); margin-bottom:8px;">⚠️ IOS系統限制提醒</div>
+      <div style="font-size:14px; font-weight:700; color:var(--t1); margin-bottom:24px; line-height:2.1;">
+        請 <span style="color:var(--text-blue); font-size:16px; font-weight:900;">長按</span> 下方 <span style="color:var(--acc);font-size:16px;font-weight:750;">橘色網址</span>，<br>
+        並選擇<span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">分享…</span>⮕
+        <span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">檢視較多</span>⮕<span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">在 Chrome 中開啟</span>
       </div>
       
       <!-- 👇 長按區塊 (加上 -webkit-touch-callout 確保蘋果系統能跳出長按選單) -->
