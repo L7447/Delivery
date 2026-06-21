@@ -6784,12 +6784,11 @@ async function verifyAuthCode(email) {
   }
 }
 
-/* ══ 替換：帳號資訊 (開放統計 & 頭像支援) ══ */
+/* ══ 替換：帳號資訊 (開放統計 & 頭像支援 & 在線人數) ══ */
 async function openAccountStats() {
   document.getElementById('sub-title').textContent = '帳號資訊';
   document.getElementById('sub-top-right').innerHTML = '';
 
-  // 👇 確保從管理員頁面返回時，左上角關閉按鈕會恢復顯示
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = '';
 
@@ -6797,9 +6796,14 @@ async function openAccountStats() {
   openOverlay('sub-page');
 
   let statsHtml = '';
+  let adminOnlineHtml = ''; // 管理員專屬的在線名單 HTML
+
   try {
-    // 呼叫全新的公開統計 API
-    const statRes = await fetch(`${API_BASE_URL}/stats`);
+    // 💡 加上 Authorization header，讓後端知道我們是不是管理員
+    const headers = { 'Content-Type': 'application/json' };
+    if (USER && USER.token) headers['Authorization'] = `Bearer ${USER.token}`;
+
+    const statRes = await fetch(`${API_BASE_URL}/stats`, { headers });
     const statData = await statRes.json();
     if (statData.success) {
       statsHtml = `
@@ -6807,11 +6811,27 @@ async function openAccountStats() {
         <div class="set-list" style="margin-bottom:20px;">
           <div class="set-row"><span class="sn">總申請人數</span><span style="font-family:var(--mono);color:var(--t1);font-weight:700;">${statData.total} 人</span></div>
           <div class="set-row"><span class="sn">已完成驗證</span><span style="font-family:var(--mono);color:var(--green);font-weight:700;">${statData.verified} 人</span></div>
+          <div class="set-row"><span class="sn">🟢 目前在線人數</span><span style="font-family:var(--mono);color:var(--green);font-weight:900;">${statData.onlineCount} 人</span></div>
         </div>`;
+        
+      // 👇 如果是管理員，把具體名單渲染出來
+      if (USER.role === 'admin' && statData.onlineUsers && statData.onlineUsers.length > 0) {
+        adminOnlineHtml = `
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px; margin-bottom:12px; box-shadow:0 4px 12px rgba(22,163,74,0.1);">
+            <div style="font-size:14px; font-weight:900; color:#16a34a; margin-bottom:10px;">🟢 當前在線清單 (${statData.onlineUsers.length}人)</div>
+            <div style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; padding-right:4px;">
+              ${statData.onlineUsers.map(email => `
+                <div style="font-size:13px; font-family:var(--mono); font-weight:700; color:#15803d; background:#dcfce7; padding:6px 10px; border-radius:8px; border:1px solid #bbf7d0;">
+                  ${email}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
     }
   } catch (e) {}
 
-  /* 替換 openAccountStats() 裡面的 avatarImg 宣告 */
   const avatarImg = USER.avatar 
     ? `<div style="position:relative; display:inline-block;">
          <img src="${USER.avatar}" style="width:192px; height:192px; object-fit:contain; margin-bottom:4px; border:none; border-radius:0; image-rendering: pixelated; image-rendering: crisp-edges;">
@@ -6831,10 +6851,9 @@ async function openAccountStats() {
       <div class="set-list" style="margin-bottom:20px;">
         <div class="set-row"><span class="sn">加入日期</span><span style="font-family:var(--mono);color:var(--text-blue);font-weight:600;">${USER.joinDate || '未知'}</span></div>
         
-        <!-- 👇 修改這裡：排除打卡紀錄，並加入點擊事件與箭頭 -->
         <div class="set-row" onclick="openRecordStats()">
-          <span class="sn">個人總記錄數</span>
-          <span style="font-family:var(--mono);color:var(--text-blue);font-weight:800; margin-right:4px;">${S.records.filter(r => !r.isPunchOnly).length} 筆</span>
+          <span class="sn">個人累計單量</span>
+          <span style="font-family:var(--mono);color:var(--text-blue);font-weight:800; margin-right:4px;">${fmt(S.records.filter(r => !r.isPunchOnly).reduce((sum, r) => sum + (parseFloat(r.orders) || 0), 0))} 單</span>
           <span class="arr">›</span>
         </div>
         
@@ -6852,6 +6871,9 @@ async function openAccountStats() {
   // 管理員專區
   document.getElementById('sub-body').innerHTML = baseHtml + `
     <h4 style="font-size:13px; color:var(--text-red); margin-bottom:8px;">⚙️ 系統管理 (管理員專區)</h4>
+
+    <!-- 👇 插入管理員專屬的在線名單 -->
+    ${adminOnlineHtml}
 
     <button onclick="openAdminUserList()" style="width:100%; padding:14px; border-radius:var(--rs); background:#10b981; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(16,185,129,0.3); cursor:pointer;">
       👥 管理註冊會員名單 (含搜尋)
