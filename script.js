@@ -9222,3 +9222,21 @@ if (document.readyState === 'loading') {
   init();
 }
 /* ══ 7. 設定管理與啟動 結束 ═══════════════════════════════════ */
+/* ══ 系統功能：強制跳出外部瀏覽器開啟官網 ══ */
+window.openOfficialWebsite = function() {
+  // 💡 請去 https://reurl.cc/ 或 https://bitly.com/ 
+  // 將 https://delivery-2ws.pages.dev/intro 縮短，並替換掉下方的網址！
+  const targetUrl = 'https://reurl.cc/yOpv8y'; // 👈 換成你的縮短網址
+  
+  const a = document.createElement('a');
+  a.href = targetUrl;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer external';
+  document.body.appendChild(a);
+  a.click();
+  
+  // 延遲 100 毫秒後再刪除，避免舊版手機瀏覽器報錯
+  setTimeout(() => {
+    a.remove();
+  }, 100);
+};
