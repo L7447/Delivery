@@ -765,7 +765,7 @@
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
       
-      <!-- 👇 官方網站 (呼叫外部腳本，乾淨無錯誤) -->
+      <!-- 👇 官方網站 (點擊後開啟長按引導彈窗) -->
       <div onclick="openOfficialWebsite()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <span style="font-size:15px; font-weight:500; color:var(--t1);">官方網站</span>
         <img src="images/new-window.png" style="width:18px; height:18px; opacity:0.5; object-fit:contain;">
@@ -814,6 +814,18 @@
     <div style="min-width:36px; text-align:right;"></div>
   </div>
   <div class="overlay-body" id="contact-body"></div>
+</div>
+
+<!-- 新增：官方網站引導長按頁面 -->
+<div class="overlay-page" id="website-page" style="z-index:1200;">
+  <div class="top-bar">
+    <button class="bar-btn" onclick="flipCloseOverlay(this, 'website-page')">
+      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+    </button>
+    <h2>官方網站</h2>
+    <div style="min-width:36px; text-align:right;"></div>
+  </div>
+  <div class="overlay-body" id="website-body"></div>
 </div>
 
 </div> <!-- 結尾 #app -->
