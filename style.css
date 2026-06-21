@@ -221,8 +221,8 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 }
 /* 日曆主體與表頭 (日一二三四五六) */
 #fc-body { background: var(--sf); }
-#fc-dow { padding-top: 4px; }
-.fc-dow-cell { text-align: center; font-size: 12px; font-weight: 700; color: #ff5900; padding: 8px 0; }
+#fc-dow { padding-top: 1px; }
+.fc-dow-cell { text-align: center; font-size: 13px; font-weight: 750; color: #00b6d2; padding: 0.5px 0; letter-spacing: 1.5px; }
 /* 日曆網格底板 */
 #fc-grid { 
   background: var(--border); 
