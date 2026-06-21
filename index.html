@@ -765,11 +765,11 @@
     
     <div style="width:100%; margin-top:22px; padding:0 24px;">
       
-      <!-- 👇 新增：官方網站 -->
-      <a href="https://delivery-2ws.pages.dev/intro" target="_blank" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; text-decoration:none; cursor:pointer;">
+      <!-- 👇 新增：官方網站 (強制跳出新視窗開啟瀏覽器) -->
+      <div onclick="window.open('https://delivery-2ws.pages.dev/intro', '_blank')" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <span style="font-size:15px; font-weight:500; color:var(--t1);">官方網站</span>
-        <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
-      </a>
+        <img src="images/new-window.png" style="width:18px; height:18px; opacity:0.6; object-fit:contain;">
+      </div>
 
       <!-- 👇 修改：禁止條款、隱私權政策 (移到聯絡我們上方) -->
       <div onclick="openPrivacyPolicy()" style="padding:16px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
