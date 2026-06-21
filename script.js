@@ -9222,21 +9222,47 @@ if (document.readyState === 'loading') {
   init();
 }
 /* ══ 7. 設定管理與啟動 結束 ═══════════════════════════════════ */
-/* ══ 系統功能：強制跳出外部瀏覽器開啟官網 ══ */
+/* ══ 官方網站：長按引導彈窗與一鍵複製功能 ══ */
 window.openOfficialWebsite = function() {
-  // 💡 請去 https://reurl.cc/ 或 https://bitly.com/ 
-  // 將 https://delivery-2ws.pages.dev/intro 縮短，並替換掉下方的網址！
-  const targetUrl = 'https://reurl.cc/yOpv8y'; // 👈 換成你的縮短網址
+  const websiteUrl = 'https://reurl.cc/yOpv8y';
   
-  const a = document.createElement('a');
-  a.href = targetUrl;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer external';
-  document.body.appendChild(a);
-  a.click();
+  document.getElementById('website-body').innerHTML = `
+    <div style="padding:24px 16px; text-align:center;">
+      <div style="font-size:54px; margin-bottom:16px;">🌐</div>
+      <div style="font-size:16px; font-weight:900; color:var(--red); margin-bottom:8px;">⚠️ 系統限制提醒</div>
+      <div style="font-size:14px; font-weight:700; color:var(--t1); margin-bottom:24px; line-height:1.6;">
+        請 <span style="color:var(--text-blue); font-size:16px; font-weight:900;">長按</span> 下方網址，<br>並選擇<span style="background:var(--sf2); padding:2px 8px; border-radius:6px; margin:0 4px; border:1px solid var(--border);">在 Safari 中開啟</span>
+      </div>
+      
+      <!-- 👇 長按區塊 (加上 -webkit-touch-callout 確保蘋果系統能跳出長按選單) -->
+      <a href="${websiteUrl}" style="display:block; font-family:var(--mono); font-size:18px; font-weight:800; color:var(--acc); margin-bottom:32px; background:#fff5f0; padding:20px 16px; border-radius:12px; border:2px dashed var(--acc); text-decoration:none; word-break: break-all; -webkit-touch-callout: default;">
+        ${websiteUrl}
+      </a>
+      
+      <button onclick="copyWebsiteUrl('${websiteUrl}')" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">
+        📋 一鍵複製網址
+      </button>
+    </div>
+  `;
   
-  // 延遲 100 毫秒後再刪除，避免舊版手機瀏覽器報錯
-  setTimeout(() => {
-    a.remove();
-  }, 100);
+  openOverlay('website-page');
+};
+// 專屬網址複製功能 (不影響信箱複製)
+window.copyWebsiteUrl = function(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      toast('✅ 網址已複製成功！');
+    }).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+  
+  function fallbackCopy(t) {
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.position = "fixed"; ta.style.top = "0"; ta.style.left = "0"; 
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand('copy'); toast('✅ 網址已複製成功！'); } 
+    catch (err) { toast('⚠️ 複製失敗，請長按手動複製'); }
+    document.body.removeChild(ta);
+  }
 };
