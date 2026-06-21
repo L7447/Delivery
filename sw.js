@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v349';
+const CACHE_NAME = 'delivery-app-v350';
 
 // 需要快取的靜態資源清單
 const ASSETS = [
@@ -29,7 +29,8 @@ const ASSETS = [
   '/images/Miyako.webp',
   '/images/close1.png',
   '/images/close2.png',
-  '/images/close3.png',  
+  '/images/close3.png',
+  '/images/new-window.png',
   '/scooter/s1.png',
   '/scooter/s2.png',
   '/scooter/s3.png',
