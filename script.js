@@ -2257,7 +2257,18 @@ function renderHistGroupView(mode) {
     html += `<div style="height:3px; background:#475569; margin: 0px 0px 4px 0px; border-radius:2px; opacity:0.8;"></div>`;
 
     // 產生下方卡片時，使用濾除掉打卡紀錄的 displayRecs
-    html += displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||'')).map(r => buildRecItem(r)).join('');
+    const sortedDisplayRecs = displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
+    
+    // 👇 極限防護：如果是查看「年」模式，且卡片超過 300 張，予以限制
+    const RENDER_LIMIT = 300;
+    if (mode === 'year' && sortedDisplayRecs.length > RENDER_LIMIT) {
+      html += sortedDisplayRecs.slice(0, RENDER_LIMIT).map(r => buildRecItem(r)).join('');
+      html += `<div style="text-align:center; padding:20px; font-weight:800; color:var(--red); font-size:13px; background:#fef2f2; border-radius:12px; margin-top:8px;">
+         ⚠️ 本年度記錄超過 ${RENDER_LIMIT} 筆，為維持系統流暢，僅顯示最新 ${RENDER_LIMIT} 筆詳細卡片。<br>※ 上方「總計資料」仍為全年精確計算，不受影響。
+       </div>`;
+    } else {
+      html += sortedDisplayRecs.map(r => buildRecItem(r)).join('');
+    }
   }
 
   html += `</div>`;
@@ -2524,7 +2535,17 @@ function doSearch() {
     return; 
   }
   
-  el.innerHTML = recs.map(r=>buildRecItem(r)).join('');
+  // 👇 極限防護：如果搜尋結果大於 300 筆，只渲染前 300 筆，避免手機渲染崩潰卡死
+  const RENDER_LIMIT = 300;
+  if (recs.length > RENDER_LIMIT) {
+    const renderRecs = recs.slice(0, RENDER_LIMIT);
+    el.innerHTML = renderRecs.map(r=>buildRecItem(r)).join('') + 
+      `<div style="text-align:center; padding:20px; font-weight:800; color:var(--red); font-size:13px; background:#fef2f2; border-radius:12px; margin-top:8px;">
+         ⚠️ 搜尋結果超過 ${RENDER_LIMIT} 筆，為維持手機流暢度，僅顯示最新 ${RENDER_LIMIT} 筆。<br>請縮小日期區間或輸入更精確的關鍵字。
+       </div>`;
+  } else {
+    el.innerHTML = recs.map(r=>buildRecItem(r)).join('');
+  }
 }
 
 function resetSearch() {
@@ -4068,8 +4089,8 @@ function renderRptCompare() {
     if (!S.rptCmpFilter) S.rptCmpFilter = 'all';
     const activePlats = S.platforms.filter(p=>p.active);
     
-    // 平台切換器
-    html += `<div style="display:flex; gap:8px; margin-bottom:8px; overflow-x:auto; padding-bottom:4px;">
+    // 平台切換器 (縮小下邊距)
+    html += `<div style="display:flex; gap:8px; margin-bottom:6px; overflow-x:auto; padding-bottom:4px;">
       <button onclick="S.rptCmpFilter='all'; renderReport()" style="flex-shrink:0; padding:6px 14px; border-radius:18px; font-size:13px; font-weight:800; border:none; cursor:pointer; transition:0.2s; ${S.rptCmpFilter === 'all' ? 'background:var(--acc); color:#fff; box-shadow:0 2px 6px rgba(255,107,53,0.3);' : 'background:var(--sf); color:var(--t2); border:1px solid var(--border);'}">全部平台</button>`;
     
     activePlats.forEach(p => {
@@ -4078,17 +4099,30 @@ function renderRptCompare() {
     });
     html += `</div>`;
 
-    // 狀態膠囊 (👉 修正：基準月 在左邊，比較對象 在右邊)
+    // 🌟 全新設計：電競對戰風 VS 資訊框 (左紅 vs 右藍)
     const targetYMStr = S.cmpTargetYM.replace('-', '/');
     const baseYMStr = `${S.cmpBaseYear}/${pad(S.cmpBaseMonth)}`;
     
     html += `
-      <div style="display:flex; justify-content:center; margin-bottom:16px;">
-        <div style="display:inline-flex; align-items:center; background:#f1f5f9; border-radius:20px; padding:4px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-          <span style="background:#fff; color:var(--text-blue); padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); box-shadow:0 1px 3px rgba(0,0,0,0.05);">${targetYMStr}</span>
-          <span style="font-size:11px; font-weight:900; color: #000000; margin:0 8px;">VS</span>
-          <span style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:16px; font-size:12px; font-weight:800; font-family:var(--mono); border:1px solid #c7d2fe;">${baseYMStr}</span>
+      <div style="display:flex; justify-content:center; align-items:center; margin-bottom:10px; padding: 0 4px;">
+        
+        <!-- 左側：比較目標 (熱情紅) -->
+        <div style="flex:1; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius:16px 4px 4px 16px; padding:8px 6px; text-align:center; box-shadow:0 4px 10px rgba(220,38,38,0.2); position:relative; overflow:hidden;">
+          <div style="font-size:10px; color:#fecdd3; font-weight:900; letter-spacing:1px; margin-bottom:2px;">比較對象</div>
+          <div style="font-size:15px; color:#ffffff; font-weight:900; font-family:var(--mono); letter-spacing:0.5px;">${targetYMStr}</div>
         </div>
+        
+        <!-- 中間：閃電 VS 圖示 -->
+        <div style="background:#ffffff; border:3px solid #1e293b; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900; font-family:var(--mono); color:#1e293b; z-index:2; margin: 0 -12px; box-shadow:0 0 0 3px #f8fafc;">
+          VS
+        </div>
+        
+        <!-- 右側：基準月 (科技藍) -->
+        <div style="flex:1; background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius:4px 16px 16px 4px; padding:8px 6px; text-align:center; box-shadow:0 4px 10px rgba(37,99,235,0.2); position:relative; overflow:hidden;">
+          <div style="font-size:10px; color:#bfdbfe; font-weight:900; letter-spacing:1px; margin-bottom:2px;">當前基準</div>
+          <div style="font-size:15px; color:#ffffff; font-weight:900; font-family:var(--mono); letter-spacing:0.5px;">${baseYMStr}</div>
+        </div>
+        
       </div>
     `;
 
@@ -4115,32 +4149,45 @@ function renderRptCompare() {
     const dB = calcData(recsB);
 
     // 輔助函式：產生帶有 ↑綠色 / ↓紅色的 比較膠囊
-    const getDiffBadge = (valA, valB, formatType) => {
+    // 👇 加入第 4 個參數 isReverseLogic (反向邏輯：數值越小越好)
+    const getDiffBadge = (valA, valB, formatType, isReverseLogic = false) => {
       const diff = valA - valB;
       if (diff === 0 || valB === 0) return `<span style="font-size:11px; color:var(--t3); font-weight:600;">—</span>`;
       
       const isUp = diff > 0;
-      const color = isUp ? '#16a34a' : '#dc2626'; 
-      const bg = isUp ? '#dcfce7' : '#fee2e2';
-      const icon = isUp ? '▲' : '▼';
+      
+      // 👇 正常邏輯：增加是綠色，減少是紅色
+      // 👇 反向邏輯 (如里程)：增加是紅色，減少是綠色
+      const color = isReverseLogic ? (isUp ? '#dc2626' : '#16a34a') : (isUp ? '#16a34a' : '#dc2626'); 
+      const bg = isReverseLogic ? (isUp ? '#fee2e2' : '#dcfce7') : (isUp ? '#dcfce7' : '#fee2e2');
+      
+      // 👇 設定前綴符號
+      let icon = '';
+      if (isReverseLogic) {
+        // 里程專用：增加是「▼+」，減少是「▲-」
+        icon = isUp ? '▼+' : '▲-';
+      } else {
+        // 正常專用：增加是「▲」，減少是「▼」
+        icon = isUp ? '▲' : '▼';
+      }
       
       let diffStr = '';
-      if (formatType === '$') diffStr = `$ ${fmt(Math.abs(diff))}`; // 👉 修正：金額符號空一格
-      else if (formatType === '$2') diffStr = `$ ${Math.abs(diff).toFixed(2)}`; // 👉 修正：處理小數點兩位的金額
+      if (formatType === '$') diffStr = `<span style="font-size:8px;">$</span> ${fmt(Math.abs(diff))}`; 
+      else if (formatType === '$2') diffStr = `<span style="font-size:8px;">$</span> ${Math.abs(diff).toFixed(2)}`; 
       else if (formatType === '%') diffStr = `${(Math.abs(diff/valB)*100).toFixed(2)} %`;
       else if (formatType === 'hr') diffStr = `${Math.abs(diff).toFixed(2)} hr`;
       else if (formatType === '單') diffStr = `${fmt(Math.abs(diff))} 單`;
       else if (formatType === 'km') diffStr = `${fmt(Math.abs(diff))} km`;
-      else diffStr = Math.abs(diff).toFixed(2); // 預設留2位小數 (如單量比)
+      else diffStr = Math.abs(diff).toFixed(2); 
 
       return `
-        <span style="background:${bg}; color:${color}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:900; font-family:var(--mono); letter-spacing:0.5px; border:1px solid ${color}30; white-space:nowrap; display:inline-flex; align-items:center; gap:2px;">
+        <span style="background:${bg}; color:${color}; padding:2px 6px; border-radius:12px; font-size:11px; font-weight:900; font-family:var(--mono); letter-spacing:0.5px; border:1px solid ${color}30; white-space:nowrap; display:inline-flex; align-items:center; gap:2px;">
           <span style="font-size:8px;">${icon}</span> ${diffStr}
         </span>
       `;
     };
 
-    // 計算均值 (👉 修正：全數採用 2 位小數處理邏輯)
+    // 計算均值
     const avgIncomeA = dA.workDays > 0 ? (dA.total / dA.workDays) : 0;
     const avgIncomeB = dB.workDays > 0 ? (dB.total / dB.workDays) : 0;
     
@@ -4156,28 +4203,33 @@ function renderRptCompare() {
     const avgOrdPriceA = dA.orders > 0 ? (dA.total / dA.orders) : 0;
     const avgOrdPriceB = dB.orders > 0 ? (dB.total / dB.orders) : 0;
 
-    // 建立 3x3 網格
+    // 建立 3x3 網格 
+    // 👇 修改：在「里程」欄位的 getDiffBadge 呼叫中，加入第 4 個參數 true
     const cards = [
-      { t: '月收入', v: `$ ${fmt(dA.total)}`, c: '#ea580c', diff: getDiffBadge(dA.total, dB.total, '%') },
-      { t: '總單量', v: `${fmt(dA.orders)} <span style="font-size:12px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
-      { t: '均單價', v: `$ ${avgOrdPriceA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$2') }, // 👉 修正：金額帶小數
+      { t: '月收入', v: `<span style="font-size:11px;">$</span> ${fmt(dA.total)}`, c: '#ea580c', diff: getDiffBadge(dA.total, dB.total, '%') },
+      { t: '總單量', v: `${fmt(dA.orders)} <span style="font-size:11px">單</span>`, c: '#475569', diff: getDiffBadge(dA.orders, dB.orders, '單') },
+      { t: '均單價', v: `<span style="font-size:11px;">$</span> ${avgOrdPriceA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdPriceA, avgOrdPriceB, '$2') }, 
 
-      { t: '總工時', v: `${dA.hours.toFixed(2)} <span style="font-size:12px">hr</span>`, c: '#475569', diff: getDiffBadge(dA.hours, dB.hours, 'hr') },
-      { t: '時薪', v: `$ ${avgHrA.toFixed(2)}`, c: '#2563eb', diff: getDiffBadge(avgHrA, avgHrB, '$2') }, // 👉 修正：時薪帶小數
-      { t: '均單量', v: `${avgOrdHrA.toFixed(2)} <span style="font-size:12px">單/hr</span>`, c: '#0f172a', diff: getDiffBadge(avgOrdHrA, avgOrdHrB, '') }, // 👉 修正：標題與單位
+      { t: '總工時', v: `${dA.hours.toFixed(2)} <span style="font-size:11px">hr</span>`, c: '#475569', diff: getDiffBadge(dA.hours, dB.hours, 'hr') },
+      { t: '時薪', v: `<span style="font-size:11px;">$</span> ${avgHrA.toFixed(2)}`, c: '#2563eb', diff: getDiffBadge(avgHrA, avgHrB, '$2') }, 
+      { t: '均單量', v: `${avgOrdHrA.toFixed(2)} <span style="font-size:11px">單/hr</span>`, c: '#0f172a', diff: getDiffBadge(avgOrdHrA, avgOrdHrB, '') }, 
 
-      { t: '日均收入', v: `$ ${fmt(avgIncomeA)}`, c: '#0f172a', diff: getDiffBadge(avgIncomeA, avgIncomeB, '$') },
-      { t: '里程', v: `${fmt(dA.mileage)} <span style="font-size:12px">km</span>`, c: '#0f172a', diff: getDiffBadge(dA.mileage, dB.mileage, 'km') },
-      { t: '每公里均價', v: `$ ${avgOrdKmA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$2') } // 👉 修正：金額帶小數
+      { t: '日均收入', v: `<span style="font-size:11px;">$</span> ${avgIncomeA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgIncomeA, avgIncomeB, '$2') },
+      
+      // 👇 里程開啟反向邏輯 (true)
+      { t: '里程', v: `${fmt(dA.mileage)} <span style="font-size:11px">km</span>`, c: '#0f172a', diff: getDiffBadge(dA.mileage, dB.mileage, 'km', true) },
+      
+      { t: '每公里均價', v: `<span style="font-size:11px;">$</span> ${avgOrdKmA.toFixed(2)}`, c: '#0f172a', diff: getDiffBadge(avgOrdKmA, avgOrdKmB, '$2') } 
     ];
 
-    html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:16px;">`;
+    // 👇 修改網格：縮小 gap 與 padding 讓排列更緊密
+    html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px;">`;
     cards.forEach(c => {
       html += `
-        <div style="background:var(--sf); border:1px solid var(--border); border-radius:12px; padding:12px 6px; text-align:center; display:flex; flex-direction:column; justify-content:center; gap:6px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
-          <div style="font-family:var(--mono); font-size:18px; font-weight:900; color:${c.c};">${c.v}</div>
-          <div style="height:22px; display:flex; align-items:center; justify-content:center;">${c.diff}</div>
-          <div style="font-size:12px; color:var(--t3); font-weight:700; margin-top:2px;">${c.t}</div>
+        <div style="background:var(--sf); border:1px solid var(--border); border-radius:12px; padding:10px 4px; text-align:center; display:flex; flex-direction:column; justify-content:center; gap:5px; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+          <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:${c.c}; line-height:1.1;">${c.v}</div>
+          <div style="height:20px; display:flex; align-items:center; justify-content:center;">${c.diff}</div>
+          <div style="font-size:11px; color:var(--t3); font-weight:800; margin-top:1px;">${c.t}</div>
         </div>
       `;
     });
