@@ -1314,60 +1314,48 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 華麗版浮動公告：質感強化 + 邏輯修復 ══ */
+// 邏輯核心：在渲染前就先檢查
 function getFloatingAnnouncementHtml() {
-  // 後端設定檔需包含 version 欄位 (例如：version: "20231027")
-  let ann = { active: false, title: '', text: '', type: 'info', version: 'v1' };
-  try {
-    const raw = localStorage.getItem('delivery_global_announcement');
-    if (raw) ann = JSON.parse(raw);
-  } catch(e) {}
-
-  // 邏輯修復：若已儲存的版本號與當前公告版本號一致，則不重複彈出
+  const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false}');
   const dismissedVer = localStorage.getItem('delivery_dismissed_ann_ver');
+  
+  // 核心：若公告未啟用，或版本號已存在於 LocalStorage，直接回傳空字串
   if (!ann.active || !ann.text || ann.version === dismissedVer) return '';
 
   return `
-    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); padding:20px;">
-      <div class="announcement-rainbow" style="max-width:360px; width:100%; background:#ffffff; border-radius:24px; padding:0; position:relative; box-shadow: 0 20px 40px rgba(0,0,0,0.4); overflow:hidden;">
+    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999998; background:rgba(0,0,0,0.4); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; padding:20px;">
+      <div style="background:#fff; width:100%; max-width:350px; border-radius:28px; overflow:hidden; position:relative; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
         
-        <!-- 多層次豐富設計：頂部裝飾區 -->
-        <div style="height:120px; background:linear-gradient(135deg, #6366f1, #a855f7); display:flex; align-items:center; justify-content:center; position:relative;">
-          <div style="font-size:50px;">${ann.type === 'warning' ? '🚨' : '✨'}</div>
-          <div style="position:absolute; bottom:-10px; width:100%; height:20px; background:#ffffff; border-radius:20px 20px 0 0;"></div>
-        </div>
-
-        <div style="padding:0 24px 24px 24px;">
-          <h2 style="text-align:center; margin:0 0 16px 0; font-size:20px; color:#1e293b;">${safeText(ann.title)}</h2>
-          <div style="background:#f8fafc; padding:16px; border-radius:12px; font-size:14px; color:#334155; line-height:1.6; margin-bottom:24px; border:1px solid #e2e8f0;">
+        <!-- 6px 七彩邊框線 -->
+        <div style="height:6px; background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); width:100%;"></div>
+        
+        <div style="padding:32px 24px; text-align:center;">
+          <div style="font-size:40px; margin-bottom:12px;">📣</div>
+          <h2 style="margin:0 0 12px 0; font-size:20px; font-weight:900;">${safeText(ann.title)}</h2>
+          <div style="font-size:14px; color:#475569; line-height:1.7; margin-bottom:28px; text-align:left; max-height:200px; overflow-y:auto;">
             ${safeTextWithBr(ann.text)}
           </div>
-          
-          <div style="display:flex; gap:12px;">
-            <button onclick="confirmDismiss('${ann.version}')" style="flex:1; padding:12px; background:#f1f5f9; color:#64748b; border:none; border-radius:12px; font-weight:800; cursor:pointer;">不再顯示</button>
-            <button onclick="dismissAnnouncement(false)" style="flex:1; padding:12px; background:var(--acc); color:#fff; border:none; border-radius:12px; font-weight:800; cursor:pointer;">已閱讀</button>
-          </div>
+          <button onclick="dismissAnnouncement('${ann.version}')" style="width:100%; padding:14px; background:#1e293b; color:#fff; border-radius:14px; font-weight:800; border:none; cursor:pointer;">已閱讀</button>
+          <div onclick="confirmDismiss('${ann.version}')" style="margin-top:16px; font-size:12px; color:#94a3b8; font-weight:700; cursor:pointer;">不再顯示此公告</div>
         </div>
       </div>
     </div>
   `;
 }
-/* ══ 新增：不再顯示前的確認彈窗 ══ */
-window.confirmDismiss = async function(version) {
-  const ok = await customConfirm('確定不再顯示此公告嗎？<br><span style="font-size:12px; color:var(--t3);">未來若有重要更新將無法即時獲取。</span>');
+
+// 點擊不再顯示，呼叫自訂確認彈窗 (confirmDismiss)
+window.confirmDismiss = async function(ver) {
+  const ok = await customConfirm("不再顯示此公告？<br>未來將無法獲取重要系統更新。");
   if (ok) {
-    localStorage.setItem('delivery_dismissed_ann_ver', version);
-    dismissAnnouncement(true);
+    localStorage.setItem('delivery_dismissed_ann_ver', ver);
+    document.getElementById('home-announcement-card').remove();
+    toast('✅ 已設定不再顯示', 500);
   }
 };
-window.dismissAnnouncement = function(isPermanent) {
-  const card = document.getElementById('home-announcement-card');
-  toast('✅ 已確認', 500);
-  if (card) {
-    card.style.transition = 'opacity 0.3s';
-    card.style.opacity = '0';
-    setTimeout(() => card.remove(), 300);
-  }
+
+window.dismissAnnouncement = function() {
+  document.getElementById('home-announcement-card').remove();
+  toast('✅ 已閱讀', 500);
 };
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
