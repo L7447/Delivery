@@ -611,14 +611,17 @@ input:checked + .slider:before { transform: translateX(20px); }
   z-index: -1;
 }
 
-/* 七彩邊框漸層動畫 */
-@keyframes rainbowBorder {
-  0% { border-image-source: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); }
-  50% { border-image-source: linear-gradient(180deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); }
-  100% { border-image-source: linear-gradient(270deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); }
-}
+/* 動態七彩邊框 */
 .announcement-rainbow {
-  border: 6px solid;
+  border: 6px solid transparent; /* 預留 6px 空間 */
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
   border-image-slice: 1;
-  animation: rainbowBorder 3s linear infinite;
+  border-image-source: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff);
+  animation: rainbowRotate 4s linear infinite;
+  border-radius: 25px;
+}
+@keyframes rainbowRotate {
+  0% { border-image-source: linear-gradient(0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); }
+  100% { border-image-source: linear-gradient(360deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); }
 }
