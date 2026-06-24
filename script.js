@@ -694,17 +694,32 @@ function runSaveProgress(callback) {
   setTimeout(() => { finishProgress(callback); }, 500); 
 }
 
-function customConfirm(msg) {
+/* ══ 彈窗事件安全性加強 ══ */
+window.customConfirm = function(msg) {
   return new Promise(resolve => {
     const ov = document.getElementById('confirm-overlay');
-    document.getElementById('confirm-msg').innerHTML = msg; ov.classList.add('show');
-    const ok = document.getElementById('confirm-ok-btn'); const cancel = document.getElementById('confirm-cancel-btn');
-    function done(v) { ov.classList.remove('show'); ok.removeEventListener('click', onOk); cancel.removeEventListener('click', onCancel); resolve(v); }
-    function onOk() { done(true); } function onCancel() { done(false); }
-    ok.addEventListener('click', onOk); cancel.addEventListener('click', onCancel);
-    ov.addEventListener('click', e=>{ if(e.target===ov) done(false); }, {once:true});
+    // 如果確認框不存在，這裡應確保它在 HTML 載入時就已經是 display: none
+    if (!ov) return resolve(false);
+
+    document.getElementById('confirm-msg').innerHTML = msg;
+    ov.classList.add('show');
+
+    const ok = document.getElementById('confirm-ok-btn');
+    const cancel = document.getElementById('confirm-cancel-btn');
+
+    // 移除舊的監聽器，防止事件累積導致的重複觸發或卡死
+    const onOk = () => { ov.classList.remove('show'); resolve(true); cleanup(); };
+    const onCancel = () => { ov.classList.remove('show'); resolve(false); cleanup(); };
+    
+    function cleanup() {
+        ok.removeEventListener('click', onOk);
+        cancel.removeEventListener('click', onCancel);
+    }
+
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
   });
-}
+};
 function openOverlay(id) { 
   const el = document.getElementById(id);
   if (el) {
@@ -1314,23 +1329,64 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 核心渲染與事件綁定 ══ */
+/* ══ 修正：渲染公告時，將邏輯與 HTML 分離 ══ */
 function getFloatingAnnouncementHtml() {
   const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false}');
   if (!ann.active || !ann.text || localStorage.getItem('delivery_ann_dismissed') === ann.text) return '';
 
+  // 將公告內容透過 window 對象暫存，避免 HTML 字串引號轉義問題
+  window.currentAnnText = ann.text;
+  window.currentAnnVer = ann.version;
+
+  // 使用 setTimeout 確保 DOM 渲染完畢後再給予事件
+  setTimeout(() => {
+    const box = document.getElementById('ann-checkbox');
+    const closeBtn = document.getElementById('close-ann-btn');
+    
+    // 在 getFloatingAnnouncementHtml 的 setTimeout 裡面這樣寫：
+    const btn = document.getElementById('close-ann-btn');
+    if(btn) {
+        btn.onclick = function(e) {
+            e.stopPropagation(); // 阻止冒泡
+            handleAnnClose(ann.text);
+        };
+    }
+
+    // 綁定勾選框
+    if(box) box.onclick = () => {
+      const isChecked = box.dataset.checked === 'true';
+      box.dataset.checked = !isChecked;
+      box.style.background = !isChecked ? '#3b82f6' : 'transparent';
+      box.innerHTML = !isChecked ? '✓' : '';
+    };
+
+    // 綁定關閉按鈕
+    if(closeBtn) closeBtn.onclick = () => {
+      const isChecked = document.getElementById('ann-checkbox').dataset.checked === 'true';
+      if (isChecked) {
+         // 這裡只觸發確認，不執行 remove
+         customConfirm("確定永久隱藏此公告？").then(ok => {
+           if (ok) {
+             localStorage.setItem('delivery_ann_dismissed', window.currentAnnText);
+             document.getElementById('home-announcement-card').remove();
+           }
+         });
+      } else {
+         document.getElementById('home-announcement-card').remove();
+      }
+    };
+  }, 100);
+
   return `
     <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999990; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; padding:20px;">
-      <div class="gaming-card" style="width:100%; max-width:340px; border-radius:24px; padding:24px; position:relative; z-index:1;">
+      <div class="gaming-card" style="width:100%; max-width:340px; border-radius:24px; padding:24px; position:relative;">
         <h2 style="margin:0 0 16px 0; text-align:center; color:#fff; font-size:20px;">${safeText(ann.title)}</h2>
         <div style="font-size:14px; color:#cbd5e1; margin-bottom:24px; line-height:1.6;">${safeTextWithBr(ann.text)}</div>
         
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;" onclick="toggleAnnCheckbox()">
-          <div id="ann-checkbox" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;"></div>
-          <span style="font-size:13px; color:#fff;">不再顯示此公告</span>
-        </div>
+        <div id="ann-checkbox" data-checked="false" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; margin-bottom:20px;"></div>
+        <span style="font-size:13px; color:#fff;">不再顯示此公告</span>
 
-        <button id="close-ann-btn" class="gaming-btn" style="width:100%;" onclick="handleAnnClose('${ann.text.replace(/'/g, "\\'")}')">關閉公告</button>
+        <button id="close-ann-btn" class="gaming-btn" style="width:100%; margin-top:20px;">關閉公告</button>
       </div>
     </div>
   `;
