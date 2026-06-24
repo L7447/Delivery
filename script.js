@@ -1314,6 +1314,29 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
+/* === 確保公告函式定義在全域，不要包在 renderHome 裡面 === */
+function renderAnnouncement() {
+  const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
+  const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
+
+  if (!ann.active || !ann.text || ann.text === dismissedAnn) return '';
+
+  return `
+    <div id="home-announcement-card" style="position: sticky; top: 10px; z-index: 50; margin: 0 16px 16px 16px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 20px; padding: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); display: flex; gap: 12px; align-items: flex-start;">
+      <div style="font-size:24px;">📢</div>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:900; color:#1e293b; margin-bottom:4px;">系統公告</div>
+        <div style="font-size:13px; color:#475569; font-weight:600; line-height:1.5;">${safeTextWithBr(ann.text)}</div>
+        <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+          <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#1e293b; color:#fff; border:none; padding:6px 16px; border-radius:30px; font-size:12px; font-weight:800; cursor:pointer;">我知道了</button>
+          <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; font-weight:700;">
+            <input type="checkbox" id="no-show-again"> 不再顯示
+          </label>
+        </div>
+      </div>
+    </div>
+  `;
+}
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
@@ -1336,53 +1359,8 @@ function renderHome() {
     const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
 
     let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
-
-    // 公告系統
-    /* === 更新後的公告渲染函式 (建議在 renderHome 內替換) === */
-    function renderAnnouncement() {
-      const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
-      const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
-
-      // 若已關閉或無內容，直接回傳空
-      if (!ann.active || !ann.text || ann.text === dismissedAnn) return '';
-
-      const safeTextUrl = encodeURIComponent(ann.text);
-      
-      return `
-        <div id="home-announcement-card" style="
-          position: sticky; top: 10px; z-index: 50;
-          margin: 0 16px 16px 16px;
-          background: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          border-radius: 20px;
-          padding: 16px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-          display: flex; gap: 12px; align-items: flex-start;
-          animation: slideDownFade 0.5s ease-out;
-        ">
-          <div style="font-size:24px;">📢</div>
-          <div style="flex:1;">
-            <div style="font-size:14px; font-weight:900; color:#1e293b; margin-bottom:4px;">系統公告</div>
-            <div style="font-size:13px; color:#475569; font-weight:600; line-height:1.5;">${safeTextWithBr(ann.text)}</div>
-            
-            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
-              <button onclick="dismissAnnouncement('${safeTextUrl}')" 
-                      style="background:#1e293b; color:#fff; border:none; padding:6px 16px; border-radius:30px; font-size:12px; font-weight:800; cursor:pointer;">
-                我知道了
-              </button>
-              <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; font-weight:700;">
-                <input type="checkbox" id="no-show-again"> 不再顯示
-              </label>
-            </div>
-          </div>
-        </div>
-        <style>
-          @keyframes slideDownFade { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        </style>
-      `;
-    }
-
+    topHtml += renderAnnouncement(); // 確保這裡呼叫並加入 topHtml
+    
     // 今日概況標題
     topHtml += `
       <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
@@ -6895,17 +6873,14 @@ async function openAccountStats() {
         </div>`;
         
       // 👇 如果是管理員，把具體名單渲染出來
-      if (USER.role === 'admin' && statData.onlineUsers && statData.onlineUsers.length > 0) {
+      // 修改原本的渲染邏輯：
+      if (USER.role === 'admin') {
         adminOnlineHtml = `
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px; margin-bottom:12px; box-shadow:0 4px 12px rgba(22,163,74,0.1);">
-            <div style="font-size:14px; font-weight:900; color:#16a34a; margin-bottom:10px;">🟢 當前在線清單 (${statData.onlineUsers.length}人)</div>
-            <div style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; padding-right:4px;">
-              ${statData.onlineUsers.map(email => `
-                <div style="font-size:13px; font-family:var(--mono); font-weight:700; color:#15803d; background:#dcfce7; padding:6px 10px; border-radius:8px; border:1px solid #bbf7d0;">
-                  ${email}
-                </div>
-              `).join('')}
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:14px; font-weight:900; color:#16a34a;">🟢 在線人數：${statData.onlineCount} 人</div>
             </div>
+            <button onclick="openAdminOnlineUsers()" style="background:#10b981; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:800;">查看名單</button>
           </div>
         `;
       }
@@ -7679,7 +7654,33 @@ async function saveAdminGasPrice() {
     finishProgress(() => toast('連線失敗，無法同步油價'));
   }
 }
+window.openAdminOnlineUsers = async function() {
+  document.getElementById('sub-title').textContent = '當前在線名單';
+  
+  // 獲取數據 (重複使用之前的 stats 請求)
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` };
+  const statRes = await fetch(`${API_BASE_URL}/stats`, { headers });
+  const statData = await statRes.json();
+  
+  let listHtml = '';
+  if (statData.success && statData.onlineUsers) {
+    listHtml = statData.onlineUsers.map(email => `
+      <div style="font-size:14px; font-family:var(--mono); color:#15803d; background:#dcfce7; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid #bbf7d0;">
+        🟢 ${email}
+      </div>
+    `).join('');
+  } else {
+    listHtml = `<div class="empty-tip">目前無人上線</div>`;
+  }
 
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div style="font-size:14px; font-weight:800; color:var(--t1); margin-bottom:16px;">目前在線人數：${statData.onlineCount || 0} 人</div>
+      ${listHtml}
+    </div>
+  `;
+  openOverlay('sub-page');
+};
 /* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
   document.getElementById('sub-title').textContent = '系統公告設定';
