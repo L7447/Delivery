@@ -1323,29 +1323,29 @@ function getFloatingAnnouncementHtml() {
 
   return `
     <div id="home-announcement-card" style="
-      position: fixed; top: 12px; left: 16px; right: 16px; z-index: 100;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      border-radius: 24px;
-      padding: 18px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      display: flex; gap: 12px; align-items: flex-start;
-      animation: slideInDown 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+      position: fixed; top: 30%; left: 16px; right: 16px; z-index: 999;
+      background: rgba(255, 255, 255, 0.95);
+      border: 3px solid #f59e0b;
+      border-radius: 30px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+      display: flex; gap: 16px; align-items: flex-start;
+      animation: zoomIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     ">
-      <div style="font-size:24px;">📢</div>
+      <div style="font-size:32px;">📢</div>
       <div style="flex:1;">
-        <div style="font-size:14px; font-weight:900; color:#1e293b; margin-bottom:4px;">系統公告</div>
-        <div style="font-size:13px; color:#475569; font-weight:600; line-height:1.5;">${safeTextWithBr(ann.text)}</div>
-        <div style="margin-top:14px; display:flex; align-items:center; gap:12px;">
-          <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#1e293b; color:#fff; border:none; padding:8px 20px; border-radius:30px; font-size:12px; font-weight:800; cursor:pointer;">我知道了</button>
+        <div style="font-size:16px; font-weight:900; color:#1e293b; margin-bottom:8px;">系統重要公告</div>
+        <div style="font-size:14px; color:#475569; font-weight:600; line-height:1.6; margin-bottom:16px;">${safeTextWithBr(ann.text)}</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#f59e0b; color:#fff; border:none; padding:10px 24px; border-radius:30px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 10px rgba(245,158,11,0.3);">我知道了</button>
           <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; font-weight:700;"><input type="checkbox" id="no-show-again"> 不再顯示</label>
         </div>
       </div>
     </div>
-    <style>@keyframes slideInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }</style>
+    <style>@keyframes zoomIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }</style>
   `;
 }
+
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
@@ -7676,45 +7676,48 @@ async function saveAdminGasPrice() {
     finishProgress(() => toast('連線失敗，無法同步油價'));
   }
 }
+/* 新增：管理員查看在線名單 (加入重新整理) */
 window.openAdminOnlineUsers = async function() {
   document.getElementById('sub-title').textContent = '當前在線名單';
+  
+  // 加入「重新整理」與「強化版返回」按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="openAdminOnlineUsers()" style="background:var(--green); color:#fff; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800; margin-right:8px;">↺ 重新整理</button>
+    <button onclick="animateSubPageReturn(this, () => openAccountStats())" style="background:#2563eb; color:#fff; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800;">🔙 返回</button>
+  `;
+
   const subBody = document.getElementById('sub-body');
   subBody.innerHTML = `<div style="text-align:center; padding:40px; color:var(--t3);">📡 正在與伺服器連線...</div>`;
-  openOverlay('sub-page');
-
+  
   try {
-    // 建立超時控制器 (5秒後自動放棄請求)
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 5000);
-
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` };
-    const statRes = await fetch(`${API_BASE_URL}/stats`, { headers, signal: controller.signal });
-    clearTimeout(id); // 請求成功，清除計時器
-
+    // 這裡我們強制不使用快取，請求新的統計
+    const statRes = await fetch(`${API_BASE_URL}/stats?t=${Date.now()}`, { headers }); 
     const statData = await statRes.json();
     
     let listHtml = '';
     if (statData.success && statData.onlineUsers && statData.onlineUsers.length > 0) {
       listHtml = statData.onlineUsers.map(email => `
-        <div style="font-size:14px; font-family:var(--mono); color:#15803d; background:#dcfce7; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid #bbf7d0;">
-          🟢 ${email}
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px; background:#ffffff; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+          <span style="font-weight:700; color:#1e293b;">${email}</span>
+          <span style="color:#10b981; font-weight:900;">在線中</span>
         </div>
       `).join('');
     } else {
-      listHtml = `<div class="empty-tip">目前無人上線</div>`;
+      listHtml = `<div class="empty-tip">目前無人上線 (或資料同步中)</div>`;
     }
 
     subBody.innerHTML = `
       <div style="padding:16px;">
-        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px;">目前在線人數：${statData.onlineCount || 0} 人</div>
+        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;">目前在線人數：${statData.onlineCount || 0} 人</div>
         ${listHtml}
       </div>
     `;
   } catch (err) {
     subBody.innerHTML = `
       <div style="text-align:center; padding:40px; color:var(--red);">
-        ⚠️ 連線逾時或失敗<br>
-        <button onclick="openAdminOnlineUsers()" style="margin-top:10px; padding:8px 16px;">重新嘗試</button>
+        ⚠️ 連線失敗<br>
+        <button onclick="openAdminOnlineUsers()" style="margin-top:10px; padding:8px 16px; background:var(--red); color:#fff; border:none; border-radius:8px;">重試</button>
       </div>`;
   }
 }
