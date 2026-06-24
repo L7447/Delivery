@@ -1368,7 +1368,6 @@ function renderHome() {
     const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
 
     let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
-    topHtml += renderAnnouncement(); // 確保這裡呼叫並加入 topHtml
     
     // 今日概況標題
     topHtml += `
@@ -1610,15 +1609,22 @@ function renderHome() {
       bottomHtml = getRewardsHtml();
     }
 
-  topEl.innerHTML = topHtml;
-  botEl.innerHTML = bottomHtml;
+    topHtml += `</div>`;
+    topEl.innerHTML = topHtml;
 
-  // 在首頁的最外層容器加入浮動公告
-  const app = document.getElementById('app');
-  const existingAnn = document.getElementById('home-announcement-card');
-  if (!existingAnn) {
-    app.insertAdjacentHTML('beforeend', getFloatingAnnouncementHtml());
-  }
+    // 4. 浮動公告處理：直接檢查並插入到 #app
+    const app = document.getElementById('app');
+    const existingAnn = document.getElementById('home-announcement-card');
+    const annHtml = getFloatingAnnouncementHtml(); // 呼叫您定義好的浮動公告函式
+
+    if (annHtml && !existingAnn) {
+       app.insertAdjacentHTML('beforeend', annHtml);
+    } else if (!annHtml && existingAnn) {
+       existingAnn.remove();
+    }
+
+    // 渲染底部內容... (略)
+    botEl.innerHTML = bottomHtml;
 
   } catch (error) {
     console.error("首頁渲染發生錯誤：", error);
@@ -7672,40 +7678,45 @@ async function saveAdminGasPrice() {
 }
 window.openAdminOnlineUsers = async function() {
   document.getElementById('sub-title').textContent = '當前在線名單';
-
-  // 1. 隱藏左上角關閉按鈕
-  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  if (closeBtn) closeBtn.style.display = 'none';
-
-  // 2. 右上角加入「返回」按鈕
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { 
-        document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; 
-        openAccountStats(); 
-    })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3);">
-      🔙 返回
-    </button>
-  `;
-  
-  // 獲取數據 (重複使用之前的 stats 請求)
-  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` };
-  const statRes = await fetch(`${API_BASE_URL}/stats`, { headers });
-  const statData = await statRes.json();
-  
-  let listHtml = '';
-  if (statData.success && statData.onlineUsers) {
-    listHtml = statData.onlineUsers.map(email => `
-      <div style="font-size:14px; font-family:var(--mono); color:#15803d; background:#dcfce7; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid #bbf7d0;">
-        🟢 ${email}
-      </div>
-    `).join('');
-  } else {
-    listHtml = `<div class="empty-tip">目前無人上線</div>`;
-  }
-
-  // 載入時先清空內容並顯示載入中
-  document.getElementById('sub-body').innerHTML = `<div style="text-align:center; padding:40px;">載入中...</div>`;
+  const subBody = document.getElementById('sub-body');
+  subBody.innerHTML = `<div style="text-align:center; padding:40px; color:var(--t3);">📡 正在與伺服器連線...</div>`;
   openOverlay('sub-page');
+
+  try {
+    // 建立超時控制器 (5秒後自動放棄請求)
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 5000);
+
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` };
+    const statRes = await fetch(`${API_BASE_URL}/stats`, { headers, signal: controller.signal });
+    clearTimeout(id); // 請求成功，清除計時器
+
+    const statData = await statRes.json();
+    
+    let listHtml = '';
+    if (statData.success && statData.onlineUsers && statData.onlineUsers.length > 0) {
+      listHtml = statData.onlineUsers.map(email => `
+        <div style="font-size:14px; font-family:var(--mono); color:#15803d; background:#dcfce7; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid #bbf7d0;">
+          🟢 ${email}
+        </div>
+      `).join('');
+    } else {
+      listHtml = `<div class="empty-tip">目前無人上線</div>`;
+    }
+
+    subBody.innerHTML = `
+      <div style="padding:16px;">
+        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px;">目前在線人數：${statData.onlineCount || 0} 人</div>
+        ${listHtml}
+      </div>
+    `;
+  } catch (err) {
+    subBody.innerHTML = `
+      <div style="text-align:center; padding:40px; color:var(--red);">
+        ⚠️ 連線逾時或失敗<br>
+        <button onclick="openAdminOnlineUsers()" style="margin-top:10px; padding:8px 16px;">重新嘗試</button>
+      </div>`;
+  }
 }
 /* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
