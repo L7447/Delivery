@@ -1314,49 +1314,55 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 華麗版浮動公告（七彩環繞邊框 + 勾選框） ══ */
+/* ══ 華麗版浮動公告：質感強化 + 邏輯修復 ══ */
 function getFloatingAnnouncementHtml() {
-  let ann = { active: false, title: '', text: '', type: 'info', version: '1.0' }; // 新增 version 欄位
+  // 後端設定檔需包含 version 欄位 (例如：version: "20231027")
+  let ann = { active: false, title: '', text: '', type: 'info', version: 'v1' };
   try {
     const raw = localStorage.getItem('delivery_global_announcement');
     if (raw) ann = JSON.parse(raw);
   } catch(e) {}
 
-  // 邏輯修復：改用版本號 (version) 或唯一識別碼來判斷，而不是內容文字
-  // 這樣即便公告內容微調，只要版本號沒變，使用者就不會看到舊的公告重複出現
+  // 邏輯修復：若已儲存的版本號與當前公告版本號一致，則不重複彈出
   const dismissedVer = localStorage.getItem('delivery_dismissed_ann_ver');
   if (!ann.active || !ann.text || ann.version === dismissedVer) return '';
 
-  const isWarning = ann.type === 'warning' || ann.type === 'urgent';
-
   return `
-    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:20px;">
-      <div class="announcement-rainbow" style="max-width:360px; width:100%; background:#fff; border-radius:16px; padding:24px; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-        <div style="font-size:32px; margin-bottom:12px; text-align:center;">${isWarning ? '🚨' : '📢'}</div>
-        <div style="font-size:20px; font-weight:900; text-align:center; margin-bottom:16px;">${safeText(ann.title)}</div>
-        <div style="font-size:14px; color:#475569; line-height:1.6; margin-bottom:24px;">${safeTextWithBr(ann.text)}</div>
+    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); padding:20px;">
+      <div class="announcement-rainbow" style="max-width:360px; width:100%; background:#ffffff; border-radius:24px; padding:0; position:relative; box-shadow: 0 20px 40px rgba(0,0,0,0.4); overflow:hidden;">
         
-        <!-- 兩按鈕設計 -->
-        <div style="display:flex; gap:12px;">
-          <button onclick="dismissAnnouncement(true, '${ann.version}')" style="flex:1; padding:12px; background:#e2e8f0; color:#475569; border:none; border-radius:12px; font-weight:800; cursor:pointer;">不再顯示</button>
-          <button onclick="dismissAnnouncement(false, '${ann.version}')" style="flex:1; padding:12px; background:var(--acc); color:#fff; border:none; border-radius:12px; font-weight:800; cursor:pointer;">已閱讀，確認</button>
+        <!-- 多層次豐富設計：頂部裝飾區 -->
+        <div style="height:120px; background:linear-gradient(135deg, #6366f1, #a855f7); display:flex; align-items:center; justify-content:center; position:relative;">
+          <div style="font-size:50px;">${ann.type === 'warning' ? '🚨' : '✨'}</div>
+          <div style="position:absolute; bottom:-10px; width:100%; height:20px; background:#ffffff; border-radius:20px 20px 0 0;"></div>
+        </div>
+
+        <div style="padding:0 24px 24px 24px;">
+          <h2 style="text-align:center; margin:0 0 16px 0; font-size:20px; color:#1e293b;">${safeText(ann.title)}</h2>
+          <div style="background:#f8fafc; padding:16px; border-radius:12px; font-size:14px; color:#334155; line-height:1.6; margin-bottom:24px; border:1px solid #e2e8f0;">
+            ${safeTextWithBr(ann.text)}
+          </div>
+          
+          <div style="display:flex; gap:12px;">
+            <button onclick="confirmDismiss('${ann.version}')" style="flex:1; padding:12px; background:#f1f5f9; color:#64748b; border:none; border-radius:12px; font-weight:800; cursor:pointer;">不再顯示</button>
+            <button onclick="dismissAnnouncement(false)" style="flex:1; padding:12px; background:var(--acc); color:#fff; border:none; border-radius:12px; font-weight:800; cursor:pointer;">已閱讀</button>
+          </div>
         </div>
       </div>
     </div>
   `;
 }
-/* ══ 公告關閉函式 ══ */
-window.dismissAnnouncement = function(isPermanent, version) {
-  const card = document.getElementById('home-announcement-card');
-  
-  if (isPermanent) {
-    // 將版本號存入 LocalStorage，下次判斷若相同則不顯示
+/* ══ 新增：不再顯示前的確認彈窗 ══ */
+window.confirmDismiss = async function(version) {
+  const ok = await customConfirm('確定不再顯示此公告嗎？<br><span style="font-size:12px; color:var(--t3);">未來若有重要更新將無法即時獲取。</span>');
+  if (ok) {
     localStorage.setItem('delivery_dismissed_ann_ver', version);
+    dismissAnnouncement(true);
   }
-  
-  // Toast 時間改為 500ms
+};
+window.dismissAnnouncement = function(isPermanent) {
+  const card = document.getElementById('home-announcement-card');
   toast('✅ 已確認', 500);
-
   if (card) {
     card.style.transition = 'opacity 0.3s';
     card.style.opacity = '0';
