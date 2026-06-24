@@ -9372,34 +9372,39 @@ async function init() {
 
 /* ══ ★ 核心修復：這是在動畫結束後，被呼叫的「進場載入函式」 ══ */
 window.onSplashFinished = function() {
-  // 1. 強制插入一個漂亮的載入畫面遮住一切，爭取手機繪製的時間
   const loadingDiv = document.createElement('div');
   loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out;";
   loadingDiv.innerHTML = `
     <div style="width:44px; height:44px; border:4px solid #e2e8f0; border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;"></div>
-    <div style="font-weight:800; color:var(--t2); font-size:15px; letter-spacing:1px;">系統準備中...</div>
+    <div style="font-weight:800; color:var(--t2); font-size:15px; letter-spacing:1px;">載入首頁...</div>
     <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
   `;
   document.body.appendChild(loadingDiv);
 
-  // 2. 延遲 500 毫秒 (讓手機背景將前一個動畫的垃圾回收清空)
   setTimeout(() => {
     try {
       S.homeSubTab = 'schedule';
-      if (document.getElementById('page-home')) {
-        goPage('home');
-      } else {
-        console.warn("page-home 尚未 ready，延後");
-        setTimeout(() => goPage('home'), 200);
-      }
+      goPage('home');                    // 強制渲染首頁
       updateNavIndicator('home');
+
+      // 強制再渲染一次公告（防止被 loadingDiv 蓋住）
+      setTimeout(() => {
+        const existing = document.getElementById('home-announcement-card');
+        if (!existing) {
+          const annHtml = getFloatingAnnouncementHtml();
+          if (annHtml) {
+            document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+          }
+        }
+      }, 600);
+
     } catch(e) {
-      console.error("首頁啟動失敗", e);
+      console.error("首頁渲染失敗", e);
     }
 
     loadingDiv.style.opacity = '0';
-    setTimeout(() => loadingDiv.remove(), 500);
-  }, 500);
+    setTimeout(() => loadingDiv.remove(), 400);
+  }, 600);
 };
 
 /* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
