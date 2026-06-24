@@ -1323,26 +1323,22 @@ function getFloatingAnnouncementHtml() {
 
   return `
     <div id="home-announcement-card" style="
-      position: fixed; top: 30%; left: 16px; right: 16px; z-index: 999;
-      background: rgba(255, 255, 255, 0.95);
-      border: 3px solid #f59e0b;
-      border-radius: 30px;
-      padding: 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-      display: flex; gap: 16px; align-items: flex-start;
-      animation: zoomIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: fixed; top: 30%; left: 20px; right: 20px; z-index: 999;
+      background: #ffffff;
+      border: 8px solid transparent;
+      border-image: linear-gradient(135deg, #f59e0b, #fbbf24, #b45309) 30;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+      animation: appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
     ">
-      <div style="font-size:32px;">📢</div>
-      <div style="flex:1;">
-        <div style="font-size:16px; font-weight:900; color:#1e293b; margin-bottom:8px;">系統重要公告</div>
-        <div style="font-size:14px; color:#475569; font-weight:600; line-height:1.6; margin-bottom:16px;">${safeTextWithBr(ann.text)}</div>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#f59e0b; color:#fff; border:none; padding:10px 24px; border-radius:30px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 10px rgba(245,158,11,0.3);">我知道了</button>
-          <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; font-weight:700;"><input type="checkbox" id="no-show-again"> 不再顯示</label>
-        </div>
-      </div>
+      <div style="font-size:40px; text-align:center; margin-bottom:10px;">👑</div>
+      <div style="font-size:18px; font-weight:900; color:#92400e; text-align:center; margin-bottom:15px; border-bottom:2px solid #f59e0b; padding-bottom:10px;">系統重要通知</div>
+      <div style="font-size:14px; color:#451a03; font-weight:700; line-height:1.8; margin-bottom:20px; text-align:center;">${safeTextWithBr(ann.text)}</div>
+      <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#f59e0b; color:#fff; border:none; padding:10px 24px; border-radius:30px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 10px rgba(245,158,11,0.3);">我知道了</button>
+      <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; font-weight:700;"><input type="checkbox" id="no-show-again"> 不再顯示</label>
     </div>
-    <style>@keyframes zoomIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }</style>
+    <style>@keyframes appear { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }</style>
   `;
 }
 
@@ -7679,16 +7675,22 @@ async function saveAdminGasPrice() {
 /* 新增：管理員查看在線名單 (加入重新整理) */
 window.openAdminOnlineUsers = async function() {
   document.getElementById('sub-title').textContent = '當前在線名單';
-  
-  // 加入「重新整理」與「強化版返回」按鈕
+
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAdminOnlineUsers()" style="background:var(--green); color:#fff; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800; margin-right:8px;">↺ 重新整理</button>
-    <button onclick="animateSubPageReturn(this, () => openAccountStats())" style="background:#2563eb; color:#fff; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800;">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
 
   const subBody = document.getElementById('sub-body');
   subBody.innerHTML = `<div style="text-align:center; padding:40px; color:var(--t3);">📡 正在與伺服器連線...</div>`;
   
+  // 加入「重新整理」按鈕
+  <button onclick="openAdminOnlineUsers()" style="background:var(--green); color:#fff; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800; margin-right:8px;">↺ 重新整理</button>
+
   try {
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` };
     // 這裡我們強制不使用快取，請求新的統計
@@ -7713,6 +7715,7 @@ window.openAdminOnlineUsers = async function() {
         ${listHtml}
       </div>
     `;
+    
   } catch (err) {
     subBody.innerHTML = `
       <div style="text-align:center; padding:40px; color:var(--red);">
