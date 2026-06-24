@@ -1334,21 +1334,22 @@ function getFloatingAnnouncementHtml() {
 
   return `
     <div id="home-announcement-card" style="
-      position: fixed; top: 25%; left: 16px; right: 16px; z-index: 9999;
-      background: #ffffff; border: 4px solid #f59e0b; border-radius: 24px; padding: 24px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: zoomIn 0.3s ease-out;
+      position: fixed; top: 30%; left: 20px; right: 20px; z-index: 999;
+      background: #ffffff;
+      border: 8px solid transparent;
+      border-image: linear-gradient(135deg, #f59e0b, #fbbf24, #b45309) 30;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+      animation: appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
     ">
-      <div style="font-size:32px; margin-bottom:8px;">📢</div>
-      <div style="font-size:16px; font-weight:900; color:#1e293b; margin-bottom:12px;">系統通知</div>
-      <div style="font-size:14px; color:#475569; font-weight:600; line-height:1.6; margin-bottom:20px;">${safeTextWithBr(ann.text)}</div>
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#64748b; cursor:pointer;">
-          <input type="checkbox" id="no-show-again" style="width:18px; height:18px;"> 不再顯示此訊息
-        </label>
-        <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#f59e0b; color:#fff; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">確定</button>
-      </div>
+      <div style="font-size:40px; text-align:center; margin-bottom:10px;">👑</div>
+      <div style="font-size:18px; font-weight:900; color:#92400e; text-align:center; margin-bottom:15px; border-bottom:2px solid #f59e0b; padding-bottom:10px;">系統重要通知</div>
+      <div style="font-size:14px; color:#451a03; font-weight:700; line-height:1.8; margin-bottom:20px; text-align:center;">${safeTextWithBr(ann.text)}</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;"> <input type="checkbox" id="no-show-again" style="width:18px;height:18px;"> 不再顯示此訊息 </label>
+      <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="width:100%; background:#92400e; color:#fff; border:none; padding:12px; font-weight:800; cursor:pointer;">已閱悉</button>
     </div>
-    <style>@keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }</style>
+    <style>@keyframes appear { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }</style>
   `;
 }
 
@@ -7679,7 +7680,16 @@ async function saveAdminGasPrice() {
 /* 新增：管理員查看在線名單 (加入重新整理) */
 window.openAdminOnlineUsers = async function() {
   document.getElementById('sub-title').textContent = '目前在線使用者';
-  
+
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+  `;
+
   const subBody = document.getElementById('sub-body');
   if (!subBody) return;
 
