@@ -1316,29 +1316,37 @@ function switchVehicleTab(tab, index) {
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 // 1. 將渲染公告的函式移出 renderHome，並回傳一個包含絕對定位樣式的 HTML
 function getFloatingAnnouncementHtml() {
-  const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
+  // 安全讀取公告設定，若解析失敗回傳預設值
+  let ann = { active: false, text: "" };
+  try {
+    const raw = localStorage.getItem('delivery_global_announcement');
+    if (raw) ann = JSON.parse(raw);
+  } catch (e) { console.error("公告讀取失敗", e); }
+
   const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
 
+  // 若沒啟用、沒內容或已被使用者標記為「不再顯示此內容」，則回傳空字串
   if (!ann.active || !ann.text || ann.text === dismissedAnn) return '';
 
   return `
     <div id="home-announcement-card" style="
-      position: fixed; top: 30%; left: 20px; right: 20px; z-index: 999;
-      background: #ffffff;
-      border: 8px solid transparent;
-      border-image: linear-gradient(135deg, #f59e0b, #fbbf24, #b45309) 30;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 0 40px rgba(0,0,0,0.5);
-      animation: appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+      position: fixed; top: 25%; left: 16px; right: 16px; z-index: 9999;
+      background: #ffffff; border: 4px solid #f59e0b; border-radius: 24px; padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      animation: zoomIn 0.3s ease-out;
     ">
-      <div style="font-size:40px; text-align:center; margin-bottom:10px;">👑</div>
-      <div style="font-size:18px; font-weight:900; color:#92400e; text-align:center; margin-bottom:15px; border-bottom:2px solid #f59e0b; padding-bottom:10px;">系統重要通知</div>
-      <div style="font-size:14px; color:#451a03; font-weight:700; line-height:1.8; margin-bottom:20px; text-align:center;">${safeTextWithBr(ann.text)}</div>
-      <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#f59e0b; color:#fff; border:none; padding:10px 24px; border-radius:30px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 10px rgba(245,158,11,0.3);">我知道了</button>
-      <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; font-weight:700;"><input type="checkbox" id="no-show-again"> 不再顯示</label>
+      <div style="font-size:32px; margin-bottom:8px;">📢</div>
+      <div style="font-size:16px; font-weight:900; color:#1e293b; margin-bottom:12px;">系統通知</div>
+      <div style="font-size:14px; color:#475569; font-weight:600; line-height:1.6; margin-bottom:20px;">${safeTextWithBr(ann.text)}</div>
+      
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#64748b; cursor:pointer;">
+          <input type="checkbox" id="no-show-again" style="width:18px; height:18px;"> 不再顯示此訊息
+        </label>
+        <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#f59e0b; color:#fff; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">確定</button>
+      </div>
     </div>
-    <style>@keyframes appear { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }</style>
+    <style>@keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }</style>
   `;
 }
 
@@ -1357,8 +1365,8 @@ function renderHome() {
     else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(100%)';
     else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
   }
-
-  try {
+  requestAnimationFrame(() => {
+    try {
     const today = todayStr();
     const dateObj = new Date(today + 'T00:00:00');
     const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
@@ -1605,27 +1613,22 @@ function renderHome() {
       bottomHtml = getRewardsHtml();
     }
 
-    topHtml += `</div>`;
-    topEl.innerHTML = topHtml;
+      topEl.innerHTML = topHtml;
+      botEl.innerHTML = bottomHtml;
 
-    // 4. 浮動公告處理：直接檢查並插入到 #app
-    const app = document.getElementById('app');
-    const existingAnn = document.getElementById('home-announcement-card');
-    const annHtml = getFloatingAnnouncementHtml(); // 呼叫您定義好的浮動公告函式
+      // 公告插入防呆
+      const app = document.getElementById('app');
+      const existingAnn = document.getElementById('home-announcement-card');
+      const annHtml = getFloatingAnnouncementHtml();
 
-    if (annHtml && !existingAnn) {
-       app.insertAdjacentHTML('beforeend', annHtml);
-    } else if (!annHtml && existingAnn) {
-       existingAnn.remove();
+      if (annHtml && !existingAnn) {
+         app.insertAdjacentHTML('beforeend', annHtml);
+      }
+    } catch (e) {
+      console.error("renderHome 渲染錯誤:", e);
+      botEl.innerHTML = `<div class="empty-tip">畫面載入異常，請重新整理。</div>`;
     }
-
-    // 渲染底部內容... (略)
-    botEl.innerHTML = bottomHtml;
-
-  } catch (error) {
-    console.error("首頁渲染發生錯誤：", error);
-    botEl.innerHTML = `<div class="empty-tip" style="color:var(--red);">系統發生例外錯誤</div>`;
-  }
+  });
 }
 
 // 關閉並記憶公告
@@ -1633,15 +1636,15 @@ window.dismissAnnouncement = function(encodedText) {
   const shouldHide = document.getElementById('no-show-again')?.checked;
   const text = decodeURIComponent(encodedText);
   
+  // 如果勾選了「不再顯示」，將該公告內容存入 localstorage
   if (shouldHide) {
     localStorage.setItem('delivery_dismissed_ann', text);
   }
   
   const el = document.getElementById('home-announcement-card');
   if (el) {
-    el.style.transition = 'all 0.3s ease';
     el.style.opacity = '0';
-    el.style.transform = 'translateY(-20px)';
+    el.style.transform = 'scale(0.9)';
     setTimeout(() => el.remove(), 300);
   }
 }
