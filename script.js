@@ -1334,24 +1334,22 @@ function getFloatingAnnouncementHtml() {
 
   return `
     <div id="home-announcement-card" style="
-      position: fixed; top: 25%; left: 16px; right: 16px; z-index: 999;
-      background: #0f172a;
-      border: 3px solid #22d3ee;
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: 0 0 30px rgba(34, 211, 238, 0.4);
-      display: flex; flex-direction: column; align-items: center;
-      animation: neonPulse 2s infinite;
+      position: fixed; top: 20%; left: 16px; right: 16px; z-index: 999;
+      background: #fffdf5;
+      border: 2px solid #d4d4d8;
+      border-radius: 4px;
+      padding: 30px;
+      box-shadow: 5px 5px 0px rgba(0,0,0,0.1);
+      background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+      background-size: 20px 20px;
     ">
-      <div style="font-size:32px; color:#22d3ee; margin-bottom:10px;">⚡</div>
-      <div style="font-size:16px; font-weight:900; color:#fff; margin-bottom:10px; letter-spacing:2px;">CYBER ALERT</div>
-      <div style="font-size:14px; color:#e2e8f0; font-weight:600; text-align:center; margin-bottom:20px;">${safeTextWithBr(ann.text)}</div>
+      <div style="font-size:20px; font-weight:900; color:#3f3f46; margin-bottom:15px; border-left:4px solid #f87171; padding-left:10px;">來自系統的信</div>
+      <div style="font-size:15px; color:#52525b; font-weight:600; line-height:2; font-family:serif; margin-bottom:20px;">
+        ${safeTextWithBr(ann.text)}
+      </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;"> <input type="checkbox" id="no-show-again" style="width:18px;height:18px;"> 不再顯示此訊息 </label><br>
-            <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#22d3ee; color:#0f172a; border:none; padding:10px 40px; border-radius:10px; font-weight:900; cursor:pointer;">確認</button>
+      <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:transparent; color:#ef4444; border:2px solid #ef4444; padding:8px 20px; border-radius:20px; font-weight:800; cursor:pointer;">好的</button>
     </div>
-    <style>
-      @keyframes neonPulse { 0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); } 50% { box-shadow: 0 0 40px rgba(34, 211, 238, 0.6); } }
-    </style>
   `;
 }
 
@@ -7724,14 +7722,14 @@ window.openAdminOnlineUsers = async function() {
 
     subBody.innerHTML = `
       <div style="padding:16px;">
-        <!-- 重新整理按鈕 -->
-        <button onclick="openAdminOnlineUsers()" 
-                style="margin-left:20px; width:50%; background:var(--green); color:#fff; border:none; padding:12px; border-radius:16px; font-size:18px; font-weight:800; box-shadow:0 4px 12px rgba(34,197,94,0.3);margin-bottom:12px; transition:0.2s; cursor:pointer;">
-          ↺ 重新整理
-        </button>
-
-        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;">
+        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;justify-content: space-around;display: flex; flex-direction: row; align-items: center;">
           目前在線人數：${statData.onlineCount || 0} 人
+
+          <!-- 重新整理按鈕 -->
+          <button onclick="openAdminOnlineUsers()" 
+                  style="width:50%; background:var(--green); color:#fff; border:none; padding:12px; border-radius:16px; font-size:18px; font-weight:800; box-shadow:0 4px 12px rgba(34,197,94,0.3);margin-bottom:12px; transition:0.2s; cursor:pointer;">
+            ↺ 重新整理
+          </button>
         </div>
         ${listHtml}
       </div>
