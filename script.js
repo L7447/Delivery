@@ -1314,45 +1314,105 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-// 1. 將渲染公告的函式移出 renderHome，並回傳一個包含絕對定位樣式的 HTML
+/* ══ 華麗版浮動公告（含兩個按鈕） ══ */
 function getFloatingAnnouncementHtml() {
-  let ann = { active: false, text: "" };
+  let ann = { active: false, title: '', text: '', type: 'info' };
   try {
     const raw = localStorage.getItem('delivery_global_announcement');
-    if (raw) {
-      ann = JSON.parse(raw);
-    }
-  } catch (e) { 
-    console.warn("公告解析失敗，已重置", e); 
-    localStorage.removeItem('delivery_global_announcement'); // 清理壞資料
+    if (raw) ann = JSON.parse(raw);
+  } catch(e) {
+    localStorage.removeItem('delivery_global_announcement');
   }
 
-  const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
-  if (!ann.active || !ann.text || typeof ann.text !== 'string' || ann.text === dismissedAnn) {
-    return '';
-  }
+  const dismissed = localStorage.getItem('delivery_dismissed_ann');
+  if (!ann.active || !ann.text || ann.text === dismissed) return '';
+
+  const isWarning = ann.type === 'warning' || ann.type === 'urgent';
 
   return `
-    <div id="home-announcement-card" style="
-      position: fixed; top: 20%; left: 16px; right: 16px; z-index: 999;
-      background: #fffdf5;
-      border: 2px solid #d4d4d8;
-      border-radius: 4px;
-      padding: 30px;
-      box-shadow: 5px 5px 0px rgba(0,0,0,0.1);
-      background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
-      background-size: 20px 20px;
-    ">
-      <div style="font-size:20px; font-weight:900; color:#3f3f46; margin-bottom:15px; border-left:4px solid #f87171; padding-left:10px;">來自系統的信</div>
-      <div style="font-size:15px; color:#52525b; font-weight:600; line-height:2; font-family:serif; margin-bottom:20px;">
-        ${safeTextWithBr(ann.text)}
+    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.68); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:20px; box-sizing:border-box;">
+      
+      <div style="max-width:390px; width:100%; background:linear-gradient(145deg, #ffffff, #f8fafc); border-radius:28px; overflow:hidden; box-shadow: 
+        0 25px 50px -12px rgba(0,0,0,0.45),
+        inset 0 0 0 1px rgba(255,255,255,0.95),
+        0 0 0 8px rgba(251,191,36,0.35); position:relative;">
+        
+        <!-- 頂部光澤條 -->
+        <div style="height:6px; background:linear-gradient(to right, #f59e0b, #fbbf24, #fcd34d, #fbbf24, #f59e0b);"></div>
+        
+        <div style="padding:24px 28px 10px; position:relative;">
+          
+          <!-- 標題 -->
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+            <div style="font-size:42px; line-height:1;">${isWarning ? '🚨' : '📢'}</div>
+            <div style="font-size:22px; font-weight:900; color:#1e293b; letter-spacing:-0.5px; flex:1;">
+              ${safeText(ann.title || '重要公告')}
+            </div>
+          </div>
+          
+          <!-- 內容 -->
+          <div style="background:rgba(255,255,255,0.75); backdrop-filter:blur(20px); border:2px solid #e2e8f0; border-radius:16px; padding:20px; font-size:15.5px; line-height:1.75; color:#1e293b; font-weight:600; box-shadow:inset 0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px;">
+            ${safeTextWithBr(ann.text)}
+          </div>
+          
+          <!-- 兩個按鈕 -->
+          <div style="display:flex; gap:12px;">
+            <button onclick="dismissAnnouncement(true)" 
+                    style="flex:1; padding:14px; background:#e2e8f0; color:#475569; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer;">
+              不再顯示此訊息
+            </button>
+            
+            <button onclick="dismissAnnouncement(false)" 
+                    style="flex:1; padding:14px; background:linear-gradient(135deg, #10b981, #34d399); color:#ffffff; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.4);">
+              已閱讀，確認
+            </button>
+          </div>
+        </div>
+        
+        <!-- 底部光條 -->
+        <div style="height:8px; background:linear-gradient(to right, #eab308, #f59e0b, #fbbf24);"></div>
       </div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;"> <input type="checkbox" id="no-show-again" style="width:18px;height:18px;"> 不再顯示此訊息 </label><br>
-      <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:transparent; color:#ef4444; border:2px solid #ef4444; padding:8px 20px; border-radius:20px; font-weight:800; cursor:pointer;">好的</button>
     </div>
+
+    <style>
+      #home-announcement-card {
+        animation: annPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      @keyframes annPopIn {
+        0% { opacity:0; transform:scale(0.75) translateY(50px); }
+        100% { opacity:1; transform:scale(1) translateY(0); }
+      }
+    </style>
   `;
 }
+/* ══ 公告關閉函式（支援兩個按鈕） ══ */
+window.dismissAnnouncement = function(isPermanent = false) {
+  const card = document.getElementById('home-announcement-card');
+  if (!card) return;
 
+  // 取得當前公告文字作為識別
+  const annText = card.querySelector('div[style*="backdrop-filter"]') 
+    ? card.querySelector('div[style*="backdrop-filter"]').textContent.trim() 
+    : '';
+
+  if (isPermanent) {
+    // 「不再顯示此訊息」→ 永久隱藏
+    localStorage.setItem('delivery_dismissed_ann', annText || 'all');
+    toast('✅ 已設定「不再顯示此公告」');
+  } else {
+    // 「已閱讀，確認」→ 只關閉本次
+    toast('✅ 已閱讀');
+  }
+
+  // 優雅關閉動畫
+  card.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+  card.style.opacity = '0';
+  card.style.transform = 'scale(0.92) translateY(30px)';
+
+  setTimeout(() => {
+    if (card && card.parentNode) card.remove();
+  }, 380);
+};
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
@@ -1632,23 +1692,6 @@ function renderHome() {
       botEl.innerHTML = `<div class="empty-tip">載入首頁時發生錯誤，請重新整理</div>`;
     }
   });  // ←←← 這裡補上缺失的閉合括號
-}
-// 關閉並記憶公告
-window.dismissAnnouncement = function(encodedText) {
-  const shouldHide = document.getElementById('no-show-again')?.checked;
-  const text = decodeURIComponent(encodedText);
-  
-  // 如果勾選了「不再顯示」，將該公告內容存入 localstorage
-  if (shouldHide) {
-    localStorage.setItem('delivery_dismissed_ann', text);
-  }
-  
-  const el = document.getElementById('home-announcement-card');
-  if (el) {
-    el.style.opacity = '0';
-    el.style.transform = 'scale(0.9)';
-    setTimeout(() => el.remove(), 300);
-  }
 }
 
 /* === 👇 打卡功能 (即時資料庫寫入版) === */
@@ -7721,13 +7764,13 @@ window.openAdminOnlineUsers = async function() {
     }
 
     subBody.innerHTML = `
-      <div style="padding:16px;">
-        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;justify-content: space-around;display: flex; flex-direction: row; align-items: center;">
-          目前在線人數：${statData.onlineCount || 0} 人
+      <div style="padding:10px 16px;">
+        <div style="font-size:16px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;justify-content: space-between;display: flex; flex-direction: row; align-items: center;">
+          目前在線人數： ${statData.onlineCount || 0} 人
 
           <!-- 重新整理按鈕 -->
           <button onclick="openAdminOnlineUsers()" 
-                  style="width:50%; background:var(--green); color:#fff; border:none; padding:12px; border-radius:16px; font-size:18px; font-weight:800; box-shadow:0 4px 12px rgba(34,197,94,0.3);margin-bottom:12px; transition:0.2s; cursor:pointer;">
+                  style="width:45%; background:var(--green); color:#fff; border:none; padding:4px 8px; border-radius:16px; font-size:16px; font-weight:750; box-shadow:0 4px 12px rgba(34,197,94,0.3);margin-bottom:10px; transition:0.2s; cursor:pointer;">
             ↺ 重新整理
           </button>
         </div>
