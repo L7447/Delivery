@@ -1314,7 +1314,7 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 華麗版浮動公告（含兩個按鈕） ══ */
+/* ══ 華麗版浮動公告（七彩環繞邊框 + 勾選框） ══ */
 function getFloatingAnnouncementHtml() {
   let ann = { active: false, title: '', text: '', type: 'info' };
   try {
@@ -1330,47 +1330,58 @@ function getFloatingAnnouncementHtml() {
   const isWarning = ann.type === 'warning' || ann.type === 'urgent';
 
   return `
-    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.68); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:20px; box-sizing:border-box;">
+    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.68); backdrop-filter:blur(14px); padding:20px;">
       
-      <div style="max-width:390px; width:100%; background:linear-gradient(145deg, #ffffff, #f8fafc); border-radius:28px; overflow:hidden; box-shadow: 
-        0 25px 50px -12px rgba(0,0,0,0.45),
-        inset 0 0 0 1px rgba(255,255,255,0.95),
-        0 0 0 8px rgba(251,191,36,0.35); position:relative;">
+      <!-- 七彩環繞主體 -->
+      <div style="max-width:390px; width:100%; position:relative;">
         
-        <!-- 頂部光澤條 -->
-        <div style="height:6px; background:linear-gradient(to right, #f59e0b, #fbbf24, #fcd34d, #fbbf24, #f59e0b);"></div>
+        <!-- 七彩旋轉光環 -->
+        <div style="position:absolute; inset:-12px; border-radius:36px; background: conic-gradient(#ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff, #ff0000); 
+                    animation: rainbowRotate 6s linear infinite; filter: blur(1px); z-index: -1; opacity: 0.85;"></div>
         
-        <div style="padding:24px 28px 10px; position:relative;">
+        <!-- 內層白色卡片 -->
+        <div style="background:linear-gradient(145deg, #ffffff, #f8fafc); border-radius:28px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.45); position:relative; z-index:2;">
           
-          <!-- 標題 -->
-          <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
-            <div style="font-size:42px; line-height:1;">${isWarning ? '🚨' : '📢'}</div>
-            <div style="font-size:22px; font-weight:900; color:#1e293b; letter-spacing:-0.5px; flex:1;">
-              ${safeText(ann.title || '重要公告')}
+          <!-- 頂部金屬光條 -->
+          <div style="height:6px; background:linear-gradient(to right, #f59e0b, #fbbf24, #fcd34d, #fbbf24, #f59e0b);"></div>
+          
+          <div style="padding:24px 28px 10px;">
+            
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+              <div style="font-size:42px;">${isWarning ? '🚨' : '📢'}</div>
+              <div style="font-size:22px; font-weight:900; color:#1e293b; flex:1;">
+                ${safeText(ann.title || '重要公告')}
+              </div>
+            </div>
+            
+            <div style="background:rgba(255,255,255,0.75); backdrop-filter:blur(20px); border:2px solid #e2e8f0; border-radius:16px; padding:20px; font-size:15.5px; line-height:1.75; color:#1e293b; font-weight:600; margin-bottom:20px;">
+              ${safeTextWithBr(ann.text)}
+            </div>
+            
+            <!-- 勾選框 -->
+            <div style="display:flex; align-items:center; gap:10px; background:#f8fafc; padding:12px; border-radius:12px; margin-bottom:20px;">
+              <input type="checkbox" id="no-show-again" style="width:20px; height:20px; accent-color:#10b981;">
+              <label for="no-show-again" style="font-size:14px; font-weight:700; color:#334155; cursor:pointer; user-select:none;">
+                不再顯示此訊息
+              </label>
+            </div>
+            
+            <!-- 兩個按鈕 -->
+            <div style="display:flex; gap:12px;">
+              <button onclick="dismissAnnouncement()" 
+                      style="flex:1; padding:14px; background:#e2e8f0; color:#475569; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer;">
+                已閱讀，確認
+              </button>
+              
+              <button onclick="dismissAnnouncement(true)" 
+                      style="flex:1; padding:14px; background:linear-gradient(135deg, #10b981, #34d399); color:#ffffff; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.4);">
+                確定不再顯示
+              </button>
             </div>
           </div>
           
-          <!-- 內容 -->
-          <div style="background:rgba(255,255,255,0.75); backdrop-filter:blur(20px); border:2px solid #e2e8f0; border-radius:16px; padding:20px; font-size:15.5px; line-height:1.75; color:#1e293b; font-weight:600; box-shadow:inset 0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px;">
-            ${safeTextWithBr(ann.text)}
-          </div>
-          
-          <!-- 兩個按鈕 -->
-          <div style="display:flex; gap:12px;">
-            <button onclick="dismissAnnouncement(true)" 
-                    style="flex:1; padding:14px; background:#e2e8f0; color:#475569; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer;">
-              不再顯示此訊息
-            </button>
-            
-            <button onclick="dismissAnnouncement(false)" 
-                    style="flex:1; padding:14px; background:linear-gradient(135deg, #10b981, #34d399); color:#ffffff; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.4);">
-              已閱讀，確認
-            </button>
-          </div>
+          <div style="height:8px; background:linear-gradient(to right, #eab308, #f59e0b, #fbbf24);"></div>
         </div>
-        
-        <!-- 底部光條 -->
-        <div style="height:8px; background:linear-gradient(to right, #eab308, #f59e0b, #fbbf24);"></div>
       </div>
     </div>
 
@@ -1382,32 +1393,41 @@ function getFloatingAnnouncementHtml() {
         0% { opacity:0; transform:scale(0.75) translateY(50px); }
         100% { opacity:1; transform:scale(1) translateY(0); }
       }
+      @keyframes rainbowRotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
     </style>
   `;
 }
-/* ══ 公告關閉函式（已強化文字識別） ══ */
+/* ══ 公告關閉函式（支援勾選框） ══ */
 window.dismissAnnouncement = function(isPermanent = false) {
   const card = document.getElementById('home-announcement-card');
   if (!card) return;
 
-  // 更可靠地取得公告文字
+  const checkbox = document.getElementById('no-show-again');
+  const shouldNeverShow = isPermanent || (checkbox && checkbox.checked);
+
+  // 取得公告文字作為永久隱藏的 key
   let annText = '';
   const contentDiv = card.querySelector('div[style*="backdrop-filter"]');
   if (contentDiv) annText = contentDiv.textContent.trim();
 
-  if (isPermanent && annText) {
+  if (shouldNeverShow && annText) {
     localStorage.setItem('delivery_dismissed_ann', annText);
     toast('✅ 已設定「不再顯示此公告」');
   } else {
     toast('✅ 已閱讀');
   }
 
-  // 優雅關閉
+  // 關閉動畫
   card.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
   card.style.opacity = '0';
   card.style.transform = 'scale(0.9) translateY(40px)';
 
-  setTimeout(() => card.remove(), 450);
+  setTimeout(() => {
+    if (card && card.parentNode) card.remove();
+  }, 450);
 };
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
