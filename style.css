@@ -611,17 +611,18 @@ input:checked + .slider:before { transform: translateX(20px); }
   z-index: -1;
 }
 
-/* 動態七彩邊框 */
-.announcement-rainbow {
-  border: 6px solid transparent; /* 預留 6px 空間 */
-  background-clip: padding-box, border-box;
-  background-origin: padding-box, border-box;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff);
-  animation: rainbowRotate 4s linear infinite;
-  border-radius: 25px;
+.gaming-card {
+  background: linear-gradient(145deg, #1a1c2c, #0f101a);
+  border: 2px solid #3b82f6;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.2);
+  color: #e2e8f0;
 }
-@keyframes rainbowRotate {
-  0% { border-image-source: linear-gradient(0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); }
-  100% { border-image-source: linear-gradient(360deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); }
+.gaming-btn {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 800;
+  cursor: pointer;
 }
