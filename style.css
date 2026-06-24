@@ -380,9 +380,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 body:has(#toast.show) #app > *:not(#toast) {
   filter: blur(5px);
 }
-#confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
-#confirm-overlay.show { display: flex; }
-#confirm-box { background: var(--sf); border-radius: 24px; padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,.15); }
+
 #confirm-msg { font-size: 16px; font-weight: 700; color: var(--t1); line-height: 1.6; margin-bottom: 24px; text-align: center; }
 
 /* 其他輔助類 */
@@ -612,8 +610,6 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 /* 確保彈窗層級永遠大於公告 */
-#confirm-overlay { z-index: 999999 !important; }
-#home-announcement-card { z-index: 999990 !important; }
 .gaming-card {
   background: linear-gradient(145deg, #1a1c2c, #0f101a);
   border: 2px solid #3b82f6;
@@ -629,17 +625,31 @@ input:checked + .slider:before { transform: translateX(20px); }
   font-weight: 800;
   cursor: pointer;
 }
-/* 讓確認框稍微向下移動，不完全蓋在公告正中心，呈現出一種「覆蓋層次感」 */
-#confirm-overlay {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* 加上 padding 避免過度重疊，或者稍微下移 */
-  padding-top: 100px; 
+/* ══ 系統級彈窗與遮罩層級 ══ */
+/* 永遠保持最高，確保永遠在公告之上 */
+#confirm-overlay { 
+  position: fixed !important; 
+  inset: 0 !important; 
+  background: rgba(0,0,0,0.6) !important; 
+  backdrop-filter: blur(6px) !important; 
+  z-index: 999999 !important; 
+  display: none; 
+  align-items: center; 
+  justify-content: center; 
+  padding: 24px; 
 }
-#confirm-overlay > div {
-  /* 給予確認框一個半透明玻璃背景，讓它看起來像浮在公告上方 */
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+#confirm-overlay.show { display: flex !important; }
+/* 彈窗內容容器 */
+#confirm-box { 
+  background: #ffffff; 
+  border-radius: 24px; 
+  padding: 24px; 
+  width: 100%; 
+  max-width: 320px; 
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+/* 確保公告層級低於確認彈窗 */
+#home-announcement-card { 
+  z-index: 999990 !important; 
 }
