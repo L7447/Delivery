@@ -627,7 +627,7 @@ function fmtHours(hVal) {
   return `${mins}<span style="${unitStyle}">m</span>`;
 }
 
-function toast(msg, ms=3500) {
+function toast(msg, ms=2000) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), ms);
@@ -1316,118 +1316,52 @@ function switchVehicleTab(tab, index) {
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 /* ══ 華麗版浮動公告（七彩環繞邊框 + 勾選框） ══ */
 function getFloatingAnnouncementHtml() {
-  let ann = { active: false, title: '', text: '', type: 'info' };
+  let ann = { active: false, title: '', text: '', type: 'info', version: '1.0' }; // 新增 version 欄位
   try {
     const raw = localStorage.getItem('delivery_global_announcement');
     if (raw) ann = JSON.parse(raw);
-  } catch(e) {
-    localStorage.removeItem('delivery_global_announcement');
-  }
+  } catch(e) {}
 
-  const dismissed = localStorage.getItem('delivery_dismissed_ann');
-  if (!ann.active || !ann.text || ann.text === dismissed) return '';
+  // 邏輯修復：改用版本號 (version) 或唯一識別碼來判斷，而不是內容文字
+  // 這樣即便公告內容微調，只要版本號沒變，使用者就不會看到舊的公告重複出現
+  const dismissedVer = localStorage.getItem('delivery_dismissed_ann_ver');
+  if (!ann.active || !ann.text || ann.version === dismissedVer) return '';
 
   const isWarning = ann.type === 'warning' || ann.type === 'urgent';
 
   return `
-    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.68); backdrop-filter:blur(14px); padding:20px;">
-      
-      <!-- 七彩環繞主體 -->
-      <div style="max-width:390px; width:100%; position:relative;">
+    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:20px;">
+      <div class="announcement-rainbow" style="max-width:360px; width:100%; background:#fff; border-radius:16px; padding:24px; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+        <div style="font-size:32px; margin-bottom:12px; text-align:center;">${isWarning ? '🚨' : '📢'}</div>
+        <div style="font-size:20px; font-weight:900; text-align:center; margin-bottom:16px;">${safeText(ann.title)}</div>
+        <div style="font-size:14px; color:#475569; line-height:1.6; margin-bottom:24px;">${safeTextWithBr(ann.text)}</div>
         
-        <!-- 七彩旋轉光環 -->
-        <div style="position:absolute; inset:-12px; border-radius:36px; background: conic-gradient(#ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff, #ff0000); 
-                    animation: rainbowRotate 6s linear infinite; filter: blur(1px); z-index: -1; opacity: 0.85;"></div>
-        
-        <!-- 內層白色卡片 -->
-        <div style="background:linear-gradient(145deg, #ffffff, #f8fafc); border-radius:28px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.45); position:relative; z-index:2;">
-          
-          <!-- 頂部金屬光條 -->
-          <div style="height:6px; background:linear-gradient(to right, #f59e0b, #fbbf24, #fcd34d, #fbbf24, #f59e0b);"></div>
-          
-          <div style="padding:24px 28px 10px;">
-            
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
-              <div style="font-size:42px;">${isWarning ? '🚨' : '📢'}</div>
-              <div style="font-size:22px; font-weight:900; color:#1e293b; flex:1;">
-                ${safeText(ann.title || '重要公告')}
-              </div>
-            </div>
-            
-            <div style="background:rgba(255,255,255,0.75); backdrop-filter:blur(20px); border:2px solid #e2e8f0; border-radius:16px; padding:20px; font-size:15.5px; line-height:1.75; color:#1e293b; font-weight:600; margin-bottom:20px;">
-              ${safeTextWithBr(ann.text)}
-            </div>
-            
-            <!-- 勾選框 -->
-            <div style="display:flex; align-items:center; gap:10px; background:#f8fafc; padding:12px; border-radius:12px; margin-bottom:20px;">
-              <input type="checkbox" id="no-show-again" style="width:20px; height:20px; accent-color:#10b981;">
-              <label for="no-show-again" style="font-size:14px; font-weight:700; color:#334155; cursor:pointer; user-select:none;">
-                不再顯示此訊息
-              </label>
-            </div>
-            
-            <!-- 兩個按鈕 -->
-            <div style="display:flex; gap:12px;">
-              <button onclick="dismissAnnouncement()" 
-                      style="flex:1; padding:14px; background:#e2e8f0; color:#475569; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer;">
-                已閱讀，確認
-              </button>
-              
-              <button onclick="dismissAnnouncement(true)" 
-                      style="flex:1; padding:14px; background:linear-gradient(135deg, #10b981, #34d399); color:#ffffff; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.4);">
-                確定不再顯示
-              </button>
-            </div>
-          </div>
-          
-          <div style="height:8px; background:linear-gradient(to right, #eab308, #f59e0b, #fbbf24);"></div>
+        <!-- 兩按鈕設計 -->
+        <div style="display:flex; gap:12px;">
+          <button onclick="dismissAnnouncement(true, '${ann.version}')" style="flex:1; padding:12px; background:#e2e8f0; color:#475569; border:none; border-radius:12px; font-weight:800; cursor:pointer;">不再顯示</button>
+          <button onclick="dismissAnnouncement(false, '${ann.version}')" style="flex:1; padding:12px; background:var(--acc); color:#fff; border:none; border-radius:12px; font-weight:800; cursor:pointer;">已閱讀，確認</button>
         </div>
       </div>
     </div>
-
-    <style>
-      #home-announcement-card {
-        animation: annPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-      }
-      @keyframes annPopIn {
-        0% { opacity:0; transform:scale(0.75) translateY(50px); }
-        100% { opacity:1; transform:scale(1) translateY(0); }
-      }
-      @keyframes rainbowRotate {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    </style>
   `;
 }
-/* ══ 公告關閉函式（支援勾選框） ══ */
-window.dismissAnnouncement = function(isPermanent = false) {
+/* ══ 公告關閉函式 ══ */
+window.dismissAnnouncement = function(isPermanent, version) {
   const card = document.getElementById('home-announcement-card');
-  if (!card) return;
-
-  const checkbox = document.getElementById('no-show-again');
-  const shouldNeverShow = isPermanent || (checkbox && checkbox.checked);
-
-  // 取得公告文字作為永久隱藏的 key
-  let annText = '';
-  const contentDiv = card.querySelector('div[style*="backdrop-filter"]');
-  if (contentDiv) annText = contentDiv.textContent.trim();
-
-  if (shouldNeverShow && annText) {
-    localStorage.setItem('delivery_dismissed_ann', annText);
-    toast('✅ 已設定「不再顯示此公告」');
-  } else {
-    toast('✅ 已閱讀');
+  
+  if (isPermanent) {
+    // 將版本號存入 LocalStorage，下次判斷若相同則不顯示
+    localStorage.setItem('delivery_dismissed_ann_ver', version);
   }
+  
+  // Toast 時間改為 500ms
+  toast('✅ 已確認', 500);
 
-  // 關閉動畫
-  card.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-  card.style.opacity = '0';
-  card.style.transform = 'scale(0.9) translateY(40px)';
-
-  setTimeout(() => {
-    if (card && card.parentNode) card.remove();
-  }, 450);
+  if (card) {
+    card.style.transition = 'opacity 0.3s';
+    card.style.opacity = '0';
+    setTimeout(() => card.remove(), 300);
+  }
 };
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
