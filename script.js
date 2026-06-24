@@ -1385,33 +1385,29 @@ function getFloatingAnnouncementHtml() {
     </style>
   `;
 }
-/* ══ 公告關閉函式（支援兩個按鈕） ══ */
+/* ══ 公告關閉函式（已強化文字識別） ══ */
 window.dismissAnnouncement = function(isPermanent = false) {
   const card = document.getElementById('home-announcement-card');
   if (!card) return;
 
-  // 取得當前公告文字作為識別
-  const annText = card.querySelector('div[style*="backdrop-filter"]') 
-    ? card.querySelector('div[style*="backdrop-filter"]').textContent.trim() 
-    : '';
+  // 更可靠地取得公告文字
+  let annText = '';
+  const contentDiv = card.querySelector('div[style*="backdrop-filter"]');
+  if (contentDiv) annText = contentDiv.textContent.trim();
 
-  if (isPermanent) {
-    // 「不再顯示此訊息」→ 永久隱藏
-    localStorage.setItem('delivery_dismissed_ann', annText || 'all');
+  if (isPermanent && annText) {
+    localStorage.setItem('delivery_dismissed_ann', annText);
     toast('✅ 已設定「不再顯示此公告」');
   } else {
-    // 「已閱讀，確認」→ 只關閉本次
     toast('✅ 已閱讀');
   }
 
-  // 優雅關閉動畫
-  card.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+  // 優雅關閉
+  card.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
   card.style.opacity = '0';
-  card.style.transform = 'scale(0.92) translateY(30px)';
+  card.style.transform = 'scale(0.9) translateY(40px)';
 
-  setTimeout(() => {
-    if (card && card.parentNode) card.remove();
-  }, 380);
+  setTimeout(() => card.remove(), 450);
 };
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
@@ -1437,37 +1433,40 @@ function renderHome() {
       const dateObj = new Date(today + 'T00:00:00');
       const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
 
-      let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
-      topHtml += `
-        <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-          <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1); line-height:1.2;">今日概況</div>
-          <div class="home-pg-date" style="font-size:14px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-            <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getFullYear()}</b> 年 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getMonth()+1}</b> 月 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getDate()}</b> 日（星期 <b style="font-size:16px; font-weight:700; color: #ff4400;">${dow}</b>）
-          </div>
-        </div>`;
+      // === 今日概況 Top 區塊 ===
+      let topHtml = `
+        <div style="padding:16px 16px 0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
+            <div style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1);">今日概況</div>
+            <div style="font-size:14px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border);">
+              <b style="color:#ff4400;">${dateObj.getFullYear()}</b> 年 
+              <b style="color:#ff4400;">${dateObj.getMonth()+1}</b> 月 
+              <b style="color:#ff4400;">${dateObj.getDate()}</b> 日（星期 <b style="color:#ff4400;">${dow}</b>）
+            </div>
+          </div>`;
 
-      const activePunchRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
-      const isPunched = !!activePunchRec;
-      let punchStatusStr = '離線';
-      if (isPunched) {
-        const startMs = activePunchRec.timestamp || new Date(`${activePunchRec.date}T${activePunchRec.punchIn}:00`).getTime();
-        const diffMin = Math.floor((Date.now() - startMs) / 60000);
-        punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h ${diffMin%60}m)`;
-      }
+      // 打卡狀態卡片
+      const activePunch = S.records.find(r => r.isPunchOnly && !r.punchOut);
+      const isPunched = !!activePunch;
+      let punchStatus = isPunched ? '上線中' : '離線';
       
       topHtml += `
-        <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
-          <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
+        <div class="punch-card-new" style="margin:8px 0 16px 0;">
+          <div class="punch-status-left">
             <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
-            <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span>
+            <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatus}</span>
           </div>
           <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
-            ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
+            ${isPunched ? '⏹ 下線' : '▶ 上線打卡'}
           </button>
-        </div></div>`;
+        </div>
+      `;
+
+      topHtml += `</div>`;
+      topEl.innerHTML = topHtml;
 
       // 底部內容 (平台排程 / 目標進度 / 獎勵進度)
-      let bottomHtml = '';
+      let bottomHtml = '<div style="padding:0 16px 80px;">';
       const activePlatforms = (S.platforms || []).filter(p => p.active);
       
       if (S.homeSubTab === 'schedule') {
@@ -1677,21 +1676,19 @@ function renderHome() {
       // 👇 在 renderHome 結尾正確關閉 requestAnimationFrame
       botEl.innerHTML = bottomHtml;
 
-      // 公告插入（已防呆）
-      try {
-        const app = document.getElementById('app');
-        const existingAnn = document.getElementById('home-announcement-card');
-        const annHtml = getFloatingAnnouncementHtml();
-        if (annHtml && !existingAnn && app) {
-          app.insertAdjacentHTML('beforeend', annHtml);
+      // 強制顯示公告（防止被蓋住）
+      setTimeout(() => {
+        if (!document.getElementById('home-announcement-card')) {
+          const annHtml = getFloatingAnnouncementHtml();
+          if (annHtml) document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
         }
-      } catch(e) { console.warn("公告插入失敗", e); }
+      }, 400);
 
     } catch(e) {
-      console.error("renderHome 執行錯誤:", e);
-      botEl.innerHTML = `<div class="empty-tip">載入首頁時發生錯誤，請重新整理</div>`;
+      console.error("renderHome 錯誤:", e);
+      botEl.innerHTML = `<div class="empty-tip">載入失敗，請重新整理</div>`;
     }
-  });  // ←←← 這裡補上缺失的閉合括號
+  });
 }
 
 /* === 👇 打卡功能 (即時資料庫寫入版) === */
