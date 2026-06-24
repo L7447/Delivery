@@ -611,6 +611,9 @@ input:checked + .slider:before { transform: translateX(20px); }
   z-index: -1;
 }
 
+/* 確保彈窗層級永遠大於公告 */
+#confirm-overlay { z-index: 999999 !important; }
+#home-announcement-card { z-index: 999990 !important; }
 .gaming-card {
   background: linear-gradient(145deg, #1a1c2c, #0f101a);
   border: 2px solid #3b82f6;
@@ -625,4 +628,18 @@ input:checked + .slider:before { transform: translateX(20px); }
   padding: 12px;
   font-weight: 800;
   cursor: pointer;
+}
+/* 讓確認框稍微向下移動，不完全蓋在公告正中心，呈現出一種「覆蓋層次感」 */
+#confirm-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 加上 padding 避免過度重疊，或者稍微下移 */
+  padding-top: 100px; 
+}
+#confirm-overlay > div {
+  /* 給予確認框一個半透明玻璃背景，讓它看起來像浮在公告上方 */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
