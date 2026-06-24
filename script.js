@@ -1314,51 +1314,45 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 電競卡片風格公告 ══ */
+/* ══ 核心渲染與事件綁定 ══ */
 function getFloatingAnnouncementHtml() {
   const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false}');
-  // 檢查是否已關閉 (使用內容文字或特定ID作為標籤)
-  if (!ann.active || localStorage.getItem('delivery_ann_dismissed') === ann.text) return '';
+  if (!ann.active || !ann.text || localStorage.getItem('delivery_ann_dismissed') === ann.text) return '';
 
   return `
-    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,0.8);">
-      <div class="gaming-card" style="width:100%; max-width:340px; border-radius:20px; padding:24px; position:relative;">
-        <!-- 電競裝飾：頂部霓虹光條 -->
-        <div style="height:4px; background:linear-gradient(90deg, #3b82f6, #06b6d4, #a855f7); border-radius:2px; margin-bottom:20px;"></div>
+    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999990; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; padding:20px;">
+      <div class="gaming-card" style="width:100%; max-width:340px; border-radius:24px; padding:24px; position:relative; z-index:1;">
+        <h2 style="margin:0 0 16px 0; text-align:center; color:#fff; font-size:20px;">${safeText(ann.title)}</h2>
+        <div style="font-size:14px; color:#cbd5e1; margin-bottom:24px; line-height:1.6;">${safeTextWithBr(ann.text)}</div>
         
-        <h2 style="font-size:22px; margin:0 0 16px 0; text-align:center; color:#fff;">${safeText(ann.title)}</h2>
-        <div style="font-size:14px; line-height:1.6; margin-bottom:24px; color:#cbd5e1;">${safeTextWithBr(ann.text)}</div>
-        
-        <!-- 勾選框與不再顯示 -->
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;" onclick="toggleAnnCheckbox()">
-          <div id="ann-checkbox" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:4px; display:flex; align-items:center; justify-content:center;"></div>
-          <span style="font-size:13px; font-weight:700;">不再顯示此公告</span>
+          <div id="ann-checkbox" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;"></div>
+          <span style="font-size:13px; color:#fff;">不再顯示此公告</span>
         </div>
 
-        <button class="gaming-btn" style="width:100%;" onclick="handleAnnClose('${ann.text.replace(/'/g, "\\'")}')">關閉公告</button>
+        <button id="close-ann-btn" class="gaming-btn" style="width:100%;" onclick="handleAnnClose('${ann.text.replace(/'/g, "\\'")}')">關閉公告</button>
       </div>
     </div>
   `;
 }
 
-// 切換勾選框狀態
-window.toggleAnnCheckbox = function() {
-  const box = document.getElementById('ann-checkbox');
-  box.dataset.checked = box.dataset.checked === 'true' ? 'false' : 'true';
-  box.style.background = box.dataset.checked === 'true' ? '#3b82f6' : 'transparent';
-  box.innerHTML = box.dataset.checked === 'true' ? '✓' : '';
-};
-
-// 處理關閉
+/* ══ 邏輯修復：獨立控制點擊事件 ══ */
 window.handleAnnClose = function(text) {
+  // 強制先關閉按鈕的互動，防止連點
+  document.getElementById('close-ann-btn').disabled = true;
+  
   const box = document.getElementById('ann-checkbox');
-  if (box && box.dataset.checked === 'true') {
-    // 顯示在上層的確認視窗 (confirm overlay)
-    customConfirm("確定要永久隱藏此公告嗎？").then(ok => {
+  const isChecked = box.dataset.checked === 'true';
+
+  if (isChecked) {
+    // 呼叫確認框 (customConfirm 在這之後會自動疊加上去，z-index 已經調整為 999999)
+    customConfirm("確定永久隱藏此公告？").then(ok => {
       if (ok) {
         localStorage.setItem('delivery_ann_dismissed', text);
         document.getElementById('home-announcement-card').remove();
-        toast('✅ 已設定永久隱藏', 500);
+        toast('✅ 已設定隱藏', 500);
+      } else {
+        document.getElementById('close-ann-btn').disabled = false;
       }
     });
   } else {
