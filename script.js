@@ -1314,48 +1314,57 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-// 邏輯核心：在渲染前就先檢查
+/* ══ 電競卡片風格公告 ══ */
 function getFloatingAnnouncementHtml() {
   const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false}');
-  const dismissedVer = localStorage.getItem('delivery_dismissed_ann_ver');
-  
-  // 核心：若公告未啟用，或版本號已存在於 LocalStorage，直接回傳空字串
-  if (!ann.active || !ann.text || ann.version === dismissedVer) return '';
+  // 檢查是否已關閉 (使用內容文字或特定ID作為標籤)
+  if (!ann.active || localStorage.getItem('delivery_ann_dismissed') === ann.text) return '';
 
   return `
-    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999998; background:rgba(0,0,0,0.4); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; padding:20px;">
-      <div style="background:#fff; width:100%; max-width:350px; border-radius:28px; overflow:hidden; position:relative; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,0.8);">
+      <div class="gaming-card" style="width:100%; max-width:340px; border-radius:20px; padding:24px; position:relative;">
+        <!-- 電競裝飾：頂部霓虹光條 -->
+        <div style="height:4px; background:linear-gradient(90deg, #3b82f6, #06b6d4, #a855f7); border-radius:2px; margin-bottom:20px;"></div>
         
-        <!-- 6px 七彩邊框線 -->
-        <div style="height:6px; background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); width:100%;"></div>
+        <h2 style="font-size:22px; margin:0 0 16px 0; text-align:center; color:#fff;">${safeText(ann.title)}</h2>
+        <div style="font-size:14px; line-height:1.6; margin-bottom:24px; color:#cbd5e1;">${safeTextWithBr(ann.text)}</div>
         
-        <div style="padding:32px 24px; text-align:center;">
-          <div style="font-size:40px; margin-bottom:12px;">📣</div>
-          <h2 style="margin:0 0 12px 0; font-size:20px; font-weight:900;">${safeText(ann.title)}</h2>
-          <div style="font-size:14px; color:#475569; line-height:1.7; margin-bottom:28px; text-align:left; max-height:200px; overflow-y:auto;">
-            ${safeTextWithBr(ann.text)}
-          </div>
-          <button onclick="dismissAnnouncement('${ann.version}')" style="width:100%; padding:14px; background:#1e293b; color:#fff; border-radius:14px; font-weight:800; border:none; cursor:pointer;">已閱讀</button>
-          <div onclick="confirmDismiss('${ann.version}')" style="margin-top:16px; font-size:12px; color:#94a3b8; font-weight:700; cursor:pointer;">不再顯示此公告</div>
+        <!-- 勾選框與不再顯示 -->
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;" onclick="toggleAnnCheckbox()">
+          <div id="ann-checkbox" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:4px; display:flex; align-items:center; justify-content:center;"></div>
+          <span style="font-size:13px; font-weight:700;">不再顯示此公告</span>
         </div>
+
+        <button class="gaming-btn" style="width:100%;" onclick="handleAnnClose('${ann.text.replace(/'/g, "\\'")}')">關閉公告</button>
       </div>
     </div>
   `;
 }
 
-// 點擊不再顯示，呼叫自訂確認彈窗 (confirmDismiss)
-window.confirmDismiss = async function(ver) {
-  const ok = await customConfirm("不再顯示此公告？<br>未來將無法獲取重要系統更新。");
-  if (ok) {
-    localStorage.setItem('delivery_dismissed_ann_ver', ver);
-    document.getElementById('home-announcement-card').remove();
-    toast('✅ 已設定不再顯示', 500);
-  }
+// 切換勾選框狀態
+window.toggleAnnCheckbox = function() {
+  const box = document.getElementById('ann-checkbox');
+  box.dataset.checked = box.dataset.checked === 'true' ? 'false' : 'true';
+  box.style.background = box.dataset.checked === 'true' ? '#3b82f6' : 'transparent';
+  box.innerHTML = box.dataset.checked === 'true' ? '✓' : '';
 };
 
-window.dismissAnnouncement = function() {
-  document.getElementById('home-announcement-card').remove();
-  toast('✅ 已閱讀', 500);
+// 處理關閉
+window.handleAnnClose = function(text) {
+  const box = document.getElementById('ann-checkbox');
+  if (box && box.dataset.checked === 'true') {
+    // 顯示在上層的確認視窗 (confirm overlay)
+    customConfirm("確定要永久隱藏此公告嗎？").then(ok => {
+      if (ok) {
+        localStorage.setItem('delivery_ann_dismissed', text);
+        document.getElementById('home-announcement-card').remove();
+        toast('✅ 已設定永久隱藏', 500);
+      }
+    });
+  } else {
+    document.getElementById('home-announcement-card').remove();
+    toast('✅ 已閱讀', 500);
+  }
 };
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
