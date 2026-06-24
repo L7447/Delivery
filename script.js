@@ -1338,24 +1338,50 @@ function renderHome() {
     let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
 
     // 公告系統
-    try {
+    /* === 更新後的公告渲染函式 (建議在 renderHome 內替換) === */
+    function renderAnnouncement() {
       const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}');
       const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
-      if (ann.active && ann.text && ann.text !== dismissedAnn) {
-        const safeTextUrl = encodeURIComponent(ann.text); 
-        topHtml += `
-          <div id="home-announcement-card" style="position:relative; background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border-left: 4px solid #f97316; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); padding: 16px; overflow: hidden;">
-            <button onclick="dismissAnnouncement('${safeTextUrl}')" style="position:absolute; top:12px; right:12px; background: #f8fafc; border:none; color:#94a3b8; width:28px; height:28px; border-radius:50%; font-size:12px; font-weight:900;">✕</button>
-            <div style="position:relative; z-index:1; display:flex; gap:12px; align-items:flex-start;">
-              <div style="background: linear-gradient(135deg, #f97316, #f59e0b); width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size:18px;">🔔</div>
-              <div>
-                <div style="font-size:14px; font-weight:900; color:#c2410c; margin-bottom:4px;">系統公告</div>
-                <div style="font-size:13px; font-weight:700; color:#475569;">${safeTextWithBr(ann.text)}</div>
-              </div>
+
+      // 若已關閉或無內容，直接回傳空
+      if (!ann.active || !ann.text || ann.text === dismissedAnn) return '';
+
+      const safeTextUrl = encodeURIComponent(ann.text);
+      
+      return `
+        <div id="home-announcement-card" style="
+          position: sticky; top: 10px; z-index: 50;
+          margin: 0 16px 16px 16px;
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          border-radius: 20px;
+          padding: 16px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+          display: flex; gap: 12px; align-items: flex-start;
+          animation: slideDownFade 0.5s ease-out;
+        ">
+          <div style="font-size:24px;">📢</div>
+          <div style="flex:1;">
+            <div style="font-size:14px; font-weight:900; color:#1e293b; margin-bottom:4px;">系統公告</div>
+            <div style="font-size:13px; color:#475569; font-weight:600; line-height:1.5;">${safeTextWithBr(ann.text)}</div>
+            
+            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+              <button onclick="dismissAnnouncement('${safeTextUrl}')" 
+                      style="background:#1e293b; color:#fff; border:none; padding:6px 16px; border-radius:30px; font-size:12px; font-weight:800; cursor:pointer;">
+                我知道了
+              </button>
+              <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; font-weight:700;">
+                <input type="checkbox" id="no-show-again"> 不再顯示
+              </label>
             </div>
-          </div>`;
-      }
-    } catch(e) {}
+          </div>
+        </div>
+        <style>
+          @keyframes slideDownFade { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        </style>
+      `;
+    }
 
     // 今日概況標題
     topHtml += `
@@ -1608,17 +1634,19 @@ function renderHome() {
 
 // 關閉並記憶公告
 window.dismissAnnouncement = function(encodedText) {
-  // 將編碼過的文字還原並存入 LocalStorage
+  const shouldHide = document.getElementById('no-show-again')?.checked;
   const text = decodeURIComponent(encodedText);
-  localStorage.setItem('delivery_dismissed_ann', text);
   
-  // 執行動畫並移除元素
+  if (shouldHide) {
+    localStorage.setItem('delivery_dismissed_ann', text);
+  }
+  
   const el = document.getElementById('home-announcement-card');
   if (el) {
+    el.style.transition = 'all 0.3s ease';
     el.style.opacity = '0';
-    el.style.transform = 'scale(0.95)';
-    el.style.marginBottom = '-'+el.offsetHeight+'px'; // 讓下方元素順滑上移
-    setTimeout(() => { el.remove(); }, 300);
+    el.style.transform = 'translateY(-20px)';
+    setTimeout(() => el.remove(), 300);
   }
 }
 
