@@ -7678,26 +7678,23 @@ async function saveAdminGasPrice() {
 }
 /* 新增：管理員查看在線名單 (加入重新整理) */
 window.openAdminOnlineUsers = async function() {
-  document.getElementById('sub-title').textContent = '當前在線名單';
+  document.getElementById('sub-title').textContent = '目前在線使用者';
+  
+  const subBody = document.getElementById('sub-body');
+  if (!subBody) return;
 
-  // 👇 強制隱藏左上角的 X 按鈕
-  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  if (closeBtn) closeBtn.style.display = 'none';
-
-  // 右上角加入強化版返回按鈕
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+  subBody.innerHTML = `
+    <div style="text-align:center; padding:40px; color:var(--t3);">
+      📡 正在與伺服器連線...
+    </div>
   `;
 
-  const subBody = document.getElementById('sub-body');
-  subBody.innerHTML = `<div style="text-align:center; padding:40px; color:var(--t3);">📡 正在與伺服器連線...</div>`;
-  
-  // 加入「重新整理」按鈕
-  <button onclick="openAdminOnlineUsers()" style="background:var(--green); color:#fff; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800; margin-right:8px;">↺ 重新整理</button>
-
   try {
-    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` };
-    // 這裡我們強制不使用快取，請求新的統計
+    const headers = { 
+      'Content-Type': 'application/json', 
+      'Authorization': `Bearer ${USER.token}` 
+    };
+    
     const statRes = await fetch(`${API_BASE_URL}/stats?t=${Date.now()}`, { headers }); 
     const statData = await statRes.json();
     
@@ -7705,7 +7702,7 @@ window.openAdminOnlineUsers = async function() {
     if (statData.success && statData.onlineUsers && statData.onlineUsers.length > 0) {
       listHtml = statData.onlineUsers.map(email => `
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px; background:#ffffff; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-          <span style="font-weight:700; color:#1e293b;">${email}</span>
+          <span style="font-weight:700; color:#1e293b;">${safeText(email)}</span>
           <span style="color:#10b981; font-weight:900;">在線中</span>
         </div>
       `).join('');
@@ -7715,19 +7712,31 @@ window.openAdminOnlineUsers = async function() {
 
     subBody.innerHTML = `
       <div style="padding:16px;">
-        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;">目前在線人數：${statData.onlineCount || 0} 人</div>
+        <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;">
+          目前在線人數：${statData.onlineCount || 0} 人
+        </div>
         ${listHtml}
+        
+        <!-- 重新整理按鈕 -->
+        <button onclick="openAdminOnlineUsers()" 
+                style="margin-top:20px; width:100%; background:var(--green); color:#fff; border:none; padding:12px; border-radius:16px; font-size:15px; font-weight:800; box-shadow:0 4px 12px rgba(34,197,94,0.3);">
+          ↺ 重新整理
+        </button>
       </div>
     `;
     
   } catch (err) {
+    console.error(err);
     subBody.innerHTML = `
       <div style="text-align:center; padding:40px; color:var(--red);">
-        ⚠️ 連線失敗<br>
-        <button onclick="openAdminOnlineUsers()" style="margin-top:10px; padding:8px 16px; background:var(--red); color:#fff; border:none; border-radius:8px;">重試</button>
+        ⚠️ 連線失敗<br><br>
+        <button onclick="openAdminOnlineUsers()" 
+                style="padding:10px 24px; background:var(--red); color:#fff; border:none; border-radius:12px; font-weight:700;">
+          重試
+        </button>
       </div>`;
   }
-}
+};
 /* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
   document.getElementById('sub-title').textContent = '系統公告設定';
@@ -9268,6 +9277,9 @@ window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); 
 
 /* ══ 系統啟動主流程 (分離架構：資料先載入，等待進場) ══ */
 async function init() {
+  if (!S.settings) S.settings = {...DEFAULT_SETTINGS};
+  if (!Array.isArray(S.platforms)) S.platforms = normalizePlatforms([]);
+
   try { await loadAll(); } catch (e) { console.error(e); }
   
   applyBackground();
