@@ -1334,22 +1334,24 @@ function getFloatingAnnouncementHtml() {
 
   return `
     <div id="home-announcement-card" style="
-      position: fixed; top: 30%; left: 20px; right: 20px; z-index: 999;
-      background: #ffffff;
-      border: 8px solid transparent;
-      border-image: linear-gradient(135deg, #f59e0b, #fbbf24, #b45309) 30;
-      border-radius: 10px;
-      padding: 30px;
-      box-shadow: 0 0 40px rgba(0,0,0,0.5);
-      animation: appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+      position: fixed; top: 25%; left: 16px; right: 16px; z-index: 999;
+      background: #0f172a;
+      border: 3px solid #22d3ee;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 0 30px rgba(34, 211, 238, 0.4);
+      display: flex; flex-direction: column; align-items: center;
+      animation: neonPulse 2s infinite;
     ">
-      <div style="font-size:40px; text-align:center; margin-bottom:10px;">👑</div>
-      <div style="font-size:18px; font-weight:900; color:#92400e; text-align:center; margin-bottom:15px; border-bottom:2px solid #f59e0b; padding-bottom:10px;">系統重要通知</div>
-      <div style="font-size:14px; color:#451a03; font-weight:700; line-height:1.8; margin-bottom:20px; text-align:center;">${safeTextWithBr(ann.text)}</div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;"> <input type="checkbox" id="no-show-again" style="width:18px;height:18px;"> 不再顯示此訊息 </label>
-      <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="width:100%; background:#92400e; color:#fff; border:none; padding:12px; font-weight:800; cursor:pointer;">已閱悉</button>
+      <div style="font-size:32px; color:#22d3ee; margin-bottom:10px;">⚡</div>
+      <div style="font-size:16px; font-weight:900; color:#fff; margin-bottom:10px; letter-spacing:2px;">CYBER ALERT</div>
+      <div style="font-size:14px; color:#e2e8f0; font-weight:600; text-align:center; margin-bottom:20px;">${safeTextWithBr(ann.text)}</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;"> <input type="checkbox" id="no-show-again" style="width:18px;height:18px;"> 不再顯示此訊息 </label><br>
+            <button onclick="dismissAnnouncement('${encodeURIComponent(ann.text)}')" style="background:#22d3ee; color:#0f172a; border:none; padding:10px 40px; border-radius:10px; font-weight:900; cursor:pointer;">確認</button>
     </div>
-    <style>@keyframes appear { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }</style>
+    <style>
+      @keyframes neonPulse { 0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); } 50% { box-shadow: 0 0 40px rgba(34, 211, 238, 0.6); } }
+    </style>
   `;
 }
 
@@ -7722,16 +7724,16 @@ window.openAdminOnlineUsers = async function() {
 
     subBody.innerHTML = `
       <div style="padding:16px;">
+        <!-- 重新整理按鈕 -->
+        <button onclick="openAdminOnlineUsers()" 
+                style="margin-left:20px; width:50%; background:var(--green); color:#fff; border:none; padding:12px; border-radius:16px; font-size:18px; font-weight:800; box-shadow:0 4px 12px rgba(34,197,94,0.3);margin-bottom:12px; transition:0.2s; cursor:pointer;">
+          ↺ 重新整理
+        </button>
+
         <div style="font-size:14px; font-weight:900; color:var(--t1); margin-bottom:16px; background:#eff6ff; padding:10px; border-radius:10px;">
           目前在線人數：${statData.onlineCount || 0} 人
         </div>
         ${listHtml}
-        
-        <!-- 重新整理按鈕 -->
-        <button onclick="openAdminOnlineUsers()" 
-                style="margin-top:20px; width:100%; background:var(--green); color:#fff; border:none; padding:12px; border-radius:16px; font-size:15px; font-weight:800; box-shadow:0 4px 12px rgba(34,197,94,0.3);">
-          ↺ 重新整理
-        </button>
       </div>
     `;
     
