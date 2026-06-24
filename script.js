@@ -1316,29 +1316,24 @@ function switchVehicleTab(tab, index) {
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 // 1. 將渲染公告的函式移出 renderHome，並回傳一個包含絕對定位樣式的 HTML
 function getFloatingAnnouncementHtml() {
-  // 安全讀取公告設定，若解析失敗回傳預設值
   let ann = { active: false, text: "" };
   try {
     const raw = localStorage.getItem('delivery_global_announcement');
     if (raw) ann = JSON.parse(raw);
-  } catch (e) { console.error("公告讀取失敗", e); }
+  } catch (e) { console.error("公告解析失敗", e); }
 
   const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
-
-  // 若沒啟用、沒內容或已被使用者標記為「不再顯示此內容」，則回傳空字串
   if (!ann.active || !ann.text || ann.text === dismissedAnn) return '';
 
   return `
     <div id="home-announcement-card" style="
       position: fixed; top: 25%; left: 16px; right: 16px; z-index: 9999;
       background: #ffffff; border: 4px solid #f59e0b; border-radius: 24px; padding: 24px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-      animation: zoomIn 0.3s ease-out;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: zoomIn 0.3s ease-out;
     ">
       <div style="font-size:32px; margin-bottom:8px;">📢</div>
       <div style="font-size:16px; font-weight:900; color:#1e293b; margin-bottom:12px;">系統通知</div>
       <div style="font-size:14px; color:#475569; font-weight:600; line-height:1.6; margin-bottom:20px;">${safeTextWithBr(ann.text)}</div>
-      
       <div style="display:flex; flex-direction:column; gap:12px;">
         <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#64748b; cursor:pointer;">
           <input type="checkbox" id="no-show-again" style="width:18px; height:18px;"> 不再顯示此訊息
@@ -1357,6 +1352,7 @@ function renderHome() {
   const tabBg = document.getElementById('home-tab-bg');
   
   if (!topEl || !botEl) return;
+
   if (!S.homeSubTab) S.homeSubTab = 'schedule';
   
   // 更新背景滑塊位置 (支援 3 個按鈕)
@@ -1365,258 +1361,253 @@ function renderHome() {
     else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(100%)';
     else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
   }
+
   requestAnimationFrame(() => {
     try {
-    const today = todayStr();
-    const dateObj = new Date(today + 'T00:00:00');
-    const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
+      const today = todayStr();
+      const dateObj = new Date(today + 'T00:00:00');
+      const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
 
-    let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
-    
-    // 今日概況標題
-    topHtml += `
-      <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-        <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1); line-height:1.2;">今日概況</div>
-        <div class="home-pg-date" style="font-size:14px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-          <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getFullYear()}</b> 年 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getMonth()+1}</b> 月 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getDate()}</b> 日（星期 <b style="font-size:16px; font-weight:700; color: #ff4400;">${dow}</b>）
-        </div>
-      </div>`;
+      let topHtml = `<div style="padding:16px 16px 0; flex-shrink:0;">`;
+      topHtml += `
+        <div class="home-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
+          <div class="home-pg-title" style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1); line-height:1.2;">今日概況</div>
+          <div class="home-pg-date" style="font-size:14px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border); box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getFullYear()}</b> 年 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getMonth()+1}</b> 月 <b style="font-size:16px; font-weight:700; color: #ff4400; font-family:var(--mono);">${dateObj.getDate()}</b> 日（星期 <b style="font-size:16px; font-weight:700; color: #ff4400;">${dow}</b>）
+          </div>
+        </div>`;
 
-    // 👇 打卡模組：動態從紀錄尋找是否有一筆「尚未下線」的紀錄
-    const activePunchRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
-    const isPunched = !!activePunchRec;
-    let punchStatusStr = '離線';
-    
-    if (isPunched) {
-      // 利用 timestamp 計算經過的分鐘數，確保跨日也能精準計算
-      const startMs = activePunchRec.timestamp || new Date(`${activePunchRec.date}T${activePunchRec.punchIn}:00`).getTime();
-      const diffMin = Math.floor((Date.now() - startMs) / 60000);
-      punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h ${diffMin%60}m)`;
-    }
-    
-    topHtml += `
-      <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
-        <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
-          <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
-          <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span>
-        </div>
-        <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
-          ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
-        </button>
-      </div></div>`;
-
-    // 底部內容 (平台排程 / 目標進度 / 獎勵進度)
-    let bottomHtml = '';
-    const activePlatforms = (S.platforms || []).filter(p => p.active);
-
-    if (S.homeSubTab === 'schedule') {
-      if (activePlatforms.length === 0) {
-        bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
-      } else {
-        bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
-        bottomHtml += `
-          <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 12px 10px; margin-bottom: -2px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
-            <!-- 頂部四色漸層飾條 -->
-            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #16a34a, #ea580c, #0284c7, #475569);"></div>
-            
-            <div style="font-size: 13px; font-weight: 900; color: #334155; margin-bottom: 10px; letter-spacing: 1px;">💡 狀態標籤圖例</div>
-            
-            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
-              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; box-shadow: 0 2px 6px rgba(22,163,74,0.15);">
-                <span style="font-size: 13px;">🔥</span> 今天
-              </span>
-              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #ffedd5; color: #c2410c; border: 1.5px solid #fdba74; box-shadow: 0 2px 6px rgba(234,88,12,0.15);">
-                <span style="font-size: 13px;">⚡</span> 明天
-              </span>
-              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc; box-shadow: 0 2px 6px rgba(2,132,199,0.15);">
-                <span style="font-size: 13px;">🔜</span> 近 3 天
-              </span>
-              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 6px rgba(71,85,105,0.15);">
-                <span style="font-size: 13px;">⏳</span> 4 天以上
-              </span>
-            </div>
-          </div>`;
-
-        activePlatforms.forEach(p => {
-          const events = calcNextDates(p.id); 
-          if (!events || events.length === 0) return;
-          bottomHtml += `
-            <div style="position: relative; overflow: hidden; border: 3px solid ${p.color}; background: ${p.color}10; border-radius: 25px; padding: 42px 10px 12px 10px;">
-              <div style="position: absolute; top: -2px; left: -2px; display:inline-flex; background: ${p.color}10; padding: 0px; border-radius: 30px; border: 4px solid ${p.color};">
-                <div style="background: linear-gradient(180deg, ${p.color}40 0%, transparent 50%, ${p.color}40 100%), ${p.color}95; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 30px; padding: 0px 13px; display: flex; align-items: center; justify-content: center;">
-                  <span style="color: #ffffff; font-size: 20px; font-weight: 700; line-height: 30px; letter-spacing: 1px;">${safeText(p.name)}</span>
-                </div>
-              </div>
-              <div style="display:flex; gap:8px;">
-                ${events.map(ev => {
-                  let titleColor = '#475569'; 
-                  if (ev.name.includes('結算') || ev.name.includes('取單')) titleColor = '#e61f1f'; 
-                  else if (ev.name.includes('明細')) titleColor = '#ea580c'; 
-                  else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; 
-                  
-                  let diffBg = '#f1f5f9', diffColor = '#334155', diffIcon = '⏳', diffText = safeText(ev.diffStr);
-                  let cardBorder = '#ffffff'; // 預設白色外框
-                  let tagBorder = '#cbd5e1';  // 預設灰色標籤框
-                  let isToday = false;        // 判斷是否啟動跑馬燈
-
-                  if (ev.diff === 0) { 
-                    diffBg = '#dcfce7'; diffColor = '#15803d'; diffIcon = '🔥'; diffText = '今天'; 
-                    tagBorder = '#86efac';
-                    isToday = true; // 👈 啟動跑馬燈
-                  } 
-                  else if (ev.diff === 1) { 
-                    diffBg = '#ffedd5'; diffColor = '#c2410c'; diffIcon = '⚡'; 
-                    cardBorder = '#fdba74'; tagBorder = '#fdba74'; 
-                  } 
-                  else if (ev.diff <= 3) { 
-                    diffBg = '#e0f2fe'; diffColor = '#0369a1'; diffIcon = '🔜'; 
-                    cardBorder = '#7dd3fc'; tagBorder = '#7dd3fc'; 
-                  }
-
-                  // 依據是否為今天，切換不同的外框樣式
-                  let cardClass = isToday ? 'marquee-today-card' : '';
-                  let cardStyle = isToday 
-                    ? `flex:1; text-align:center; display:flex; flex-direction:column; margin-top:10px; transition:0.3s;`
-                    : `flex:1; background:#ffffff; border-radius:25px; text-align:center; border:2px solid ${cardBorder}; display:flex; flex-direction:column; overflow:hidden; margin-top:10px; transition:0.3s; box-shadow:0 2px 6px rgba(0,0,0,0.02);`;
-                    
-                  // 配合跑馬燈邊框，內部標題區塊需加入微小圓角，才不會蓋掉邊緣的光線
-                  let headerRadius = isToday ? 'border-radius:25px 25px 0 0;' : '';
-
-                  return `
-                    <div class="${cardClass}" style="${cardStyle}">
-                      <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30; ${headerRadius} position:relative; z-index:1;">
-                        <span style="font-size:16px; color:${titleColor}; font-weight:750;">${safeText(ev.name)}</span>
-                      </div>
-                      <div style="padding:10px 2px; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1; position:relative; z-index:1;">
-                        <span style="font-family:var(--mono); font-size:17px; font-weight:900; color:var(--t1); line-height:1;">${safeText(ev.dateStr)}</span>
-                        <div style="margin-top:8px;">
-                          <span style="display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:900; padding:4px 6px; border-radius:8px; background:${diffBg}; color:${diffColor}; border:1.5px solid ${tagBorder};">
-                            <span style="font-size:10px;">${diffIcon}</span> ${diffText}
-                          </span>
-                        </div>
-                      </div>
-                    </div>`;
-                }).join('')}
-              </div>
-            </div>`;
-        });
-        bottomHtml += `</div>`;
+      const activePunchRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
+      const isPunched = !!activePunchRec;
+      let punchStatusStr = '離線';
+      if (isPunched) {
+        const startMs = activePunchRec.timestamp || new Date(`${activePunchRec.date}T${activePunchRec.punchIn}:00`).getTime();
+        const diffMin = Math.floor((Date.now() - startMs) / 60000);
+        punchStatusStr = `上線中 (${Math.floor(diffMin/60)}h ${diffMin%60}m)`;
       }
-    } else if (S.homeSubTab === 'goal') {
-      const goals = S.settings.goals || {};
-      const weekly = pf(goals.weekly); const monthly = pf(goals.monthly); const yearly = pf(goals.yearly);
-      if (weekly > 0 || monthly > 0 || yearly > 0) {
-        // 👇 將三大目標包裝進一個大白框，加上標題與陰影
-        bottomHtml += `
-          <div style="background:#ffffff; border-radius:24px; padding:16px 14px; border:2px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.03);">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; padding:0 4px;">
-              <span style="font-size:18px;">🎯</span>
-              <span style="font-size:15px; font-weight:900; color:var(--t1); letter-spacing:0.5px;">收入目標進度</span>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:12px;">`; 
-        
-        if (weekly > 0) {
-          const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
-          for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
-          const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); 
-          const wColor = wPct >= 100 ? '#10b981' : '#3b82f6';
-          
-          // 內部卡片稍微調整圓角與外框，使其嵌在大框中更好看
+      
+      topHtml += `
+        <div class="punch-card-new" style="background:var(--sf); border:1px solid var(--border); border-radius:20px; padding:8px 20px; display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px 0; box-shadow:0 8px 20px rgba(0,0,0,0.03);">
+          <div class="punch-status-left" style="display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700;">
+            <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
+            <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatusStr}</span>
+          </div>
+          <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
+            ${isPunched ? '⏹ 下線打卡' : '▶ 上線打卡'}
+          </button>
+        </div></div>`;
+
+      // 底部內容 (平台排程 / 目標進度 / 獎勵進度)
+      let bottomHtml = '';
+      const activePlatforms = (S.platforms || []).filter(p => p.active);
+      
+      if (S.homeSubTab === 'schedule') {
+        if (activePlatforms.length === 0) {
+          bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
+        } else {
+          bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
           bottomHtml += `
-            <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <div style="width:32px; height:32px; border-radius:10px; background:#dbeafe; display:flex; align-items:center; justify-content:center; font-size:16px;">🏃</div>
-                  <div>
-                    <div style="font-size:14px;font-weight:900;color:#1e3a8a;">本週目標</div>
-                    <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#60a5fa;font-size:17px;"> ${7 - wDay} </span>天</div>
-                  </div> 
-                </div>
-                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${wColor};">${wPct}<span style="font-size:14px;"> %</span></span>
-              </div>
-              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
-                <div style="height:100%; width:${wPct}%; background:linear-gradient(90deg, ${wColor}10 0%, ${wColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
-                <span style="color:#3b82f6;">$ <span style="color:#000000;font-size:12px;">${fmt(weekTotal)}</span><span style="color:#3b82f6;font-weight:800;font-size:14px;"> / ${fmt(weekly)}</span></span>
-                <span style="color:${wRemain > 0 ? '#64748b' : '#10b981'};">${wRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(wRemain)}</span>` : '🎉 已達標！'}</span>
+            <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 12px 10px; margin-bottom: -2px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+              <!-- 頂部四色漸層飾條 -->
+              <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #16a34a, #ea580c, #0284c7, #475569);"></div>
+              
+              <div style="font-size: 13px; font-weight: 900; color: #334155; margin-bottom: 10px; letter-spacing: 1px;">💡 狀態標籤圖例</div>
+              
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; box-shadow: 0 2px 6px rgba(22,163,74,0.15);">
+                  <span style="font-size: 13px;">🔥</span> 今天
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #ffedd5; color: #c2410c; border: 1.5px solid #fdba74; box-shadow: 0 2px 6px rgba(234,88,12,0.15);">
+                  <span style="font-size: 13px;">⚡</span> 明天
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc; box-shadow: 0 2px 6px rgba(2,132,199,0.15);">
+                  <span style="font-size: 13px;">🔜</span> 近 3 天
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 6px rgba(71,85,105,0.15);">
+                  <span style="font-size: 13px;">⏳</span> 4 天以上
+                </span>
               </div>
             </div>`;
-        }
-        
-        if (monthly > 0) {
-          const monthRecs = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
-          const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); 
-          const mColor = mPct >= 100 ? '#10b981' : '#a855f7';
-          
-          bottomHtml += `
-            <div style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%); border: 1.5px solid #e9d5ff; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <div style="width:32px; height:32px; border-radius:10px; background:#e9d5ff; display:flex; align-items:center; justify-content:center; font-size:16px;">🔥</div>
-                  <div>
-                    <div style="font-size:14px;font-weight:900;color:#581c87;">本月目標</div>
-                    <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#c084fc;font-size:17px;"> ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} </span>天</div>
-                  </div> 
-                </div>
-                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${mColor};">${mPct}<span style="font-size:14px;"> %</span></span>
-              </div>
-              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
-                <div style="height:100%; width:${mPct}%; background:linear-gradient(90deg, ${mColor}10 0%, ${mColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
-                <span style="color:#a855f7;">$ <span style="color:#000000;font-size:12px;">${fmt(monthTotal)}</span><span style="color:#a855f7;font-weight:800;font-size:14px;"> / ${fmt(monthly)}</span></span>
-                <span style="color:${mRemain > 0 ? '#64748b' : '#10b981'};">${mRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(mRemain)}</span>` : '🎉 已達標！'}</span>
-              </div>
-            </div>`;
-        }
-        
-        if (yearly > 0) {
-          const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
-          const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); 
-          const yColor = yPct >= 100 ? '#10b981' : '#0d9488';
-          
-          bottomHtml += `
-            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border: 1.5px solid #99f6e4; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <div style="width:32px; height:32px; border-radius:10px; background:#ccfbf1; display:flex; align-items:center; justify-content:center; font-size:16px;">👑</div>
-                  <div>
-                    <div style="font-size:14px;font-weight:900;color:#134e4a;">本年目標</div>
-                    <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#2dd4bf;font-size:17px;"> ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} </span>天</div>
+
+          activePlatforms.forEach(p => {
+            const events = calcNextDates(p.id); 
+            if (!events || events.length === 0) return;
+            bottomHtml += `
+              <div style="position: relative; overflow: hidden; border: 3px solid ${p.color}; background: ${p.color}10; border-radius: 25px; padding: 42px 10px 12px 10px;">
+                <div style="position: absolute; top: -2px; left: -2px; display:inline-flex; background: ${p.color}10; padding: 0px; border-radius: 30px; border: 4px solid ${p.color};">
+                  <div style="background: linear-gradient(180deg, ${p.color}40 0%, transparent 50%, ${p.color}40 100%), ${p.color}95; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 30px; padding: 0px 13px; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: #ffffff; font-size: 20px; font-weight: 700; line-height: 30px; letter-spacing: 1px;">${safeText(p.name)}</span>
                   </div>
                 </div>
-                <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${yColor};">${yPct}<span style="font-size:14px;"> %</span></span>
-              </div>
-              <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
-                <div style="height:100%; width:${yPct}%; background:linear-gradient(90deg, ${yColor}10 0%, ${yColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
-                <span style="color:#0d9488;">$ <span style="color:#000000;font-size:12px;">${fmt(yearTotal)}</span><span style="color:#0d9488;font-weight:800;font-size:14px;"> / ${fmt(yearly)}</span></span>
-                <span style="color:${yRemain > 0 ? '#64748b' : '#10b981'};">${yRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(yRemain)}</span>` : '🎉 已達標！'}</span>
-              </div>
-            </div>`;
+                <div style="display:flex; gap:8px;">
+                  ${events.map(ev => {
+                    let titleColor = '#475569'; 
+                    if (ev.name.includes('結算') || ev.name.includes('取單')) titleColor = '#e61f1f'; 
+                    else if (ev.name.includes('明細')) titleColor = '#ea580c'; 
+                    else if (ev.name.includes('發薪')) titleColor = '#0ea5e9'; 
+                    
+                    let diffBg = '#f1f5f9', diffColor = '#334155', diffIcon = '⏳', diffText = safeText(ev.diffStr);
+                    let cardBorder = '#ffffff'; // 預設白色外框
+                    let tagBorder = '#cbd5e1';  // 預設灰色標籤框
+                    let isToday = false;        // 判斷是否啟動跑馬燈
+
+                    if (ev.diff === 0) { 
+                      diffBg = '#dcfce7'; diffColor = '#15803d'; diffIcon = '🔥'; diffText = '今天'; 
+                      tagBorder = '#86efac';
+                      isToday = true; // 👈 啟動跑馬燈
+                    } 
+                    else if (ev.diff === 1) { 
+                      diffBg = '#ffedd5'; diffColor = '#c2410c'; diffIcon = '⚡'; 
+                      cardBorder = '#fdba74'; tagBorder = '#fdba74'; 
+                    } 
+                    else if (ev.diff <= 3) { 
+                      diffBg = '#e0f2fe'; diffColor = '#0369a1'; diffIcon = '🔜'; 
+                      cardBorder = '#7dd3fc'; tagBorder = '#7dd3fc'; 
+                    }
+
+                    // 依據是否為今天，切換不同的外框樣式
+                    let cardClass = isToday ? 'marquee-today-card' : '';
+                    let cardStyle = isToday 
+                      ? `flex:1; text-align:center; display:flex; flex-direction:column; margin-top:10px; transition:0.3s;`
+                      : `flex:1; background:#ffffff; border-radius:25px; text-align:center; border:2px solid ${cardBorder}; display:flex; flex-direction:column; overflow:hidden; margin-top:10px; transition:0.3s; box-shadow:0 2px 6px rgba(0,0,0,0.02);`;
+                      
+                    // 配合跑馬燈邊框，內部標題區塊需加入微小圓角，才不會蓋掉邊緣的光線
+                    let headerRadius = isToday ? 'border-radius:25px 25px 0 0;' : '';
+
+                    return `
+                      <div class="${cardClass}" style="${cardStyle}">
+                        <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30; ${headerRadius} position:relative; z-index:1;">
+                          <span style="font-size:16px; color:${titleColor}; font-weight:750;">${safeText(ev.name)}</span>
+                        </div>
+                        <div style="padding:10px 2px; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1; position:relative; z-index:1;">
+                          <span style="font-family:var(--mono); font-size:17px; font-weight:900; color:var(--t1); line-height:1;">${safeText(ev.dateStr)}</span>
+                          <div style="margin-top:8px;">
+                            <span style="display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:900; padding:4px 6px; border-radius:8px; background:${diffBg}; color:${diffColor}; border:1.5px solid ${tagBorder};">
+                              <span style="font-size:10px;">${diffIcon}</span> ${diffText}
+                            </span>
+                          </div>
+                        </div>
+                      </div>`;
+                  }).join('')}
+                </div>
+              </div>`;
+          });
+          bottomHtml += `</div>`;
         }
-        bottomHtml += `</div></div>`; // 結束大白框
-      } else {
-        bottomHtml += `
-          <div style="background:#ffffff; border-radius:24px; padding:32px 20px; border:2px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.03); text-align:center;">
-            <div style="font-size:32px; margin-bottom:12px;">🎯</div>
-            <div style="font-size:15px; font-weight:800; color:var(--t1); margin-bottom:6px;">尚未設定收入目標</div>
-            <div style="font-size:13px; color:var(--t3); font-weight:600; margin-bottom:16px;">設定目標，能幫助您更專注於跑單進度</div>
-            <button onclick="goPage('settings'); setTimeout(openGoalSettings, 300);" style="background:var(--acc); color:#fff; border:none; border-radius:12px; padding:10px 20px; font-size:14px; font-weight:800; box-shadow:0 4px 12px rgba(255,107,53,0.3); cursor:pointer;">前往設定</button>
-          </div>
-        `;
+      } else if (S.homeSubTab === 'goal') {
+        const goals = S.settings.goals || {};
+        const weekly = pf(goals.weekly); const monthly = pf(goals.monthly); const yearly = pf(goals.yearly);
+        if (weekly > 0 || monthly > 0 || yearly > 0) {
+          // 👇 將三大目標包裝進一個大白框，加上標題與陰影
+          bottomHtml += `
+            <div style="background:#ffffff; border-radius:24px; padding:16px 14px; border:2px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.03);">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; padding:0 4px;">
+                <span style="font-size:18px;">🎯</span>
+                <span style="font-size:15px; font-weight:900; color:var(--t1); letter-spacing:0.5px;">收入目標進度</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px;">`; 
+          
+          if (weekly > 0) {
+            const wDate = new Date(dateObj); const wDay = wDate.getDay() || 7; wDate.setDate(wDate.getDate() - wDay + 1); let weekTotal = 0;
+            for(let i=0; i<7; i++) { const dStr = `${wDate.getFullYear()}-${pad(wDate.getMonth()+1)}-${pad(wDate.getDate())}`; weekTotal += getDayRecs(dStr).reduce((s,r)=>s+recTotal(r),0); wDate.setDate(wDate.getDate() + 1); }
+            const wPct = Math.min(100, Math.round(weekTotal/weekly*100)); const wRemain = Math.max(0, weekly-weekTotal); 
+            const wColor = wPct >= 100 ? '#10b981' : '#3b82f6';
+            
+            // 內部卡片稍微調整圓角與外框，使其嵌在大框中更好看
+            bottomHtml += `
+              <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:32px; height:32px; border-radius:10px; background:#dbeafe; display:flex; align-items:center; justify-content:center; font-size:16px;">🏃</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:900;color:#1e3a8a;">本週目標</div>
+                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#60a5fa;font-size:17px;"> ${7 - wDay} </span>天</div>
+                    </div> 
+                  </div>
+                  <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${wColor};">${wPct}<span style="font-size:14px;"> %</span></span>
+                </div>
+                <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
+                  <div style="height:100%; width:${wPct}%; background:linear-gradient(90deg, ${wColor}10 0%, ${wColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
+                  <span style="color:#3b82f6;">$ <span style="color:#000000;font-size:12px;">${fmt(weekTotal)}</span><span style="color:#3b82f6;font-weight:800;font-size:14px;"> / ${fmt(weekly)}</span></span>
+                  <span style="color:${wRemain > 0 ? '#64748b' : '#10b981'};">${wRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(wRemain)}</span>` : '🎉 已達標！'}</span>
+                </div>
+              </div>`;
+          }
+          
+          if (monthly > 0) {
+            const monthRecs = getMonthRecs(dateObj.getFullYear(), dateObj.getMonth()+1); const monthTotal = monthRecs.reduce((s,r)=>s+recTotal(r), 0);
+            const mPct = Math.min(100, Math.round(monthTotal/monthly*100)); const mRemain = Math.max(0, monthly-monthTotal); 
+            const mColor = mPct >= 100 ? '#10b981' : '#a855f7';
+            
+            bottomHtml += `
+              <div style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%); border: 1.5px solid #e9d5ff; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:32px; height:32px; border-radius:10px; background:#e9d5ff; display:flex; align-items:center; justify-content:center; font-size:16px;">🔥</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:900;color:#581c87;">本月目標</div>
+                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#c084fc;font-size:17px;"> ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} </span>天</div>
+                    </div> 
+                  </div>
+                  <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${mColor};">${mPct}<span style="font-size:14px;"> %</span></span>
+                </div>
+                <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
+                  <div style="height:100%; width:${mPct}%; background:linear-gradient(90deg, ${mColor}10 0%, ${mColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
+                  <span style="color:#a855f7;">$ <span style="color:#000000;font-size:12px;">${fmt(monthTotal)}</span><span style="color:#a855f7;font-weight:800;font-size:14px;"> / ${fmt(monthly)}</span></span>
+                  <span style="color:${mRemain > 0 ? '#64748b' : '#10b981'};">${mRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(mRemain)}</span>` : '🎉 已達標！'}</span>
+                </div>
+              </div>`;
+          }
+          
+          if (yearly > 0) {
+            const yearRecs = S.records.filter(r => r.date.startsWith(`${dateObj.getFullYear()}-`)); const yearTotal = yearRecs.reduce((s,r)=>s+recTotal(r), 0);
+            const yPct = Math.min(100, Math.round(yearTotal/yearly*100)); const yRemain = Math.max(0, yearly-yearTotal); 
+            const yColor = yPct >= 100 ? '#10b981' : '#0d9488';
+            
+            bottomHtml += `
+              <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border: 1.5px solid #99f6e4; border-radius: 16px; padding: 14px; position: relative; overflow: hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:32px; height:32px; border-radius:10px; background:#ccfbf1; display:flex; align-items:center; justify-content:center; font-size:16px;">👑</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:900;color:#134e4a;">本年目標</div>
+                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#2dd4bf;font-size:17px;"> ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} </span>天</div>
+                    </div>
+                  </div>
+                  <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${yColor};">${yPct}<span style="font-size:14px;"> %</span></span>
+                </div>
+                <div style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:8px;">
+                  <div style="height:100%; width:${yPct}%; background:linear-gradient(90deg, ${yColor}10 0%, ${yColor} 100%); border-radius:6px; transition:width 0.4s ease;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:650;font-family:var(--mono);">
+                  <span style="color:#0d9488;">$ <span style="color:#000000;font-size:12px;">${fmt(yearTotal)}</span><span style="color:#0d9488;font-weight:800;font-size:14px;"> / ${fmt(yearly)}</span></span>
+                  <span style="color:${yRemain > 0 ? '#64748b' : '#10b981'};">${yRemain>0 ? `還差 $ <span style="font-weight:800;color:#ff0000;font-size:14px;">${fmt(yRemain)}</span>` : '🎉 已達標！'}</span>
+                </div>
+              </div>`;
+          }
+          bottomHtml += `</div></div>`; // 結束大白框
+        } else {
+          bottomHtml += `
+            <div style="background:#ffffff; border-radius:24px; padding:32px 20px; border:2px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.03); text-align:center;">
+              <div style="font-size:32px; margin-bottom:12px;">🎯</div>
+              <div style="font-size:15px; font-weight:800; color:var(--t1); margin-bottom:6px;">尚未設定收入目標</div>
+              <div style="font-size:13px; color:var(--t3); font-weight:600; margin-bottom:16px;">設定目標，能幫助您更專注於跑單進度</div>
+              <button onclick="goPage('settings'); setTimeout(openGoalSettings, 300);" style="background:var(--acc); color:#fff; border:none; border-radius:12px; padding:10px 20px; font-size:14px; font-weight:800; box-shadow:0 4px 12px rgba(255,107,53,0.3); cursor:pointer;">前往設定</button>
+            </div>
+          `;
+        }
+      } else if (S.homeSubTab === 'reward') {
+        // 👇 呼叫取得獎勵的 HTML
+        bottomHtml = getRewardsHtml();
       }
-    } else if (S.homeSubTab === 'reward') {
-      // 👇 呼叫取得獎勵的 HTML
-      bottomHtml = getRewardsHtml();
-    }
 
       topEl.innerHTML = topHtml;
       botEl.innerHTML = bottomHtml;
 
-      // 公告插入防呆
       const app = document.getElementById('app');
       const existingAnn = document.getElementById('home-announcement-card');
       const annHtml = getFloatingAnnouncementHtml();
@@ -1626,11 +1617,9 @@ function renderHome() {
       }
     } catch (e) {
       console.error("renderHome 渲染錯誤:", e);
-      botEl.innerHTML = `<div class="empty-tip">畫面載入異常，請重新整理。</div>`;
     }
   });
 }
-
 // 關閉並記憶公告
 window.dismissAnnouncement = function(encodedText) {
   const shouldHide = document.getElementById('no-show-again')?.checked;
