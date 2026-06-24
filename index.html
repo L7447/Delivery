@@ -151,7 +151,7 @@
       </div>
     </div>
 
-<!-- 👇 外層 padding 從 16px 縮小為 8px 12px -->
+    <!-- 👇 外層 padding 從 16px 縮小為 8px 12px -->
     <div style="flex:1; overflow-y:auto; padding:6px 16px;">
       <!-- 平台選擇 -->
       <div style="margin-bottom:6px;">
@@ -435,404 +435,400 @@
     <div class="ni" data-pg="settings" data-img1="images/settings1.png" data-img2="images/settings2.png"><img class="ni-img" src="images/settings1.png"><span class="lb">設定</span></div>
   </nav>
 
-<div class="overlay-page" id="search-page">
-  <!-- 頂部標題列 (固定) -->
-  <div class="top-bar">
-    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('search-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
-    <h2>🔍 搜尋記錄</h2>
-    <div style="width:36px"></div>
+  <div class="overlay-page" id="search-page">
+    <!-- 頂部標題列 (固定) -->
+    <div class="top-bar">
+      <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('search-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+      <h2>🔍 搜尋記錄</h2>
+      <div style="width:36px"></div>
+    </div>
+
+    <!-- 👇 操控區 (固定在上方，不隨畫面滾動) -->
+    <div style="padding: 6px 16px 0 16px; flex-shrink: 0; background: #ffffff; border-bottom: 1px solid var(--border); z-index: 10;">
+      
+      <!-- 1. 日期區間 -->
+      <div style="display:flex; gap:10px; margin-bottom:8px;">
+        <div class="fg" style="flex:1; margin-bottom:0;">
+          <label style="font-weight:700; color:var(--t2);">開始日期</label>
+          <input type="date" class="finp" id="search-from" onchange="doSearch()">
+        </div>
+        <div class="fg" style="flex:1; margin-bottom:0;">
+          <label style="font-weight:700; color:var(--t2);">結束日期</label>
+          <input type="date" class="finp" id="search-to" onchange="doSearch()">
+        </div>
+      </div>
+
+      <!-- 2. 輸入框 -->
+      <div class="fg" style="margin-bottom:8px;">
+        <label style="font-weight:700; color:var(--t1);">搜尋關鍵字</label>
+        <input type="text" class="finp" id="search-kw" placeholder="請輸入平台、備註或金額..." oninput="doSearch()" style="border: 2px solid var(--text-blue); font-weight:800; color:var(--text-blue); background:#eff6ff;">
+      </div>
+      
+      <!-- 3. 彩色標籤 -->
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+        <div class="search-quick-tag" onclick="setSearchKw('現金小費')" style="background:#fef08a; color:#854d0e; border-color:#fde047;">現金小費</div>
+        <div class="search-quick-tag" onclick="setSearchKw('線上小費')" style="background:#f3e8ff; color:#6b21a8; border-color:#e9d5ff;">線上小費</div>
+        <div class="search-quick-tag" onclick="setSearchKw('下雨')" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">下雨</div>
+        <div class="search-quick-tag" onclick="setSearchKw('暴雨')" style="background:#ccfbf1; color:#0d9488; border-color:#99f6e4;">暴雨</div>
+        <div class="search-quick-tag" onclick="setSearchKw('炎熱')" style="background:#ffedd5; color:#ea580c; border-color:#fed7aa;">炎熱</div>
+        <div class="search-quick-tag" onclick="setSearchKw('寒流')" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;">寒流</div>
+        <div class="search-quick-tag" onclick="setSearchKw('颱風')" style="background:#fce7f3; color:#db2777; border-color:#fbcfe8;">颱風</div>
+      </div>
+
+      <!-- 4. 清除與搜尋按鈕 -->
+      <div style="display:flex; gap:10px; margin-bottom:6px;">
+        <button onclick="resetSearch()" class="btn-acc" style="flex:2; padding:12px; font-weight:750; border-radius:var(--rs); background:var(--bg-input); color:var(--t2); border:1.5px solid var(--border); cursor:pointer;">清除</button>
+        <button onclick="doSearch()" class="btn-acc" style="flex:1; padding:12px; border-radius:var(--rs);">🔍 搜尋</button>
+      </div>
+    </div>
+
+    <!-- 👇 5. 搜尋結果區 (這裡才會出現滾動軸，高度自動填滿剩下的空間) -->
+    <div class="overlay-body" style="background:var(--sf2); padding:3px 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="font-size:13px; font-weight:800; color:var(--t2); display:flex; align-items:center; gap:6px;">
+          📋 搜尋結果
+        </div>
+        <!-- 👇 新增：搜尋數量的橘色膠囊 (預設隱藏) -->
+        <div id="search-count" style="display:none; align-items:center; background:#ffedd5; color:#ff5900; padding:1px 10px; border-radius:16px; font-size:12px; font-weight:650; border:1.5px solid #fed7aa;">
+        </div>
+      </div>
+      <div id="search-results" style="display:flex; flex-direction:column; gap:6px;">
+        <div class="empty-tip">請輸入條件開始搜尋</div>
+      </div>
+    </div>
   </div>
 
-  <!-- 👇 操控區 (固定在上方，不隨畫面滾動) -->
-  <div style="padding: 6px 16px 0 16px; flex-shrink: 0; background: #ffffff; border-bottom: 1px solid var(--border); z-index: 10;">
+  <div class="overlay-page" id="sub-page">
+    <div class="top-bar">
+      <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('sub-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+      <h2 id="sub-title">設定</h2>
+      <div id="sub-top-right" style="min-width:36px; text-align:right; margin-left: auto;"></div>
+    </div>
+    <div class="overlay-body" id="sub-body"></div>
+  </div>
+
+  <div id="detail-overlay">
+    <div id="detail-box">
+      <div class="top-bar" style="border-radius:20px 20px 0 0"><button class="bar-btn" onclick="animateClose(this, () => closeDetailOverlay())"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>記錄詳情</h2><div style="width:36px"></div></div>
+      <div id="detail-body" style="padding:16px 16px 32px;overflow-y:auto;max-height:70vh"></div>
+    </div>
+  </div>
+
+  <div id="confirm-overlay">
+    <div id="confirm-box">
+      <div id="confirm-msg"></div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button id="confirm-cancel-btn" style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--sf2);color:var(--t2);font-size:14px;font-family:var(--sans);cursor:pointer">取消</button>
+        <button id="confirm-ok-btn" style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--red);color:#fff;font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="progress-overlay">
+    <div id="big-progress-container">
+      <div id="big-progress-fill"></div>
+      <div id="big-progress-text">資料儲存中...</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <input type="file" id="restore-file" accept=".json" style="display:none">
+
+  <div class="overlay-page" id="full-calendar-overlay" style="background:var(--bg); z-index:900;">
+    <!-- 👇 頂部 Header 改用三等分排版，但把按鈕與年月選單全塞在中間區塊 -->
+    <div class="top-bar" style="padding: 10px 16px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;">
+      
+      <!-- 左側：關閉按鈕 -->
+      <div style="display:flex; justify-content:flex-start;">
+        <button class="bar-btn" onclick="animateReturnClose(this, () => closeFullCalendar())">
+          <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+        </button>
+      </div>
+      
+      <!-- 中間：◀ 箭頭 + 年份月份選單 + ▶ 箭頭 (緊緊靠在一起置中) -->
+      <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
+        <button class="mbtn" onclick="changeFullCalMonth(-1)" style="width:36px; height:36px;">◀</button>
+        
+        <div id="fc-title" style="font-size:18px; font-weight:900; text-align:center;"></div>
+        
+        <button class="mbtn" onclick="changeFullCalMonth(1)" style="width:36px; height:36px;">▶</button>
+      </div>
+      
+      <!-- 右側：留白佔位，確保中間能絕對置中 -->
+      <div style="display:flex; justify-content:flex-end;"></div>
+      
+    </div>
     
-    <!-- 1. 日期區間 -->
-    <div style="display:flex; gap:10px; margin-bottom:8px;">
-      <div class="fg" style="flex:1; margin-bottom:0;">
-        <label style="font-weight:700; color:var(--t2);">開始日期</label>
-        <input type="date" class="finp" id="search-from" onchange="doSearch()">
-      </div>
-      <div class="fg" style="flex:1; margin-bottom:0;">
-        <label style="font-weight:700; color:var(--t2);">結束日期</label>
-        <input type="date" class="finp" id="search-to" onchange="doSearch()">
-      </div>
-    </div>
-
-    <!-- 2. 輸入框 -->
-    <div class="fg" style="margin-bottom:8px;">
-      <label style="font-weight:700; color:var(--t1);">搜尋關鍵字</label>
-      <input type="text" class="finp" id="search-kw" placeholder="請輸入平台、備註或金額..." oninput="doSearch()" style="border: 2px solid var(--text-blue); font-weight:800; color:var(--text-blue); background:#eff6ff;">
-    </div>
-    
-    <!-- 3. 彩色標籤 -->
-    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
-      <div class="search-quick-tag" onclick="setSearchKw('現金小費')" style="background:#fef08a; color:#854d0e; border-color:#fde047;">現金小費</div>
-      <div class="search-quick-tag" onclick="setSearchKw('線上小費')" style="background:#f3e8ff; color:#6b21a8; border-color:#e9d5ff;">線上小費</div>
-      <div class="search-quick-tag" onclick="setSearchKw('下雨')" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">下雨</div>
-      <div class="search-quick-tag" onclick="setSearchKw('暴雨')" style="background:#ccfbf1; color:#0d9488; border-color:#99f6e4;">暴雨</div>
-      <div class="search-quick-tag" onclick="setSearchKw('炎熱')" style="background:#ffedd5; color:#ea580c; border-color:#fed7aa;">炎熱</div>
-      <div class="search-quick-tag" onclick="setSearchKw('寒流')" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;">寒流</div>
-      <div class="search-quick-tag" onclick="setSearchKw('颱風')" style="background:#fce7f3; color:#db2777; border-color:#fbcfe8;">颱風</div>
-    </div>
-
-    <!-- 4. 清除與搜尋按鈕 -->
-    <div style="display:flex; gap:10px; margin-bottom:6px;">
-      <button onclick="resetSearch()" class="btn-acc" style="flex:2; padding:12px; font-weight:750; border-radius:var(--rs); background:var(--bg-input); color:var(--t2); border:1.5px solid var(--border); cursor:pointer;">清除</button>
-      <button onclick="doSearch()" class="btn-acc" style="flex:1; padding:12px; border-radius:var(--rs);">🔍 搜尋</button>
+    <div class="overlay-body" id="fc-body" style="padding: 0 16px 16px 8px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); display:flex; flex-direction:column; height:100%;">
+      <div id="fc-dow" style="display:grid; grid-template-columns:repeat(7,1fr); background:var(--sf); border-bottom:1px solid var(--border); border-radius: 12px 12px 0 0; overflow:hidden;"></div>
+      <div id="fc-grid" style="display:grid; grid-template-columns:repeat(7,1fr); flex:1; overflow-y:auto; background:var(--border); gap:1px; border-radius: 0 0 12px 12px; border: 1.5px solid var(--border); margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);"></div>
     </div>
   </div>
 
-  <!-- 👇 5. 搜尋結果區 (這裡才會出現滾動軸，高度自動填滿剩下的空間) -->
-  <div class="overlay-body" style="background:var(--sf2); padding:3px 16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <div style="font-size:13px; font-weight:800; color:var(--t2); display:flex; align-items:center; gap:6px;">
-        📋 搜尋結果
-      </div>
-      <!-- 👇 新增：搜尋數量的橘色膠囊 (預設隱藏) -->
-      <div id="search-count" style="display:none; align-items:center; background:#ffedd5; color:#ff5900; padding:1px 10px; border-radius:16px; font-size:12px; font-weight:650; border:1.5px solid #fed7aa;">
-      </div>
-    </div>
-    <div id="search-results" style="display:flex; flex-direction:column; gap:6px;">
-      <div class="empty-tip">請輸入條件開始搜尋</div>
-    </div>
+  <div class="overlay-page" id="vehicle-add-page">
+    <div class="top-bar"><button class="bar-btn" onclick="animateClose(this, () => closeOverlay('vehicle-add-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>新增車輛</h2><div style="width:36px"></div></div>
+    <div class="overlay-body" id="vehicle-add-body"></div>
   </div>
-</div>
 
-<div class="overlay-page" id="sub-page">
-  <div class="top-bar">
-    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('sub-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
-    <h2 id="sub-title">設定</h2>
-    <div id="sub-top-right" style="min-width:36px; text-align:right; margin-left: auto;"></div>
-  </div>
-  <div class="overlay-body" id="sub-body"></div>
-</div>
-
-<div id="detail-overlay">
-  <div id="detail-box">
-    <div class="top-bar" style="border-radius:20px 20px 0 0"><button class="bar-btn" onclick="animateClose(this, () => closeDetailOverlay())"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>記錄詳情</h2><div style="width:36px"></div></div>
-    <div id="detail-body" style="padding:16px 16px 32px;overflow-y:auto;max-height:70vh"></div>
-  </div>
-</div>
-
-<div id="confirm-overlay">
-  <div id="confirm-box">
-    <div id="confirm-msg"></div>
-    <div style="display:flex;gap:10px;margin-top:20px">
-      <button id="confirm-cancel-btn" style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--sf2);color:var(--t2);font-size:14px;font-family:var(--sans);cursor:pointer">取消</button>
-      <button id="confirm-ok-btn" style="flex:1;padding:12px;border-radius:var(--rs);border:none;background:var(--red);color:#fff;font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">確定</button>
-    </div>
-  </div>
-</div>
-
-<div id="progress-overlay">
-  <div id="big-progress-container">
-    <div id="big-progress-fill"></div>
-    <div id="big-progress-text">資料儲存中...</div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-<input type="file" id="restore-file" accept=".json" style="display:none">
-
-<div class="overlay-page" id="full-calendar-overlay" style="background:var(--bg); z-index:900;">
-  <!-- 👇 頂部 Header 改用三等分排版，但把按鈕與年月選單全塞在中間區塊 -->
-  <div class="top-bar" style="padding: 10px 16px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;">
-    
-    <!-- 左側：關閉按鈕 -->
-    <div style="display:flex; justify-content:flex-start;">
-      <button class="bar-btn" onclick="animateReturnClose(this, () => closeFullCalendar())">
-        <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+  <div class="overlay-page" id="veh-rec-add-page" style="background:var(--bg);">
+    <div class="top-bar" style="padding: 10px 16px;">
+      <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('veh-rec-add-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
+      <h2 id="veh-rec-title" style="font-size:16px; font-weight:800;">新增車輛記錄</h2>
+      <button id="veh-save-btn" onclick="confirmAddVehRec()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none; transition:transform 0.2s;">
+        <img id="veh-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
       </button>
     </div>
     
-    <!-- 中間：◀ 箭頭 + 年份月份選單 + ▶ 箭頭 (緊緊靠在一起置中) -->
-    <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
-      <button class="mbtn" onclick="changeFullCalMonth(-1)" style="width:36px; height:36px;">◀</button>
-      
-      <div id="fc-title" style="font-size:18px; font-weight:900; text-align:center;"></div>
-      
-      <button class="mbtn" onclick="changeFullCalMonth(1)" style="width:36px; height:36px;">▶</button>
-    </div>
-    
-    <!-- 右側：留白佔位，確保中間能絕對置中 -->
-    <div style="display:flex; justify-content:flex-end;"></div>
-    
-  </div>
-  
-  <div class="overlay-body" id="fc-body" style="padding: 0 16px 16px 8px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); display:flex; flex-direction:column; height:100%;">
-    <div id="fc-dow" style="display:grid; grid-template-columns:repeat(7,1fr); background:var(--sf); border-bottom:1px solid var(--border); border-radius: 12px 12px 0 0; overflow:hidden;"></div>
-    <div id="fc-grid" style="display:grid; grid-template-columns:repeat(7,1fr); flex:1; overflow-y:auto; background:var(--border); gap:1px; border-radius: 0 0 12px 12px; border: 1.5px solid var(--border); margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);"></div>
-  </div>
-</div>
-
-<div class="overlay-page" id="vehicle-add-page">
-  <div class="top-bar"><button class="bar-btn" onclick="animateClose(this, () => closeOverlay('vehicle-add-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button><h2>新增車輛</h2><div style="width:36px"></div></div>
-  <div class="overlay-body" id="vehicle-add-body"></div>
-</div>
-
-<div class="overlay-page" id="veh-rec-add-page" style="background:var(--bg);">
-  <div class="top-bar" style="padding: 10px 16px;">
-    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('veh-rec-add-page'))"><img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;"></button>
-    <h2 id="veh-rec-title" style="font-size:16px; font-weight:800;">新增車輛記錄</h2>
-    <button id="veh-save-btn" onclick="confirmAddVehRec()" title="儲存" style="width:30px; height:30px; padding:0; background:transparent; border:none; cursor:pointer; outline:none; transition:transform 0.2s;">
-      <img id="veh-save-img" src="images/Check1.png" alt="儲存" style="width:100%; height:100%; object-fit:contain;">
-    </button>
-  </div>
-  
-  <div style="padding:8px 16px 0; background:var(--sf); border-bottom:1px solid var(--border);">
-    <div class="slide-tabs tabs-3" style="margin-bottom:8px;">
-      <div class="slide-bg" id="veh-form-tab-bg" style="transform: translateX(0%);"></div>
-      <button class="slide-btn active" id="btn-form-fuel" onclick="switchVehFormTab('fuel', 0)" style="padding:6px 0;">車輛燃料</button>
-      <button class="slide-btn" id="btn-form-maint" onclick="switchVehFormTab('maintenance', 1)" style="padding:6px 0;">保養維修</button>
-      <button class="slide-btn" id="btn-form-wash" onclick="switchVehFormTab('wash', 2)" style="padding:6px 0;">洗車美容</button>
-    </div>
-  </div>
-
-  <div class="overlay-body" style="padding:10px 14px;">
-    <!-- 選擇的車輛卡片 (縮小版) -->
-    <div style="margin-bottom:10px;">
-      <div id="veh-rec-veh-icons"></div>
-    </div>
-    
-    <!-- 日期與時間 (緊湊) -->
-    <div class="card" style="padding:10px 14px; margin-bottom:10px;">
-      <div style="display:flex; gap:10px;">
-        <div class="fg" style="flex:1.5; margin-bottom:0;"><label>📆 日期</label><input type="date" class="finp" style="padding:8px;" id="vr-date"></div>
-        <div class="fg" style="flex:1; margin-bottom:0;"><label>⏱ 時間</label><input type="time" class="finp" style="padding:8px;" id="vr-time"></div>
+    <div style="padding:8px 16px 0; background:var(--sf); border-bottom:1px solid var(--border);">
+      <div class="slide-tabs tabs-3" style="margin-bottom:8px;">
+        <div class="slide-bg" id="veh-form-tab-bg" style="transform: translateX(0%);"></div>
+        <button class="slide-btn active" id="btn-form-fuel" onclick="switchVehFormTab('fuel', 0)" style="padding:6px 0;">車輛燃料</button>
+        <button class="slide-btn" id="btn-form-maint" onclick="switchVehFormTab('maintenance', 1)" style="padding:6px 0;">保養維修</button>
+        <button class="slide-btn" id="btn-form-wash" onclick="switchVehFormTab('wash', 2)" style="padding:6px 0;">洗車美容</button>
       </div>
     </div>
 
-    <!-- 燃料表單 (保持原本，縮小內距) -->
-    <div id="form-area-fuel">
+    <div class="overlay-body" style="padding:10px 14px;">
+      <!-- 選擇的車輛卡片 (縮小版) -->
+      <div style="margin-bottom:10px;">
+        <div id="veh-rec-veh-icons"></div>
+      </div>
+      
+      <!-- 日期與時間 (緊湊) -->
       <div class="card" style="padding:10px 14px; margin-bottom:10px;">
-        <div style="display:flex; gap:10px; margin-bottom:10px;" id="vr-fuel-type-row">
-          <div class="fg" style="flex:1.2; margin-bottom:0;"><label>⛽ 汽油類型</label>
-            <select class="fsel" style="padding:8px;" id="vr-fuel-type" oninput="applyGlobalGasPrice()">
-              <option value="92">92 無鉛</option>
-              <option value="95" selected>95 無鉛</option>
-              <option value="98">98 無鉛</option>
-            </select>
-          </div>
-          <div class="fg" style="flex:1; margin-bottom:0;"><label>💸 折扣 (NT$)</label><input type="number" class="finp" style="padding:8px;" id="vr-discount" value="0" inputmode="numeric" oninput="calcVehFuel()"></div>
-        </div>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-          <div class="fg" style="flex:1; margin-bottom:0;"><label id="lbl-prev-km">上次里程 (km)</label><input type="number" class="finp" style="padding:8px;" id="vr-prev-km" placeholder="0" inputmode="numeric" oninput="calcVehFuel()"></div>
-          <div class="fg" style="flex:1; margin-bottom:0;"><label id="lbl-curr-km">現在里程 (km)</label><input type="number" class="finp" style="padding:8px;" id="vr-curr-km" placeholder="0" inputmode="numeric" oninput="calcVehFuel()"></div>
-        </div>
-        <div style="display:flex; gap:10px; margin-bottom:10px;" id="vr-fuel-amount-row">
-          <div class="fg" style="flex:1; margin-bottom:0;"><label>💧 油量 (公升)</label><input type="number" class="finp" style="padding:8px;" id="vr-liters" step="0.01" placeholder="0.0" inputmode="decimal" oninput="calcVehFuel()"></div>
-          <div class="fg" style="flex:1; margin-bottom:0;"><label>💲 單價</label><input type="number" class="finp" style="padding:8px;" id="vr-price" step="0.1" placeholder="0.0" inputmode="decimal" oninput="calcVehFuel()"></div>
-        </div>
-      </div>
-
-      <!-- 👇 新增：獨立的電動車月租費白框卡片 (含立體卡片樣式) -->
-      <div id="vr-ev-fee-card" style="display:none; margin-bottom:16px; background:#ffffff; border:1.5px solid #bfdbfe; border-radius:16px; padding:16px; box-shadow:0 4px 12px rgba(37,99,235,0.06);">
-        <!-- 卡片小標題 -->
-        <div style="font-size:13px; font-weight:800; color:var(--text-blue); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-          <span>🔋</span> 換電費用設定
-        </div>
-        
         <div style="display:flex; gap:10px;">
-          <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-weight:700; color:var(--t2);">電池月租費</label>
-            <input type="number" class="finp" id="vr-ev-fee" placeholder="" oninput="calcVehFuel()" style="font-weight:800; color:var(--text-blue); border-color:#dbeafe;">
+          <div class="fg" style="flex:1.5; margin-bottom:0;"><label>📆 日期</label><input type="date" class="finp" style="padding:8px;" id="vr-date"></div>
+          <div class="fg" style="flex:1; margin-bottom:0;"><label>⏱ 時間</label><input type="time" class="finp" style="padding:8px;" id="vr-time"></div>
+        </div>
+      </div>
+
+      <!-- 燃料表單 (保持原本，縮小內距) -->
+      <div id="form-area-fuel">
+        <div class="card" style="padding:10px 14px; margin-bottom:10px;">
+          <div style="display:flex; gap:10px; margin-bottom:10px;" id="vr-fuel-type-row">
+            <div class="fg" style="flex:1.2; margin-bottom:0;"><label>⛽ 汽油類型</label>
+              <select class="fsel" style="padding:8px;" id="vr-fuel-type" oninput="applyGlobalGasPrice()">
+                <option value="92">92 無鉛</option>
+                <option value="95" selected>95 無鉛</option>
+                <option value="98">98 無鉛</option>
+              </select>
+            </div>
+            <div class="fg" style="flex:1; margin-bottom:0;"><label>💸 折扣 (NT$)</label><input type="number" class="finp" style="padding:8px;" id="vr-discount" value="0" inputmode="numeric" oninput="calcVehFuel()"></div>
           </div>
-          <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-weight:700; color:var(--t2);">計費換電</label>
-            <input type="number" class="finp" id="vr-ev-extra" placeholder="" oninput="calcVehFuel()" style="font-weight:800; color:var(--red); border-color:#fee2e2; background:#fff1f2;">
+          <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <div class="fg" style="flex:1; margin-bottom:0;"><label id="lbl-prev-km">上次里程 (km)</label><input type="number" class="finp" style="padding:8px;" id="vr-prev-km" placeholder="0" inputmode="numeric" oninput="calcVehFuel()"></div>
+            <div class="fg" style="flex:1; margin-bottom:0;"><label id="lbl-curr-km">現在里程 (km)</label><input type="number" class="finp" style="padding:8px;" id="vr-curr-km" placeholder="0" inputmode="numeric" oninput="calcVehFuel()"></div>
+          </div>
+          <div style="display:flex; gap:10px; margin-bottom:10px;" id="vr-fuel-amount-row">
+            <div class="fg" style="flex:1; margin-bottom:0;"><label>💧 油量 (公升)</label><input type="number" class="finp" style="padding:8px;" id="vr-liters" step="0.01" placeholder="0.0" inputmode="decimal" oninput="calcVehFuel()"></div>
+            <div class="fg" style="flex:1; margin-bottom:0;"><label>💲 單價</label><input type="number" class="finp" style="padding:8px;" id="vr-price" step="0.1" placeholder="0.0" inputmode="decimal" oninput="calcVehFuel()"></div>
+          </div>
+        </div>
+
+        <!-- 👇 新增：獨立的電動車月租費白框卡片 (含立體卡片樣式) -->
+        <div id="vr-ev-fee-card" style="display:none; margin-bottom:16px; background:#ffffff; border:1.5px solid #bfdbfe; border-radius:16px; padding:16px; box-shadow:0 4px 12px rgba(37,99,235,0.06);">
+          <!-- 卡片小標題 -->
+          <div style="font-size:13px; font-weight:800; color:var(--text-blue); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+            <span>🔋</span> 換電費用設定
+          </div>
+          
+          <div style="display:flex; gap:10px;">
+            <div class="fg" style="flex:1; margin-bottom:0;">
+              <label style="font-weight:700; color:var(--t2);">電池月租費</label>
+              <input type="number" class="finp" id="vr-ev-fee" placeholder="" oninput="calcVehFuel()" style="font-weight:800; color:var(--text-blue); border-color:#dbeafe;">
+            </div>
+            <div class="fg" style="flex:1; margin-bottom:0;">
+              <label style="font-weight:700; color:var(--t2);">計費換電</label>
+              <input type="number" class="finp" id="vr-ev-extra" placeholder="" oninput="calcVehFuel()" style="font-weight:800; color:var(--red); border-color:#fee2e2; background:#fff1f2;">
+            </div>
+          </div>
+        </div>
+
+        <div id="vr-fuel-total-panel" style="padding:12px 16px; border-radius:12px; margin-bottom:10px; display:flex; flex-direction:column; justify-content:center; align-items:flex-end;"></div>
+      </div>
+
+      <!-- 保養維修表單 (全新動態明細與同排設計) -->
+      <div id="form-area-maint" style="display:none;">
+        
+        <!-- 👇 新增：記錄類別選擇 -->
+        <div class="card" style="padding:10px 14px; margin-bottom:10px;">
+          <div style="font-size:12px; font-weight:800; color:var(--t2); margin-bottom:8px;">🛠️ 記錄類別</div>
+          <div class="slide-tabs tabs-2" style="margin-bottom:0; background:#e2e8f0; border-radius:12px; padding:4px;">
+            <div class="slide-bg" id="maint-cat-bg" style="background:#10b981; border-radius:10px;"></div>
+            <button class="slide-btn active" id="btn-mcat-maint" onclick="setMaintCategory('maintenance', 0)" style="color:#fff; font-size:14px; padding:6px 0;">保養</button>
+            <button class="slide-btn" id="btn-mcat-repair" onclick="setMaintCategory('repair', 1)" style="font-size:14px; padding:6px 0;">維修</button>
+          </div>
+        </div>
+
+        <!-- 里程與店家同排 -->
+        <div class="card" style="padding:10px 14px; margin-bottom:10px;">
+          
+          <!-- 補回遺失的里程與店家輸入框 -->
+          <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <div class="fg" style="flex:1; margin-bottom:0;">
+              <label>🛣️ 保養時里程</label>
+              <input type="number" class="finp" style="padding:8px;" id="vm-km" placeholder="0" inputmode="numeric">
+            </div>
+            <div class="fg" style="flex:1; margin-bottom:0;">
+              <label>🏪 保養店家</label>
+              <input type="text" class="finp" style="padding:8px;" id="vm-shop" placeholder="例: 機車行">
+            </div>
+          </div>
+          <!-- 補回歷史店家標籤的容器 -->
+          <div id="shop-history-container" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;"></div>
+          
+          <div style="border-top:1px dashed var(--border); margin:12px 0;"></div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:12px; font-weight:800; color:var(--green);">🔧 保養項目與單項金額明細</div>
+          </div>
+          
+          <!-- 動態列表容器 -->
+          <div id="vm-dynamic-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+          
+          <!-- 新增不同項目按鈕 -->
+          <button onclick="addMaintItemRow()" style="width:100%; padding:8px; background:rgba(34,197,94,0.1); color:var(--green); border:1px dashed var(--green); border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; transition:0.2s;">
+            ＋ 再新增不同項目
+          </button>
+
+          <!-- 常用標籤 (點擊快速帶入) -->
+          <div style="margin-top:12px;">
+            <div style="font-size:11px; color:var(--t3); margin-bottom:6px; font-weight:700;">點擊下方標籤快速帶入項目名稱：</div>
+            <div id="vm-items-tags" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+          </div>
+        </div>
+
+        <!-- 總額與備註 -->
+        <div class="card" style="padding:10px 14px; margin-bottom:10px;">
+          <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+            <div class="fg" style="flex:1; margin-bottom:0;">
+              <label>💳 支付方式</label>
+              <select class="fsel" style="padding:8px;" id="vm-pay-method">
+                <option value="現金">💵 現金</option>
+                <option value="電子支付">📱 電子支付</option>
+                <option value="銀行帳戶">🏦 轉帳</option>
+              </select>
+            </div>
+            <div class="fg" style="flex:1.2; margin-bottom:0; text-align:right;">
+              <label>💰 總金額 (自動加總)</label>
+              <!-- 改為唯讀顯示，由腳本自動計算 -->
+              <div style="font-size:22px; font-weight:900; color:var(--green); font-family:var(--mono); line-height:1.2; padding:4px 0;">$ <span id="vm-amount-display">0</span></div>
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:0;">
+            <label>📝 備註細節</label>
+            <input type="text" class="finp" style="padding:8px;" id="vm-note" placeholder="其它記事">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 洗車美容表單 -->
+      <div id="form-area-wash" style="display:none;">
+        <div class="card" style="padding:10px 14px; margin-bottom:10px;">
+          <div style="font-size:12px; font-weight:800; color:var(--text-cyan); margin-bottom:8px;">🧽 洗車記錄</div>
+          <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <div class="fg" style="flex:1; margin-bottom:0;">
+              <label>💰 花費金額</label>
+              <input type="number" class="finp" style="padding:8px; font-size:18px; font-weight:800; font-family:var(--mono); color:#0891b2;" id="vw-amount" placeholder="0" inputmode="numeric">
+            </div>
+            <div class="fg" style="flex:1; margin-bottom:0;">
+              <label>🏪 洗車地點</label>
+              <input type="text" class="finp" style="padding:8px;" id="vw-shop" placeholder="例: 自助洗車">
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:0;">
+            <label>📝 備註細節 (選填)</label>
+            <input type="text" class="finp" style="padding:8px;" id="vw-note" placeholder="例如：打蠟、鍍膜">
           </div>
         </div>
       </div>
 
-      <div id="vr-fuel-total-panel" style="padding:12px 16px; border-radius:12px; margin-bottom:10px; display:flex; flex-direction:column; justify-content:center; align-items:flex-end;"></div>
+      <button id="veh-rec-del-btn" onclick="deleteVehRecFromEdit()" class="btn-danger" style="width:100%; display:none; padding:12px; font-size:14px; font-weight:800; border-radius:var(--rs); margin-top:4px;">🗑 刪除此記錄</button>
+      <div style="height: 30px;"></div>
     </div>
-
-    <!-- 保養維修表單 (全新動態明細與同排設計) -->
-    <div id="form-area-maint" style="display:none;">
-      
-      <!-- 👇 新增：記錄類別選擇 -->
-      <div class="card" style="padding:10px 14px; margin-bottom:10px;">
-        <div style="font-size:12px; font-weight:800; color:var(--t2); margin-bottom:8px;">🛠️ 記錄類別</div>
-        <div class="slide-tabs tabs-2" style="margin-bottom:0; background:#e2e8f0; border-radius:12px; padding:4px;">
-          <div class="slide-bg" id="maint-cat-bg" style="background:#10b981; border-radius:10px;"></div>
-          <button class="slide-btn active" id="btn-mcat-maint" onclick="setMaintCategory('maintenance', 0)" style="color:#fff; font-size:14px; padding:6px 0;">保養</button>
-          <button class="slide-btn" id="btn-mcat-repair" onclick="setMaintCategory('repair', 1)" style="font-size:14px; padding:6px 0;">維修</button>
-        </div>
-      </div>
-
-      <!-- 里程與店家同排 -->
-      <div class="card" style="padding:10px 14px; margin-bottom:10px;">
-        
-        <!-- 補回遺失的里程與店家輸入框 -->
-        <div style="display:flex; gap:10px; margin-bottom:12px;">
-          <div class="fg" style="flex:1; margin-bottom:0;">
-            <label>🛣️ 保養時里程</label>
-            <input type="number" class="finp" style="padding:8px;" id="vm-km" placeholder="0" inputmode="numeric">
-          </div>
-          <div class="fg" style="flex:1; margin-bottom:0;">
-            <label>🏪 保養店家</label>
-            <input type="text" class="finp" style="padding:8px;" id="vm-shop" placeholder="例: 機車行">
-          </div>
-        </div>
-        <!-- 補回歷史店家標籤的容器 -->
-        <div id="shop-history-container" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;"></div>
-        
-        <div style="border-top:1px dashed var(--border); margin:12px 0;"></div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div style="font-size:12px; font-weight:800; color:var(--green);">🔧 保養項目與單項金額明細</div>
-        </div>
-        
-        <!-- 動態列表容器 -->
-        <div id="vm-dynamic-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
-        
-        <!-- 新增不同項目按鈕 -->
-        <button onclick="addMaintItemRow()" style="width:100%; padding:8px; background:rgba(34,197,94,0.1); color:var(--green); border:1px dashed var(--green); border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; transition:0.2s;">
-          ＋ 再新增不同項目
-        </button>
-
-        <!-- 常用標籤 (點擊快速帶入) -->
-        <div style="margin-top:12px;">
-          <div style="font-size:11px; color:var(--t3); margin-bottom:6px; font-weight:700;">點擊下方標籤快速帶入項目名稱：</div>
-          <div id="vm-items-tags" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
-        </div>
-      </div>
-
-      <!-- 總額與備註 -->
-      <div class="card" style="padding:10px 14px; margin-bottom:10px;">
-        <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
-          <div class="fg" style="flex:1; margin-bottom:0;">
-            <label>💳 支付方式</label>
-            <select class="fsel" style="padding:8px;" id="vm-pay-method">
-              <option value="現金">💵 現金</option>
-              <option value="電子支付">📱 電子支付</option>
-              <option value="銀行帳戶">🏦 轉帳</option>
-            </select>
-          </div>
-          <div class="fg" style="flex:1.2; margin-bottom:0; text-align:right;">
-            <label>💰 總金額 (自動加總)</label>
-            <!-- 改為唯讀顯示，由腳本自動計算 -->
-            <div style="font-size:22px; font-weight:900; color:var(--green); font-family:var(--mono); line-height:1.2; padding:4px 0;">$ <span id="vm-amount-display">0</span></div>
-          </div>
-        </div>
-        <div class="fg" style="margin-bottom:0;">
-          <label>📝 備註細節</label>
-          <input type="text" class="finp" style="padding:8px;" id="vm-note" placeholder="其它記事">
-        </div>
-      </div>
-
-    </div>
-
-    <!-- 洗車美容表單 -->
-    <div id="form-area-wash" style="display:none;">
-      <div class="card" style="padding:10px 14px; margin-bottom:10px;">
-        <div style="font-size:12px; font-weight:800; color:var(--text-cyan); margin-bottom:8px;">🧽 洗車記錄</div>
-        <div style="display:flex; gap:10px; margin-bottom:12px;">
-          <div class="fg" style="flex:1; margin-bottom:0;">
-            <label>💰 花費金額</label>
-            <input type="number" class="finp" style="padding:8px; font-size:18px; font-weight:800; font-family:var(--mono); color:#0891b2;" id="vw-amount" placeholder="0" inputmode="numeric">
-          </div>
-          <div class="fg" style="flex:1; margin-bottom:0;">
-            <label>🏪 洗車地點</label>
-            <input type="text" class="finp" style="padding:8px;" id="vw-shop" placeholder="例: 自助洗車">
-          </div>
-        </div>
-        <div class="fg" style="margin-bottom:0;">
-          <label>📝 備註細節 (選填)</label>
-          <input type="text" class="finp" style="padding:8px;" id="vw-note" placeholder="例如：打蠟、鍍膜">
-        </div>
-      </div>
-    </div>
-
-    <button id="veh-rec-del-btn" onclick="deleteVehRecFromEdit()" class="btn-danger" style="width:100%; display:none; padding:12px; font-size:14px; font-weight:800; border-radius:var(--rs); margin-top:4px;">🗑 刪除此記錄</button>
-    <div style="height: 30px;"></div>
   </div>
-</div>
 
-<div class="overlay-page" id="about-page" style="z-index:1000;">
-  <!-- 👇 更新為標準子頁面頂部樣式 (與每日記錄提醒一致) -->
-  <div class="top-bar">
-    <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('about-page'))">
-      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
-    </button>
-    <h2>關於我們</h2>
-    <div style="min-width:36px; text-align:right;"></div>
-  </div>
-  
-  <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
-    <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px; margin-top:24px;">黒崎製作 2026 © v1.15.116.12157</div>
+  <div class="overlay-page" id="about-page" style="z-index:1000;">
+    <!-- 👇 更新為標準子頁面頂部樣式 (與每日記錄提醒一致) -->
+    <div class="top-bar">
+      <button class="bar-btn" onclick="animateClose(this, () => closeOverlay('about-page'))">
+        <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+      </button>
+      <h2>關於我們</h2>
+      <div style="min-width:36px; text-align:right;"></div>
+    </div>
     
-    <div style="width:100%; margin-top:22px; padding:0 24px;">
+    <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
+      <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px; margin-top:24px;">黒崎製作 2026 © v1.15.116.12157</div>
       
-      <!-- 👇 官方網站 (點擊後開啟長按引導彈窗) -->
-      <div onclick="openOfficialWebsite()" style="padding:16px 0; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <span style="font-size:15px; font-weight:500; color:var(--t1);">官方網站</span>
-        <img src="images/new-window.png" style="width:18px; height:18px; opacity:0.5; object-fit:contain;">
-      </div>
+      <div style="width:100%; margin-top:22px; padding:0 24px;">
+        
+        <!-- 👇 官方網站 (點擊後開啟長按引導彈窗) -->
+        <div onclick="openOfficialWebsite()" style="padding:16px 0; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          <span style="font-size:15px; font-weight:500; color:var(--t1);">官方網站</span>
+          <img src="images/new-window.png" style="width:18px; height:18px; opacity:0.5; object-fit:contain;">
+        </div>
 
-      <!-- 👇 修改：禁止條款、隱私權政策 (移到聯絡我們上方) -->
-      <div onclick="openPrivacyPolicy()" style="padding:16px 0; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <span style="font-size:15px; font-weight:500; color:var(--t1);">禁止條款、隱私權政策</span>
-        <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
-      </div>
+        <!-- 👇 修改：禁止條款、隱私權政策 (移到聯絡我們上方) -->
+        <div onclick="openPrivacyPolicy()" style="padding:16px 0; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          <span style="font-size:15px; font-weight:500; color:var(--t1);">禁止條款、隱私權政策</span>
+          <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
+        </div>
 
-      <!-- 👇 聯絡我們 (移到下面) -->
-      <div onclick="openContactUs()" style="padding:16px 0; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <span style="font-size:15px; font-weight:500; color:var(--t1);">聯絡我們</span>
-        <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
-      </div>
+        <!-- 👇 聯絡我們 (移到下面) -->
+        <div onclick="openContactUs()" style="padding:16px 0; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          <span style="font-size:15px; font-weight:500; color:var(--t1);">聯絡我們</span>
+          <span style="color:var(--t3); font-size:20px; font-weight:300;">›</span>
+        </div>
 
-      <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT0201.aspx?id=FL105973" target="_blank" style="display:block; padding:16px 0; border-bottom:2px solid var(--border); text-decoration:none;">
-        <div style="font-size:17px; font-weight:600; color:var(--t1); margin-bottom:6px; line-height:1.4;">外送員權益保障及外送平臺管理法</div>
-        <div style="font-size:15px; font-weight:400; color:var(--t2);">勞動部 官方法規網站</div>
-      </a>
-      <div style="height:40px;"></div>
+        <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT0201.aspx?id=FL105973" target="_blank" style="display:block; padding:16px 0; border-bottom:2px solid var(--border); text-decoration:none;">
+          <div style="font-size:17px; font-weight:600; color:var(--t1); margin-bottom:6px; line-height:1.4;">外送員權益保障及外送平臺管理法</div>
+          <div style="font-size:15px; font-weight:400; color:var(--t2);">勞動部 官方法規網站</div>
+        </a>
+        <div style="height:40px;"></div>
+      </div>
     </div>
   </div>
-</div>
-  
-<div class="overlay-page" id="privacy-page" style="z-index:1200;">
-  <div class="top-bar">
-    <button class="bar-btn" onclick="flipCloseOverlay(this, 'privacy-page')">
-      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
-    </button>
-    <!-- 👇 修改標題 -->
-    <h2 style="white-space: nowrap; font-size: 24px;">禁止條款、隱私權政策</h2>
-    <div style="min-width:36px; text-align:right;"></div>
+    
+  <div class="overlay-page" id="privacy-page" style="z-index:1200;">
+    <div class="top-bar">
+      <button class="bar-btn" onclick="flipCloseOverlay(this, 'privacy-page')">
+        <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+      </button>
+      <!-- 👇 修改標題 -->
+      <h2 style="white-space: nowrap; font-size: 24px;">禁止條款、隱私權政策</h2>
+      <div style="min-width:36px; text-align:right;"></div>
+    </div>
+    <div class="overlay-body" id="privacy-body"></div>
   </div>
-  <div class="overlay-body" id="privacy-body"></div>
-</div>
 
-<!-- 新增：專屬聯絡我們頁面 (支援向右翻頁) -->
-<div class="overlay-page" id="contact-page" style="z-index:1200;">
-  <div class="top-bar">
-    <button class="bar-btn" onclick="flipCloseOverlay(this, 'contact-page')">
-      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
-    </button>
-    <h2>聯絡我們</h2>
-    <div style="min-width:36px; text-align:right;"></div>
+  <!-- 新增：專屬聯絡我們頁面 (支援向右翻頁) -->
+  <div class="overlay-page" id="contact-page" style="z-index:1200;">
+    <div class="top-bar">
+      <button class="bar-btn" onclick="flipCloseOverlay(this, 'contact-page')">
+        <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+      </button>
+      <h2>聯絡我們</h2>
+      <div style="min-width:36px; text-align:right;"></div>
+    </div>
+    <div class="overlay-body" id="contact-body"></div>
   </div>
-  <div class="overlay-body" id="contact-body"></div>
-</div>
 
-<!-- 新增：官方網站引導長按頁面 -->
-<div class="overlay-page" id="website-page" style="z-index:1200;">
-  <div class="top-bar">
-    <button class="bar-btn" onclick="flipCloseOverlay(this, 'website-page')">
-      <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
-    </button>
-    <h2>官方網站</h2>
-    <div style="min-width:36px; text-align:right;"></div>
+  <!-- 新增：官方網站引導長按頁面 -->
+  <div class="overlay-page" id="website-page" style="z-index:1200;">
+    <div class="top-bar">
+      <button class="bar-btn" onclick="flipCloseOverlay(this, 'website-page')">
+        <img src="images/close1.png" style="width:100%; height:100%; object-fit:contain;">
+      </button>
+      <h2>官方網站</h2>
+      <div style="min-width:36px; text-align:right;"></div>
+    </div>
+    <div class="overlay-body" id="website-body"></div>
   </div>
-  <div class="overlay-body" id="website-body"></div>
-</div>
 
 </div> <!-- 結尾 #app -->
-
-<!-- [修復5] script.js 加 defer：讓 #splash 先繪製，init() 在背景執行
-     沒有 defer 時瀏覽器遇到此行就停住，3783 行全執行完才繪製任何畫面 -->
-<script src="/script.js?v=1.6.0" defer></script>
 
 <!-- 動畫控制腳本 (5種風格共用) -->
 <script>
@@ -932,5 +928,6 @@
    </div>
 </div>
 
+<script src="/script.js?v=1.6.0"></script> 
 </body>
 </html>
