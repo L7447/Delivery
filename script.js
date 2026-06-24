@@ -1319,11 +1319,18 @@ function getFloatingAnnouncementHtml() {
   let ann = { active: false, text: "" };
   try {
     const raw = localStorage.getItem('delivery_global_announcement');
-    if (raw) ann = JSON.parse(raw);
-  } catch (e) { console.error("公告解析失敗", e); }
+    if (raw) {
+      ann = JSON.parse(raw);
+    }
+  } catch (e) { 
+    console.warn("公告解析失敗，已重置", e); 
+    localStorage.removeItem('delivery_global_announcement'); // 清理壞資料
+  }
 
   const dismissedAnn = localStorage.getItem('delivery_dismissed_ann'); 
-  if (!ann.active || !ann.text || ann.text === dismissedAnn) return '';
+  if (!ann.active || !ann.text || typeof ann.text !== 'string' || ann.text === dismissedAnn) {
+    return '';
+  }
 
   return `
     <div id="home-announcement-card" style="
@@ -1362,6 +1369,7 @@ function renderHome() {
     else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
   }
 
+  // 👇 修復：確保 requestAnimationFrame 有正確的閉合
   requestAnimationFrame(() => {
     try {
       const today = todayStr();
@@ -1605,20 +1613,24 @@ function renderHome() {
         bottomHtml = getRewardsHtml();
       }
 
-      topEl.innerHTML = topHtml;
+      // 👇 在 renderHome 結尾正確關閉 requestAnimationFrame
       botEl.innerHTML = bottomHtml;
 
-      const app = document.getElementById('app');
-      const existingAnn = document.getElementById('home-announcement-card');
-      const annHtml = getFloatingAnnouncementHtml();
+      // 公告插入（已防呆）
+      try {
+        const app = document.getElementById('app');
+        const existingAnn = document.getElementById('home-announcement-card');
+        const annHtml = getFloatingAnnouncementHtml();
+        if (annHtml && !existingAnn && app) {
+          app.insertAdjacentHTML('beforeend', annHtml);
+        }
+      } catch(e) { console.warn("公告插入失敗", e); }
 
-      if (annHtml && !existingAnn) {
-         app.insertAdjacentHTML('beforeend', annHtml);
-      }
-    } catch (e) {
-      console.error("renderHome 渲染錯誤:", e);
+    } catch(e) {
+      console.error("renderHome 執行錯誤:", e);
+      botEl.innerHTML = `<div class="empty-tip">載入首頁時發生錯誤，請重新整理</div>`;
     }
-  });
+  });  // ←←← 這裡補上缺失的閉合括號
 }
 // 關閉並記憶公告
 window.dismissAnnouncement = function(encodedText) {
@@ -9307,18 +9319,21 @@ window.onSplashFinished = function() {
 
   // 2. 延遲 500 毫秒 (讓手機背景將前一個動畫的垃圾回收清空)
   setTimeout(() => {
-    
-    // 3. 安全地啟動首頁與排版
-    S.homeSubTab = 'schedule';
-    goPage('home');
-    
-    // 確保畫面 DOM 長出來後，對齊底部膠囊
-    setTimeout(() => updateNavIndicator('home'), 100);
+    try {
+      S.homeSubTab = 'schedule';
+      if (document.getElementById('page-home')) {
+        goPage('home');
+      } else {
+        console.warn("page-home 尚未 ready，延後");
+        setTimeout(() => goPage('home'), 200);
+      }
+      updateNavIndicator('home');
+    } catch(e) {
+      console.error("首頁啟動失敗", e);
+    }
 
-    // 4. 漸隱並移除載入畫面，完美登場
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 500);
-
   }, 500);
 };
 
