@@ -861,6 +861,11 @@ window.flipCloseOverlay = function(btn, overlayId) {
     overlay.classList.remove('flip-page-out'); // 清除動畫，確保下次開啟正常
     if (img) img.src = 'images/close1.png';
     btn.style.pointerEvents = 'auto';
+    // 若關閉的是 sub-page（版本紀錄借用），還原 z-index 與 onclick
+    if (overlayId === 'sub-page') {
+      overlay.style.zIndex = '';
+      btn.onclick = function() { animateClose(this, () => closeOverlay('sub-page')); };
+    }
   }, 2000);
 }
 
@@ -1358,67 +1363,129 @@ function getFloatingAnnouncementHtml() {
   const ann = S.settings.announcement || { enabled: false, title: '系統公告', content: '', style: 'aurora' };
   if (!ann.enabled || !ann.content) return '';
 
-  // 檢查是否已隱藏
-  const dismissedVer = localStorage.getItem('delivery_ann_dismissed_ver');
-  if (dismissedVer === ann.version) return '';
+  // 檢查是否已隱藏（版本代號對比）
+  const annVer = ann.version || '';
+  if (annVer && localStorage.getItem('delivery_ann_dismissed_ver') === annVer) return '';
+
+  // ── 5 種樣式定義 ──────────────────────────────────────
+  const STYLES = {
+    aurora: {
+      overlay: 'rgba(10,10,40,0.55)',
+      wrapStyle: 'background:linear-gradient(125deg,#00feba,#5b54fa,#ff2a85,#ffcc00,#00feba);background-size:400% 100%;animation:holo-flow 3.5s linear infinite;',
+      card: 'background:rgba(255,255,255,0.12);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1.5px solid rgba(255,255,255,0.45);box-shadow:0 8px 32px rgba(80,120,255,0.3);border-radius:24px;',
+      title: 'color:#ffffff;text-shadow:0 1px 6px rgba(0,0,0,0.4);',
+      body:  'color:rgba(255,255,255,0.9);',
+      sep:   'border-color:rgba(255,255,255,0.25);',
+      cbTxt: 'color:rgba(255,255,255,0.9);',
+      cbBd:  'rgba(255,255,255,0.7)',
+      btn:   'background:rgba(255,255,255,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.5);backdrop-filter:blur(8px);',
+    },
+    neon: {
+      overlay: 'rgba(0,0,10,0.8)',
+      wrapStyle: 'background:#0d0d1a;',
+      card: 'background:#0d0d1a;border:2px solid #00f0ff;box-shadow:0 0 24px rgba(0,240,255,0.5),0 0 60px rgba(0,240,255,0.12);border-radius:20px;',
+      title: 'color:#00f0ff;text-shadow:0 0 10px #00f0ff;',
+      body:  'color:#b0ccff;',
+      sep:   'border-color:#1a2a4a;',
+      cbTxt: 'color:#00f0ff;',
+      cbBd:  '#00f0ff',
+      btn:   'background:linear-gradient(90deg,#00f0ff,#8b00ff);color:#fff;border:none;box-shadow:0 0 12px rgba(0,240,255,0.5);',
+    },
+    minimal: {
+      overlay: 'rgba(0,0,0,0.3)',
+      wrapStyle: 'background:#f8fafc;',
+      card: 'background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:16px;',
+      title: 'color:#0f172a;',
+      body:  'color:#475569;',
+      sep:   'border-color:#e2e8f0;',
+      cbTxt: 'color:#64748b;',
+      cbBd:  '#94a3b8',
+      btn:   'background:#0f172a;color:#fff;border:none;',
+    },
+    festive: {
+      overlay: 'rgba(0,0,0,0.5)',
+      wrapStyle: 'background:linear-gradient(135deg,#fff9e6,#fff0f5);',
+      card: 'background:linear-gradient(135deg,#fff9e6,#fff0f5);border:2px solid #f59e0b;box-shadow:0 8px 30px rgba(245,158,11,0.3);border-radius:24px;',
+      title: 'color:#b45309;',
+      body:  'color:#78350f;',
+      sep:   'border-color:#fde68a;',
+      cbTxt: 'color:#92400e;',
+      cbBd:  '#f59e0b',
+      btn:   'background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;border:none;box-shadow:0 4px 12px rgba(245,158,11,0.4);',
+    },
+    urgent: {
+      overlay: 'rgba(0,0,0,0.65)',
+      wrapStyle: 'background:#fff5f5;',
+      card: 'background:linear-gradient(135deg,#fff5f5,#fff);border:2.5px solid #ef4444;box-shadow:0 0 0 4px rgba(239,68,68,0.15),0 8px 24px rgba(239,68,68,0.2);border-radius:20px;',
+      title: 'color:#dc2626;',
+      body:  'color:#7f1d1d;',
+      sep:   'border-color:#fecaca;',
+      cbTxt: 'color:#dc2626;',
+      cbBd:  '#ef4444',
+      btn:   'background:#ef4444;color:#fff;border:none;box-shadow:0 4px 12px rgba(239,68,68,0.4);animation:urgentPulse 1.2s ease-in-out infinite;',
+    },
+  };
+  const s = STYLES[ann.style] || STYLES.aurora;
 
   return `
-    <div id="home-announcement-overlay" style="position:fixed; inset:0; z-index:99990; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:24px;">
-      <div id="home-announcement-card" style="width:100%; max-width:360px; padding:20px; border-radius:20px; background:linear-gradient(135deg,#ffffff,#f8fafc); border:2px solid var(--acc); box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-        <div style="font-size:16px; font-weight:900; color:var(--t1); margin-bottom:8px;">📢 ${safeText(ann.title)}</div>
-        <div style="font-size:14px; line-height:1.6; color:var(--t2); margin-bottom:16px;">${safeTextWithBr(ann.content)}</div>
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; padding-top:12px;">
-          <div id="ann-checkbox" data-checked="false" style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; color:var(--t2);">
-            <div style="width:20px; height:20px; border:2px solid var(--t3); border-radius:6px;"></div> 不再顯示
+    <div id="home-announcement-overlay" style="position:fixed;inset:0;z-index:99990;background:${s.overlay};display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div style="${s.wrapStyle}position:absolute;inset:0;"></div>
+      <div id="home-announcement-card" style="position:relative;width:100%;max-width:360px;padding:20px;${s.card}">
+        <div style="font-size:16px;font-weight:900;margin-bottom:8px;${s.title}">📢 ${safeText(ann.title)}</div>
+        <div style="font-size:14px;line-height:1.6;margin-bottom:16px;${s.body}">${safeTextWithBr(ann.content)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid;padding-top:12px;${s.sep}">
+          <div id="ann-checkbox" data-checked="false" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;${s.cbTxt}">
+            <div id="ann-cb-box" style="width:20px;height:20px;border:2px solid ${s.cbBd};border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
+            <span id="ann-cb-label">不再顯示</span>
           </div>
-          <button id="close-ann-btn" style="background:var(--acc); color:#fff; border:none; padding:6px 16px; border-radius:12px; font-weight:800;">確認閱讀</button>
+          <button id="close-ann-btn" data-ver="${annVer}" style="border:none;padding:8px 18px;border-radius:12px;font-weight:800;cursor:pointer;${s.btn}">確認閱讀</button>
         </div>
       </div>
     </div>
+    <style>
+      @keyframes urgentPulse{0%,100%{box-shadow:0 4px 12px rgba(239,68,68,0.4);}50%{box-shadow:0 4px 20px rgba(239,68,68,0.8);}}
+    </style>
   `;
-}
-function toggleAnnCheckbox() {
-    const box = document.getElementById('ann-checkbox');
-    const isChecked = box.dataset.checked === 'true';
-    box.dataset.checked = !isChecked;
-    box.style.background = !isChecked ? '#3b82f6' : 'transparent';
-    box.innerHTML = !isChecked ? '✓' : '';
 }
 /* ══ 確保事件能正常綁定 ══ */
 document.addEventListener('click', function(e) {
   // 處理關閉按鈕
   if (e.target && e.target.id === 'close-ann-btn') {
-    const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{}');
+    const btn = e.target;
+    const annVer = btn.dataset.ver || '';
     const box = document.getElementById('ann-checkbox');
-    const isChecked = box.dataset.checked === 'true';
-    const removeAnn = () => {
-      const overlay = document.getElementById('home-announcement-overlay');
-      if (overlay) overlay.remove();
-      else { const card = document.getElementById('home-announcement-card'); if (card) card.remove(); }
+    const isChecked = box ? box.dataset.checked === 'true' : false;
+    const removeOverlay = () => {
+      const ov = document.getElementById('home-announcement-overlay');
+      if (ov) ov.remove();
     };
 
-    if (isChecked) {
-      customConfirm("確定永久隱藏此公告嗎？").then(ok => {
+    if (isChecked && annVer) {
+      customConfirm('確定永久隱藏此公告嗎？').then(ok => {
         if (ok) {
-          localStorage.setItem('delivery_ann_dismissed_ver', ann.version);
-          removeAnn();
+          localStorage.setItem('delivery_ann_dismissed_ver', annVer);
+          removeOverlay();
           toast('✅ 已設定隱藏', 500);
         }
       });
     } else {
-      removeAnn();
+      removeOverlay();
       toast('✅ 已閱讀', 500);
     }
   }
 
-  // 處理勾選框點擊
-  if (e.target && e.target.id === 'ann-checkbox' || e.target.parentElement.id === 'ann-checkbox') {
+  // 處理勾選框點擊（維持文字「不再顯示」不消失）
+  const tgt = e.target;
+  if (tgt && (tgt.id === 'ann-checkbox' || tgt.id === 'ann-cb-box' || tgt.id === 'ann-cb-label' || (tgt.parentElement && tgt.parentElement.id === 'ann-checkbox'))) {
     const box = document.getElementById('ann-checkbox');
+    const cbBox = document.getElementById('ann-cb-box');
+    if (!box || !cbBox) return;
     const isChecked = box.dataset.checked === 'true';
-    box.dataset.checked = !isChecked;
-    box.style.background = !isChecked ? '#3b82f6' : 'transparent';
-    box.innerHTML = !isChecked ? '✓' : '';
+    const newChecked = !isChecked;
+    box.dataset.checked = String(newChecked);
+    cbBox.style.background = newChecked ? '#3b82f6' : '';
+    cbBox.style.borderColor = newChecked ? '#3b82f6' : '';
+    cbBox.innerHTML = newChecked ? '<span style="color:#fff;font-size:14px;font-weight:900;line-height:1;">✓</span>' : '';
   }
 });
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
@@ -1690,7 +1757,7 @@ function renderHome() {
 
       // 強制顯示公告（防止被蓋住）
       setTimeout(() => {
-        if (!document.getElementById('home-announcement-overlay') && !document.getElementById('home-announcement-card')) {
+        if (!document.getElementById('home-announcement-overlay')) {
           const annHtml = getFloatingAnnouncementHtml();
           if (annHtml) document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
         }
@@ -7868,14 +7935,14 @@ window.saveAnnouncement = function() {
 // 1. 統一的開啟版本紀錄 (進入點)
 window.openVersionHistory = function() {
   document.getElementById('sub-title').textContent = '版本紀錄';
-  document.getElementById('sub-top-right').innerHTML = ''; // 清除舊按鈕
-  
-  // 檢查權限顯示新增按鈕
-  let adminBtn = USER.role === 'admin' ? 
-    `<button onclick="openAddVersion()" class="btn-acc" style="width:100%; margin-bottom:12px;">＋ 新增版本紀錄</button>` : '';
+
+  // 右上角：admin 才顯示「新增紀錄」
+  document.getElementById('sub-top-right').innerHTML = USER.role === 'admin'
+    ? `<button onclick="openAddVersion()" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">＋ 新增紀錄</button>`
+    : '';
 
   const versions = Array.isArray(S.settings.versions) ? S.settings.versions : [];
-  let html = versions.map(v => `
+  let html = versions.length ? versions.map(v => `
     <div style="margin:12px; background:#fff; border-radius:12px; padding:16px; border:1px solid var(--border);">
       <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
         <span style="font-size:18px; font-weight:900; color:var(--acc);">v${safeText(v.ver)}</span>
@@ -7883,29 +7950,32 @@ window.openVersionHistory = function() {
       </div>
       <div style="font-size:14px; color:var(--t1);">${safeTextWithBr(v.note)}</div>
     </div>
-  `).join('');
+  `).join('') : '<div style="padding:32px; text-align:center; color:var(--t3); font-size:14px;">尚無版本紀錄</div>';
 
-  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${adminBtn}${html}</div>`;
-  
-  // 隱藏左上角的 X，改用右上角返回
-  document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; document.getElementById('sub-page').style.zIndex=''; openOverlay('about-page'); })" class="btn-acc" style="padding:6px 16px; border-radius:20px;">🔙 返回</button>
-  `;
-  
-  // 提升 sub-page 的 z-index，確保蓋住 about-page（z-index:1000）
-  const subPage = document.getElementById('sub-page');
-  subPage.style.zIndex = '1100';
-  
+  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${html}</div>`;
+
+  // 左上角 X 改為 flipCloseOverlay（與聯絡我們一樣向右翻頁關閉）
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  closeBtn.style.display = '';
+  closeBtn.onclick = function() { flipCloseOverlay(this, 'sub-page'); };
+
+  // 提升 z-index 確保蓋在 about-page 之上
+  document.getElementById('sub-page').style.zIndex = '1100';
+
   openOverlay('sub-page');
 };
 
 // 2. 新增版本頁面
 window.openAddVersion = function() {
   document.getElementById('sub-title').textContent = '新增版本';
+  // 右上角放「返回」
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 16px;">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
   `;
+  // 關閉按鈕暫時隱藏（由右上角返回取代）
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  closeBtn.style.display = 'none';
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:20px;">
       <div class="fg"><label>版本號</label><input type="text" class="finp" id="new-ver" value="1.15.117"></div>
@@ -9482,7 +9552,7 @@ window.onSplashFinished = function() {
 
       // 強制再渲染一次公告（防止被 loadingDiv 蓋住）
       setTimeout(() => {
-        const existing = document.getElementById('home-announcement-overlay') || document.getElementById('home-announcement-card');
+        const existing = document.getElementById('home-announcement-overlay');
         if (!existing) {
           const annHtml = getFloatingAnnouncementHtml();
           if (annHtml) {
