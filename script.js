@@ -861,11 +861,6 @@ window.flipCloseOverlay = function(btn, overlayId) {
     overlay.classList.remove('flip-page-out'); // 清除動畫，確保下次開啟正常
     if (img) img.src = 'images/close1.png';
     btn.style.pointerEvents = 'auto';
-    // 若關閉的是 sub-page（版本紀錄借用），還原 z-index 與 onclick
-    if (overlayId === 'sub-page') {
-      overlay.style.zIndex = '';
-      btn.onclick = function() { animateClose(this, () => closeOverlay('sub-page')); };
-    }
   }, 2000);
 }
 
@@ -1359,133 +1354,196 @@ function switchVehicleTab(tab, index) {
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 /* ══ 首頁公告渲染函式 ══ */
+/* ══ 公告：5 種鮮明樣式 + fixed 置中 overlay ══ */
 function getFloatingAnnouncementHtml() {
-  const ann = S.settings.announcement || { enabled: false, title: '系統公告', content: '', style: 'aurora' };
+  const ann = S.settings.announcement || { enabled: false, title: '', content: '', style: 'aurora', version: '', date: '' };
   if (!ann.enabled || !ann.content) return '';
 
-  // 檢查是否已隱藏（版本代號對比）
-  const annVer = ann.version || '';
+  // dismiss 判斷：用 S.settings 裡的 version，版本為空時仍可顯示（但不可 dismiss）
+  const annVer = (ann.version || '').trim();
   if (annVer && localStorage.getItem('delivery_ann_dismissed_ver') === annVer) return '';
 
-  // ── 5 種樣式定義 ──────────────────────────────────────
+  /* ─── 5 種樣式 ───────────────────────────────────── */
   const STYLES = {
+    // 🌈 極光玻璃：全息流光背景 + 毛玻璃卡片
     aurora: {
-      overlay: 'rgba(10,10,40,0.55)',
-      wrapStyle: 'background:linear-gradient(125deg,#00feba,#5b54fa,#ff2a85,#ffcc00,#00feba);background-size:400% 100%;animation:holo-flow 3.5s linear infinite;',
-      card: 'background:rgba(255,255,255,0.12);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1.5px solid rgba(255,255,255,0.45);box-shadow:0 8px 32px rgba(80,120,255,0.3);border-radius:24px;',
-      title: 'color:#ffffff;text-shadow:0 1px 6px rgba(0,0,0,0.4);',
-      body:  'color:rgba(255,255,255,0.9);',
-      sep:   'border-color:rgba(255,255,255,0.25);',
-      cbTxt: 'color:rgba(255,255,255,0.9);',
-      cbBd:  'rgba(255,255,255,0.7)',
-      btn:   'background:rgba(255,255,255,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.5);backdrop-filter:blur(8px);',
+      bgHtml: `<div style="position:absolute;inset:0;background:linear-gradient(125deg,#00feba,#5b54fa,#ff2a85,#ffcc00,#00feba);background-size:400% 100%;animation:annHoloFlow 4s linear infinite;"></div>`,
+      card:   `background:rgba(255,255,255,0.14);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1.5px solid rgba(255,255,255,0.5);box-shadow:0 16px 48px rgba(80,0,200,0.25),0 2px 0 rgba(255,255,255,0.3) inset;`,
+      radius: '24px',
+      badge:  `background:rgba(255,255,255,0.22);color:#fff;border:1px solid rgba(255,255,255,0.5);`,
+      icon:   '📢',
+      title:  `color:#fff;text-shadow:0 1px 8px rgba(0,0,0,0.35);`,
+      body:   `color:rgba(255,255,255,0.92);`,
+      sep:    `border-color:rgba(255,255,255,0.25);`,
+      cbTxt:  `color:rgba(255,255,255,0.9);`,
+      cbBd:   `rgba(255,255,255,0.7)`,
+      cbChk:  `background:#fff;color:#5b54fa;`,
+      btn:    `background:rgba(255,255,255,0.22);color:#fff;border:1.5px solid rgba(255,255,255,0.5);backdrop-filter:blur(8px);`,
+      extra:  `@keyframes annHoloFlow{0%{background-position:100% 50%;}100%{background-position:0% 50%;}}`,
     },
+    // ⚡ 電競霓虹：深黑底 + 青色/紫色霓虹光
     neon: {
-      overlay: 'rgba(0,0,10,0.8)',
-      wrapStyle: 'background:#0d0d1a;',
-      card: 'background:#0d0d1a;border:2px solid #00f0ff;box-shadow:0 0 24px rgba(0,240,255,0.5),0 0 60px rgba(0,240,255,0.12);border-radius:20px;',
-      title: 'color:#00f0ff;text-shadow:0 0 10px #00f0ff;',
-      body:  'color:#b0ccff;',
-      sep:   'border-color:#1a2a4a;',
-      cbTxt: 'color:#00f0ff;',
-      cbBd:  '#00f0ff',
-      btn:   'background:linear-gradient(90deg,#00f0ff,#8b00ff);color:#fff;border:none;box-shadow:0 0 12px rgba(0,240,255,0.5);',
+      bgHtml: `<div style="position:absolute;inset:0;background:#050510;"></div><div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(0,240,255,0.18) 0%,transparent 60%),radial-gradient(ellipse at 70% 50%,rgba(180,0,255,0.15) 0%,transparent 60%);"></div>`,
+      card:   `background:#0a0a1a;border:2px solid #00f0ff;box-shadow:0 0 20px rgba(0,240,255,0.45),0 0 60px rgba(0,240,255,0.12),inset 0 0 20px rgba(0,240,255,0.04);`,
+      radius: '20px',
+      badge:  `background:rgba(0,240,255,0.12);color:#00f0ff;border:1px solid rgba(0,240,255,0.5);text-shadow:0 0 8px #00f0ff;`,
+      icon:   '⚡',
+      title:  `color:#00f0ff;text-shadow:0 0 12px #00f0ff,0 0 24px rgba(0,240,255,0.5);letter-spacing:1px;`,
+      body:   `color:#94b8d8;`,
+      sep:    `border-color:#0a1a2a;`,
+      cbTxt:  `color:#00f0ff;`,
+      cbBd:   `#00f0ff`,
+      cbChk:  `background:#00f0ff;color:#050510;box-shadow:0 0 8px #00f0ff;`,
+      btn:    `background:linear-gradient(90deg,#00f0ff,#8b00ff);color:#fff;border:none;box-shadow:0 0 16px rgba(0,240,255,0.5);letter-spacing:1px;`,
+      extra:  ``,
     },
+    // ✨ 簡約極簡：純白 + 細線 + 黑色Typography
     minimal: {
-      overlay: 'rgba(0,0,0,0.3)',
-      wrapStyle: 'background:#f8fafc;',
-      card: 'background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:16px;',
-      title: 'color:#0f172a;',
-      body:  'color:#475569;',
-      sep:   'border-color:#e2e8f0;',
-      cbTxt: 'color:#64748b;',
-      cbBd:  '#94a3b8',
-      btn:   'background:#0f172a;color:#fff;border:none;',
+      bgHtml: `<div style="position:absolute;inset:0;background:rgba(0,0,0,0.4);"></div>`,
+      card:   `background:#fff;border:1.5px solid #e2e8f0;box-shadow:0 8px 32px rgba(0,0,0,0.12);`,
+      radius: '16px',
+      badge:  `background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;`,
+      icon:   '📋',
+      title:  `color:#0f172a;letter-spacing:0.5px;`,
+      body:   `color:#475569;`,
+      sep:    `border-color:#f1f5f9;`,
+      cbTxt:  `color:#64748b;`,
+      cbBd:   `#cbd5e1`,
+      cbChk:  `background:#0f172a;color:#fff;`,
+      btn:    `background:#0f172a;color:#fff;border:none;`,
+      extra:  ``,
     },
+    // 🎉 節慶喜慶：金橘漸層 + 彩帶感
     festive: {
-      overlay: 'rgba(0,0,0,0.5)',
-      wrapStyle: 'background:linear-gradient(135deg,#fff9e6,#fff0f5);',
-      card: 'background:linear-gradient(135deg,#fff9e6,#fff0f5);border:2px solid #f59e0b;box-shadow:0 8px 30px rgba(245,158,11,0.3);border-radius:24px;',
-      title: 'color:#b45309;',
-      body:  'color:#78350f;',
-      sep:   'border-color:#fde68a;',
-      cbTxt: 'color:#92400e;',
-      cbBd:  '#f59e0b',
-      btn:   'background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;border:none;box-shadow:0 4px 12px rgba(245,158,11,0.4);',
+      bgHtml: `<div style="position:absolute;inset:0;background:linear-gradient(135deg,#ff6b35,#f59e0b,#fbbf24);"></div><div style="position:absolute;inset:0;background-image:radial-gradient(circle at 20% 20%,rgba(255,255,255,0.15) 0%,transparent 40%),radial-gradient(circle at 80% 80%,rgba(255,255,255,0.1) 0%,transparent 40%);"></div>`,
+      card:   `background:rgba(255,255,255,0.92);border:2px solid rgba(255,255,255,0.8);box-shadow:0 12px 40px rgba(245,158,11,0.35);`,
+      radius: '24px',
+      badge:  `background:linear-gradient(90deg,#ff6b35,#f59e0b);color:#fff;border:none;`,
+      icon:   '🎉',
+      title:  `color:#92400e;`,
+      body:   `color:#78350f;`,
+      sep:    `border-color:#fde68a;`,
+      cbTxt:  `color:#92400e;`,
+      cbBd:   `#f59e0b`,
+      cbChk:  `background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;`,
+      btn:    `background:linear-gradient(90deg,#ff6b35,#f59e0b);color:#fff;border:none;box-shadow:0 4px 16px rgba(245,158,11,0.4);`,
+      extra:  ``,
     },
+    // 🚨 警示緊急：純白 + 紅色邊框 + 脈衝按鈕
     urgent: {
-      overlay: 'rgba(0,0,0,0.65)',
-      wrapStyle: 'background:#fff5f5;',
-      card: 'background:linear-gradient(135deg,#fff5f5,#fff);border:2.5px solid #ef4444;box-shadow:0 0 0 4px rgba(239,68,68,0.15),0 8px 24px rgba(239,68,68,0.2);border-radius:20px;',
-      title: 'color:#dc2626;',
-      body:  'color:#7f1d1d;',
-      sep:   'border-color:#fecaca;',
-      cbTxt: 'color:#dc2626;',
-      cbBd:  '#ef4444',
-      btn:   'background:#ef4444;color:#fff;border:none;box-shadow:0 4px 12px rgba(239,68,68,0.4);animation:urgentPulse 1.2s ease-in-out infinite;',
+      bgHtml: `<div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div><div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(239,68,68,0.15) 0%,transparent 70%);"></div>`,
+      card:   `background:#fff;border:3px solid #ef4444;box-shadow:0 0 0 6px rgba(239,68,68,0.12),0 16px 40px rgba(239,68,68,0.2);`,
+      radius: '20px',
+      badge:  `background:#fef2f2;color:#dc2626;border:1px solid #fecaca;`,
+      icon:   '🚨',
+      title:  `color:#dc2626;`,
+      body:   `color:#7f1d1d;`,
+      sep:    `border-color:#fecaca;`,
+      cbTxt:  `color:#dc2626;`,
+      cbBd:   `#ef4444`,
+      cbChk:  `background:#ef4444;color:#fff;`,
+      btn:    `background:#ef4444;color:#fff;border:none;box-shadow:0 4px 16px rgba(239,68,68,0.4);animation:annUrgentPulse 1.4s ease-in-out infinite;`,
+      extra:  `@keyframes annUrgentPulse{0%,100%{box-shadow:0 4px 16px rgba(239,68,68,0.4);}50%{box-shadow:0 4px 28px rgba(239,68,68,0.75);}}`,
     },
   };
   const s = STYLES[ann.style] || STYLES.aurora;
 
+  // 日期與版本號 badge（有值才顯示）
+  const metaBadges = [
+    ann.date    ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;${s.badge}">${safeText(ann.date)}</span>` : '',
+    annVer      ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;${s.badge}">v${safeText(annVer)}</span>` : '',
+  ].filter(Boolean).join('');
+
   return `
-    <div id="home-announcement-overlay" style="position:fixed;inset:0;z-index:99990;background:${s.overlay};display:flex;align-items:center;justify-content:center;padding:24px;">
-      <div style="${s.wrapStyle}position:absolute;inset:0;"></div>
-      <div id="home-announcement-card" style="position:relative;width:100%;max-width:360px;padding:20px;${s.card}">
-        <div style="font-size:16px;font-weight:900;margin-bottom:8px;${s.title}">📢 ${safeText(ann.title)}</div>
-        <div style="font-size:14px;line-height:1.6;margin-bottom:16px;${s.body}">${safeTextWithBr(ann.content)}</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid;padding-top:12px;${s.sep}">
-          <div id="ann-checkbox" data-checked="false" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;${s.cbTxt}">
-            <div id="ann-cb-box" style="width:20px;height:20px;border:2px solid ${s.cbBd};border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
-            <span id="ann-cb-label">不再顯示</span>
+    <div id="home-announcement-overlay" style="position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;padding:24px;">
+      ${s.bgHtml}
+      <div id="home-announcement-card" style="position:relative;width:100%;max-width:380px;border-radius:${s.radius};padding:22px;${s.card}">
+
+        <!-- 圖示 + 標題 -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${metaBadges ? '8px' : '12px'};">
+          <div style="font-size:26px;line-height:1;flex-shrink:0;">${s.icon}</div>
+          <div style="font-size:17px;font-weight:900;line-height:1.3;${s.title}">${safeText(ann.title)}</div>
+        </div>
+
+        <!-- 日期 + 版本 badge -->
+        ${metaBadges ? `<div style="display:flex;gap:6px;margin-bottom:12px;">${metaBadges}</div>` : ''}
+
+        <!-- 公告內容 -->
+        <div style="font-size:14px;line-height:1.75;margin-bottom:18px;${s.body}">${safeTextWithBr(ann.content)}</div>
+
+        <!-- 分隔線 + 底部操作區 -->
+        <div style="border-top:1px solid;padding-top:14px;${s.sep}display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <!-- 不再顯示勾選 -->
+          <div id="ann-checkbox" data-checked="false" data-ver="${annVer}" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;-webkit-tap-highlight-color:transparent;">
+            <div id="ann-cb-box" style="width:22px;height:22px;border:2px solid ${s.cbBd};border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:0.2s;"></div>
+            <span id="ann-cb-label" style="font-size:13px;font-weight:700;${s.cbTxt}">不再顯示</span>
           </div>
-          <button id="close-ann-btn" data-ver="${annVer}" style="border:none;padding:8px 18px;border-radius:12px;font-weight:800;cursor:pointer;${s.btn}">確認閱讀</button>
+          <!-- 確認閱讀按鈕 -->
+          <button id="close-ann-btn" data-ver="${annVer}" style="flex-shrink:0;border:none;padding:9px 20px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;${s.btn}">確認閱讀</button>
         </div>
       </div>
     </div>
-    <style>
-      @keyframes urgentPulse{0%,100%{box-shadow:0 4px 12px rgba(239,68,68,0.4);}50%{box-shadow:0 4px 20px rgba(239,68,68,0.8);}}
-    </style>
+    ${s.extra ? `<style>${s.extra}</style>` : ''}
   `;
 }
-/* ══ 確保事件能正常綁定 ══ */
+
+/* ══ 公告：click 委派（勾選 + 確認） ══ */
 document.addEventListener('click', function(e) {
-  // 處理關閉按鈕
-  if (e.target && e.target.id === 'close-ann-btn') {
-    const btn = e.target;
-    const annVer = btn.dataset.ver || '';
-    const box = document.getElementById('ann-checkbox');
+  const tgt = e.target;
+
+  // ── 勾選「不再顯示」──
+  if (tgt && (tgt.id === 'ann-checkbox' || tgt.id === 'ann-cb-box' || tgt.id === 'ann-cb-label' ||
+      (tgt.closest && tgt.closest('#ann-checkbox')))) {
+    const box   = document.getElementById('ann-checkbox');
+    const cbBox = document.getElementById('ann-cb-box');
+    if (!box || !cbBox) return;
+    const nowChecked = !(box.dataset.checked === 'true');
+    box.dataset.checked = String(nowChecked);
+    // 取得當前樣式的勾選色（從 close-ann-btn 按鈕背景推算；保險起見直接用藍色）
+    if (nowChecked) {
+      cbBox.style.cssText += ';background:#3b82f6;border-color:#3b82f6;';
+      cbBox.innerHTML = '<span style="color:#fff;font-size:15px;font-weight:900;line-height:1;">✓</span>';
+    } else {
+      cbBox.style.background = '';
+      cbBox.style.borderColor = '';
+      cbBox.innerHTML = '';
+    }
+    e.stopPropagation();
+    return;
+  }
+
+  // ── 確認閱讀按鈕 ──
+  if (tgt && tgt.id === 'close-ann-btn') {
+    const box      = document.getElementById('ann-checkbox');
     const isChecked = box ? box.dataset.checked === 'true' : false;
+    // 版本號優先從 button 的 data-ver 取（HTML 渲染時已嵌入）
+    const annVer   = tgt.dataset.ver || '';
+    const canDismiss = isChecked && annVer;
+
     const removeOverlay = () => {
       const ov = document.getElementById('home-announcement-overlay');
       if (ov) ov.remove();
     };
 
-    if (isChecked && annVer) {
+    if (canDismiss) {
+      // 先把 overlay 暫時提升，讓 confirm 彈窗能正確蓋在上面
+      const ov = document.getElementById('home-announcement-overlay');
+      if (ov) ov.style.zIndex = '99980'; // 壓低，讓 confirm-overlay(999999) 蓋上
       customConfirm('確定永久隱藏此公告嗎？').then(ok => {
         if (ok) {
           localStorage.setItem('delivery_ann_dismissed_ver', annVer);
           removeOverlay();
-          toast('✅ 已設定隱藏', 500);
+          toast('✅ 已設定不再顯示', 500);
+        } else {
+          // 取消：還原 z-index
+          if (ov) ov.style.zIndex = '99990';
         }
       });
     } else {
       removeOverlay();
       toast('✅ 已閱讀', 500);
     }
-  }
-
-  // 處理勾選框點擊（維持文字「不再顯示」不消失）
-  const tgt = e.target;
-  if (tgt && (tgt.id === 'ann-checkbox' || tgt.id === 'ann-cb-box' || tgt.id === 'ann-cb-label' || (tgt.parentElement && tgt.parentElement.id === 'ann-checkbox'))) {
-    const box = document.getElementById('ann-checkbox');
-    const cbBox = document.getElementById('ann-cb-box');
-    if (!box || !cbBox) return;
-    const isChecked = box.dataset.checked === 'true';
-    const newChecked = !isChecked;
-    box.dataset.checked = String(newChecked);
-    cbBox.style.background = newChecked ? '#3b82f6' : '';
-    cbBox.style.borderColor = newChecked ? '#3b82f6' : '';
-    cbBox.innerHTML = newChecked ? '<span style="color:#fff;font-size:14px;font-weight:900;line-height:1;">✓</span>' : '';
+    e.stopPropagation();
   }
 });
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
@@ -7920,10 +7978,12 @@ window.openAnnouncementEdit = function() {
 
 window.saveAnnouncement = function() {
   S.settings.announcement = {
-    enabled: document.getElementById('ann-enabled').checked,
-    title: document.getElementById('ann-title').value.trim(),
-    content: document.getElementById('ann-content').value.trim(),
-    style: document.getElementById('ann-style').value
+    enabled:  document.getElementById('ann-enabled').checked,
+    title:    document.getElementById('ann-title').value.trim(),
+    content:  document.getElementById('ann-content').value.trim(),
+    style:    document.getElementById('ann-style').value,
+    version:  (document.getElementById('ann-ver').value  || '').trim(),
+    date:     (document.getElementById('ann-date').value || '').trim(),
   };
   saveSettings();
   closeOverlay('sub-page');
@@ -7935,14 +7995,14 @@ window.saveAnnouncement = function() {
 // 1. 統一的開啟版本紀錄 (進入點)
 window.openVersionHistory = function() {
   document.getElementById('sub-title').textContent = '版本紀錄';
-
-  // 右上角：admin 才顯示「新增紀錄」
-  document.getElementById('sub-top-right').innerHTML = USER.role === 'admin'
-    ? `<button onclick="openAddVersion()" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">＋ 新增紀錄</button>`
-    : '';
+  document.getElementById('sub-top-right').innerHTML = ''; // 清除舊按鈕
+  
+  // 檢查權限顯示新增按鈕
+  let adminBtn = USER.role === 'admin' ? 
+    `<button onclick="openAddVersion()" class="btn-acc" style="width:100%; margin-bottom:12px;">＋ 新增版本紀錄</button>` : '';
 
   const versions = Array.isArray(S.settings.versions) ? S.settings.versions : [];
-  let html = versions.length ? versions.map(v => `
+  let html = versions.map(v => `
     <div style="margin:12px; background:#fff; border-radius:12px; padding:16px; border:1px solid var(--border);">
       <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
         <span style="font-size:18px; font-weight:900; color:var(--acc);">v${safeText(v.ver)}</span>
@@ -7950,32 +8010,25 @@ window.openVersionHistory = function() {
       </div>
       <div style="font-size:14px; color:var(--t1);">${safeTextWithBr(v.note)}</div>
     </div>
-  `).join('') : '<div style="padding:32px; text-align:center; color:var(--t3); font-size:14px;">尚無版本紀錄</div>';
+  `).join('');
 
-  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${html}</div>`;
-
-  // 左上角 X 改為 flipCloseOverlay（與聯絡我們一樣向右翻頁關閉）
-  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  closeBtn.style.display = '';
-  closeBtn.onclick = function() { flipCloseOverlay(this, 'sub-page'); };
-
-  // 提升 z-index 確保蓋在 about-page 之上
-  document.getElementById('sub-page').style.zIndex = '1100';
-
+  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${adminBtn}${html}</div>`;
+  
+  // 隱藏左上角的 X，改用右上角返回
+  document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openOverlay('about-page'); })" class="btn-acc" style="padding:6px 16px; border-radius:20px;">🔙 返回</button>
+  `;
+  
   openOverlay('sub-page');
 };
 
 // 2. 新增版本頁面
 window.openAddVersion = function() {
   document.getElementById('sub-title').textContent = '新增版本';
-  // 右上角放「返回」
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 16px;">🔙 返回</button>
   `;
-  // 關閉按鈕暫時隱藏（由右上角返回取代）
-  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  closeBtn.style.display = 'none';
-
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:20px;">
       <div class="fg"><label>版本號</label><input type="text" class="finp" id="new-ver" value="1.15.117"></div>
