@@ -616,6 +616,21 @@ input:checked + .slider:before { transform: translateX(20px); }
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.2);
   color: #e2e8f0;
 }
+/* 將電競卡片文字結構化 */
+.gaming-card h2 {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-left: 4px solid #3b82f6;
+  padding-left: 10px;
+}
+/* 讓日期與標題有個對比色區隔 */
+.gaming-card .date-label {
+  color: #38bdf8;
+  font-size: 11px;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
 .gaming-btn {
   background: linear-gradient(90deg, #3b82f6, #8b5cf6);
   color: white;
