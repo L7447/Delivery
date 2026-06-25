@@ -1353,26 +1353,26 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 豐富版公告渲染函式 ══ */
+/* ══ 首頁公告渲染函式 ══ */
 function getFloatingAnnouncementHtml() {
-  const ann = S.settings.announcement || { enabled: false, title: '', content: '', style: 'aurora' };
+  const ann = S.settings.announcement || { enabled: false, title: '系統公告', content: '', style: 'aurora' };
   if (!ann.enabled || !ann.content) return '';
 
-  const styles = {
-    aurora: 'background:linear-gradient(125deg,#00feba,#5b54fa,#ff2a85,#ffcc00); color:#fff; box-shadow:0 0 25px rgba(0,254,186,0.6);',
-    neon: 'background:#0a0a0a; color:#00ffcc; border:2px solid #00ffcc; box-shadow:0 0 20px #00ffcc;',
-    minimal: 'background:#ffffff; color:#1e2937; border:1px solid #e2e8f0; box-shadow:0 4px 15px rgba(0,0,0,0.08);',
-    festive: 'background:linear-gradient(135deg,#f59e0b,#ef4444); color:#fff;',
-    urgent: 'background:#fef2f2; color:#e11d48; border:2px solid #ef4444;'
-  };
-
-  const styleClass = styles[ann.style] || styles.aurora;
+  // 檢查是否已隱藏
+  const dismissedVer = localStorage.getItem('delivery_ann_dismissed_ver');
+  if (dismissedVer === ann.version) return '';
 
   return `
-    <div id="home-announcement-card" onclick="openAnnouncementEdit()" style="margin:12px 16px; padding:16px; border-radius:20px; ${styleClass} cursor:pointer; position:relative; overflow:hidden;">
-      <div style="font-size:15px; font-weight:900; margin-bottom:6px;">📢 ${escapeHtml(ann.title || '系統公告')}</div>
-      <div style="font-size:14px; line-height:1.5; opacity:0.95;">${escapeHtmlWithBr(ann.content)}</div>
-      <div style="position:absolute; top:12px; right:12px; font-size:20px; opacity:0.6;">✦</div>
+    <div id="home-announcement-card" style="margin:12px 16px; padding:16px; border-radius:20px; background:linear-gradient(135deg,#ffffff,#f8fafc); border:2px solid var(--acc); box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+      <div style="font-size:16px; font-weight:900; color:var(--t1); margin-bottom:8px;">📢 ${safeText(ann.title)}</div>
+      <div style="font-size:14px; line-height:1.6; color:var(--t2); margin-bottom:16px;">${safeTextWithBr(ann.content)}</div>
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; pt:12px;">
+        <div id="ann-checkbox" data-checked="false" style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; color:var(--t2);">
+          <div style="width:20px; height:20px; border:2px solid var(--t3); border-radius:6px;"></div> 不再顯示
+        </div>
+        <button id="close-ann-btn" style="background:var(--acc); color:#fff; border:none; padding:6px 16px; border-radius:12px; font-weight:800;">確認閱讀</button>
+      </div>
     </div>
   `;
 }
@@ -7809,32 +7809,22 @@ window.openAdminOnlineUsers = async function() {
 /* ✨ 新增：管理員編輯公告介面 */
 // 公告編輯（已優化）
 window.openAnnouncementEdit = function() {
-  document.getElementById('sub-title').textContent = '編輯首頁系統公告';
-  const ann = S.settings.announcement || { enabled: true, title: '最新公告', content: '', style: 'aurora' };
+  document.getElementById('sub-title').textContent = '編輯公告';
+  const ann = S.settings.announcement || { enabled: true, title: '最新公告', content: '', style: 'aurora', version: '1.0' };
 
   document.getElementById('sub-body').innerHTML = `
-    <div style="padding:20px;">
-      <div class="fg"><label>公告標題</label><input type="text" class="finp" id="ann-title" value="${escapeHtml(ann.title)}"></div>
-      <div class="fg"><label>公告內容</label><textarea class="finp" id="ann-content" rows="6" style="resize:vertical;">${escapeHtml(ann.content)}</textarea></div>
-      
-      <div class="fg">
-        <label>選擇公告樣式</label>
-        <select class="fsel" id="ann-style">
-          <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
-          <option value="neon" ${ann.style==='neon'?'selected':''}>⚡ 電競霓虹</option>
-          <option value="minimal" ${ann.style==='minimal'?'selected':''}>✨ 簡約極簡</option>
-          <option value="festive" ${ann.style==='festive'?'selected':''}>🎉 節慶喜慶</option>
-          <option value="urgent" ${ann.style==='urgent'?'selected':''}>🚨 警示緊急</option>
-        </select>
+    <div style="padding:16px;">
+      <div class="fg"><label>版本代號 </label><input type="text" class="finp" id="ann-ver" value="${ann.version || '1.0'}"></div>
+      <div class="fg"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${todayStr()}"></div>
+      <div class="fg"><label>標題標籤 (快速填入)</label>
+         <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <span onclick="document.getElementById('ann-title').value='系統公告'" class="w-tag">系統公告</span>
+            <span onclick="document.getElementById('ann-title').value='更新通知'" class="w-tag">更新通知</span>
+         </div>
       </div>
-
-      <label class="switch" style="margin:20px 0;display:block;">
-        <input type="checkbox" id="ann-enabled" ${ann.enabled?'checked':''}>
-        <span class="slider"></span>
-      </label>
-      <span style="font-size:13px;color:var(--t2);">啟用首頁浮動公告</span>
-
-      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%;margin-top:24px;padding:16px;">✅ 儲存公告</button>
+      <div class="fg"><label>公告標題</label><input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}"></div>
+      <div class="fg"><label>公告內容</label><textarea class="finp" id="ann-content" rows="6">${safeText(ann.content)}</textarea></div>
+      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px;">儲存公告</button>
     </div>
   `;
   openOverlay('sub-page');
@@ -7855,6 +7845,10 @@ window.saveAnnouncement = function() {
 
 // 版本紀錄
 window.openVersionHistory = function() {
+    // 不關閉 about-page，而是直接把內容蓋過去，或將其 opacity 降為 0
+  document.getElementById('about-page').style.opacity = '0';
+  document.getElementById('about-page').style.pointerEvents = 'none';
+
   document.getElementById('sub-title').textContent = '版本紀錄';
   document.getElementById('sub-top-right').innerHTML = ''; // 清空右側
   
@@ -7882,6 +7876,14 @@ window.openVersionHistory = function() {
 
   document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${adminAddBtn}${html}</div>`;
   openOverlay('sub-page');
+  // 呼叫顯示版本頁面邏輯
+  document.getElementById('version-page').classList.add('show');
+};
+// 在關閉版本紀錄時，恢復 about-page 的可見度
+window.closeVersionPage = function() {
+  document.getElementById('version-page').classList.remove('show');
+  document.getElementById('about-page').style.opacity = '1';
+  document.getElementById('about-page').style.pointerEvents = 'auto';
 };
 // 管理員手動新增版本 (簡易介面)
 window.openAddVersion = function() {
