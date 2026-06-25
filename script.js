@@ -1363,15 +1363,17 @@ function getFloatingAnnouncementHtml() {
   if (dismissedVer === ann.version) return '';
 
   return `
-    <div id="home-announcement-card" style="margin:12px 16px; padding:16px; border-radius:20px; background:linear-gradient(135deg,#ffffff,#f8fafc); border:2px solid var(--acc); box-shadow:0 10px 25px rgba(0,0,0,0.15);">
-      <div style="font-size:16px; font-weight:900; color:var(--t1); margin-bottom:8px;">📢 ${safeText(ann.title)}</div>
-      <div style="font-size:14px; line-height:1.6; color:var(--t2); margin-bottom:16px;">${safeTextWithBr(ann.content)}</div>
-      
-      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; pt:12px;">
-        <div id="ann-checkbox" data-checked="false" style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; color:var(--t2);">
-          <div style="width:20px; height:20px; border:2px solid var(--t3); border-radius:6px;"></div> 不再顯示
+    <div id="home-announcement-overlay" style="position:fixed; inset:0; z-index:99990; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:24px;">
+      <div id="home-announcement-card" style="width:100%; max-width:360px; padding:20px; border-radius:20px; background:linear-gradient(135deg,#ffffff,#f8fafc); border:2px solid var(--acc); box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <div style="font-size:16px; font-weight:900; color:var(--t1); margin-bottom:8px;">📢 ${safeText(ann.title)}</div>
+        <div style="font-size:14px; line-height:1.6; color:var(--t2); margin-bottom:16px;">${safeTextWithBr(ann.content)}</div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; padding-top:12px;">
+          <div id="ann-checkbox" data-checked="false" style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; color:var(--t2);">
+            <div style="width:20px; height:20px; border:2px solid var(--t3); border-radius:6px;"></div> 不再顯示
+          </div>
+          <button id="close-ann-btn" style="background:var(--acc); color:#fff; border:none; padding:6px 16px; border-radius:12px; font-weight:800;">確認閱讀</button>
         </div>
-        <button id="close-ann-btn" style="background:var(--acc); color:#fff; border:none; padding:6px 16px; border-radius:12px; font-weight:800;">確認閱讀</button>
       </div>
     </div>
   `;
@@ -1390,17 +1392,22 @@ document.addEventListener('click', function(e) {
     const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{}');
     const box = document.getElementById('ann-checkbox');
     const isChecked = box.dataset.checked === 'true';
+    const removeAnn = () => {
+      const overlay = document.getElementById('home-announcement-overlay');
+      if (overlay) overlay.remove();
+      else { const card = document.getElementById('home-announcement-card'); if (card) card.remove(); }
+    };
 
     if (isChecked) {
       customConfirm("確定永久隱藏此公告嗎？").then(ok => {
         if (ok) {
           localStorage.setItem('delivery_ann_dismissed_ver', ann.version);
-          document.getElementById('home-announcement-card').remove();
+          removeAnn();
           toast('✅ 已設定隱藏', 500);
         }
       });
     } else {
-      document.getElementById('home-announcement-card').remove();
+      removeAnn();
       toast('✅ 已閱讀', 500);
     }
   }
@@ -1683,7 +1690,7 @@ function renderHome() {
 
       // 強制顯示公告（防止被蓋住）
       setTimeout(() => {
-        if (!document.getElementById('home-announcement-card')) {
+        if (!document.getElementById('home-announcement-overlay') && !document.getElementById('home-announcement-card')) {
           const annHtml = getFloatingAnnouncementHtml();
           if (annHtml) document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
         }
@@ -7883,8 +7890,12 @@ window.openVersionHistory = function() {
   // 隱藏左上角的 X，改用右上角返回
   document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openOverlay('about-page'); })" class="btn-acc" style="padding:6px 16px; border-radius:20px;">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; document.getElementById('sub-page').style.zIndex=''; openOverlay('about-page'); })" class="btn-acc" style="padding:6px 16px; border-radius:20px;">🔙 返回</button>
   `;
+  
+  // 提升 sub-page 的 z-index，確保蓋住 about-page（z-index:1000）
+  const subPage = document.getElementById('sub-page');
+  subPage.style.zIndex = '1100';
   
   openOverlay('sub-page');
 };
@@ -9471,7 +9482,7 @@ window.onSplashFinished = function() {
 
       // 強制再渲染一次公告（防止被 loadingDiv 蓋住）
       setTimeout(() => {
-        const existing = document.getElementById('home-announcement-card');
+        const existing = document.getElementById('home-announcement-overlay') || document.getElementById('home-announcement-card');
         if (!existing) {
           const annHtml = getFloatingAnnouncementHtml();
           if (annHtml) {
