@@ -1355,30 +1355,24 @@ function switchVehicleTab(tab, index) {
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 /* ══ 豐富版公告渲染函式 ══ */
 function getFloatingAnnouncementHtml() {
-  const raw = localStorage.getItem('delivery_global_announcement');
-  if (!raw) return '';
-  const ann = JSON.parse(raw);
-  const dismissedVer = localStorage.getItem('delivery_ann_dismissed_ver');
-  if (!ann.active || ann.version === dismissedVer) return '';
+  const ann = S.settings.announcement || { enabled: false, title: '', content: '', style: 'aurora' };
+  if (!ann.enabled || !ann.content) return '';
+
+  const styles = {
+    aurora: 'background:linear-gradient(125deg,#00feba,#5b54fa,#ff2a85,#ffcc00); color:#fff; box-shadow:0 0 25px rgba(0,254,186,0.6);',
+    neon: 'background:#0a0a0a; color:#00ffcc; border:2px solid #00ffcc; box-shadow:0 0 20px #00ffcc;',
+    minimal: 'background:#ffffff; color:#1e2937; border:1px solid #e2e8f0; box-shadow:0 4px 15px rgba(0,0,0,0.08);',
+    festive: 'background:linear-gradient(135deg,#f59e0b,#ef4444); color:#fff;',
+    urgent: 'background:#fef2f2; color:#e11d48; border:2px solid #ef4444;'
+  };
+
+  const styleClass = styles[ann.style] || styles.aurora;
 
   return `
-    <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999990; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; padding:20px;">
-      <div style="width:100%; max-width:320px; background:#fff; border-radius:24px; padding:20px; box-shadow:0 20px 40px rgba(0,0,0,0.3); border:4px solid #3b82f6;">
-        <div style="font-size:32px; text-align:center; margin-bottom:10px;">📢</div>
-        <h2 style="font-size:20px; color:#1e293b; text-align:center; margin:0 0 4px 0;">${safeText(ann.title)}</h2>
-        <div style="display:flex; justify-content:center; gap:10px; font-size:12px; font-weight:800; color:#94a3b8; margin-bottom:16px;">
-          <span>📅 ${safeText(ann.date)}</span>
-          <span style="color:#3b82f6;">${safeText(ann.version)}</span>
-        </div>
-        <div style="font-size:14px; color:#475569; line-height:1.7; margin-bottom:20px; padding:12px; background:#f8fafc; border-radius:12px; max-height:160px; overflow-y:auto;">
-          ${safeTextWithBr(ann.text)}
-        </div>
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;" onclick="toggleAnnCheckbox()">
-          <div id="ann-checkbox" data-checked="false" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:6px;"></div>
-          <span style="font-size:13px; color:#64748b;">不再顯示此版本</span>
-        </div>
-        <button id="close-ann-btn" style="width:100%; background:#3b82f6; color:#fff; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">知道了</button>
-      </div>
+    <div id="home-announcement-card" onclick="openAnnouncementEdit()" style="margin:12px 16px; padding:16px; border-radius:20px; ${styleClass} cursor:pointer; position:relative; overflow:hidden;">
+      <div style="font-size:15px; font-weight:900; margin-bottom:6px;">📢 ${escapeHtml(ann.title || '系統公告')}</div>
+      <div style="font-size:14px; line-height:1.5; opacity:0.95;">${escapeHtmlWithBr(ann.content)}</div>
+      <div style="position:absolute; top:12px; right:12px; font-size:20px; opacity:0.6;">✦</div>
     </div>
   `;
 }
@@ -7024,9 +7018,23 @@ async function openAccountStats() {
       📢 編輯首頁系統公告
     </button>
 
-    <button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
+    <button onclick="logoutWithConfirm()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
   </div>`;
 }
+// 新增：登出確認框
+window.logoutWithConfirm = function() {
+  customConfirm('確定要登出當前帳號嗎？<br><span style="color:#ef4444;font-size:13px;">登出後需重新登入才能新增記錄</span>').then(ok => {
+    if (ok) {
+      // 執行登出
+      USER = {email:null, verified:false, loggedIn:false, joinDate:null, token:null, role:"user"};
+      saveUser();
+      toast('✅ 已登出');
+      closeOverlay('sub-page');
+      // 可視需求重新渲染首頁
+      if (S.tab === 'home') renderHome();
+    }
+  });
+};
 
 /* ══ 新增：個人記錄統計 (三種不同風格混合設計，改為計算「總單量」) ══ */
 window.openRecordStats = function() {
@@ -7799,86 +7807,112 @@ window.openAdminOnlineUsers = async function() {
   }
 };
 /* ✨ 新增：管理員編輯公告介面 */
-function openAnnouncementEdit() {
-  document.getElementById('sub-title').textContent = '公告編輯';
-  let ann = { active: false, title: '', date: todayStr(), version: 'v1.0.0', text: '' };
-  try { ann = JSON.parse(localStorage.getItem('delivery_global_announcement')); } catch(e){}
+// 公告編輯（已優化）
+window.openAnnouncementEdit = function() {
+  document.getElementById('sub-title').textContent = '編輯首頁系統公告';
+  const ann = S.settings.announcement || { enabled: true, title: '最新公告', content: '', style: 'aurora' };
 
   document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px; display:flex; flex-direction:column; gap:12px;">
-      <div class="fg"><label>啟用公告</label><input type="checkbox" id="ann-active" ${ann.active?'checked':''}></div>
-      <div class="fg"><label>版本號 (顯示於公告上)</label><input type="text" id="ann-version" class="finp" value="${ann.version||''}"></div>
-      <div class="fg"><label>標題</label><input type="text" id="ann-title" class="finp" value="${ann.title||''}"></div>
-      <div class="fg"><label>日期</label><input type="date" id="ann-date" class="finp" value="${ann.date||todayStr()}"></div>
-      <div class="fg"><label>內容 (支援換行)</label><textarea id="ann-text" class="finp" rows="6">${ann.text||''}</textarea></div>
-      <button class="btn-acc" onclick="saveAnnouncement()">發布</button>
+    <div style="padding:20px;">
+      <div class="fg"><label>公告標題</label><input type="text" class="finp" id="ann-title" value="${escapeHtml(ann.title)}"></div>
+      <div class="fg"><label>公告內容</label><textarea class="finp" id="ann-content" rows="6" style="resize:vertical;">${escapeHtml(ann.content)}</textarea></div>
+      
+      <div class="fg">
+        <label>選擇公告樣式</label>
+        <select class="fsel" id="ann-style">
+          <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
+          <option value="neon" ${ann.style==='neon'?'selected':''}>⚡ 電競霓虹</option>
+          <option value="minimal" ${ann.style==='minimal'?'selected':''}>✨ 簡約極簡</option>
+          <option value="festive" ${ann.style==='festive'?'selected':''}>🎉 節慶喜慶</option>
+          <option value="urgent" ${ann.style==='urgent'?'selected':''}>🚨 警示緊急</option>
+        </select>
+      </div>
+
+      <label class="switch" style="margin:20px 0;display:block;">
+        <input type="checkbox" id="ann-enabled" ${ann.enabled?'checked':''}>
+        <span class="slider"></span>
+      </label>
+      <span style="font-size:13px;color:var(--t2);">啟用首頁浮動公告</span>
+
+      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%;margin-top:24px;padding:16px;">✅ 儲存公告</button>
     </div>
   `;
   openOverlay('sub-page');
-}
+};
 
-function saveAnnouncement() {
-  const data = {
-    active: document.getElementById('ann-active').checked,
-    version: document.getElementById('ann-version').value,
-    title: document.getElementById('ann-title').value,
-    date: document.getElementById('ann-date').value,
-    text: document.getElementById('ann-text').value
+window.saveAnnouncement = function() {
+  S.settings.announcement = {
+    enabled: document.getElementById('ann-enabled').checked,
+    title: document.getElementById('ann-title').value.trim(),
+    content: document.getElementById('ann-content').value.trim(),
+    style: document.getElementById('ann-style').value
   };
-  localStorage.setItem('delivery_global_announcement', JSON.stringify(data));
-  toast('✅ 公告已發布');
-}
-// 初始化版本紀錄
-let VERSION_HISTORY = JSON.parse(localStorage.getItem('delivery_version_history') || '[]');
+  saveSettings();
+  closeOverlay('sub-page');
+  toast('✅ 公告已更新');
+  if (S.tab === 'home') renderHome();
+};
 
-// 設定頁面新增按鈕：在 renderSettings() 的 "功能設定" 區塊下新增
-// <div class="set-row" onclick="openVersionHistory()"><span class="sn">📜 版本紀錄</span><span class="arr">›</span></div>
-function openVersionHistory() {
+// 版本紀錄
+window.openVersionHistory = function() {
   document.getElementById('sub-title').textContent = '版本紀錄';
+  document.getElementById('sub-top-right').innerHTML = ''; // 清空右側
   
-  // 管理員權限按鈕
-  let adminBtn = USER.role === 'admin' ? 
-    `<button onclick="openAddVersion()" style="background:var(--acc); color:#fff; border:none; padding:6px 12px; border-radius:16px; font-size:12px; font-weight:800;">+ 新增</button>` : '';
-  document.getElementById('sub-top-right').innerHTML = adminBtn;
+  // 隱藏左上角 X，改用右上角返回
+  document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openOverlay('about-page'); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900;">🔙 返回</button>
+  `;
 
-  let html = `<div style="padding:16px; position:relative; padding-left:30px;">
-    <div style="position:absolute; left:22px; top:0; bottom:0; width:2px; background:#e2e8f0;"></div>`;
-  
-  VERSION_HISTORY.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(v => {
-    html += `
-      <div style="margin-bottom:24px; position:relative;">
-        <div style="position:absolute; left:-22px; top:0; width:12px; height:12px; background:var(--acc); border-radius:50%; border:3px solid #fff;"></div>
-        <div style="font-weight:900; color:var(--acc); font-size:15px;">${v.version}</div>
-        <div style="font-size:12px; color:var(--t3); margin-bottom:6px;">${v.date}</div>
-        <div style="background:#fff; padding:12px; border-radius:12px; border:1px solid #e2e8f0; font-size:13px; color:var(--t1); line-height:1.6;">${safeTextWithBr(v.content)}</div>
-      </div>`;
-  });
-  html += `</div>`;
-  document.getElementById('sub-body').innerHTML = html;
+  // 若為管理員，在頁面頂端加入按鈕
+  let adminAddBtn = USER.role === 'admin' ? `
+    <button onclick="openAddVersion()" class="btn-acc" style="width:100%; padding:14px; margin-bottom:12px;">＋ 新增版本紀錄</button>
+  ` : '';
+
+  const versions = Array.isArray(S.settings.versions) ? S.settings.versions : [];
+  let html = versions.map(v => `
+    <div style="margin:12px; background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="font-size:18px; font-weight:900; color:var(--acc);">v${safeText(v.ver)}</span>
+        <span style="font-size:12px; color:var(--t3);">${safeText(v.date)}</span>
+      </div>
+      <div style="line-height:1.6; font-size:14px;">${safeTextWithBr(v.note)}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${adminAddBtn}${html}</div>`;
   openOverlay('sub-page');
-}
+};
 // 管理員手動新增版本 (簡易介面)
 window.openAddVersion = function() {
+  document.getElementById('sub-title').textContent = '新增版本紀錄';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" style="background:var(--acc); color:#fff; padding:6px 16px; border-radius:20px; font-size:13px;">🔙 返回</button>
+  `;
+  document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
+
   document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px;" class="card">
-      <div class="fg"><label>版本號</label><input type="text" id="add-v-num" class="finp" placeholder="v1.0.1"></div>
-      <div class="fg"><label>更新日期</label><input type="date" id="add-v-date" class="finp" value="${todayStr()}"></div>
-      <div class="fg"><label>更新內容</label><textarea id="add-v-con" class="finp" rows="5"></textarea></div>
-      <button class="btn-acc" style="width:100%" onclick="submitAddVersion()">儲存</button>
+    <div style="padding:20px;">
+      <div class="fg"><label>版本號碼</label><input type="text" class="finp" id="new-ver" value="1.15.117"></div>
+      <div class="fg"><label>更新日期</label><input type="date" class="finp" id="new-date" value="${todayStr()}"></div>
+      <div class="fg"><label>更新內容</label><textarea class="finp" id="new-note" rows="6"></textarea></div>
+      <button onclick="saveNewVersion()" class="btn-acc" style="width:100%; padding:14px; margin-top:20px;">✅ 儲存</button>
     </div>
   `;
-}
-window.submitAddVersion = function() {
-  const v = {
-    version: document.getElementById('add-v-num').value,
-    date: document.getElementById('add-v-date').value,
-    content: document.getElementById('add-v-con').value
-  };
-  VERSION_HISTORY.push(v);
-  localStorage.setItem('delivery_version_history', JSON.stringify(VERSION_HISTORY));
-  toast('✅ 已新增版本紀錄');
-  openVersionHistory();
-}
+};
+window.saveNewVersion = function() {
+  if (!S.settings.versions) S.settings.versions = [];
+  
+  S.settings.versions.unshift({
+    ver: (document.getElementById('new-ver').value || '1.0.0').trim(),
+    date: document.getElementById('new-date').value || todayStr(),
+    note: (document.getElementById('new-note').value || '').trim()
+  });
+  
+  saveSettings();
+  toast('✅ 版本紀錄已新增');
+  openVersionHistory(); // 直接呼叫函式重新渲染即可，無需 setTimeout
+};
 
 /* ══ 踢下線檢查 (處理強制登出與 31 天未活動) ══ */
 async function checkAccountStatus() {
