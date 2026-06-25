@@ -664,18 +664,14 @@ input:checked + .slider:before { transform: translateX(20px); }
   box-shadow: 0 20px 40px rgba(0,0,0,0.3);
   border: 1px solid rgba(255,255,255,0.2);
 }
-/* 確保公告層級低於確認彈窗，但高於一般 overlay */
+/* 公告 overlay（fixed 全屏遮罩）*/
 #home-announcement-overlay {
   position: fixed !important;
   inset: 0 !important;
   z-index: 99990 !important;
 }
-#home-announcement-card { 
-  z-index: 99991 !important; 
-}
-
-/* 公告樣式微調 */
-#home-announcement-card { transition: all 0.3s; }
+/* 公告卡片微互動 */
+#home-announcement-card { transition: transform 0.15s; }
 #home-announcement-card:active { transform: scale(0.98); }
 
 /* 版本紀錄時間軸風格 */
