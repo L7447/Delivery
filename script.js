@@ -1455,9 +1455,10 @@ function getFloatingAnnouncementHtml() {
   ].filter(Boolean).join('');
 
   return `
-    <div id="home-announcement-overlay" style="position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;padding:24px;">
-      ${s.bgHtml}
-      <div id="home-announcement-card" style="position:relative;width:100%;max-width:380px;border-radius:${s.radius};padding:22px;${s.card}">
+    <div id="home-announcement-overlay" style="position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+      <div id="home-announcement-card" style="position:relative;width:100%;max-width:380px;border-radius:${s.radius};padding:22px;overflow:hidden;${s.card}">
+        <div style="position:absolute;inset:0;border-radius:${s.radius};overflow:hidden;pointer-events:none;">${s.bgHtml}</div>
+        <div style="position:relative;">
 
         <!-- 圖示 + 標題 -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:${metaBadges ? '8px' : '12px'};">
@@ -1480,6 +1481,7 @@ function getFloatingAnnouncementHtml() {
           </div>
           <!-- 確認閱讀按鈕 -->
           <button id="close-ann-btn" data-ver="${annVer}" style="flex-shrink:0;border:none;padding:9px 20px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;${s.btn}">確認閱讀</button>
+        </div>
         </div>
       </div>
     </div>
@@ -1546,6 +1548,7 @@ document.addEventListener('click', function(e) {
     e.stopPropagation();
   }
 });
+
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
@@ -7995,14 +7998,14 @@ window.saveAnnouncement = function() {
 // 1. 統一的開啟版本紀錄 (進入點)
 window.openVersionHistory = function() {
   document.getElementById('sub-title').textContent = '版本紀錄';
-  document.getElementById('sub-top-right').innerHTML = ''; // 清除舊按鈕
-  
-  // 檢查權限顯示新增按鈕
-  let adminBtn = USER.role === 'admin' ? 
-    `<button onclick="openAddVersion()" class="btn-acc" style="width:100%; margin-bottom:12px;">＋ 新增版本紀錄</button>` : '';
+
+  // 右上角：admin 才顯示「新增紀錄」
+  document.getElementById('sub-top-right').innerHTML = USER.role === 'admin'
+    ? `<button onclick="openAddVersion()" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">＋ 新增紀錄</button>`
+    : '';
 
   const versions = Array.isArray(S.settings.versions) ? S.settings.versions : [];
-  let html = versions.map(v => `
+  let html = versions.length ? versions.map(v => `
     <div style="margin:12px; background:#fff; border-radius:12px; padding:16px; border:1px solid var(--border);">
       <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
         <span style="font-size:18px; font-weight:900; color:var(--acc);">v${safeText(v.ver)}</span>
@@ -8010,25 +8013,31 @@ window.openVersionHistory = function() {
       </div>
       <div style="font-size:14px; color:var(--t1);">${safeTextWithBr(v.note)}</div>
     </div>
-  `).join('');
+  `).join('') : '<div style="padding:32px; text-align:center; color:var(--t3); font-size:14px;">尚無版本紀錄</div>';
 
-  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${adminBtn}${html}</div>`;
-  
-  // 隱藏左上角的 X，改用右上角返回
-  document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openOverlay('about-page'); })" class="btn-acc" style="padding:6px 16px; border-radius:20px;">🔙 返回</button>
-  `;
-  
+  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${html}</div>`;
+
+  // 左上角 X 改為 flipCloseOverlay（與聯絡我們一樣向右翻頁關閉）
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  closeBtn.style.display = '';
+  closeBtn.onclick = function() { flipCloseOverlay(this, 'sub-page'); };
+
+  // 提升 z-index 確保蓋在 about-page 之上
+  document.getElementById('sub-page').style.zIndex = '1100';
+
   openOverlay('sub-page');
 };
-
 // 2. 新增版本頁面
 window.openAddVersion = function() {
   document.getElementById('sub-title').textContent = '新增版本';
+  // 右上角放「返回」
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 16px;">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
   `;
+  // 關閉按鈕暫時隱藏（由右上角返回取代）
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  closeBtn.style.display = 'none';
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:20px;">
       <div class="fg"><label>版本號</label><input type="text" class="finp" id="new-ver" value="1.15.117"></div>
