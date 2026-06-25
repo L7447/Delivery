@@ -7807,16 +7807,16 @@ window.openAdminOnlineUsers = async function() {
   }
 };
 /* ✨ 新增：管理員編輯公告介面 */
-// 公告編輯（已優化）
+// 編輯公告
 window.openAnnouncementEdit = function() {
   document.getElementById('sub-title').textContent = '編輯公告';
-  const ann = S.settings.announcement || { enabled: true, title: '最新公告', content: '', style: 'aurora', version: '1.0' };
+  const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '' };
 
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <div class="fg"><label>版本代號 </label><input type="text" class="finp" id="ann-ver" value="${ann.version || '1.0'}"></div>
+      <div class="fg"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${ann.version}"></div>
       <div class="fg"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${todayStr()}"></div>
-      <div class="fg"><label>標題標籤 (快速填入)</label>
+      <div class="fg"><label>標題標籤 (快速點選)</label>
          <div style="display:flex; gap:6px; margin-bottom:8px;">
             <span onclick="document.getElementById('ann-title').value='系統公告'" class="w-tag">系統公告</span>
             <span onclick="document.getElementById('ann-title').value='更新通知'" class="w-tag">更新通知</span>
@@ -7824,6 +7824,20 @@ window.openAnnouncementEdit = function() {
       </div>
       <div class="fg"><label>公告標題</label><input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}"></div>
       <div class="fg"><label>公告內容</label><textarea class="finp" id="ann-content" rows="6">${safeText(ann.content)}</textarea></div>
+      <div class="fg">
+        <label>公告樣式</label>
+        <select class="fsel" id="ann-style">
+          <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
+          <option value="neon" ${ann.style==='neon'?'selected':''}>⚡ 電競霓虹</option>
+          <option value="minimal" ${ann.style==='minimal'?'selected':''}>✨ 簡約極簡</option>
+          <option value="festive" ${ann.style==='festive'?'selected':''}>🎉 節慶喜慶</option>
+          <option value="urgent" ${ann.style==='urgent'?'selected':''}>🚨 警示緊急</option>
+        </select>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; margin:20px 0;">
+        <label class="switch"><input type="checkbox" id="ann-enabled" ${ann.enabled?'checked':''}><span class="slider"></span></label>
+        <span>啟用公告</span>
+      </div>
       <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px;">儲存公告</button>
     </div>
   `;
@@ -7844,61 +7858,49 @@ window.saveAnnouncement = function() {
 };
 
 // 版本紀錄
+// 1. 統一的開啟版本紀錄 (進入點)
 window.openVersionHistory = function() {
-    // 不關閉 about-page，而是直接把內容蓋過去，或將其 opacity 降為 0
-  document.getElementById('about-page').style.opacity = '0';
-  document.getElementById('about-page').style.pointerEvents = 'none';
-
   document.getElementById('sub-title').textContent = '版本紀錄';
-  document.getElementById('sub-top-right').innerHTML = ''; // 清空右側
+  document.getElementById('sub-top-right').innerHTML = ''; // 清除舊按鈕
   
-  // 隱藏左上角 X，改用右上角返回
-  document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openOverlay('about-page'); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900;">🔙 返回</button>
-  `;
-
-  // 若為管理員，在頁面頂端加入按鈕
-  let adminAddBtn = USER.role === 'admin' ? `
-    <button onclick="openAddVersion()" class="btn-acc" style="width:100%; padding:14px; margin-bottom:12px;">＋ 新增版本紀錄</button>
-  ` : '';
+  // 檢查權限顯示新增按鈕
+  let adminBtn = USER.role === 'admin' ? 
+    `<button onclick="openAddVersion()" class="btn-acc" style="width:100%; margin-bottom:12px;">＋ 新增版本紀錄</button>` : '';
 
   const versions = Array.isArray(S.settings.versions) ? S.settings.versions : [];
   let html = versions.map(v => `
-    <div style="margin:12px; background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px;">
+    <div style="margin:12px; background:#fff; border-radius:12px; padding:16px; border:1px solid var(--border);">
       <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
         <span style="font-size:18px; font-weight:900; color:var(--acc);">v${safeText(v.ver)}</span>
         <span style="font-size:12px; color:var(--t3);">${safeText(v.date)}</span>
       </div>
-      <div style="line-height:1.6; font-size:14px;">${safeTextWithBr(v.note)}</div>
+      <div style="font-size:14px; color:var(--t1);">${safeTextWithBr(v.note)}</div>
     </div>
   `).join('');
 
-  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${adminAddBtn}${html}</div>`;
-  openOverlay('sub-page');
-  // 呼叫顯示版本頁面邏輯
-  document.getElementById('version-page').classList.add('show');
-};
-// 在關閉版本紀錄時，恢復 about-page 的可見度
-window.closeVersionPage = function() {
-  document.getElementById('version-page').classList.remove('show');
-  document.getElementById('about-page').style.opacity = '1';
-  document.getElementById('about-page').style.pointerEvents = 'auto';
-};
-// 管理員手動新增版本 (簡易介面)
-window.openAddVersion = function() {
-  document.getElementById('sub-title').textContent = '新增版本紀錄';
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" style="background:var(--acc); color:#fff; padding:6px 16px; border-radius:20px; font-size:13px;">🔙 返回</button>
-  `;
+  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${adminBtn}${html}</div>`;
+  
+  // 隱藏左上角的 X，改用右上角返回
   document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'none';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openOverlay('about-page'); })" class="btn-acc" style="padding:6px 16px; border-radius:20px;">🔙 返回</button>
+  `;
+  
+  openOverlay('sub-page');
+};
 
+// 2. 新增版本頁面
+window.openAddVersion = function() {
+  document.getElementById('sub-title').textContent = '新增版本';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 16px;">🔙 返回</button>
+  `;
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:20px;">
-      <div class="fg"><label>版本號碼</label><input type="text" class="finp" id="new-ver" value="1.15.117"></div>
-      <div class="fg"><label>更新日期</label><input type="date" class="finp" id="new-date" value="${todayStr()}"></div>
-      <div class="fg"><label>更新內容</label><textarea class="finp" id="new-note" rows="6"></textarea></div>
-      <button onclick="saveNewVersion()" class="btn-acc" style="width:100%; padding:14px; margin-top:20px;">✅ 儲存</button>
+      <div class="fg"><label>版本號</label><input type="text" class="finp" id="new-ver" value="1.15.117"></div>
+      <div class="fg"><label>日期</label><input type="date" class="finp" id="new-date" value="${todayStr()}"></div>
+      <div class="fg"><label>內容</label><textarea class="finp" id="new-note" rows="6"></textarea></div>
+      <button onclick="saveNewVersion()" class="btn-acc" style="width:100%; padding:14px;">儲存</button>
     </div>
   `;
 };
