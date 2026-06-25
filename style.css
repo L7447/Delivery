@@ -668,3 +668,10 @@ input:checked + .slider:before { transform: translateX(20px); }
 #home-announcement-card { 
   z-index: 999990 !important; 
 }
+
+/* 公告樣式微調 */
+#home-announcement-card { transition: all 0.3s; }
+#home-announcement-card:active { transform: scale(0.98); }
+
+/* 版本紀錄時間軸風格 */
+.version-dot { width:12px; height:12px; background:var(--acc); border-radius:50%; display:inline-block; margin-right:8px; }
