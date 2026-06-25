@@ -11,7 +11,13 @@ const DEFAULT_PLATFORMS =[
   { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日報酬結算，｜結算後週三寄明細，｜再隔週三發薪。' },
   { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15日及月底報酬結算。｜每月5日及20日發薪。' },
 ];
-
+/* ══ 環境判斷工具（自動區分本地開發與正式環境） ══ */
+function isLocalDevelopment() {
+  return location.hostname === '127.0.0.1' || 
+         location.hostname === 'localhost' || 
+         location.hostname.includes('192.168.') || 
+         location.protocol === 'file:';
+}
 /* ════ 基本工資設定區 (預設值)(範圍設定) 開始════ 
  * 未來調薪時，只需更改這裡的 max (最大) 與 min (最小) 數值即可！
  * 預設 Infinity 代表「無限大」。
@@ -439,16 +445,34 @@ let tempAuthCode = '';
 let GLOBAL_REQUIRE_LOGIN = true; 
 let GLOBAL_ALLOW_REGISTRATION = true; // 👈 新增：控制是否允許註冊
 
-// 👇 獲取雲端權限設定
+// 👇 獲取雲端權限設定（自動判斷本地開發）
 async function fetchSystemSettings() {
   try {
-    const res = await fetch(`${API_BASE_URL}/settings/system`);
+    if (isLocalDevelopment()) {
+      console.log('🟢 本地開發模式 - 跳過遠端 API');
+      GLOBAL_REQUIRE_LOGIN = false;
+      GLOBAL_ALLOW_REGISTRATION = true;
+      return;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/settings/system`, { 
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!res.ok) throw new Error('Network response not ok');
+
     const data = await res.json();
     if (data.success && data.settings) {
       GLOBAL_REQUIRE_LOGIN = data.settings.requireLoginToAdd !== false; 
-      GLOBAL_ALLOW_REGISTRATION = data.settings.allowRegistration !== false; // 👈 新增
+      GLOBAL_ALLOW_REGISTRATION = data.settings.allowRegistration !== false;
+      console.log('✅ 系統設定已從雲端載入');
     }
-  } catch(e) { console.log('無法取得系統設定', e); }
+  } catch(e) {
+    console.log('⚠️ 無法取得系統設定，使用本地預設值', e);
+    GLOBAL_REQUIRE_LOGIN = false;
+    GLOBAL_ALLOW_REGISTRATION = true;
+  }
 }
 
 // 👇 專屬權限警告視窗
@@ -1329,93 +1353,73 @@ function switchVehicleTab(tab, index) {
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
-/* ══ 修正：渲染公告時，將邏輯與 HTML 分離 ══ */
+/* ══ 豐富版公告渲染函式 ══ */
 function getFloatingAnnouncementHtml() {
-  const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false}');
-  if (!ann.active || !ann.text || localStorage.getItem('delivery_ann_dismissed') === ann.text) return '';
-
-  // 將公告內容透過 window 對象暫存，避免 HTML 字串引號轉義問題
-  window.currentAnnText = ann.text;
-  window.currentAnnVer = ann.version;
-
-  // 使用 setTimeout 確保 DOM 渲染完畢後再給予事件
-  setTimeout(() => {
-    const box = document.getElementById('ann-checkbox');
-    const closeBtn = document.getElementById('close-ann-btn');
-    
-    // 在 getFloatingAnnouncementHtml 的 setTimeout 裡面這樣寫：
-    const btn = document.getElementById('close-ann-btn');
-    if(btn) {
-        btn.onclick = function(e) {
-            e.stopPropagation(); // 阻止冒泡
-            handleAnnClose(ann.text);
-        };
-    }
-
-    // 綁定勾選框
-    if(box) box.onclick = () => {
-      const isChecked = box.dataset.checked === 'true';
-      box.dataset.checked = !isChecked;
-      box.style.background = !isChecked ? '#3b82f6' : 'transparent';
-      box.innerHTML = !isChecked ? '✓' : '';
-    };
-
-    // 綁定關閉按鈕
-    if(closeBtn) closeBtn.onclick = () => {
-      const isChecked = document.getElementById('ann-checkbox').dataset.checked === 'true';
-      if (isChecked) {
-         // 這裡只觸發確認，不執行 remove
-         customConfirm("確定永久隱藏此公告？").then(ok => {
-           if (ok) {
-             localStorage.setItem('delivery_ann_dismissed', window.currentAnnText);
-             document.getElementById('home-announcement-card').remove();
-           }
-         });
-      } else {
-         document.getElementById('home-announcement-card').remove();
-      }
-    };
-  }, 100);
+  const raw = localStorage.getItem('delivery_global_announcement');
+  if (!raw) return '';
+  const ann = JSON.parse(raw);
+  const dismissedVer = localStorage.getItem('delivery_ann_dismissed_ver');
+  if (!ann.active || ann.version === dismissedVer) return '';
 
   return `
     <div id="home-announcement-card" style="position:fixed; inset:0; z-index:999990; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; padding:20px;">
-      <div class="gaming-card" style="width:100%; max-width:340px; border-radius:24px; padding:24px; position:relative;">
-        <h2 style="margin:0 0 16px 0; text-align:center; color:#fff; font-size:20px;">${safeText(ann.title)}</h2>
-        <div style="font-size:14px; color:#cbd5e1; margin-bottom:24px; line-height:1.6;">${safeTextWithBr(ann.text)}</div>
-        
-        <div id="ann-checkbox" data-checked="false" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; margin-bottom:20px;"></div>
-        <span style="font-size:13px; color:#fff;">不再顯示此公告</span>
-
-        <button id="close-ann-btn" class="gaming-btn" style="width:100%; margin-top:20px;">關閉公告</button>
+      <div style="width:100%; max-width:320px; background:#fff; border-radius:24px; padding:20px; box-shadow:0 20px 40px rgba(0,0,0,0.3); border:4px solid #3b82f6;">
+        <div style="font-size:32px; text-align:center; margin-bottom:10px;">📢</div>
+        <h2 style="font-size:20px; color:#1e293b; text-align:center; margin:0 0 4px 0;">${safeText(ann.title)}</h2>
+        <div style="display:flex; justify-content:center; gap:10px; font-size:12px; font-weight:800; color:#94a3b8; margin-bottom:16px;">
+          <span>📅 ${safeText(ann.date)}</span>
+          <span style="color:#3b82f6;">${safeText(ann.version)}</span>
+        </div>
+        <div style="font-size:14px; color:#475569; line-height:1.7; margin-bottom:20px; padding:12px; background:#f8fafc; border-radius:12px; max-height:160px; overflow-y:auto;">
+          ${safeTextWithBr(ann.text)}
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;" onclick="toggleAnnCheckbox()">
+          <div id="ann-checkbox" data-checked="false" style="width:20px; height:20px; border:2px solid #3b82f6; border-radius:6px;"></div>
+          <span style="font-size:13px; color:#64748b;">不再顯示此版本</span>
+        </div>
+        <button id="close-ann-btn" style="width:100%; background:#3b82f6; color:#fff; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">知道了</button>
       </div>
     </div>
   `;
 }
+function toggleAnnCheckbox() {
+    const box = document.getElementById('ann-checkbox');
+    const isChecked = box.dataset.checked === 'true';
+    box.dataset.checked = !isChecked;
+    box.style.background = !isChecked ? '#3b82f6' : 'transparent';
+    box.innerHTML = !isChecked ? '✓' : '';
+}
+/* ══ 確保事件能正常綁定 ══ */
+document.addEventListener('click', function(e) {
+  // 處理關閉按鈕
+  if (e.target && e.target.id === 'close-ann-btn') {
+    const ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{}');
+    const box = document.getElementById('ann-checkbox');
+    const isChecked = box.dataset.checked === 'true';
 
-/* ══ 邏輯修復：獨立控制點擊事件 ══ */
-window.handleAnnClose = function(text) {
-  // 強制先關閉按鈕的互動，防止連點
-  document.getElementById('close-ann-btn').disabled = true;
-  
-  const box = document.getElementById('ann-checkbox');
-  const isChecked = box.dataset.checked === 'true';
-
-  if (isChecked) {
-    // 呼叫確認框 (customConfirm 在這之後會自動疊加上去，z-index 已經調整為 999999)
-    customConfirm("確定永久隱藏此公告？").then(ok => {
-      if (ok) {
-        localStorage.setItem('delivery_ann_dismissed', text);
-        document.getElementById('home-announcement-card').remove();
-        toast('✅ 已設定隱藏', 500);
-      } else {
-        document.getElementById('close-ann-btn').disabled = false;
-      }
-    });
-  } else {
-    document.getElementById('home-announcement-card').remove();
-    toast('✅ 已閱讀', 500);
+    if (isChecked) {
+      customConfirm("確定永久隱藏此公告嗎？").then(ok => {
+        if (ok) {
+          localStorage.setItem('delivery_ann_dismissed_ver', ann.version);
+          document.getElementById('home-announcement-card').remove();
+          toast('✅ 已設定隱藏', 500);
+        }
+      });
+    } else {
+      document.getElementById('home-announcement-card').remove();
+      toast('✅ 已閱讀', 500);
+    }
   }
-};
+
+  // 處理勾選框點擊
+  if (e.target && e.target.id === 'ann-checkbox' || e.target.parentElement.id === 'ann-checkbox') {
+    const box = document.getElementById('ann-checkbox');
+    const isChecked = box.dataset.checked === 'true';
+    box.dataset.checked = !isChecked;
+    box.style.background = !isChecked ? '#3b82f6' : 'transparent';
+    box.innerHTML = !isChecked ? '✓' : '';
+  }
+});
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
@@ -7796,60 +7800,84 @@ window.openAdminOnlineUsers = async function() {
 };
 /* ✨ 新增：管理員編輯公告介面 */
 function openAnnouncementEdit() {
-  document.getElementById('sub-title').textContent = '系統公告設定';
-  
-  // 👇 強制隱藏左上角的 X 按鈕
-  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  if (closeBtn) closeBtn.style.display = 'none';
-
-  // 右上角加入強化版返回按鈕
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
-  `;
-  
-  let ann = { active: false, text: '' };
-  try { ann = JSON.parse(localStorage.getItem('delivery_global_announcement') || '{"active":false,"text":""}'); } catch(e){}
+  document.getElementById('sub-title').textContent = '公告編輯';
+  let ann = { active: false, title: '', date: todayStr(), version: 'v1.0.0', text: '' };
+  try { ann = JSON.parse(localStorage.getItem('delivery_global_announcement')); } catch(e){}
 
   document.getElementById('sub-body').innerHTML = `
-    <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-size:14px; font-weight:700; color:var(--t1);">📢 啟用首頁公告</span>
-        <label class="switch">
-          <input type="checkbox" id="ann-active" ${ann.active ? 'checked' : ''}>
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div style="border-top:1px dashed var(--border);"></div>
-      
-      <div class="fg">
-        <label style="font-weight:700; color:var(--t1);">📝 公告內容支援換行</label>
-        <textarea id="ann-text" class="finp" rows="5" placeholder="輸入要顯示給所有外送員的公告內容..." style="resize:none; font-size:14px; line-height:1.5;">${safeText(ann.text)}</textarea>
-      </div>
+    <div style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+      <div class="fg"><label>啟用公告</label><input type="checkbox" id="ann-active" ${ann.active?'checked':''}></div>
+      <div class="fg"><label>版本號 (顯示於公告上)</label><input type="text" id="ann-version" class="finp" value="${ann.version||''}"></div>
+      <div class="fg"><label>標題</label><input type="text" id="ann-title" class="finp" value="${ann.title||''}"></div>
+      <div class="fg"><label>日期</label><input type="date" id="ann-date" class="finp" value="${ann.date||todayStr()}"></div>
+      <div class="fg"><label>內容 (支援換行)</label><textarea id="ann-text" class="finp" rows="6">${ann.text||''}</textarea></div>
+      <button class="btn-acc" onclick="saveAnnouncement()">發布</button>
     </div>
-    
-    <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3); margin-top:8px;">✅ 發布公告</button>
   `;
-  // 透過提高 z-index 疊加在帳號頁面之上
-  document.getElementById('sub-page').style.zIndex = '1100'; 
+  openOverlay('sub-page');
 }
 
 function saveAnnouncement() {
-  const active = document.getElementById('ann-active').checked;
-  const text = document.getElementById('ann-text').value.trim();
+  const data = {
+    active: document.getElementById('ann-active').checked,
+    version: document.getElementById('ann-version').value,
+    title: document.getElementById('ann-title').value,
+    date: document.getElementById('ann-date').value,
+    text: document.getElementById('ann-text').value
+  };
+  localStorage.setItem('delivery_global_announcement', JSON.stringify(data));
+  toast('✅ 公告已發布');
+}
+// 初始化版本紀錄
+let VERSION_HISTORY = JSON.parse(localStorage.getItem('delivery_version_history') || '[]');
+
+// 設定頁面新增按鈕：在 renderSettings() 的 "功能設定" 區塊下新增
+// <div class="set-row" onclick="openVersionHistory()"><span class="sn">📜 版本紀錄</span><span class="arr">›</span></div>
+function openVersionHistory() {
+  document.getElementById('sub-title').textContent = '版本紀錄';
   
-  if (active && text === '') {
-    toast('⚠️ 啟用公告時內容不能為空');
-    return;
-  }
+  // 管理員權限按鈕
+  let adminBtn = USER.role === 'admin' ? 
+    `<button onclick="openAddVersion()" style="background:var(--acc); color:#fff; border:none; padding:6px 12px; border-radius:16px; font-size:12px; font-weight:800;">+ 新增</button>` : '';
+  document.getElementById('sub-top-right').innerHTML = adminBtn;
+
+  let html = `<div style="padding:16px; position:relative; padding-left:30px;">
+    <div style="position:absolute; left:22px; top:0; bottom:0; width:2px; background:#e2e8f0;"></div>`;
   
-  localStorage.setItem('delivery_global_announcement', JSON.stringify({ active, text }));
-  toast('✅ 公告設定已發布');
-  
-  // 關閉回到原本的管理員頁面並重新渲染首頁
-  document.getElementById('sub-page').style.zIndex = '200';
-  openAccountStats();
-  if (S.tab === 'home') renderHome();
+  VERSION_HISTORY.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(v => {
+    html += `
+      <div style="margin-bottom:24px; position:relative;">
+        <div style="position:absolute; left:-22px; top:0; width:12px; height:12px; background:var(--acc); border-radius:50%; border:3px solid #fff;"></div>
+        <div style="font-weight:900; color:var(--acc); font-size:15px;">${v.version}</div>
+        <div style="font-size:12px; color:var(--t3); margin-bottom:6px;">${v.date}</div>
+        <div style="background:#fff; padding:12px; border-radius:12px; border:1px solid #e2e8f0; font-size:13px; color:var(--t1); line-height:1.6;">${safeTextWithBr(v.content)}</div>
+      </div>`;
+  });
+  html += `</div>`;
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
+}
+// 管理員手動新增版本 (簡易介面)
+window.openAddVersion = function() {
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;" class="card">
+      <div class="fg"><label>版本號</label><input type="text" id="add-v-num" class="finp" placeholder="v1.0.1"></div>
+      <div class="fg"><label>更新日期</label><input type="date" id="add-v-date" class="finp" value="${todayStr()}"></div>
+      <div class="fg"><label>更新內容</label><textarea id="add-v-con" class="finp" rows="5"></textarea></div>
+      <button class="btn-acc" style="width:100%" onclick="submitAddVersion()">儲存</button>
+    </div>
+  `;
+}
+window.submitAddVersion = function() {
+  const v = {
+    version: document.getElementById('add-v-num').value,
+    date: document.getElementById('add-v-date').value,
+    content: document.getElementById('add-v-con').value
+  };
+  VERSION_HISTORY.push(v);
+  localStorage.setItem('delivery_version_history', JSON.stringify(VERSION_HISTORY));
+  toast('✅ 已新增版本紀錄');
+  openVersionHistory();
 }
 
 /* ══ 踢下線檢查 (處理強制登出與 31 天未活動) ══ */
@@ -8900,14 +8928,26 @@ window.applyGlobalGasPrice = function() {
   }
 };
 
-/* ══ Service Worker 正式註冊與強制更新 (破除快取) ══ */
+/* ══ Service Worker 註冊（自動判斷環境） ══ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    if (isLocalDevelopment()) {
+      console.log('🟡 本地開發模式：Service Worker 已停用');
+      
+      // 強制清除所有已註冊的 SW
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      });
+      return;
+    }
+
+    // 正式環境才註冊
     navigator.serviceWorker.register('/sw.js')
       .then(r => {
-        console.log('SW 已註冊', r.scope);
-        // 💡 強制觸發更新檢查，確保手機不會死咬著舊代碼
-        r.update(); 
+        console.log('✅ SW 已註冊', r.scope);
+        r.update();
       })
       .catch(e => console.warn('SW 註冊失敗', e));
   });
