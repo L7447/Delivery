@@ -664,6 +664,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   box-shadow: 0 20px 40px rgba(0,0,0,0.3);
   border: 1px solid rgba(255,255,255,0.2);
 }
+
 /* 公告 overlay —— 固定全屏，低於 confirm-overlay (999999) 但高於其他頁面 */
 #home-announcement-overlay {
   z-index: 99990 !important;
@@ -671,6 +672,85 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* 公告卡片點按微互動 */
 #home-announcement-card { transition: transform 0.12s; }
 #home-announcement-card:active { transform: scale(0.985); }
+/* ══ 系統公告容器基礎設定 ══ */
+.ann-overlay { position:fixed; inset:0; z-index:99990; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); }
+.ann-card { position:relative; width:100%; max-width:380px; border-radius:24px; padding:24px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); }
+.ann-title { font-size:20px; font-weight:900; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.ann-body { font-size:14px; line-height:1.6; padding:15px; border-radius:12px; margin-bottom:20px; }
+.ann-btn { width:100%; padding:14px; border-radius:12px; font-weight:900; cursor:pointer; border:none; transition:0.3s; }
+/* 1. 極光玻璃 (Aurora) - 速度調慢 */
+.ann-aurora { background:rgba(255,255,255,0.1); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.3); }
+.ann-aurora .ann-bg { position:absolute; inset:0; background:linear-gradient(125deg, #00feba, #5b54fa, #ff2a85, #ffcc00, #00feba); background-size:400% 100%; animation:annHoloSlow 8s linear infinite; z-index:-1; }
+.ann-aurora .ann-title { color:#fff; }
+.ann-aurora .ann-body { background:rgba(0,0,0,0.2); color:#fff; }
+/* 2. 電競霓虹 (Neon) - 重設計：深藍科技金屬感 */
+.ann-neon { background: linear-gradient(145deg, #0f172a, #1e293b); border: 2px solid #38bdf8; box-shadow: 0 0 30px rgba(56, 189, 248, 0.3); }
+.ann-neon .ann-title { color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; }
+.ann-neon .ann-body { background: #0f172a; color: #cbd5e1; border: 1px solid #334155; }
+.ann-neon .ann-btn { background: #38bdf8; color: #000; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4); }
+/* 3. 節慶喜慶 (Festive) - 重設計：高貴紅金絲絨 */
+.ann-festive { background: #7f1d1d; border: 4px double #f59e0b; }
+.ann-festive .ann-title { color: #f59e0b; }
+.ann-festive .ann-body { background: #991b1b; color: #fff; border: 1px solid #ef4444; }
+.ann-festive .ann-btn { background: #f59e0b; color: #7f1d1d; font-weight: 900; }
+/* 4. 警示緊急 (Urgent) - 重設計：極簡工業黑黃警示 */
+.ann-urgent { background: #18181b; border: 4px solid #eab308; }
+.ann-urgent .ann-title { color: #eab308; }
+.ann-urgent .ann-body { background: #27272a; color: #e4e4e7; border-left: 5px solid #eab308; }
+.ann-urgent .ann-btn { background: #eab308; color: #000; animation: annPulse 1.5s infinite; }
+/* 5. 簡約極簡 -> 改為：日系紙質風格 (Paper) */
+.ann-paper { background: #fdfaf6; border: 1px solid #d6d3d1; color: #44403c; }
+.ann-paper .ann-title { color: #57534e; }
+.ann-paper .ann-body { background: #f5f5f4; color: #57534e; border: 1px solid #e7e5e4; }
+.ann-paper .ann-btn { background: #57534e; color: #fff; }
+@keyframes annHoloSlow { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes annPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 
-/* 版本紀錄時間軸風格 */
-.version-dot { width:12px; height:12px; background:var(--acc); border-radius:50%; display:inline-block; margin-right:8px; }
+/* ══ 版本紀錄專屬時間軸樣式 ══ */
+.version-container { padding: 20px 16px; }
+.version-item {
+    position: relative;
+    margin-bottom: 24px;
+    padding-left: 24px;
+}
+/* 多段線性漸層時間軸線 */
+.version-item::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 30px;
+    bottom: -24px;
+    width: 3px;
+    background: linear-gradient(to bottom, #3b82f6, #8b5cf6, #ec4899);
+    z-index: 1;
+}
+.version-item:last-child::before { display: none; }
+.version-dot {
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border: 3px solid #3b82f6;
+    border-radius: 50%;
+    z-index: 2;
+}
+.version-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border-left: 5px solid #3b82f6;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.version-header {
+    background: #f8fafc;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+}
+.version-ver { font-size: 16px; font-weight: 900; color: #1e293b; font-family: var(--mono); }
+.version-date { font-size: 12px; color: #64748b; font-weight: 800; }
+.version-body { padding: 16px; font-size: 14px; color: #334155; line-height: 1.6; }
