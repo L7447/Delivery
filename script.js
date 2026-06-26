@@ -7960,34 +7960,35 @@ window.openVersionHistory = function() {
     ? `<button onclick="openAddVersion()" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">＋ 新增紀錄</button>`
     : '';
 
-  const versions = Array.isArray(S.settings.versions) ? S.settings.versions : [];
-  // 渲染清單
+  // 排序：將日期轉為時間戳記進行降冪排序
+  let versions = Array.isArray(S.settings.versions) ? [...S.settings.versions] : [];
+  versions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
   let html = `<div class="version-container">`;
   
-  if (versions.length > 0) {
-    html += versions.map((v, idx) => {
-      // 邏輯：判斷是否為陣列中的第一筆資料 (最新資料)
-      const isLatest = (idx === 0);
-      
-      return `
+  versions.forEach((v, idx) => {
+    const isLatest = (idx === 0);
+    const isAdmin = USER.role === 'admin';
+    
+    html += `
       <div class="version-item ${isLatest ? 'latest' : ''}">
         <div class="version-dot"></div>
         <div class="version-card">
           <div class="version-header">
-            <span class="version-ver">
-                v${safeText(v.ver)} 
-                ${isLatest ? '<span class="version-ver-badge">最新</span>' : ''}
-            </span>
+            <span class="version-ver">v${safeText(v.ver)} ${isLatest ? '<span class="version-ver-badge">最新</span>' : ''}</span>
             <span class="version-date">${safeText(v.date)}</span>
           </div>
           <div class="version-body">${safeTextWithBr(v.note)}</div>
+          
+          ${isAdmin ? `
+          <div style="padding:0 16px 12px; display:flex; gap:8px;">
+            <button onclick="openEditVersion('${v.ver}')" class="btn-acc" style="padding:4px 12px; font-size:11px;">編輯</button>
+            <button onclick="deleteVersion('${v.ver}')" style="padding:4px 12px; font-size:11px; background:#fef2f2; color:#dc2626; border:1px solid #fecdd3; border-radius:12px; cursor:pointer;">刪除</button>
+          </div>` : ''}
         </div>
       </div>
     `;
-    }).join('');
-  } else {
-    html += `<div class="empty-tip">目前尚無版本更新紀錄</div>`;
-  }
+  });
   
   html += `</div>`;
 
@@ -8035,6 +8036,45 @@ window.saveNewVersion = function() {
   saveSettings();
   toast('✅ 版本紀錄已新增');
   openVersionHistory(); // 直接呼叫函式重新渲染即可，無需 setTimeout
+};
+// 編輯版本
+window.openEditVersion = function(ver) {
+  const v = S.settings.versions.find(x => x.ver === ver);
+  if (!v) return;
+
+  document.getElementById('sub-title').textContent = '編輯版本紀錄';
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:20px;">
+      <div class="fg"><label>版本號</label><input type="text" class="finp" id="edit-ver" value="${safeText(v.ver)}" readonly style="background:#f1f5f9;"></div>
+      <div class="fg"><label>日期</label><input type="date" class="finp" id="edit-date" value="${v.date}"></div>
+      <div class="fg"><label>內容</label><textarea class="finp" id="edit-note" rows="6">${safeText(v.note)}</textarea></div>
+      <button onclick="saveEditVersion()" class="btn-acc" style="width:100%; padding:14px;">更新儲存</button>
+    </div>
+  `;
+};
+window.saveEditVersion = function() {
+  const ver = document.getElementById('edit-ver').value;
+  const note = document.getElementById('edit-note').value;
+  const date = document.getElementById('edit-date').value;
+
+  const v = S.settings.versions.find(x => x.ver === ver);
+  if (v) {
+    v.note = note;
+    v.date = date;
+    saveSettings();
+    toast('✅ 版本已更新');
+    openVersionHistory();
+  }
+};
+// 刪除版本
+window.deleteVersion = async function(ver) {
+  const ok = await customConfirm(`確定要刪除版本 v${ver} 嗎？`);
+  if (!ok) return;
+
+  S.settings.versions = S.settings.versions.filter(x => x.ver !== ver);
+  saveSettings();
+  toast('🗑️ 版本紀錄已刪除');
+  openVersionHistory();
 };
 
 /* ══ 踢下線檢查 (處理強制登出與 31 天未活動) ══ */
