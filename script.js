@@ -1354,138 +1354,36 @@ function switchVehicleTab(tab, index) {
 
 /* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
 /* ══ 首頁公告渲染函式 ══ */
-/* ══ 公告：5 種鮮明樣式 + fixed 置中 overlay ══ */
+/* ══ 公告處理邏輯 ══ */
 function getFloatingAnnouncementHtml() {
   const ann = S.settings.announcement || { enabled: false, title: '', content: '', style: 'aurora', version: '', date: '' };
   if (!ann.enabled || !ann.content) return '';
 
-  // dismiss 判斷：用 S.settings 裡的 version，版本為空時仍可顯示（但不可 dismiss）
   const annVer = (ann.version || '').trim();
+  // 檢查版本號是否為空
+  if (!annVer) {
+    console.warn("公告未設定版本號，強制顯示警告");
+  }
+
+  // 檢查是否已閱讀過此版本
   if (annVer && localStorage.getItem('delivery_ann_dismissed_ver') === annVer) return '';
 
-  /* ─── 5 種樣式 ───────────────────────────────────── */
-  const STYLES = {
-    // 🌈 極光玻璃：全息流光背景 + 毛玻璃卡片
-    aurora: {
-      bgHtml: `<div style="position:absolute;inset:0;background:linear-gradient(125deg,#00feba,#5b54fa,#ff2a85,#ffcc00,#00feba);background-size:400% 100%;animation:annHoloFlow 4s linear infinite;"></div>`,
-      card:   `background:rgba(255,255,255,0.14);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1.5px solid rgba(255,255,255,0.5);box-shadow:0 16px 48px rgba(80,0,200,0.25),0 2px 0 rgba(255,255,255,0.3) inset;`,
-      radius: '24px',
-      badge:  `background:rgba(255,255,255,0.22);color:#fff;border:1px solid rgba(255,255,255,0.5);`,
-      icon:   '📢',
-      title:  `color:#fff;text-shadow:0 1px 8px rgba(0,0,0,0.35);`,
-      body:   `color:rgba(255,255,255,0.92);`,
-      sep:    `border-color:rgba(255,255,255,0.25);`,
-      cbTxt:  `color:rgba(255,255,255,0.9);`,
-      cbBd:   `rgba(255,255,255,0.7)`,
-      cbChk:  `background:#fff;color:#5b54fa;`,
-      btn:    `background:rgba(255,255,255,0.22);color:#fff;border:1.5px solid rgba(255,255,255,0.5);backdrop-filter:blur(8px);`,
-      extra:  `@keyframes annHoloFlow{0%{background-position:100% 50%;}100%{background-position:0% 50%;}}`,
-    },
-    // ⚡ 電競霓虹：深黑底 + 青色/紫色霓虹光
-    neon: {
-      bgHtml: `<div style="position:absolute;inset:0;background:#050510;"></div><div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(0,240,255,0.18) 0%,transparent 60%),radial-gradient(ellipse at 70% 50%,rgba(180,0,255,0.15) 0%,transparent 60%);"></div>`,
-      card:   `background:#0a0a1a;border:2px solid #00f0ff;box-shadow:0 0 20px rgba(0,240,255,0.45),0 0 60px rgba(0,240,255,0.12),inset 0 0 20px rgba(0,240,255,0.04);`,
-      radius: '20px',
-      badge:  `background:rgba(0,240,255,0.12);color:#00f0ff;border:1px solid rgba(0,240,255,0.5);text-shadow:0 0 8px #00f0ff;`,
-      icon:   '⚡',
-      title:  `color:#00f0ff;text-shadow:0 0 12px #00f0ff,0 0 24px rgba(0,240,255,0.5);letter-spacing:1px;`,
-      body:   `color:#94b8d8;`,
-      sep:    `border-color:#0a1a2a;`,
-      cbTxt:  `color:#00f0ff;`,
-      cbBd:   `#00f0ff`,
-      cbChk:  `background:#00f0ff;color:#050510;box-shadow:0 0 8px #00f0ff;`,
-      btn:    `background:linear-gradient(90deg,#00f0ff,#8b00ff);color:#fff;border:none;box-shadow:0 0 16px rgba(0,240,255,0.5);letter-spacing:1px;`,
-      extra:  ``,
-    },
-    // ✨ 簡約極簡：純白 + 細線 + 黑色Typography
-    minimal: {
-      bgHtml: `<div style="position:absolute;inset:0;background:rgba(0,0,0,0.4);"></div>`,
-      card:   `background:#fff;border:1.5px solid #e2e8f0;box-shadow:0 8px 32px rgba(0,0,0,0.12);`,
-      radius: '16px',
-      badge:  `background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;`,
-      icon:   '📋',
-      title:  `color:#0f172a;letter-spacing:0.5px;`,
-      body:   `color:#475569;`,
-      sep:    `border-color:#f1f5f9;`,
-      cbTxt:  `color:#64748b;`,
-      cbBd:   `#cbd5e1`,
-      cbChk:  `background:#0f172a;color:#fff;`,
-      btn:    `background:#0f172a;color:#fff;border:none;`,
-      extra:  ``,
-    },
-    // 🎉 節慶喜慶：金橘漸層 + 彩帶感
-    festive: {
-      bgHtml: `<div style="position:absolute;inset:0;background:linear-gradient(135deg,#ff6b35,#f59e0b,#fbbf24);"></div><div style="position:absolute;inset:0;background-image:radial-gradient(circle at 20% 20%,rgba(255,255,255,0.15) 0%,transparent 40%),radial-gradient(circle at 80% 80%,rgba(255,255,255,0.1) 0%,transparent 40%);"></div>`,
-      card:   `background:rgba(255,255,255,0.92);border:2px solid rgba(255,255,255,0.8);box-shadow:0 12px 40px rgba(245,158,11,0.35);`,
-      radius: '24px',
-      badge:  `background:linear-gradient(90deg,#ff6b35,#f59e0b);color:#fff;border:none;`,
-      icon:   '🎉',
-      title:  `color:#92400e;`,
-      body:   `color:#78350f;`,
-      sep:    `border-color:#fde68a;`,
-      cbTxt:  `color:#92400e;`,
-      cbBd:   `#f59e0b`,
-      cbChk:  `background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;`,
-      btn:    `background:linear-gradient(90deg,#ff6b35,#f59e0b);color:#fff;border:none;box-shadow:0 4px 16px rgba(245,158,11,0.4);`,
-      extra:  ``,
-    },
-    // 🚨 警示緊急：純白 + 紅色邊框 + 脈衝按鈕
-    urgent: {
-      bgHtml: `<div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div><div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(239,68,68,0.15) 0%,transparent 70%);"></div>`,
-      card:   `background:#fff;border:3px solid #ef4444;box-shadow:0 0 0 6px rgba(239,68,68,0.12),0 16px 40px rgba(239,68,68,0.2);`,
-      radius: '20px',
-      badge:  `background:#fef2f2;color:#dc2626;border:1px solid #fecaca;`,
-      icon:   '🚨',
-      title:  `color:#dc2626;`,
-      body:   `color:#7f1d1d;`,
-      sep:    `border-color:#fecaca;`,
-      cbTxt:  `color:#dc2626;`,
-      cbBd:   `#ef4444`,
-      cbChk:  `background:#ef4444;color:#fff;`,
-      btn:    `background:#ef4444;color:#fff;border:none;box-shadow:0 4px 16px rgba(239,68,68,0.4);animation:annUrgentPulse 1.4s ease-in-out infinite;`,
-      extra:  `@keyframes annUrgentPulse{0%,100%{box-shadow:0 4px 16px rgba(239,68,68,0.4);}50%{box-shadow:0 4px 28px rgba(239,68,68,0.75);}}`,
-    },
-  };
-  const s = STYLES[ann.style] || STYLES.aurora;
-
-  // 日期與版本號 badge（有值才顯示）
-  const metaBadges = [
-    ann.date    ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;${s.badge}">${safeText(ann.date)}</span>` : '',
-    annVer      ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;${s.badge}">v${safeText(annVer)}</span>` : '',
-  ].filter(Boolean).join('');
-
   return `
-    <div id="home-announcement-overlay" style="position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
-      <div id="home-announcement-card" style="position:relative;width:100%;max-width:380px;border-radius:${s.radius};padding:22px;overflow:hidden;${s.card}">
-        <div style="position:absolute;inset:0;border-radius:${s.radius};overflow:hidden;pointer-events:none;">${s.bgHtml}</div>
-        <div style="position:relative;">
-
-        <!-- 圖示 + 標題 -->
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${metaBadges ? '8px' : '12px'};">
-          <div style="font-size:26px;line-height:1;flex-shrink:0;">${s.icon}</div>
-          <div style="font-size:17px;font-weight:900;line-height:1.3;${s.title}">${safeText(ann.title)}</div>
+    <div id="home-announcement-overlay" class="ann-overlay">
+      <div id="home-announcement-card" class="ann-card ann-${ann.style}">
+        <div class="ann-bg"></div>
+        <div class="ann-title">📢 ${safeText(ann.title)}</div>
+        ${ann.date ? `<div style="font-size:11px; margin-bottom:10px; opacity:0.8;">${safeText(ann.date)} | v${annVer || '未標示'}</div>` : ''}
+        <div class="ann-body">${safeTextWithBr(ann.content)}</div>
+        
+        <div style="margin-bottom:15px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="ann-checkbox" data-checked="false" data-ver="${annVer}">
+            <div id="ann-cb-box" style="width:20px;height:20px;border:2px solid #fff;border-radius:5px;"></div>
+            <span style="font-size:12px; font-weight:700;">不再顯示此版本</span>
         </div>
 
-        <!-- 日期 + 版本 badge -->
-        ${metaBadges ? `<div style="display:flex;gap:6px;margin-bottom:12px;">${metaBadges}</div>` : ''}
-
-        <!-- 公告內容 -->
-        <div style="font-size:14px;line-height:1.75;margin-bottom:18px;${s.body}">${safeTextWithBr(ann.content)}</div>
-
-        <!-- 分隔線 + 底部操作區 -->
-        <div style="border-top:1px solid;padding-top:14px;${s.sep}display:flex;justify-content:space-between;align-items:center;gap:12px;">
-          <!-- 不再顯示勾選 -->
-          <div id="ann-checkbox" data-checked="false" data-ver="${annVer}" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;-webkit-tap-highlight-color:transparent;">
-            <div id="ann-cb-box" style="width:22px;height:22px;border:2px solid ${s.cbBd};border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:0.2s;"></div>
-            <span id="ann-cb-label" style="font-size:13px;font-weight:700;${s.cbTxt}">不再顯示</span>
-          </div>
-          <!-- 確認閱讀按鈕 -->
-          <button id="close-ann-btn" data-ver="${annVer}" style="flex-shrink:0;border:none;padding:9px 20px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;${s.btn}">確認閱讀</button>
-        </div>
-        </div>
+        <button id="close-ann-btn" data-ver="${annVer}" class="ann-btn">確認閱讀</button>
       </div>
     </div>
-    ${s.extra ? `<style>${s.extra}</style>` : ''}
   `;
 }
 
@@ -7941,58 +7839,97 @@ window.openAdminOnlineUsers = async function() {
       </div>`;
   }
 };
-/* ✨ 新增：管理員編輯公告介面 */
+
+/* ✨ 編輯首頁系統公告 */
 // 編輯公告
 window.openAnnouncementEdit = function() {
   document.getElementById('sub-title').textContent = '編輯公告';
-  const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '' };
+  
+  // 右上角強化版返回
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" 
+    style="background:#3b82f6; color:#fff; border:none; padding:6px 16px; border-radius:18px; font-size:12px; font-weight:800; cursor:pointer;">🔙 返回</button>
+  `;
+
+  const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '', date: '' };
 
   document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px;">
-      <div class="fg"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${ann.version}"></div>
-      <div class="fg"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${todayStr()}"></div>
-      <div class="fg"><label>標題標籤 (快速點選)</label>
-         <div style="display:flex; gap:6px; margin-bottom:8px;">
-            <span onclick="document.getElementById('ann-title').value='系統公告'" class="w-tag">系統公告</span>
-            <span onclick="document.getElementById('ann-title').value='更新通知'" class="w-tag">更新通知</span>
-         </div>
+    <div style="padding:16px 16px 40px; display:flex; flex-direction:column; gap:16px;">
+      
+      <!-- 區塊 1：版本與日期 (藍色系) -->
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:14px;">
+        <div style="font-size:12px; font-weight:900; color:#2563eb; margin-bottom:10px;">🏷️ 版本資訊</div>
+        <div style="display:flex; gap:10px;">
+          <div class="fg" style="flex:1;"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${safeText(ann.version)}" style="padding:8px;"></div>
+          <div class="fg" style="flex:1.2;"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${ann.date || todayStr()}" style="padding:8px;"></div>
+        </div>
       </div>
-      <div class="fg"><label>公告標題</label><input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}"></div>
-      <div class="fg"><label>公告內容</label><textarea class="finp" id="ann-content" rows="6">${safeText(ann.content)}</textarea></div>
-      <div class="fg">
-        <label>公告樣式</label>
-        <select class="fsel" id="ann-style">
-          <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
-          <option value="neon" ${ann.style==='neon'?'selected':''}>⚡ 電競霓虹</option>
-          <option value="minimal" ${ann.style==='minimal'?'selected':''}>✨ 簡約極簡</option>
-          <option value="festive" ${ann.style==='festive'?'selected':''}>🎉 節慶喜慶</option>
-          <option value="urgent" ${ann.style==='urgent'?'selected':''}>🚨 警示緊急</option>
-        </select>
+
+      <!-- 區塊 2：公告內容 (橘色系) -->
+      <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:16px; padding:14px;">
+        <div style="font-size:12px; font-weight:900; color:#c2410c; margin-bottom:10px;">📝 公告詳情</div>
+        <div class="fg" style="margin-bottom:10px;">
+          <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="標題..." style="font-weight:700;">
+        </div>
+        <textarea class="finp" id="ann-content" rows="5" placeholder="請輸入公告內容..." style="width:100%; font-size:14px; padding:10px;">${safeText(ann.content)}</textarea>
       </div>
-      <div style="display:flex; align-items:center; gap:10px; margin:20px 0;">
-        <label class="switch"><input type="checkbox" id="ann-enabled" ${ann.enabled?'checked':''}><span class="slider"></span></label>
-        <span>啟用公告</span>
+
+      <!-- 區塊 3：進階設定 (綠色系) -->
+      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:14px;">
+        <div style="font-size:12px; font-weight:900; color:#059669; margin-bottom:10px;">⚙️ 進階設定</div>
+        <div class="fg" style="margin-bottom:12px;">
+          <label>顯示樣式</label>
+          <select class="fsel" id="ann-style" style="padding:8px;">
+            <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
+            <option value="neon" ${ann.style==='neon'?'selected':''}>⚡ 電競霓虹</option>
+            <option value="festive" ${ann.style==='festive'?'selected':''}>🎉 節慶喜慶</option>
+            <option value="urgent" ${ann.style==='urgent'?'selected':''}>🚨 警示緊急</option>
+            <option value="paper" ${ann.style==='paper'?'selected':''}>📜 日系紙質</option>
+          </select>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0;">
+          <span style="font-size:14px; font-weight:800;">是否啟用公告</span>
+          <label class="switch"><input type="checkbox" id="ann-enabled" ${ann.enabled?'checked':''}><span class="slider"></span></label>
+        </div>
       </div>
-      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px;">儲存公告</button>
+
+      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; background:#1e293b; color:#fff;">
+        💾 儲存並發布
+      </button>
     </div>
   `;
   openOverlay('sub-page');
 };
-
 window.saveAnnouncement = function() {
+  const ver = document.getElementById('ann-ver').value.trim();
+  const title = document.getElementById('ann-title').value.trim();
+  const content = document.getElementById('ann-content').value.trim();
+  
+  // 檢查公告版本號是否為空
+  if (!ver) {
+    toast('⚠️ 錯誤：版本號不能為空！');
+    return;
+  }
+
+  // 檢查公告版本是否重複發布過 (簡單檢查)
+  const versions = S.settings.versions || [];
+  if (versions.some(v => v.ver === ver)) {
+     if(!confirm("此公告版本號已經存在，確定要覆蓋嗎？")) return;
+  }
+
   S.settings.announcement = {
-    enabled:  document.getElementById('ann-enabled').checked,
-    title:    document.getElementById('ann-title').value.trim(),
-    content:  document.getElementById('ann-content').value.trim(),
-    style:    document.getElementById('ann-style').value,
-    version:  (document.getElementById('ann-ver').value  || '').trim(),
-    date:     (document.getElementById('ann-date').value || '').trim(),
+    enabled: document.getElementById('ann-enabled').checked,
+    title, content,
+    style: document.getElementById('ann-style').value,
+    version: ver,
+    date: document.getElementById('ann-date').value || todayStr(),
   };
+  
   saveSettings();
   closeOverlay('sub-page');
   toast('✅ 公告已更新');
-  if (S.tab === 'home') renderHome();
 };
+
 
 // 版本紀錄
 // 1. 統一的開啟版本紀錄 (進入點)
@@ -8005,17 +7942,29 @@ window.openVersionHistory = function() {
     : '';
 
   const versions = Array.isArray(S.settings.versions) ? S.settings.versions : [];
-  let html = versions.length ? versions.map(v => `
-    <div style="margin:12px; background:#fff; border-radius:12px; padding:16px; border:1px solid var(--border);">
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-        <span style="font-size:18px; font-weight:900; color:var(--acc);">v${safeText(v.ver)}</span>
-        <span style="font-size:12px; color:var(--t3);">${safeText(v.date)}</span>
+  // 渲染清單
+  let html = `<div class="version-container">`;
+  
+  if (versions.length > 0) {
+    html += versions.map(v => `
+      <div class="version-item">
+        <div class="version-dot"></div>
+        <div class="version-card">
+          <div class="version-header">
+            <span class="version-ver">v${safeText(v.ver)}</span>
+            <span class="version-date">${safeText(v.date)}</span>
+          </div>
+          <div class="version-body">${safeTextWithBr(v.note)}</div>
+        </div>
       </div>
-      <div style="font-size:14px; color:var(--t1);">${safeTextWithBr(v.note)}</div>
-    </div>
-  `).join('') : '<div style="padding:32px; text-align:center; color:var(--t3); font-size:14px;">尚無版本紀錄</div>';
+    `).join('');
+  } else {
+    html += `<div class="empty-tip">目前尚無版本更新紀錄</div>`;
+  }
+  
+  html += `</div>`;
 
-  document.getElementById('sub-body').innerHTML = `<div style="padding-top:10px;">${html}</div>`;
+  document.getElementById('sub-body').innerHTML = html;
 
   // 左上角 X 改為 flipCloseOverlay（與聯絡我們一樣向右翻頁關閉）
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
