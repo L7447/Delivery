@@ -1372,13 +1372,22 @@ function getFloatingAnnouncementHtml() {
     <div id="home-announcement-overlay" class="ann-overlay">
       <div id="home-announcement-card" class="ann-card ann-${ann.style}">
         <div class="ann-bg"></div>
+        
+        <!-- 層級 1：突顯標題 -->
         <div class="ann-title">📢 ${safeText(ann.title)}</div>
-        ${ann.date ? `<div style="font-size:11px; margin-bottom:10px; opacity:0.8;">${safeText(ann.date)} | v${annVer || '未標示'}</div>` : ''}
+        
+        <!-- 層級 2：框框突顯的日期與版本 -->
+        <div class="ann-meta">
+            ${ann.date ? `<span class="ann-tag">${safeText(ann.date)}</span>` : ''}
+            <span class="ann-tag">v${safeText(annVer || '---')}</span>
+        </div>
+
+        <!-- 層級 3：內容區塊 -->
         <div class="ann-body">${safeTextWithBr(ann.content)}</div>
         
         <div style="margin-bottom:15px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="ann-checkbox" data-checked="false" data-ver="${annVer}">
             <div id="ann-cb-box" style="width:20px;height:20px;border:2px solid #fff;border-radius:5px;"></div>
-            <span style="font-size:12px; font-weight:700;">不再顯示此版本</span>
+            <span style="font-size:12px; font-weight:700; color:#fff;">不再顯示此版本</span>
         </div>
 
         <button id="close-ann-btn" data-ver="${annVer}" class="ann-btn">確認閱讀</button>
@@ -7845,19 +7854,23 @@ window.openAdminOnlineUsers = async function() {
 window.openAnnouncementEdit = function() {
   document.getElementById('sub-title').textContent = '編輯公告';
   
-  // 右上角強化版返回
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+
+  // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" 
-    style="background:#3b82f6; color:#fff; border:none; padding:6px 16px; border-radius:18px; font-size:12px; font-weight:800; cursor:pointer;">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
 
   const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '', date: '' };
+  const tags = ['改版公告', '新功能公告', 'Bug修復公告', '系統公告'];
 
   document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px 16px 40px; display:flex; flex-direction:column; gap:16px;">
+    <div style="padding:16px; display:flex; flex-direction:column; gap:20px;">
       
       <!-- 區塊 1：版本與日期 (藍色系) -->
-      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:14px;">
+      <div style="background: #eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#2563eb; margin-bottom:10px;">🏷️ 版本資訊</div>
         <div style="display:flex; gap:10px;">
           <div class="fg" style="flex:1;"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${safeText(ann.version)}" style="padding:8px;"></div>
@@ -7866,16 +7879,22 @@ window.openAnnouncementEdit = function() {
       </div>
 
       <!-- 區塊 2：公告內容 (橘色系) -->
-      <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:16px; padding:14px;">
-        <div style="font-size:12px; font-weight:900; color:#c2410c; margin-bottom:10px;">📝 公告詳情</div>
-        <div class="fg" style="margin-bottom:10px;">
-          <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="標題..." style="font-weight:700;">
+      <!-- 標題區塊 -->
+      <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
+        <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告標題</label>
+        <div style="display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:4px;">
+            ${tags.map(t => `<button type="button" class="tag-btn" onclick="document.getElementById('ann-title').value='${t}'">${t}</button>`).join('')}
         </div>
-        <textarea class="finp" id="ann-content" rows="5" placeholder="請輸入公告內容..." style="width:100%; font-size:14px; padding:10px;">${safeText(ann.content)}</textarea>
+        <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="輸入標題或點選上方標籤..." style="border:2px solid #3b82f6;">
+      </div>
+      <!-- 內容區塊 -->
+      <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
+        <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告內容</label>
+        <textarea class="finp" id="ann-content" rows="6" style="width:100%; padding:10px;">${safeText(ann.content)}</textarea>
       </div>
 
       <!-- 區塊 3：進階設定 (綠色系) -->
-      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:14px;">
+      <div style="background: #f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#059669; margin-bottom:10px;">⚙️ 進階設定</div>
         <div class="fg" style="margin-bottom:12px;">
           <label>顯示樣式</label>
@@ -7946,18 +7965,26 @@ window.openVersionHistory = function() {
   let html = `<div class="version-container">`;
   
   if (versions.length > 0) {
-    html += versions.map(v => `
-      <div class="version-item">
+    html += versions.map((v, idx) => {
+      // 邏輯：判斷是否為陣列中的第一筆資料 (最新資料)
+      const isLatest = (idx === 0);
+      
+      return `
+      <div class="version-item ${isLatest ? 'latest' : ''}">
         <div class="version-dot"></div>
         <div class="version-card">
           <div class="version-header">
-            <span class="version-ver">v${safeText(v.ver)}</span>
+            <span class="version-ver">
+                v${safeText(v.ver)} 
+                ${isLatest ? '<span class="version-ver-badge">最新</span>' : ''}
+            </span>
             <span class="version-date">${safeText(v.date)}</span>
           </div>
           <div class="version-body">${safeTextWithBr(v.note)}</div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   } else {
     html += `<div class="empty-tip">目前尚無版本更新紀錄</div>`;
   }
