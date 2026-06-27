@@ -791,25 +791,17 @@ window.animateClose = function(btn, action) {
 /* 返回按鈕專用：由上而下關閉動畫 (向下滑出) */
 window.animateReturnClose = function(btn, action) {
   btn.style.pointerEvents = 'none'; // 鎖定按鈕防止連點
-
   // 自動往上尋找最外層的頁面容器
   const targetWrap = btn.closest('.overlay-page, #sub-page');
-  
   // 套用向下滑出特效
-  if (targetWrap) {
-    targetWrap.classList.add('slide-down-out');
-  }
-
-  // 設定 700ms 延遲，配合 CSS 動畫播完後再執行關閉
+  if (targetWrap){targetWrap.classList.add('slide-down-out');}
+  // 設定 1200ms (即 1.2秒) 延遲，配合 CSS 動畫播完後再執行關閉
   setTimeout(() => {
     action(); // 執行返回指令
-    
     // 動作執行完畢後，移除動畫 Class
-    if (targetWrap) {
-      targetWrap.classList.remove('slide-down-out');
-    }
+    if (targetWrap){targetWrap.classList.remove('slide-down-out');}
     btn.style.pointerEvents = 'auto';
-  }, 700);
+  }, 1200);
 }
 /* 子頁面內部切換專用：內容向下滑出並淡入新內容 (解決背景閃爍破綻) */
 window.animateSubPageReturn = function(btn, action) {
@@ -8497,7 +8489,8 @@ window.openAddReward = function() {
   if (closeBtn) closeBtn.style.display = 'none';
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => openRewardSettings())" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#ffffff; border:1px solid #6d28d9; padding:6px 8px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(139,92,246,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
+    
+    <button onclick="animateSubPageReturn(this, () =>{document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'flex';openRewardSettings();} )" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#ffffff; border:1px solid #6d28d9; padding:6px 8px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(139,92,246,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
