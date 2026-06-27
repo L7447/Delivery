@@ -47,53 +47,20 @@
   <!-- [修復4] 移除 ios-pwa-splash CDN（被內容阻擋器封鎖時會卡住）-->
   <link rel="stylesheet" href="/style.css?v=1.6.0">
 
-  <!-- 多段殘留、緩慢向左抽離特效 -->
-  <style>
-    .drawer-slide-out {
-      /* 總時長拉長至 0.9 秒，並使用平滑的 ease-in-out 曲線 */
-      animation: drawerCloseAnim 0.9s ease-in-out forwards !important;
-    }
-    @keyframes drawerCloseAnim {
-      0%   { transform: translateX(0); opacity: 1; }
-      20%  { transform: translateX(-12px); opacity: 0.95; } /* 第一段：微微拉扯、卡住的感覺 */
-      45%  { transform: translateX(-35px); opacity: 0.85; } /* 第二段：殘留感，非常緩慢地拖行 */
-      75%  { transform: translateX(-50vw); opacity: 0.4; }  /* 第三段：逐漸失去阻力，開始加速 */
-      100% { transform: translateX(-100vw); opacity: 0; }   /* 第四段：完全抽離畫面 */
-    }
-  </style>
-  <!-- 由上而下關閉特效 (帶有停留與下沉感) -->
-  <style>
-    .slide-down-out {
-      animation: slideDownCloseAnim 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-    }
-    @keyframes slideDownCloseAnim {
-      0%   { transform: translateY(0); opacity: 1; }
-      20%  { transform: translateY(-8px); opacity: 0.98; } /* 停留感：微微向上提一下 */
-      50%  { transform: translateY(20px); opacity: 0.9; }  /* 下沉開始：慢慢往下掉落，帶有重量感 */
-      80%  { transform: translateY(60px); opacity: 0.6; }  /* 加速下沉：越掉越快，逐漸變淡 */
-      100% { transform: translateY(100vh); opacity: 0; }  /* 順滑下沉至畫面底端 */
-    }
-  </style>
-
 </head>
 <body data-tab="home" ontouchstart="">
 
 <!-- 🛵 故事型啟動動畫 (Splash Screen) - 背景更新為全息幻彩流光特效 -->
 <div id="splash" style="position:fixed; inset:0; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; transition:opacity 0.4s ease; background:linear-gradient(125deg, #00feba, #5b54fa, #ff2a85, #ffcc00, #00feba); background-size:400% 100%; animation:holo-flow 3.5s linear infinite;">
-  
   <!-- 毛玻璃卡片 -->
   <div style="position: relative; top: -140px; background:rgba(255, 255, 255, 0.1); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.3); border-radius:30px; padding:40px; display:flex; flex-direction:column; align-items:center; box-shadow:0 20px 40px rgba(0,0,0,0.2); animation:aur-float 3s ease-in-out infinite alternate, aur-fadeUp 1s ease-out forwards;">
-    
     <!-- 發光幾何體 -->
     <div style="width:60px; height:60px; background:linear-gradient(135deg, #fff, #f0f0f0); border-radius:16px; transform:rotate(45deg); box-shadow:0 0 30px rgba(255,255,255,0.8); display:flex; align-items:center; justify-content:center; animation:aur-spin 4s linear infinite;">
       <div style="width:20px; height:20px; background:#4169e1; border-radius:50%;"></div>
     </div>
-    
     <div style="margin-top:30px; color:#ffffff; font-family:-apple-system, sans-serif; font-size:24px; font-weight:800; letter-spacing:3px; text-shadow:0 2px 10px rgba(0,0,0,0.2);">外送記錄與分析 APP</div>
   </div>
-
   <div id="skip-hint" style="position:absolute; bottom:360px; color:#ffffff; font-size:19px; font-weight:650; opacity:0; transition:opacity 0.5s; letter-spacing:1.5px; background:rgba(0,0,0,0.2); padding:8px 16px; border-radius:20px;">點擊螢幕任意處跳過 ⏭</div>
-
   <style>
     /* 無縫迴圈的全息流光背景動畫 */
     @keyframes holo-flow { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
@@ -105,7 +72,6 @@
 
 <!-- 📱 APP 內容區塊 (保留您原本的 #app 程式碼) -->
 <div id="app">
-
   <section class="page active" id="page-home" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
     <div id="home-top-content" style="flex-shrink:0;"></div> 
     <div style="padding: 0 16px; flex-shrink:0;">
