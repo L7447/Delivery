@@ -209,16 +209,18 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 /* ══ 10. 全螢幕大日曆 (熱力圖與排版優化版) ══ */
 /* 強制橫向顯示的設定 (手機轉向用) */
 @media screen and (orientation: portrait) {
-  #full-calendar-overlay.show {
-    width: 100vh;
-    height: 100vw;
-    transform: rotate(90deg);
-    transform-origin: top left;
-    position: fixed;
-    top: 0;
-    left: 100vw;
-  }
+  #full-calendar-overlay.show{width:100vh;height:100vw;transform:rotate(90deg);transform-origin:top left;position:fixed;top:0;left:100vw;}
   #fc-body { padding-bottom: 5px !important; }
+  .slide-down-out-rotated {
+    /* 這裡使用一個專門給旋轉後元素的動畫，從 90 度轉回 0 度並隱藏 */
+    animation: rotateAndDown 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  }  
+}
+@keyframes rotateAndDown {
+  0%   { transform: rotate(90deg) translateY(0); opacity: 1; }
+  15%  { transform: rotate(90deg) translateY(-10px); }
+  70%  { transform: rotate(90deg) translateY(30px); opacity: 0.6; }
+  100% { transform: rotate(90deg) translateY(100vh); opacity: 0; }
 }
 /* 日曆主體與表頭 (日一二三四五六) */
 #fc-body { background: var(--sf); }
@@ -712,7 +714,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 .version-item{position:relative;margin-bottom:24px;padding-left:24px;}
 /* 多段線性漸層時間軸線 */
 .version-item::before{content:'';position:absolute;left:6px;top:25px;bottom:-24px;width:3px;background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;}
-.version-item:last-child::before{height:35px;bottom:auto;} /* 讓線條在最後一個圓點下方停住 */
+.version-item:last-child::before{height:50px;bottom:auto;} /* 讓線條在最後一個圓點下方停住 */
 /* 最新版本的 Dot 顏色與卡片邊框 */
 .version-item.latest .version-dot { border-color: #10b981; }
 .version-item.latest .version-card { border-left: 5px solid #10b981; }
@@ -730,7 +732,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 /* ══ 由上而下關閉特效 (帶有停留與下沉感) ══ */
 .slide-down-out {
-  animation: slideDownCloseAnim 5.1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+  animation: slideDownCloseAnim 1.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
   pointer-events: none; /* 防止在下墜過程中點擊 */
 }
 @keyframes slideDownCloseAnim {
