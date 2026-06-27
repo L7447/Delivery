@@ -665,9 +665,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 /* 公告 overlay —— 固定全屏，低於 confirm-overlay (999999) 但高於其他頁面 */
-#home-announcement-overlay {
-  z-index: 99990 !important;
-}
+#home-announcement-overlay{z-index:99990 !important;}
 /* 公告卡片點按微互動 */
 #home-announcement-card { transition: transform 0.12s; }
 #home-announcement-card:active { transform: scale(0.985); }
@@ -711,63 +709,24 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 /* ══ 版本紀錄專屬時間軸樣式 ══ */
 .version-container { padding: 20px 16px; }
-.version-item {
-    position: relative;
-    margin-bottom: 24px;
-    padding-left: 24px;
-}
+.version-item{position:relative;margin-bottom:24px;padding-left:24px;}
 /* 多段線性漸層時間軸線 */
-.version-item::before {
-    content: '';
-    position: absolute;
-    left: 6px;
-    top: 30px;
-    bottom: -24px;
-    width: 3px;
-    background: linear-gradient(to bottom, #3b82f6, #8b5cf6, #ec4899);
-    z-index: 1;
-}
+.version-item::before{content:'';position:absolute;left:6px;top:30px;bottom:-24px;width:3px;background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;}
 .version-item:last-child::before { display: none; }
-.version-dot {
-    position: absolute;
-    left: 0;
-    top: 6px;
-    width: 14px;
-    height: 14px;
-    background: #ffffff;
-    border: 3px solid #3b82f6;
-    border-radius: 50%;
-    z-index: 2;
-}
-.version-card {
-    background: #ffffff;
-    border-radius: 16px;
-    border-left: 5px solid #3b82f6;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    overflow: hidden;
-}
-.version-header {
-    background: #f8fafc;
-    padding: 10px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #e2e8f0;
-}
+/* 確保即便只有 1 個項目，線條也能畫出（只要不是最後一個項目） */
+.version-item:not(:last-child)::before{content:'';position:absolute;left:6px;top:30px;bottom:-24px;width:3px;/* 移除綠色條的變數邏輯，統一改為彩色漸層 */
+ background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;}
+/* 最新版本的 Dot 顏色與卡片邊框 */
+.version-item.latest .version-dot { border-color: #10b981; }
+.version-item.latest .version-card { border-left: 5px solid #10b981; }
+.version-dot{position:absolute;left:0;top:6px;width:14px;height:14px;background:#ffffff;border:3px solid #3b82f6;border-radius:50%;z-index:2;}
+.version-card{background:#ffffff;border-radius:16px;border-left:5px solid #3b82f6;box-shadow:0 4px 12px rgba(0,0,0,0.05);overflow:hidden;}
+.version-header{background:#f8fafc;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;}
 .version-ver { font-size: 16px; font-weight: 900; color: #1e293b; font-family: var(--mono); }
 .version-date { font-size: 12px; color: #64748b; font-weight: 800; }
 .version-body { padding: 16px; font-size: 14px; color: #334155; line-height: 1.6; }
-
-/* ══ 版本紀錄：最新標籤與線條 ══ */
-.version-item.latest::before { background: #10b981; } /* 最新版本時間軸改為綠色 */
-.version-ver-badge {
-    background: #10b981; color: #fff; padding: 2px 8px; border-radius: 6px;
-    font-size: 10px; font-weight: 900; margin-left: 8px; vertical-align: middle;
-}
+/* 最新標籤：變大變細 (Large & Light) */
+.version-ver-badge{background:#10b981;color:#fff;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:650;margin-left:8px;vertical-align:middle;letter-spacing:1px;}
 /* ══ 公告編輯器：標籤區塊 ══ */
-.tag-btn {
-    padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 800;
-    border: 1.5px solid #cbd5e1; background: #f1f5f9; cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+.tag-btn{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:800;border:1.5px solid #cbd5e1;background:#f1f5f9;cursor:pointer;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);}
 .tag-btn:active { transform: scale(0.9); background: #3b82f6; color: #fff; border-color: #3b82f6; }
