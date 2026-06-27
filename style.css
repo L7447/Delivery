@@ -712,7 +712,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 .version-item{position:relative;margin-bottom:24px;padding-left:24px;}
 /* 多段線性漸層時間軸線 */
 .version-item::before{content:'';position:absolute;left:6px;top:25px;bottom:-24px;width:3px;background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;}
-.version-item:last-child::before{height:20px;bottom:auto;} /* 讓線條在最後一個圓點下方停住 */
+.version-item:last-child::before{height:35px;bottom:auto;} /* 讓線條在最後一個圓點下方停住 */
 /* 最新版本的 Dot 顏色與卡片邊框 */
 .version-item.latest .version-dot { border-color: #10b981; }
 .version-item.latest .version-card { border-left: 5px solid #10b981; }
@@ -730,8 +730,8 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 /* ══ 由上而下關閉特效 (帶有停留與下沉感) ══ */
 .slide-down-out {
-  /* 將時長拉長，並加入慢速彈性 */
-  animation: slideDownCloseAnim 2.1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+  animation: slideDownCloseAnim 5.1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+  pointer-events: none; /* 防止在下墜過程中點擊 */
 }
 @keyframes slideDownCloseAnim {
   0%   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
