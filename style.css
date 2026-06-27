@@ -711,11 +711,8 @@ input:checked + .slider:before { transform: translateX(20px); }
 .version-container { padding: 20px 16px; }
 .version-item{position:relative;margin-bottom:24px;padding-left:24px;}
 /* 多段線性漸層時間軸線 */
-.version-item::before{content:'';position:absolute;left:6px;top:30px;bottom:-24px;width:3px;background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;}
-.version-item:last-child::before { display: none; }
-/* 確保即便只有 1 個項目，線條也能畫出（只要不是最後一個項目） */
-/* .version-item:not(:last-child)::before{content:'';position:absolute;left:6px;top:30px;bottom:-24px;width:3px;/* 移除綠色條的變數邏輯，統一改為彩色漸層 */
-/*  background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;} */
+.version-item::before{content:'';position:absolute;left:6px;top:25px;bottom:-24px;width:3px;background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;}
+.version-item:last-child::before{height:20px;bottom:auto;} /* 讓線條在最後一個圓點下方停住 */
 /* 最新版本的 Dot 顏色與卡片邊框 */
 .version-item.latest .version-dot { border-color: #10b981; }
 .version-item.latest .version-card { border-left: 5px solid #10b981; }
@@ -733,19 +730,19 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 /* ══ 由上而下關閉特效 (帶有停留與下沉感) ══ */
 .slide-down-out {
-  /* 總時長拉長至 1.2 秒 */
-  animation: slideDownCloseAnim 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  /* 將時長拉長，並加入慢速彈性 */
+  animation: slideDownCloseAnim 2.1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
 }
 @keyframes slideDownCloseAnim {
-  0%   { transform: translateY(0); opacity: 1; }
-  /* 前段：輕微向上提 (預備動作) */
-  15%  { transform: translateY(-10px); opacity: 1; } 
-  /* 中段：緩慢下沉 (重量感) */
-  40%  { transform: translateY(5px); opacity: 0.95; }
-  /* 後段：極慢速拖行，最後才快速墜落 */
-  70%  { transform: translateY(30px); opacity: 0.7; }
-  /* 終段：完全滑出 */
-  100% { transform: translateY(100vh); opacity: 0; }
+  0%   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+  /* 1. 預備：微微向上提、縮小一點點 (類似被按壓) */
+  15%  { transform: translateY(-15px) scale(0.98) rotate(-2deg); opacity: 1; } 
+  /* 2. 殘留感：開始向下滑，但因為慣性微微往反方向傾斜 */
+  40%  { transform: translateY(10px) scale(1) rotate(1deg); opacity: 0.95; }
+  /* 3. 拖曳感：快速加速下墜，並在過程中輕微扭轉，模擬手滑掉的物理慣性 */
+  70%  { transform: translateY(100px) scale(0.95) rotate(0deg); opacity: 0.6; }
+  /* 4. 完全滑出 */
+  100% { transform: translateY(100vh) scale(0.8) rotate(0deg); opacity: 0; }
 }
 /* ══ 多段殘留、緩慢向左抽離特效 ══ */
 .drawer-slide-out{animation:drawerCloseAnim 0.9s ease-in-out forwards !important;} /* 總時長拉長至 0.9 秒，並使用平滑的 ease-in-out 曲線 */
