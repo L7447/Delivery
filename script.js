@@ -78,7 +78,7 @@ function openWageSettings() {
   
   // 右上角放入重設預設值按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="resetWageSettings()" style="background:var(--sf2); color:var(--t2); border:1px solid var(--border); padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05); transition:0.2s;">↺ 預設值</button>
+    <button onclick="resetWageSettings()" style="background:var(--sf2); color:var(--t2); border:2px solid var(--border); padding:7px 14px; border-radius:16px; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05); transition:0.2s;">↺ 預設值</button>
   `;
 
   // 讀取目前的規則設定
@@ -261,7 +261,7 @@ function saveWageSettings() {
 }
 // 一鍵重設為預設值
 function resetWageSettings() {
-  customConfirm('確定要將基本工資分析設定重設為「系統預設值」嗎？').then(ok => {
+  customConfirm('確定要將『基本工資分析設定』，<br>重設為「系統預設值」嗎？').then(ok => {
     if (ok) {
       S.settings.wageRules = null; // 清空設定即可自動套用 DEFAULT_WAGE_RULES
       saveSettings();
@@ -651,7 +651,7 @@ function fmtHours(hVal) {
   return `${mins}<span style="${unitStyle}">m</span>`;
 }
 
-function toast(msg, ms=2000) {
+function toast(msg, ms=1500) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), ms);
@@ -760,7 +760,7 @@ function closeOverlay(id) {
 }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
 
-/* 退出按鈕點擊動畫：抽屜式向右慢慢抽離 (附帶停留感) */
+/* 退出按鈕點擊動畫：抽屜式往左慢慢抽離 (附帶停留感) */
 window.animateClose = function(btn, action) {
   const img = btn.querySelector('img');
   if (img) img.src = 'images/close2.png';
@@ -769,7 +769,7 @@ window.animateClose = function(btn, action) {
   // 自動往上尋找最外層的頁面或彈窗容器
   const targetWrap = btn.closest('.overlay-page, #detail-overlay, #full-calendar-overlay, .page');
   
-  // 套用抽屜向右滑出特效
+  // 套用抽屜往左滑出特效
   if (targetWrap) {
     targetWrap.classList.add('drawer-slide-out');
   }
@@ -778,7 +778,7 @@ window.animateClose = function(btn, action) {
   setTimeout(() => {
     action(); // 執行原本的關閉指令
     
-    // 動作執行完畢後，移除動畫 Class，確保下次開啟時畫面不會躲在右邊
+    // 動作執行完畢後，移除動畫 Class，確保下次開啟時，動畫能再次被觸發
     if (targetWrap) {
       targetWrap.classList.remove('drawer-slide-out');
     }
@@ -847,8 +847,8 @@ window.animateSubPageReturn = function(btn, action) {
 /* 專屬：向右翻頁並停留 2 秒的關閉動畫 */
 window.flipCloseOverlay = function(btn, overlayId) {
   const overlay = document.getElementById(overlayId);
-  const img = btn.querySelector('img');
 
+  const img = btn.querySelector('img');
   if (img) img.src = 'images/close2.png';
   btn.style.pointerEvents = 'none';
 
@@ -2536,14 +2536,21 @@ function openDetailOverlay(id) {
   const hourDisplay = isOnline ? '<span style="color:var(--green); font-weight:800;">計時中...</span>' : (r.hours>0 ? fmtHours(r.hours) : '—');
 
   const rows = [ ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${safeText(plat.name)}</span>`], ['📆 日期', safeText(r.date)], ['⏱ 打卡', punchDisplay], ['🕐 工時', hourDisplay], ['📦 接單數', r.orders>0?`${r.orders} 單`:'—'], ['🛣️ 行駛里程', r.mileage>0?`${r.mileage} km`:'—'], ['💰 行程收入',`NT$ ${fmt(r.income)}`], ['🎁 固定獎勵',r.bonus>0?`NT$ ${fmt(r.bonus)}`:'—'], ['⚡ 臨時獎勵',r.tempBonus>0?`NT$ ${fmt(r.tempBonus)}`:'—'], ['🤑 小費', r.tips>0?`NT$ ${fmt(r.tips)}`:'—'], ['📝 備註', r.note ? safeTextWithBr(r.note) : '—'] ];
-  document.getElementById('detail-body').innerHTML = `<div style="text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--border)"><div style="font-size:13px;color:var(--t3);margin-bottom:4px">本筆總收入</div><div style="font-family:var(--mono);font-size:38px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}</div></div><div style="margin-top:12px">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--t3)">${l}</span><span style="font-size:13px;font-weight:500">${v}</span></div>`).join('')}</div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="closeDetailOverlay();openAddPage(${JSON.stringify(r).replace(/"/g,'&quot;')})" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--acc-d);color:var(--acc);border:1px solid rgba(255,107,53,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">✎ 編輯</button><button onclick="deleteRecord('${safeText(r.id)}')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">🗑 刪除</button></div>`;
+  document.getElementById('detail-body').innerHTML = `
+    <div style="text-align:center;padding:10px 0 16px;border-bottom:1px solid var(--border)"><div style="font-size:13px;color:var(--t3);margin-bottom:4px">本筆總收入</div><div style="font-family:var(--mono);font-size:38px;font-weight:700;color:var(--green)">NT$ ${fmt(total)}
+    </div></div><div style="margin-top:12px">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--t3)">${l}
+    </span><span style="font-size:13px;font-weight:500">${v}
+    </span></div>`).join('')}
+    </div><div style="display:flex;gap:8px;margin-top:16px"><button onclick="closeDetailOverlay();openAddPage(${JSON.stringify(r).replace(/"/g,'&quot;')}
+    )" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--acc-d);color:var(--acc);border:1px solid rgba(255,107,53,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">✎ 編輯</button><button onclick="deleteRecord('${safeText(r.id)}
+    ')" style="flex:1;padding:12px;border-radius:var(--rs);background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3);font-size:14px;font-family:var(--sans);cursor:pointer;font-weight:600">🗑 刪除</button></div>`;
   document.getElementById('detail-overlay').classList.add('show');
 }
 async function deleteRecord(id) { closeDetailOverlay(); const ok = await customConfirm('確定要<span style="color:var(--red);"> 刪除 </span>這筆記錄嗎？<br><span style="color:var(--text-blue);font-weight:700;">此動作無法復原。</span>'); if (!ok) return; S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除'); if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory(); }
 
 /* ══ 替換：搜尋功能 (保留快速標籤點擊與過濾，新增動態年份區間) ══ */
 function openSearch() { 
-  openOverlay('search-page'); 
+  openOverlay('search-page');
 
   // 動態生成「年份快速選擇」標籤 (自動抓取記錄中的所有年份)
   let yearContainer = document.getElementById('dynamic-year-tags');
@@ -7084,7 +7091,6 @@ window.openRecordStats = function() {
   
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => openAccountStats())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">
       🔙 返回
@@ -7278,7 +7284,6 @@ window.openAdminUserList = async function() {
   // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
@@ -7452,7 +7457,6 @@ window.openAdminCreateUser = function() {
   // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => openAdminUserList())" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff; border:1px solid #047857; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
@@ -7524,7 +7528,6 @@ window.openAdminBannedList = async function() {
   // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
@@ -7623,7 +7626,6 @@ function openAdminSystemSettings() {
   // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
@@ -7704,7 +7706,6 @@ function openAdminGasPriceEdit() {
   // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
@@ -7785,7 +7786,6 @@ window.openAdminOnlineUsers = async function() {
   // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
@@ -7857,7 +7857,6 @@ window.openAnnouncementEdit = function() {
   // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
   // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
@@ -7961,37 +7960,43 @@ window.openVersionHistory = function() {
     : '';
 
   // 排序：將日期轉為時間戳記進行降冪排序
-  let versions = Array.isArray(S.settings.versions) ? [...S.settings.versions] : [];
+  const versions = Array.isArray(S.settings.versions) ? [...S.settings.versions] : [];
   versions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   let html = `<div class="version-container">`;
   
-  versions.forEach((v, idx) => {
-    const isLatest = (idx === 0);
-    const isAdmin = USER.role === 'admin';
-    
-    html += `
-      <div class="version-item ${isLatest ? 'latest' : ''}">
-        <div class="version-dot"></div>
-        <div class="version-card">
-          <div class="version-header">
-            <span class="version-ver">v${safeText(v.ver)} ${isLatest ? '<span class="version-ver-badge">最新</span>' : ''}</span>
-            <span class="version-date">${safeText(v.date)}</span>
+  if (versions.length > 0) {
+    versions.forEach((v, idx) => {
+      const isLatest = (idx === 0);
+      const isAdmin = USER.role === 'admin';
+      
+      html += `
+        <div class="version-item ${isLatest ? 'latest' : ''}">
+          <div class="version-dot"></div>
+          <div class="version-card">
+            <div class="version-header">
+              <span class="version-ver">
+                  v${safeText(v.ver)} 
+                  ${isLatest ? '<span class="version-ver-badge">最新</span>' : ''}
+              </span>
+              <span class="version-date">${safeText(v.date)}</span>
+            </div>
+            <div class="version-body">${safeTextWithBr(v.note)}</div>
+            
+            ${isAdmin ? `
+            <div style="padding:0 16px 12px; display:flex; gap:8px;">
+              <button onclick="openEditVersion('${v.ver}')" class="btn-acc" style="padding:4px 12px; font-size:11px;">編輯</button>
+              <button onclick="deleteVersion('${v.ver}')" style="padding:4px 12px; font-size:11px; background:#fef2f2; color:#dc2626; border:1px solid #fecdd3; border-radius:12px; cursor:pointer;">刪除</button>
+            </div>` : ''}
           </div>
-          <div class="version-body">${safeTextWithBr(v.note)}</div>
-          
-          ${isAdmin ? `
-          <div style="padding:0 16px 12px; display:flex; gap:8px;">
-            <button onclick="openEditVersion('${v.ver}')" class="btn-acc" style="padding:4px 12px; font-size:11px;">編輯</button>
-            <button onclick="deleteVersion('${v.ver}')" style="padding:4px 12px; font-size:11px; background:#fef2f2; color:#dc2626; border:1px solid #fecdd3; border-radius:12px; cursor:pointer;">刪除</button>
-          </div>` : ''}
         </div>
-      </div>
-    `;
-  });
+      `;
+    });
+  } else {
+    html += `<div class="empty-tip">目前尚無版本更新紀錄</div>`;
+  }
   
   html += `</div>`;
-
   document.getElementById('sub-body').innerHTML = html;
 
   // 左上角 X 改為 flipCloseOverlay（與聯絡我們一樣向右翻頁關閉）
@@ -8007,13 +8012,13 @@ window.openVersionHistory = function() {
 // 2. 新增版本頁面
 window.openAddVersion = function() {
   document.getElementById('sub-title').textContent = '新增版本';
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
   // 右上角放「返回」
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
   `;
-  // 關閉按鈕暫時隱藏（由右上角返回取代）
-  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  closeBtn.style.display = 'none';
 
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:20px;">
@@ -8043,6 +8048,14 @@ window.openEditVersion = function(ver) {
   if (!v) return;
 
   document.getElementById('sub-title').textContent = '編輯版本紀錄';
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+  // 右上角放「返回」
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
+  `;
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:20px;">
       <div class="fg"><label>版本號</label><input type="text" class="finp" id="edit-ver" value="${safeText(v.ver)}" readonly style="background:#f1f5f9;"></div>
@@ -8479,6 +8492,9 @@ window.openAddReward = function() {
   editingRewardId = null;
   document.getElementById('sub-title').textContent = '新增進階獎勵項目'; 
   
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => openRewardSettings())" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#ffffff; border:1px solid #6d28d9; padding:6px 8px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(139,92,246,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
@@ -8494,9 +8510,12 @@ window.openEditReward = function(id) {
   editingRewardId = id;
   document.getElementById('sub-title').textContent = '編輯獎勵項目'; 
   
+  // 👇 強制隱藏左上角的 X 按鈕
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
   // 👇 注入返回清單按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openRewardSettings(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
   // 深拷貝一份階距陣列，避免直接修改到原始資料
