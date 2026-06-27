@@ -795,13 +795,13 @@ window.animateReturnClose = function(btn, action) {
   const targetWrap = btn.closest('.overlay-page, #sub-page, #detail-overlay, #full-calendar-overlay');
   // 套用向下滑出特效
   if (targetWrap){targetWrap.classList.add('slide-down-out');}
-  // 設定 2100ms (即 2.1秒) 延遲，配合 CSS 動畫播完後再執行關閉
+  // 設定 1400ms (即 1.4秒) 延遲，配合 CSS 動畫播完後再執行關閉
   setTimeout(() => {
     action(); // 執行返回指令
     // 動作執行完畢後，移除動畫 Class
     if (targetWrap){targetWrap.classList.remove('slide-down-out');}
     btn.style.pointerEvents = 'auto';
-  }, 5100);
+  }, 1400);
 }
 /* 子頁面內部切換專用：內容向下滑出並淡入新內容 (解決背景閃爍破綻) */
 window.animateSubPageReturn = function(btn, action) {
