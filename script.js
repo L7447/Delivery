@@ -7900,10 +7900,10 @@ window.openAnnouncementEdit = function() {
           <label>顯示樣式</label>
           <select class="fsel" id="ann-style" style="padding:8px;">
             <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
-            <option value="neon" ${ann.style==='neon'?'selected':''}>⚡ 電競霓虹</option>
-            <option value="festive" ${ann.style==='festive'?'selected':''}>🎉 節慶喜慶</option>
-            <option value="urgent" ${ann.style==='urgent'?'selected':''}>🚨 警示緊急</option>
-            <option value="glitch" ${ann.style==='glitch'?'selected':''}>📜 日系紙質</option>
+            <option value="cute-gold" ${ann.style==='cute-gold'?'selected':''}>萌趣金幣樂園</option>
+            <option value="bear-party" ${ann.style==='bear-party'?'selected':''}>熊熊冒險派對</option>
+            <option value="gem-feast" ${ann.style==='gem-feast'?'selected':''}>華麗寶石盛宴</option>
+            <option value="candy-dream" ${ann.style==='candy-dream'?'selected':''}>夢幻糖果王國</option>
           </select>
         </div>
         <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0;">
