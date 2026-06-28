@@ -1397,63 +1397,52 @@ function getFloatingAnnouncementHtml() {
   `;
 }
 
-/* ══ 公告：click 委派（勾選 + 確認） ══ */
+/* ══ 公告：click 委派（勾選 + 確認）══ */
 document.addEventListener('click', function(e) {
-  const tgt = e.target;
+  // 檢查是否點擊到關閉按鈕或其子元素 (圖片)
+  const closeBtn = e.target.closest('#close-ann-btn');
+  const checkbox = e.target.closest('#ann-checkbox');
 
   // ── 勾選「不再顯示」──
-  if (tgt && (tgt.id === 'ann-checkbox' || tgt.id === 'ann-cb-box' || tgt.id === 'ann-cb-label' ||
-      (tgt.closest && tgt.closest('#ann-checkbox')))) {
-    const box   = document.getElementById('ann-checkbox');
+  if (checkbox) {
+    const box = document.getElementById('ann-checkbox');
     const cbBox = document.getElementById('ann-cb-box');
-    if (!box || !cbBox) return;
     const nowChecked = !(box.dataset.checked === 'true');
     box.dataset.checked = String(nowChecked);
-    // 取得當前樣式的勾選色（從 close-ann-btn 按鈕背景推算；保險起見直接用藍色）
+    
     if (nowChecked) {
-      cbBox.style.cssText += ';background:#3b82f6;border-color:#3b82f6;';
-      cbBox.innerHTML = '<span style="color:#fff;font-size:15px;font-weight:900;line-height:1;">✓</span>';
+      cbBox.style.cssText = 'width:20px;height:20px;border:2px solid #fff;border-radius:5px;background:#3b82f6;border-color:#3b82f6;display:flex;align-items:center;justify-content:center;';
+      cbBox.innerHTML = '<span style="color:#fff;font-size:14px;font-weight:900;">✓</span>';
     } else {
-      cbBox.style.background = '';
-      cbBox.style.borderColor = '';
+      cbBox.style.cssText = 'width:20px;height:20px;border:2px solid #fff;border-radius:5px;';
       cbBox.innerHTML = '';
     }
-    e.stopPropagation();
     return;
   }
 
   // ── 確認閱讀按鈕 ──
-  if (tgt && tgt.id === 'close-ann-btn') {
-    const box      = document.getElementById('ann-checkbox');
+  if (closeBtn) {
+    const box = document.getElementById('ann-checkbox');
     const isChecked = box ? box.dataset.checked === 'true' : false;
-    // 版本號優先從 button 的 data-ver 取（HTML 渲染時已嵌入）
-    const annVer   = tgt.dataset.ver || '';
-    const canDismiss = isChecked && annVer;
-
+    const annVer = closeBtn.dataset.ver || '';
+    
     const removeOverlay = () => {
       const ov = document.getElementById('home-announcement-overlay');
       if (ov) ov.remove();
     };
 
-    if (canDismiss) {
-      // 先把 overlay 暫時提升，讓 confirm 彈窗能正確蓋在上面
-      const ov = document.getElementById('home-announcement-overlay');
-      if (ov) ov.style.zIndex = '99980'; // 壓低，讓 confirm-overlay(999999) 蓋上
+    if (isChecked && annVer) {
       customConfirm('確定永久隱藏此公告嗎？').then(ok => {
         if (ok) {
           localStorage.setItem('delivery_ann_dismissed_ver', annVer);
           removeOverlay();
-          toast('✅ 已設定不再顯示', 500);
-        } else {
-          // 取消：還原 z-index
-          if (ov) ov.style.zIndex = '99990';
+          toast('✅ 已設定不再顯示');
         }
       });
     } else {
       removeOverlay();
-      toast('✅ 已閱讀', 500);
+      toast('✅ 已閱讀');
     }
-    e.stopPropagation();
   }
 });
 
@@ -7068,12 +7057,12 @@ async function openAccountStats() {
       📢 編輯首頁系統公告
     </button>
 
-    <button onclick="logoutWithConfirm()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出當前帳號</button>
+    <button onclick="logoutWithConfirm()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
   </div>`;
 }
 // 新增：登出確認框
 window.logoutWithConfirm = function() {
-  customConfirm('確定要登出當前帳號嗎？<br><span style="color:#ef4444;font-size:13px;">登出後需重新登入才能新增記錄</span>').then(ok => {
+  customConfirm('確定要<span style="color:var(--text-blue);font-size:15px;font-weight:750;"> 登出帳號 </span>嗎？').then(ok => {
     if (ok) {
       // 執行登出
       USER = {email:null, verified:false, loggedIn:false, joinDate:null, token:null, role:"user"};
