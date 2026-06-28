@@ -691,37 +691,38 @@ input:checked + .slider:before { transform: translateX(20px); }
 .ann-aurora .ann-title { color:#fff; }
 .ann-aurora .ann-body { background:rgba(0,0,0,0.2); color:#fff; }
 @keyframes annHoloSlow { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-/* ══ 1. 甜點王國風 (Soft Pastel) - 替代原本的電競霓虹 ══ */
-.ann-neon { background: #fffdf5; border: 6px solid #ffdeeb; border-radius: 40px; box-shadow: 0 10px 0 #ffd6e0; }
-.ann-neon .ann-title { color: #ff85a2; font-size: 28px; text-shadow: 1px 1px 0 #fff; }
-.ann-neon .ann-body { background: #fff5f7; color: #884d5c; border: 2px dashed #ffcce0; }
-.ann-neon .ann-btn { background: #ff85a2; color: #fff; border-radius: 50px; box-shadow: 0 4px 0 #d16b84; }
-
-/* 2. 蝦皮遊戲風 (Shopee Style) - 替代原本的節慶喜慶 */
-.ann-festive { background: #fffbf0; border: 5px solid #ff6600; border-radius: 30px; box-shadow: 0 8px 0 #e65c00; }
-.ann-festive .ann-title { color: #ff6600; text-shadow: 0 1px 0 #fff; }
-.ann-festive .ann-body { background: #ffe0cc; color: #803300; border: none; }
-.ann-festive .ann-btn { background: #ff6600; color: #fff; font-weight: 900; box-shadow: 0 4px 0 #cc5200; }
-
-/* 3. 森林小屋風 (Woodland) - 替代原本的警示緊急 */
-.ann-urgent { background: #fdf6e3; border: 8px solid #d4a373; border-radius: 45px; box-shadow: inset 0 0 20px rgba(0,0,0,0.05); }
-.ann-urgent .ann-title { color: #6f4e37; }
-.ann-urgent .ann-body { background: #faedcd; color: #5a3e2b; border: 2px solid #d4a373; }
-.ann-urgent .ann-btn { background: #6f4e37; color: #faedcd; border-radius: 20px; box-shadow: 0 4px 0 #4a3424; }
-
-/* 4. 極光海洋風 (Ocean Breeze) - 替代原本的故障藝術 */
-.ann-glitch { background: linear-gradient(180deg, #e0f7fa 0%, #ffffff 100%); border: 4px solid #00acc1; border-radius: 35px; box-shadow: 0 10px 30px rgba(0,172,193,0.2); }
-.ann-glitch .ann-title { color: #007c91; }
-.ann-glitch .ann-body { background: #b2ebf2; color: #006064; border: none; }
-.ann-glitch .ann-btn { background: #00acc1; color: #ffffff; border-radius: 50px; box-shadow: 0 4px 0 #007c91; }
-
+/* 新風格1: 萌趣金幣樂園 (Cute Golden Paradise) - 多層金幣堆疊 + 軟萌圓角框架 */
+.ann-cute-gold{background:linear-gradient(135deg,#fefce8 0%,#fcd34d 40%,#f59e0b 100%);border:8px solid #d97706;border-image:linear-gradient(#fbbf24,#b45309) 1;box-shadow:0 0 25px rgba(245,158,11,0.6),inset 0 0 40px rgba(254,215,170,0.8),0 15px 35px rgba(180,83,9,0.4);border-radius:28px;overflow:hidden;position:relative;}
+.ann-cute-gold::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,0.9) 0%,transparent 40%),url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><circle cx=%2720%27 cy=%2725%27 r=%278%27 fill=%27%23fbbf24%27 opacity=%270.25%27/><circle cx=%2775%27 cy=%2745%27 r=%2710%27 fill=%27%23f59e0b%27 opacity=%270.2%27/></svg>') repeat;pointer-events:none;z-index:1;opacity:0.6;}
+.ann-cute-gold .ann-title{color:#78350f;text-shadow:2px 2px 0 #fbbf24,-2px -2px 0 #b45309;font-weight:900;letter-spacing:3px;}
+.ann-cute-gold .ann-body{background:rgba(255,248,230,0.95);color:#451a03;border:3px solid #d97706;border-radius:18px;}
+.ann-cute-gold .ann-btn{background:linear-gradient(#fcd34d,#f59e0b);color:#451a03;border:4px solid #78350f;box-shadow:0 6px 0 #78350f;font-weight:800;}
+/* 新風格2:熊熊冒險派對 (Bear Adventure Party) - 木質標牌 + 溫暖毛絨層次 */
+.ann-bear-party{background:linear-gradient(#f5e8c7,#e8b923);border:12px solid #854d0e;box-shadow:0 10px 30px rgba(133,77,14,0.5),inset 0 8px 20px rgba(245,230,199,0.9);border-radius:32px;position:relative;}
+.ann-bear-party::before{content:'';position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:80px;height:18px;background:#854d0e;border-radius:50%;box-shadow:0 4px 8px rgba(0,0,0,0.3);}
+.ann-bear-party::after{content:'';position:absolute;inset:12px;border:3px dashed #fcd34d;border-radius:22px;opacity:0.7;}
+.ann-bear-party .ann-title{color:#78350f;text-shadow:3px 3px 2px #451a03;}
+.ann-bear-party .ann-body{background:#fffbeb;color:#451a03;border:4px solid #b45309;}
+.ann-bear-party .ann-btn{background:#b45309;color:#fefce8;border:5px solid #451a03;box-shadow:0 8px 0 #451a03;}
+/* 新風格3:華麗寶石盛宴 (Gemstone Feast) - 多層寶石光澤 + 粉橘漸層 */
+.ann-gem-feast{background:linear-gradient(120deg,#fce7f3 0%,#f472b6 35%,#ec4899 70%,#9f1239 100%);border:10px double #f472b6;box-shadow:0 0 40px rgba(236,72,153,0.7),inset 0 0 60px rgba(253,230,138,0.6),0 20px 45px rgba(159,18,57,0.4);border-radius:26px;position:relative;}
+.ann-gem-feast::before{content:'';position:absolute;inset:0;background:repeating-radial-gradient(circle at 40% 30%,rgba(253,224,71,0.4) 0px,transparent 12px,transparent 20px);opacity:0.5;}
+.ann-gem-feast .ann-title{color:#fefce8;text-shadow:0 0 10px #eab308,0 0 20px #ec4899;letter-spacing:4px;}
+.ann-gem-feast .ann-body{background:rgba(253,230,138,0.92);color:#831843;border:3px solid #f472b6;}
+.ann-gem-feast .ann-btn{background:linear-gradient(#eab308,#f59e0b);color:#831843;border:4px solid #9f1239;box-shadow:0 6px 18px rgba(236,72,153,0.5);}
+/* 新風格4:夢幻糖果王國 (Candy Dream Kingdom) - 糖果彩虹 + 立體糖霜邊框 */
+.ann-candy-dream{background:linear-gradient(145deg,#a5f3fc 0%,#c084fc 45%,#f472b6 100%);border:14px solid transparent;border-image:linear-gradient(45deg,#67e8f9,#c084fc,#fb923c,#f472b6) 1;box-shadow:0 0 35px rgba(192,132,252,0.8),0 12px 40px rgba(103,232,249,0.5);border-radius:36px;position:relative;overflow:hidden;}
+.ann-candy-dream::before{content:'';position:absolute;inset:8px;background:repeating-linear-gradient( 45deg,rgba(251,191,36,0.25),rgba(251,191,36,0.25) 8px,transparent 8px,transparent 20px );border-radius:26px;}
+.ann-candy-dream .ann-title{color:#1e3a8a;text-shadow:2px 2px 0 #67e8f9,-2px -2px 0 #c084fc;font-weight:900;}
+.ann-candy-dream .ann-body{background:rgba(255,255,255,0.9);color:#1e40af;border:4px solid #f472b6;border-radius:20px;}
+.ann-candy-dream .ann-btn{background:linear-gradient(#67e8f9,#c084fc);color:#1e3a8a;border:5px solid #1e40af;box-shadow:0 8px 0 #1e40af;font-size:1.1em;}
 
 /* ══ 版本紀錄專屬時間軸樣式 ══ */
 .version-container { padding: 20px 16px; }
 .version-item{position:relative;margin-bottom:24px;padding-left:24px;}
 /* 多段線性漸層時間軸線 */
 .version-item::before{content:'';position:absolute;left:6px;top:25px;bottom:-24px;width:3px;background:linear-gradient(to bottom,#3b82f6,#8b5cf6,#ec4899);z-index:1;}
-.version-item:last-child::before{height:50px;bottom:auto;} /* 讓線條在最後一個圓點下方停住 */
+.version-item:last-child::before{height:60px;bottom:auto;} /* 讓線條在最後一個圓點下方停住 */
 /* 最新版本的 Dot 顏色與卡片邊框 */
 .version-item.latest .version-dot { border-color: #10b981; }
 .version-item.latest .version-card { border-left: 5px solid #10b981; }
