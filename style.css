@@ -580,96 +580,30 @@ input:checked + .slider:before { transform: translateX(20px); }
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
   box-shadow: 0 2px 4px rgba(0,0,0,0.03);
 }
-.search-quick-tag:active {
-  transform: scale(0.9);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-}
+.search-quick-tag:active{transform:scale(0.9);box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);}
 
 /* ══ 首頁日程表：今日專屬跑馬燈雷射外框 ══ */
-@keyframes spinMarquee { 
-  100% { transform: rotate(360deg); } 
-}
-.marquee-today-card {
-  position: relative;
-  border-radius: 25px;
-  padding: 2px; /* 這裡的 padding 會變成跑馬燈邊框的粗細 */
-  overflow: hidden;
-  z-index: 1;
-}
+@keyframes spinMarquee { 100% { transform: rotate(360deg); } }
+.marquee-today-card{position:relative;border-radius:25px;padding:2px;overflow:hidden;z-index:1;}
 /* 旋轉的漸層背景 (放在最底層) */
-.marquee-today-card::before {
-  content: '';
-  position: absolute;
-  top: -50%; left: -50%; width: 200%; height: 200%;
-  background: conic-gradient(transparent, transparent, transparent, #22c55e, #86efac);
-  animation: spinMarquee 2.5s linear infinite;
-  z-index: -2;
-}
+.marquee-today-card::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:conic-gradient(transparent,transparent,transparent,#22c55e,#86efac);animation:spinMarquee 2.5s linear infinite;z-index:-2;}
 /* 白色的內層遮罩 (擋住中間，只露出邊緣) */
-.marquee-today-card::after {
-  content: '';
-  position: absolute;
-  inset: 2px; /* 必須跟上面的 padding 一樣 */
-  background: #ffffff;
-  border-radius: 25px;
-  z-index: -1;
-}
-
+.marquee-today-card::after{content:'';position:absolute;inset:2px;/* 必須跟上面的 padding 一樣 */
+ background:#ffffff;border-radius:25px;z-index:-1;}
 /* 確保彈窗層級永遠大於公告 */
-.gaming-card {
-  background: linear-gradient(145deg, #1a1c2c, #0f101a);
-  border: 2px solid #3b82f6;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.2);
-  color: #e2e8f0;
-}
+.gaming-card{background:linear-gradient(145deg,#1a1c2c,#0f101a);border:2px solid #3b82f6;box-shadow:0 0 20px rgba(59,130,246,0.5),inset 0 0 10px rgba(59,130,246,0.2);color:#e2e8f0;}
 /* 將電競卡片文字結構化 */
-.gaming-card h2 {
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-left: 4px solid #3b82f6;
-  padding-left: 10px;
-}
+.gaming-card h2{text-transform:uppercase;letter-spacing:1px;border-left:4px solid #3b82f6;padding-left:10px;}
 /* 讓日期與標題有個對比色區隔 */
-.gaming-card .date-label {
-  color: #38bdf8;
-  font-size: 11px;
-  background: rgba(56, 189, 248, 0.1);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-.gaming-btn {
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
+.gaming-card .date-label{color:#38bdf8;font-size:11px;background:rgba(56,189,248,0.1);padding:2px 8px;border-radius:4px;}
+.gaming-btn{background:linear-gradient(90deg,#3b82f6,#8b5cf6);color:white;border:none;border-radius:8px;padding:12px;font-weight:800;cursor:pointer;}
+
 /* ══ 系統級彈窗與遮罩層級 ══ */
 /* 永遠保持最高，確保永遠在公告之上 */
-#confirm-overlay { 
-  position: fixed !important; 
-  inset: 0 !important; 
-  background: rgba(0,0,0,0.6) !important; 
-  backdrop-filter: blur(6px) !important; 
-  z-index: 999999 !important; 
-  display: none; 
-  align-items: center; 
-  justify-content: center; 
-  padding: 24px; 
-}
-#confirm-overlay.show { display: flex !important; }
+#confirm-overlay{position:fixed !important;inset:0 !important;background:rgba(0,0,0,0.6) !important;backdrop-filter:blur(6px) !important;z-index:999999 !important;display:none;align-items:center;justify-content:center;padding:24px;}
+#confirm-overlay.show{display:flex !important;}
 /* 彈窗內容容器 */
-#confirm-box { 
-  background: #ffffff; 
-  border-radius: 24px; 
-  padding: 24px; 
-  width: 100%; 
-  max-width: 320px; 
-  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.2);
-}
+#confirm-box{background:#ffffff;border-radius:24px;padding:24px;width:100%;max-width:320px;box-shadow:0 20px 40px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);}
 
 /* 公告 overlay —— 固定全屏，低於 confirm-overlay (999999) 但高於其他頁面 */
 #home-announcement-overlay{z-index:99990 !important;}
@@ -677,11 +611,11 @@ input:checked + .slider:before { transform: translateX(20px); }
 #home-announcement-card { transition: transform 0.12s; }
 #home-announcement-card:active { transform: scale(0.985); }
 /* ══ 系統公告容器基礎設定 ══ */
-.ann-overlay { position:fixed; inset:0; z-index:99990; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); }
+.ann-overlay{position:fixed;inset:0;z-index:99990 !important;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);pointer-events:auto;}
 .ann-card { position:relative; width:100%; max-width:380px; border-radius:24px; padding:24px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); }
 .ann-title{font-size:24px;font-weight:950;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;gap:10px;}
 .ann-body { font-size:14px; line-height:1.6; padding:15px; border-radius:12px; margin-bottom:20px; }
-.ann-btn { width:100%; padding:14px; border-radius:12px; font-weight:900; cursor:pointer; border:none; transition:0.3s; }
+.ann-btn{width:100%;padding:14px;border-radius:12px;font-weight:900;cursor:pointer;border:none;transition:0.3s;pointer-events:auto !important;}
 /* 日期與版本膠囊框 */
 .ann-meta{display:flex;gap:8px;margin-bottom:16px;}
 .ann-tag{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;border:1px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.2);}
