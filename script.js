@@ -793,15 +793,24 @@ window.animateReturnClose = function(btn, action) {
   btn.style.pointerEvents = 'none'; // 鎖定按鈕防止連點
   // 自動往上尋找最外層的頁面容器
   const targetWrap = btn.closest('.overlay-page, #sub-page, #detail-overlay, #full-calendar-overlay');
-  // 套用向下滑出特效
-  if (targetWrap){targetWrap.classList.add('slide-down-out');}
-  // 設定 1400ms (即 1.4秒) 延遲，配合 CSS 動畫播完後再執行關閉
+
+  if (targetWrap) {
+    // 檢查是否為旋轉狀態 (全螢幕日曆)
+    if (targetWrap.id === 'full-calendar-overlay' && window.innerWidth < window.innerHeight) {
+        targetWrap.classList.add('slide-down-out-rotated');
+    } else {
+        targetWrap.classList.add('slide-down-out');
+    }
+  }
+
   setTimeout(() => {
-    action(); // 執行返回指令
-    // 動作執行完畢後，移除動畫 Class
-    if (targetWrap){targetWrap.classList.remove('slide-down-out');}
+    action(); 
+    if (targetWrap) {
+        targetWrap.classList.remove('slide-down-out');
+        targetWrap.classList.remove('slide-down-out-rotated');
+    }
     btn.style.pointerEvents = 'auto';
-  }, 1400);
+  }, 1400); 
 }
 /* 子頁面內部切換專用：內容向下滑出並淡入新內容 (解決背景閃爍破綻) */
 window.animateSubPageReturn = function(btn, action) {
@@ -7894,7 +7903,7 @@ window.openAnnouncementEdit = function() {
             <option value="neon" ${ann.style==='neon'?'selected':''}>⚡ 電競霓虹</option>
             <option value="festive" ${ann.style==='festive'?'selected':''}>🎉 節慶喜慶</option>
             <option value="urgent" ${ann.style==='urgent'?'selected':''}>🚨 警示緊急</option>
-            <option value="paper" ${ann.style==='paper'?'selected':''}>📜 日系紙質</option>
+            <option value="glitch" ${ann.style==='glitch'?'selected':''}>📜 日系紙質</option>
           </select>
         </div>
         <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0;">
