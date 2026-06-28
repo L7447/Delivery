@@ -212,15 +212,20 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
   #full-calendar-overlay.show{width:100vh;height:100vw;transform:rotate(90deg);transform-origin:top left;position:fixed;top:0;left:100vw;}
   #fc-body { padding-bottom: 5px !important; }
   .slide-down-out-rotated {
-    /* 這裡使用一個專門給旋轉後元素的動畫，從 90 度轉回 0 度並隱藏 */
-    animation: rotateAndDown 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
-  }  
+    /* 改用更緩慢的曲線 */
+    animation: rotateAndDown 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  }
 }
 @keyframes rotateAndDown {
-  0%   { transform: rotate(90deg) translateY(0); opacity: 1; }
-  15%  { transform: rotate(90deg) translateY(-10px); }
-  70%  { transform: rotate(90deg) translateY(30px); opacity: 0.6; }
-  100% { transform: rotate(90deg) translateY(100vh); opacity: 0; }
+  0%{transform:rotate(90deg) translateY(0);opacity:1;}
+  /* 1. 預備動作：向上微提 (往左移，因為旋轉了90度) */
+  15%{transform:rotate(90deg) translateY(-20px);opacity:1;}
+  /* 2. 殘留感：停留與緩慢拖曳 */
+  40%{transform:rotate(90deg) translateY(0px);opacity:0.95;}
+  /* 3. 拖曳下滑：這裡將速度變慢，改用 Cubic-Bezier 控制 */
+  70%{transform:rotate(90deg) translateY(60px);opacity:0.6;}
+  /* 4. 完全滑出 */
+  100%{transform:rotate(90deg) translateY(100vh);opacity:0;}
 }
 /* 日曆主體與表頭 (日一二三四五六) */
 #fc-body { background: var(--sf); }
@@ -685,29 +690,31 @@ input:checked + .slider:before { transform: translateX(20px); }
 .ann-aurora .ann-bg { position:absolute; inset:0; background:linear-gradient(125deg, #00feba, #5b54fa, #ff2a85, #ffcc00, #00feba); background-size:400% 100%; animation:annHoloSlow 8s linear infinite; z-index:-1; }
 .ann-aurora .ann-title { color:#fff; }
 .ann-aurora .ann-body { background:rgba(0,0,0,0.2); color:#fff; }
-/* 2. 電競霓虹 (Neon) - 重設計：深藍科技金屬感 */
-.ann-neon { background: linear-gradient(145deg, #0f172a, #1e293b); border: 2px solid #38bdf8; box-shadow: 0 0 30px rgba(56, 189, 248, 0.3); }
-.ann-neon .ann-title { color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; }
-.ann-neon .ann-body { background: #0f172a; color: #cbd5e1; border: 1px solid #334155; }
-.ann-neon .ann-btn { background: #38bdf8; color: #000; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4); }
-/* 3. 節慶喜慶 (Festive) - 重設計：高貴紅金絲絨 */
-.ann-festive { background: #7f1d1d; border: 4px double #f59e0b; }
-.ann-festive .ann-title { color: #f59e0b; }
-.ann-festive .ann-body { background: #991b1b; color: #fff; border: 1px solid #ef4444; }
-.ann-festive .ann-btn { background: #f59e0b; color: #7f1d1d; font-weight: 900; }
-/* 4. 警示緊急 (Urgent) - 重設計：極簡工業黑黃警示 */
-.ann-urgent { background: #18181b; border: 4px solid #eab308; }
-.ann-urgent .ann-title { color: #eab308; }
-.ann-urgent .ann-body { background: #27272a; color: #e4e4e7; border-left: 5px solid #eab308; }
-.ann-urgent .ann-btn { background: #eab308; color: #000; animation: annPulse 1.5s infinite; }
-/* 5. 賽博龐克故障藝術風格 (取代日系紙質) */
-.ann-glitch{background:#000;border:3px solid #ff00ff;box-shadow:10px 10px 0px #00ffff;}
-.ann-glitch .ann-title { color: #fff; text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff; }
-.ann-glitch .ann-body { background: #111; color: #fff; border: 1px solid #333; }
-.ann-glitch .ann-btn { background: #ff00ff; color: #fff; border: 2px solid #fff; }
-.ann-glitch .ann-tag { border: 1px solid #00ffff; color: #00ffff; }
 @keyframes annHoloSlow { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-@keyframes annPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+/* ══ 1. 甜點王國風 (Soft Pastel) - 替代原本的電競霓虹 ══ */
+.ann-neon { background: #fffdf5; border: 6px solid #ffdeeb; border-radius: 40px; box-shadow: 0 10px 0 #ffd6e0; }
+.ann-neon .ann-title { color: #ff85a2; font-size: 28px; text-shadow: 1px 1px 0 #fff; }
+.ann-neon .ann-body { background: #fff5f7; color: #884d5c; border: 2px dashed #ffcce0; }
+.ann-neon .ann-btn { background: #ff85a2; color: #fff; border-radius: 50px; box-shadow: 0 4px 0 #d16b84; }
+
+/* 2. 蝦皮遊戲風 (Shopee Style) - 替代原本的節慶喜慶 */
+.ann-festive { background: #fffbf0; border: 5px solid #ff6600; border-radius: 30px; box-shadow: 0 8px 0 #e65c00; }
+.ann-festive .ann-title { color: #ff6600; text-shadow: 0 1px 0 #fff; }
+.ann-festive .ann-body { background: #ffe0cc; color: #803300; border: none; }
+.ann-festive .ann-btn { background: #ff6600; color: #fff; font-weight: 900; box-shadow: 0 4px 0 #cc5200; }
+
+/* 3. 森林小屋風 (Woodland) - 替代原本的警示緊急 */
+.ann-urgent { background: #fdf6e3; border: 8px solid #d4a373; border-radius: 45px; box-shadow: inset 0 0 20px rgba(0,0,0,0.05); }
+.ann-urgent .ann-title { color: #6f4e37; }
+.ann-urgent .ann-body { background: #faedcd; color: #5a3e2b; border: 2px solid #d4a373; }
+.ann-urgent .ann-btn { background: #6f4e37; color: #faedcd; border-radius: 20px; box-shadow: 0 4px 0 #4a3424; }
+
+/* 4. 極光海洋風 (Ocean Breeze) - 替代原本的故障藝術 */
+.ann-glitch { background: linear-gradient(180deg, #e0f7fa 0%, #ffffff 100%); border: 4px solid #00acc1; border-radius: 35px; box-shadow: 0 10px 30px rgba(0,172,193,0.2); }
+.ann-glitch .ann-title { color: #007c91; }
+.ann-glitch .ann-body { background: #b2ebf2; color: #006064; border: none; }
+.ann-glitch .ann-btn { background: #00acc1; color: #ffffff; border-radius: 50px; box-shadow: 0 4px 0 #007c91; }
+
 
 /* ══ 版本紀錄專屬時間軸樣式 ══ */
 .version-container { padding: 20px 16px; }
@@ -732,19 +739,19 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 /* ══ 由上而下關閉特效 (帶有停留與下沉感) ══ */
 .slide-down-out {
-  animation: slideDownCloseAnim 1.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+  animation: slideDownCloseAnim 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
   pointer-events: none; /* 防止在下墜過程中點擊 */
 }
 @keyframes slideDownCloseAnim {
-  0%   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
-  /* 1. 預備：微微向上提、縮小一點點 (類似被按壓) */
-  15%  { transform: translateY(-15px) scale(0.98) rotate(-2deg); opacity: 1; } 
-  /* 2. 殘留感：開始向下滑，但因為慣性微微往反方向傾斜 */
-  40%  { transform: translateY(10px) scale(1) rotate(1deg); opacity: 0.95; }
-  /* 3. 拖曳感：快速加速下墜，並在過程中輕微扭轉，模擬手滑掉的物理慣性 */
-  70%  { transform: translateY(100px) scale(0.95) rotate(0deg); opacity: 0.6; }
-  /* 4. 完全滑出 */
-  100% { transform: translateY(100vh) scale(0.8) rotate(0deg); opacity: 0; }
+ 0%{transform:translateY(0);opacity:1;}
+/* 1. 預備動作：向上提 (製造被抓起感) */
+ 15%{transform:translateY(-15px);opacity:1;}
+/* 2. 緩慢拖曳：模擬手離開後的重量慣性 */
+ 40%{transform:translateY(0px);opacity:0.9;}
+/* 3. 加速下滑：這裡控制下墜速度，保持 1.8s 的均勻度 */
+ 70%{transform:translateY(60px);opacity:0.5;}
+/* 4. 完全滑出畫面 */
+ 100%{transform:translateY(100vh);opacity:0;}
 }
 /* ══ 多段殘留、緩慢向左抽離特效 ══ */
 .drawer-slide-out{animation:drawerCloseAnim 0.9s ease-in-out forwards !important;} /* 總時長拉長至 0.9 秒，並使用平滑的 ease-in-out 曲線 */
