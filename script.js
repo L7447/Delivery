@@ -1373,24 +1373,22 @@ function getFloatingAnnouncementHtml() {
     <div id="home-announcement-overlay" class="ann-overlay">
       <div id="home-announcement-card" class="ann-card ann-${ann.style}">
         <div class="ann-bg"></div>
-        
-        <!-- 層級 1：突顯標題 -->
+        <!-- 層級 1：突顯公告標題 -->
         <div class="ann-title">📢 ${safeText(ann.title)}</div>
-        
         <!-- 層級 2：框框突顯的日期與版本 -->
         <div class="ann-meta">
             ${ann.date ? `<span class="ann-tag">${safeText(ann.date)}</span>` : ''}
             <span class="ann-tag">v${safeText(annVer || '---')}</span>
         </div>
-
-        <!-- 層級 3：內容區塊 -->
+        <!-- 層級 3：公告內容區塊 -->
         <div class="ann-body">${safeTextWithBr(ann.content)}</div>
-        
-        <div style="margin-bottom:15px; display:flex; align-items:center; gap:8px; cursor:pointer;" id="ann-checkbox" data-checked="false" data-ver="${annVer}">
-            <div id="ann-cb-box" style="width:20px;height:20px;border:2px solid #fff;border-radius:5px;"></div>
-            <span style="font-size:12px; font-weight:700; color:#fff;">不再顯示此版本</span>
+        <!-- 層級 4：不再顯示 -->
+        <div id="ann-checkbox" data-checked="false" data-ver="${annVer}" 
+            style="margin-bottom:25px; display:flex; align-items:center; gap:8px; cursor:pointer; pointer-events:auto; position:relative; z-index:100;">
+            <div id="ann-cb-box" style="width:20px;height:20px;border:2px solid #fff;border-radius:5px;flex-shrink:0; pointer-events:none;"></div>
+            <span style="font-size:12px; font-weight:700; color:#fff; pointer-events:none;">不再顯示此版本</span>
         </div>
-
+        <!-- 層級 5：確認閱讀 -->
         <button id="close-ann-btn" data-ver="${annVer}" class="ann-btn">確認閱讀</button>
       </div>
     </div>
@@ -1399,25 +1397,29 @@ function getFloatingAnnouncementHtml() {
 
 /* ══ 公告：click 委派（勾選 + 確認）══ */
 document.addEventListener('click', function(e) {
-  // 檢查是否點擊到關閉按鈕或其子元素 (圖片)
+  // 檢查是否點擊到公告內的任何元素
+  const checkboxContainer = e.target.closest('#ann-checkbox');
   const closeBtn = e.target.closest('#close-ann-btn');
-  const checkbox = e.target.closest('#ann-checkbox');
 
-  // ── 勾選「不再顯示」──
-  if (checkbox) {
-    const box = document.getElementById('ann-checkbox');
+  // ── 勾選「不再顯示」邏輯 ──
+  if (checkboxContainer) {
+    const box   = checkboxContainer; // 因為已經用了 .closest()，這裡就是容器本身
     const cbBox = document.getElementById('ann-cb-box');
     const nowChecked = !(box.dataset.checked === 'true');
+    
     box.dataset.checked = String(nowChecked);
     
+    // 更新樣式 (這裡直接針對點擊到的 box 進行樣式切換)
     if (nowChecked) {
-      cbBox.style.cssText = 'width:20px;height:20px;border:2px solid #fff;border-radius:5px;background:#3b82f6;border-color:#3b82f6;display:flex;align-items:center;justify-content:center;';
-      cbBox.innerHTML = '<span style="color:#fff;font-size:14px;font-weight:900;">✓</span>';
+      cbBox.style.background = '#3b82f6';
+      cbBox.style.borderColor = '#3b82f6';
+      cbBox.innerHTML = '<span style="color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;">✓</span>';
     } else {
-      cbBox.style.cssText = 'width:20px;height:20px;border:2px solid #fff;border-radius:5px;';
+      cbBox.style.background = 'transparent';
+      cbBox.style.borderColor = '#fff';
       cbBox.innerHTML = '';
     }
-    return;
+    return; // 事件已處理，直接離開
   }
 
   // ── 確認閱讀按鈕 ──
