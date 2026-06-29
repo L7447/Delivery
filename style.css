@@ -614,7 +614,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 .ann-overlay{position:fixed;inset:0;z-index:99990 !important;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);pointer-events:auto;}
 .ann-card { position:relative; width:100%; max-width:380px; border-radius:24px; padding:24px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); }
 .ann-title{font-size:24px;font-weight:950;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;gap:10px;}
-.ann-body { font-size:14px; line-height:1.6; padding:15px; border-radius:12px; margin-bottom:20px; }
+.ann-body { font-size:14px; line-height:1.6; padding:15px; border-radius:12px; margin-bottom:40px; }
 .ann-btn{width:100%;padding:14px;border-radius:12px;font-weight:900;cursor:pointer;border:none;transition:0.3s;position:relative;z-index:100;pointer-events:auto !important;}
 /* 日期與版本膠囊框 */
 .ann-meta{display:flex;gap:8px;margin-bottom:16px;}
