@@ -436,11 +436,11 @@
       font-size: 16px; font-weight: 800; color: #0f172a;
       padding: 8px 4px; 
       /* 負 margin 讓它左右貼齊外框 */
-      margin: 5px -14px 2px -14px;
+      margin: 4px -14px 2px -14px;
       text-align: left; display: flex; align-items: flex-start; line-height: 1.5; letter-spacing: 1px;
-      background: #1e293b; color: #f1f5f9;
-      border-top: 3.5px solid #cbd5e1;
-      border-bottom: 3.5px solid #cbd5e1;
+      background: #1e293b; color: #ffffff;
+      border-top: 4px solid #cbd5e1;
+      border-bottom: 4px solid #cbd5e1;
       box-shadow: 0 4px 6px rgba(0,0,0,0.02);
     }
     /* 👇 新增這段：保護數字標籤 (numPart) 絕對不變形、不換行 */
@@ -515,7 +515,38 @@
     .nav-arrow.prev { left: -16px; }
     .nav-arrow.next { right: -24px; }
     
-
+    .vertical-disclaimer {
+      flex: 0 0 auto;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      background: #fef2f2;
+      color: #dc2626;
+      font-size: 13px; 
+      font-weight: 900; 
+      letter-spacing: 2px;
+      padding: 9px 4px; 
+      border-radius: 8px; 
+      border: 1.5px solid #fca5a5;
+      pointer-events: none; 
+      z-index: 10;
+      text-align: center;
+      top: 6px; 
+      left: -10px;
+      position: absolute;
+      margin-left: 2px;
+      display: flex;
+      align-items: center;
+      gap: 2px; /* 可微調間距 */
+    }
+    /* 新增：讓 AI 保持橫向 */
+    .ai-horizontal {
+      writing-mode: horizontal-tb;     /* 強制水平 */
+      text-orientation: mixed;
+      transform: rotate(0deg);       /* 因為整體是 vertical-rl，需要旋轉讓它正確顯示 */
+      display: inline-block;
+      font-size: 13px;                 /* 可依需要調整大小 */
+      letter-spacing: 0.5px;               /* AI 通常不需要加大間距 */
+    }
 
 
 
@@ -686,7 +717,7 @@
     // --- 定義展示資料結構 ---
     const appData = {
       'home': { name: '今日概況', color: 'var(--c-blue-text)', sections: [ { title: '1.打卡系統', steps: [ { desc: '1-1. 同時多開平台，計算「總工時」。', img: 'intro/int1.png' }, { desc: '1-2. 打卡後，顯示「綠色轉圈」執行中。', img: 'intro/int2.png' }, { desc: '1-3. 打卡後，馬上加入打卡記錄。', img: 'intro/int3.png' }, { desc: '1-4. 上線時間持續累積，即使關閉APP也不中斷。', img: 'intro/int4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/int5.png' } ] }, { title: '2.平台日程表', steps: [ { desc: '結算與發薪提醒<br>（今天的外框，會顯示跑馬燈繞圈）', img: 'intro/int6-1.png' } ] }, { title: '3.目標進度', steps: [ { desc: '目標進度追蹤', img: 'intro/int7.png' } ] }, { title: '4.獎勵進度', steps: [ { desc: '4-1. 目前達標進度。', img: 'intro/int8.png' }, { desc: '4-2. 最高階獎勵完成。', img: 'intro/int9.png' }, { desc: '4-3. 「即將到來」獎勵預覽。', img: 'intro/int10.png' } ] } ] },
-      'history': { name: '查看紀錄', color: 'var(--c-green-text)', sections: [ { title: '1.「日曆查閱、搜尋」記錄列表', steps: [ { desc: '1-1. 「現金小費」記錄。', img: 'intro/int11.png' }, { desc: '1-2. 打卡後，顯示「綠色轉圈」執行中。', img: 'intro/int2.png' }, { desc: '1-3. 全螢幕日曆。', img: 'intro/int3.png' }, { desc: '1-4. 上線時間持續累積，即使關閉APP也不中斷。', img: 'intro/int4.png' }, { desc: '1-5. 下線打卡後，結算上線工時。', img: 'intro/int5.png' } ] }, { title: '週～年記錄表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist2.png' }] } ] },
+      'history': { name: '查看紀錄', color: 'var(--c-green-text)', sections: [ { title: '1.【 日 區間】，「日曆查閱、搜尋」記錄頁', steps: [ { desc: '1-1. 「當日總結卡片」、「各平台卡片」記錄列表。', img: 'intro/int12.png' }, { desc: '1-2. 卡片展開資訊。', img: 'intro/int13.png' }, { desc: '1-3. 全螢幕日曆，當日總金額及顏色區別。', img: 'intro/int19.png' }, { desc: '1-4. 搜尋記錄功能。', img: 'intro/int20.png' } ] }, { title: '2.【 週 區間】記錄列表', steps: [{ desc: '自訂區間查詢與統計', img: 'intro/hist14.png' }] } ] },
       'analysis': { name: '收入分析', color: 'var(--c-yellow-text)', sections: [ { title: '各種分析圖表', steps: [{ desc: '收入結構與佔比圓餅圖', img: 'intro/ana1.png' }, { desc: '歷史趨勢柱狀圖', img: 'intro/ana2.png' }] }, { title: 'TOP 5 排行榜', steps: [{ desc: '單月最佳收入排行', img: 'intro/ana3.png' }] } ] },
       'vehicle': { name: '車輛管理', color: 'var(--c-purple-text)', sections: [ { title: '車輛燃料記錄', steps: [{ desc: '油耗計算與油資統計', img: 'intro/veh1.png' }] }, { title: '保養花費記錄', steps: [{ desc: '保養時間軸與里程追蹤', img: 'intro/veh2.png' }] } ] }
     };
@@ -768,6 +799,9 @@
               <!-- 需求3：圖片與右側標籤的 Flex 並排容器 -->
               <div class="device-body">
                 ${navArrows}
+                <!-- 👇 新增：左側紅色聲明標籤 -->
+                <div class="vertical-disclaimer"> 所有外送數據由<span class="ai-horizontal">AI</span>生成</div>
+                
                 <div class="img-container">
                   <img id="img-${sIdx}" src="${sec.steps[0].img}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'100%\\\' height=\\\'500\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23f8fafc\\\'/><text x=\\\'50%\\\' y=\\\'50%\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%2394a3b8\\\'>圖片</text></svg>'">
                 </div>
