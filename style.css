@@ -615,7 +615,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 .ann-card { position:relative; width:100%; max-width:380px; border-radius:24px; padding:24px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); }
 .ann-title{font-size:24px;font-weight:950;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;gap:10px;}
 .ann-body { font-size:14px; line-height:1.6; padding:15px; border-radius:12px; margin-bottom:20px; }
-.ann-btn{width:100%;padding:14px;border-radius:12px;font-weight:900;cursor:pointer;border:none;transition:0.3s;pointer-events:auto !important;}
+.ann-btn{width:100%;padding:14px;border-radius:12px;font-weight:900;cursor:pointer;border:none;transition:0.3s;position:relative;z-index:100;pointer-events:auto !important;}
 /* 日期與版本膠囊框 */
 .ann-meta{display:flex;gap:8px;margin-bottom:16px;}
 .ann-tag{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;border:1px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.2);}
@@ -627,7 +627,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 @keyframes annHoloSlow { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 /* 新風格1: 萌趣金幣樂園 (Cute Golden Paradise) - 多層金幣堆疊 + 軟萌圓角框架 */
 .ann-cute-gold{background:linear-gradient(135deg,#fefce8 0%,#fcd34d 40%,#f59e0b 100%);border:8px solid #d97706;border-image:linear-gradient(#fbbf24,#b45309) 1;box-shadow:0 0 25px rgba(245,158,11,0.6),inset 0 0 40px rgba(254,215,170,0.8),0 15px 35px rgba(180,83,9,0.4);border-radius:28px;overflow:hidden;position:relative;}
-.ann-cute-gold::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,0.9) 0%,transparent 40%),url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><circle cx=%2720%27 cy=%2725%27 r=%278%27 fill=%27%23fbbf24%27 opacity=%270.25%27/><circle cx=%2775%27 cy=%2745%27 r=%2710%27 fill=%27%23f59e0b%27 opacity=%270.2%27/></svg>') repeat;pointer-events:none;z-index:1;opacity:0.6;}
+.ann-cute-gold::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,0.9) 0%,transparent 40%),url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><circle cx=%2720%27 cy=%2725%27 r=%278%27 fill=%27%23fbbf24%27 opacity=%270.25%27/><circle cx=%2775%27 cy=%2745%27 r=%2710%27 fill=%27%23f59e0b%27 opacity=%270.2%27/></svg>') repeat;z-index:1;opacity:0.6;}
 .ann-cute-gold .ann-title{color:#78350f;text-shadow:2px 2px 0 #fbbf24,-2px -2px 0 #b45309;font-weight:900;letter-spacing:3px;}
 .ann-cute-gold .ann-body{background:rgba(255,248,230,0.95);color:#451a03;border:3px solid #d97706;border-radius:18px;}
 .ann-cute-gold .ann-btn{background:linear-gradient(#fcd34d,#f59e0b);color:#451a03;border:4px solid #78350f;box-shadow:0 6px 0 #78350f;font-weight:800;}
