@@ -697,3 +697,21 @@ input:checked + .slider:before { transform: translateX(20px); }
   75%  { transform: translateX(-50vw); opacity: 0.4; }  /* 第三段：逐漸失去阻力，開始加速 */
   100% { transform: translateX(-100vw); opacity: 0; }   /* 第四段：完全抽離畫面 */
 }
+
+/* --- 同日連接線視覺效果 --- */
+.rec-group-wrapper{position:relative;padding-left:14px;/* 為左側連接線留空間 */
+ margin-bottom:8px;}
+/* 連接主線 */
+.rec-group-line{position:absolute;left:0;top:15px;bottom:15px;width:3px;background:#cbd5e1;/* 灰藍色線條 */
+ border-radius:4px;}
+/* 類似{的彎曲端點 (頂部與底部) */
+.rec-group-line::before,.rec-group-line::after{content:'';position:absolute;left:0;width:10px;height:3px;background:#cbd5e1;}
+.rec-group-line::before{top:0;border-radius:0 4px 4px 0;}
+.rec-group-line::after{bottom:0;border-radius:0 4px 4px 0;}
+/* 每一筆記錄前面的小節點 */
+.rec-node{position:absolute;left:-17px;top:22px;width:10px;height:10px;background:#fff;border:2px solid #3b82f6;border-radius:50%;z-index:2;}
+/* 分頁按鈕樣式 */
+.pagination-ctrl{display:flex;justify-content:center;align-items:center;gap:20px;margin:20px 0;padding-bottom:40px;}
+.pg-btn{padding:8px 16px;background:#fff;border:1.5px solid #cbd5e1;border-radius:12px;font-weight:800;color:#475569;}
+.pg-btn:disabled{opacity:0.4;}
+.pg-info{font-family:var(--mono);font-weight:800;color:#2563eb;}
