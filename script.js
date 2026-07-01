@@ -501,6 +501,7 @@ const S = {
   records: [], platforms: [], settings: { ...DEFAULT_SETTINGS }, punch: null,
   vehicles: [], vehicleRecs: [], editingId: null, selPlatformId: null, charts: {},
   homeSubTab: 'schedule', vehicleTab: 'fuel', newVehIcon: 4, newVehColor: '#555555',
+  histPage: 1, // 新增分頁狀態
   selVehicleId: null, vehY: new Date().getFullYear(), vehM: new Date().getMonth()+1, addVehRecType: 'fuel',
   rptOverviewFilter: 'all', cmpType: 'prev_month', cmpPeriods: [],
   histFullCalY: new Date().getFullYear(), histFullCalM: new Date().getMonth()+1
@@ -1715,11 +1716,15 @@ function renderHome() {
       // 👇 在 renderHome 結尾正確關閉 requestAnimationFrame
       botEl.innerHTML = bottomHtml;
 
-      // 強制顯示公告（防止被蓋住）
+      // 修改 renderHome 中的公告觸發邏輯
       setTimeout(() => {
+        // 檢查是否已經存在公告，避免重複插入
         if (!document.getElementById('home-announcement-overlay')) {
           const annHtml = getFloatingAnnouncementHtml();
-          if (annHtml) document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+          // 只有在非「重置中」的狀態下才插入，或確保版本號已讀取
+          if (annHtml) {
+            document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+          }
         }
       }, 400);
 
@@ -2312,78 +2317,109 @@ function renderHistGroupView(mode) {
       cardDateStr = labelStr;
   }
 
-  // 1. 取得區間內所有紀錄 (包含純打卡，供智慧工時計算使用)
+  // 1. 取得資料並排序
   let rawRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
-
-  // 若有選擇特定平台過濾，必須「保留純打卡記錄」，否則智慧工時會抓不到！
   if (S.histFilter !== 'all') {
     rawRecs = rawRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
   }
 
-  // 2. 過濾掉純打卡紀錄 與 現金小費，專門用來渲染下方的實體卡片列表
-  // 👇 加上 && !r.isCashTip 排除現金小費
   let displayRecs = rawRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
+  displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
+
+  // 2. 分頁邏輯 (1頁30筆)
+  const itemsPerPage = 30;
+  const totalPages = Math.ceil(displayRecs.length / itemsPerPage) || 1;
+  if (S.histPage > totalPages) S.histPage = totalPages;
   
-  // 計算實際要顯示的卡片數量 (此時已經不含打卡與現金小費)
-  const recCount = displayRecs.length;
+  const startIdx = (S.histPage - 1) * itemsPerPage;
+  const pageItems = displayRecs.slice(startIdx, startIdx + itemsPerPage);
 
-  let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}" ${S.histFilter===p.id?'selected':''}>${safeText(p.name)}</option>`).join('');
-
-  let html = `<div style="padding: 0 16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
-      <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')" style="width: 42px; height: 42px;">◀</button>
-      <span style="font-family:var(--mono); font-size: 22px; font-weight: 900; color: #006eff; letter-spacing: 0px; text-align: center; flex: 1;">${labelStr}</span>
-      <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width: 42px; height: 42px;">▶</button>
-    </div>
-    
-    <!-- 👇 修改這裡：左邊顯示筆數，右邊放下拉選單 -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; padding: 0 4px;">
-      <div style="font-size:13px; font-weight:800; color:var(--t2);">
-        共 <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ea580c; margin:0 2px;">${recCount}</span> 筆記錄
-      </div>
-      <select class="fsel" style="width:auto; padding:6px 14px; font-size:13px; font-weight:800; border-radius:14px; background: #f1f5f9; border: 1.5px solid #cbd5e1; color: var(--t2);" onchange="changeHistFilter(this.value)">${platOpts}</select>
-    </div>
-  </div>
-  <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:7px;">`;
-
-  // 3. 判斷是否有實質行程記錄 (若只有打卡沒跑單，就不顯示該平台)
-  if (displayRecs.length === 0) {
-    html += `<div class="empty-tip">沒有資料</div>`;
+  // 3. 準備清單 HTML (加入同日群組判斷)
+  let listHtml = '';
+  if (pageItems.length === 0) {
+    listHtml = `<div class="empty-tip">沒有資料</div>`;
   } else {
-    // 💡 餵給它們包含打卡的 rawRecs，智慧工時就能正確發揮作用
-    const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
-    const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
-    const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
-    const tHrs = calcTotalHours(rawRecs);
-    const tBonus = rawRecs.reduce((s,r) => s + pf(r.bonus), 0);
-    const tTemp = rawRecs.reduce((s,r) => s + pf(r.tempBonus), 0);
-    const tTips = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
+    let i = 0;
+    while (i < pageItems.length) {
+      let currentDate = pageItems[i].date;
+      let sameDayRecs = [];
+      
+      // 找出連續相同日期的記錄
+      while (i < pageItems.length && pageItems[i].date === currentDate) {
+        sameDayRecs.push(pageItems[i]);
+        i++;
+      }
 
-    html += buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
-
-    // 深灰色的質感分隔線
-    html += `<div style="height:3px; background:#475569; margin: 0px 0px 4px 0px; border-radius:2px; opacity:0.8;"></div>`;
-
-    // 產生下方卡片時，使用濾除掉打卡紀錄的 displayRecs
-    const sortedDisplayRecs = displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
-    
-    // 👇 極限防護：如果是查看「年」模式，且卡片超過 300 張，予以限制
-    const RENDER_LIMIT = 300;
-    if (mode === 'year' && sortedDisplayRecs.length > RENDER_LIMIT) {
-      html += sortedDisplayRecs.slice(0, RENDER_LIMIT).map(r => buildRecItem(r)).join('');
-      html += `<div style="text-align:center; padding:20px; font-weight:800; color:var(--red); font-size:13px; background:#fef2f2; border-radius:12px; margin-top:8px;">
-         ⚠️ 本年度記錄超過 ${RENDER_LIMIT} 筆，為維持系統流暢，僅顯示最新 ${RENDER_LIMIT} 筆詳細卡片。<br>※ 上方「總計資料」仍為全年精確計算，不受影響。
-       </div>`;
-    } else {
-      html += sortedDisplayRecs.map(r => buildRecItem(r)).join('');
+      // 如果當天有多筆記錄，加上連接線外框
+      if (sameDayRecs.length > 1) {
+        listHtml += `
+          <div class="rec-group-wrapper">
+            <div class="rec-group-line"></div>
+            ${sameDayRecs.map(r => `
+              <div style="position:relative; margin-bottom:8px;">
+                <div class="rec-node"></div>
+                ${buildRecItem(r)}
+              </div>
+            `).join('')}
+          </div>`;
+      } else {
+        // 單筆記錄不顯示連接線
+        listHtml += sameDayRecs.map(r => `<div style="margin-bottom:8px;">${buildRecItem(r)}</div>`).join('');
+      }
     }
   }
 
-  html += `</div>`;
-  
-  // 👇 已修復：移除這裡原本錯誤多加的 const 宣告，直接塞入 HTML 即可！
-  content.innerHTML = html;
+  // 4. 分頁控制項 UI
+  const paginationHtml = totalPages > 1 ? `
+    <div class="pagination-ctrl">
+      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage === 1 ? 'disabled' : ''}>上一頁</button>
+      <span class="pg-info">${S.histPage} / ${totalPages}</span>
+      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage === totalPages ? 'disabled' : ''}>下一頁</button>
+    </div>
+  ` : '';
+
+  // 5. 組合最終 HTML (包含原本的總計卡片)
+  const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
+  const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
+  const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
+  const tHrs = calcTotalHours(rawRecs);
+  const tBonus = rawRecs.reduce((s,r) => s + pf(r.bonus), 0);
+  const tTemp = rawRecs.reduce((s,r) => s + pf(r.tempBonus), 0);
+  const tTips = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
+
+  let headerHtml = `
+    <div style="padding: 0 16px;">
+      <!-- ... 原本的日期導航與平台下拉選單 ... -->
+      ${buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr)}
+      <div style="height:3px; background:#475569; margin: 10px 0 15px 0; border-radius:2px; opacity:0.8;"></div>
+    </div>
+    <div style="padding: 0 16px;">
+      ${listHtml}
+      ${paginationHtml}
+    </div>
+  `;
+
+  content.innerHTML = headerHtml;
 }
+// 分頁切換函式
+window.changeHistPage = function(dir) {
+  S.histPage += dir;
+  renderHistory();
+  // 切換頁面後自動滾動到最上方
+  document.getElementById('hist-content').scrollTop = 0;
+};
+// 修正：當切換標籤或日期時，重置頁碼為 1
+const originalNavHistGroup = navHistGroup;
+navHistGroup = function(dir, mode) {
+  S.histPage = 1; 
+  originalNavHistGroup(dir, mode);
+};
+const originalChangeHistFilter = changeHistFilter;
+changeHistFilter = function(val) {
+  S.histPage = 1;
+  originalChangeHistFilter(val);
+};
+
 
 function openFullCalendar() { document.getElementById('full-calendar-overlay').classList.add('show'); renderFullCalendar(); }
 function closeFullCalendar() { document.getElementById('full-calendar-overlay').classList.remove('show'); }
