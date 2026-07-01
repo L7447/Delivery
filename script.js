@@ -1716,17 +1716,17 @@ function renderHome() {
       // 👇 在 renderHome 結尾正確關閉 requestAnimationFrame
       botEl.innerHTML = bottomHtml;
 
-      // 修改 renderHome 中的公告觸發邏輯
+      // [修改] renderHome 末尾的公告觸發邏輯
       setTimeout(() => {
-        // 檢查是否已經存在公告，避免重複插入
-        if (!document.getElementById('home-announcement-overlay')) {
-          const annHtml = getFloatingAnnouncementHtml();
-          // 只有在非「重置中」的狀態下才插入，或確保版本號已讀取
-          if (annHtml) {
-            document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
-          }
+        // 1. 如果公告已經在畫面上，不要重複插入
+        if (document.getElementById('home-announcement-overlay')) return;
+        
+        const annHtml = getFloatingAnnouncementHtml();
+        // 2. 只有當 HTML 產生成功（代表未閱讀且開啟中）才插入
+        if (annHtml) {
+          document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
         }
-      }, 400);
+      }, 600); // 稍微延後，確保在重置流程之後
 
     } catch(e) {
       console.error("renderHome 錯誤:", e);
@@ -2274,8 +2274,9 @@ function calcTotalHours(recs) {
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
   const nd = new Date(S.histNavDate);
-  let startD, endD, labelStr;
+  let startD, endD, labelStr, isYearMode = (mode === 'year');
 
+  // --- 1. 日期區間計算 ---
   if (mode === 'week') {
     const day = nd.getDay() || 7;
     startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
@@ -2288,8 +2289,7 @@ function renderHistGroupView(mode) {
     const cycleOffset = Math.floor(diffDays / 14);
     startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14);
     endD = new Date(startD); endD.setDate(endD.getDate() + 13);
-    let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : '';
-    labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+    labelStr = `${startD.getFullYear() === endD.getFullYear() ? '' : startD.getFullYear()+'/'}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
   } else if (mode === 'halfmonth') {
     let isFirstHalf = nd.getDate() <= 15;
     if (isFirstHalf) {
@@ -2299,63 +2299,94 @@ function renderHistGroupView(mode) {
     }
   } else if (mode === 'month') {
     startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
-  } else if (mode === 'year') {
-    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()}年`;
+  } else if (isYearMode) {
+    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()} 年`;
   }
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
 
-  let cardDateStr = '';
-  if (mode === 'week' || mode === 'biweek') {
-      if (startD.getFullYear() === endD.getFullYear()) {
-          cardDateStr = `${startD.getFullYear()}年 ${pad(startD.getMonth()+1)}月${pad(startD.getDate())}日 ~ ${pad(endD.getMonth()+1)}月${pad(endD.getDate())}日`;
-      } else {
-          cardDateStr = `${startD.getFullYear()}年 ${pad(startD.getMonth()+1)}月${pad(startD.getDate())}日 ~ ${endD.getFullYear()}年 ${pad(endD.getMonth()+1)}月${pad(endD.getDate())}日`;
-      }
-  } else {
-      cardDateStr = labelStr;
-  }
-
-  // 1. 取得資料並排序
+  // --- 2. 資料過濾與排序 ---
   let rawRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
-  if (S.histFilter !== 'all') {
-    rawRecs = rawRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
-  }
-
   let displayRecs = rawRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
-  displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
+  
+  if (S.histFilter !== 'all') {
+    displayRecs = displayRecs.filter(r => r.platformId === S.histFilter);
+  }
+  displayRecs.sort((a,b) => b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||''));
 
-  // 2. 分頁邏輯 (1頁30筆)
+  // --- 3. 分頁計算 (1頁30筆) ---
   const itemsPerPage = 30;
-  const totalPages = Math.ceil(displayRecs.length / itemsPerPage) || 1;
+  const totalItems = displayRecs.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  if (!S.histPage || S.histPage < 1) S.histPage = 1;
   if (S.histPage > totalPages) S.histPage = totalPages;
   
   const startIdx = (S.histPage - 1) * itemsPerPage;
   const pageItems = displayRecs.slice(startIdx, startIdx + itemsPerPage);
 
-  // 3. 準備清單 HTML (加入同日群組判斷)
+  // --- 4. 構建 UI 組件 ---
+  // A. 導航列 (包含年切換)
+  const navHtml = `
+    <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+      <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')" style="width: 42px; height: 42px;">◀</button>
+      <span style="font-family:var(--mono); font-size: 20px; font-weight: 900; color: #006eff; text-align: center; flex: 1;">${labelStr}</span>
+      <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width: 42px; height: 42px;">▶</button>
+    </div>
+  `;
+
+  // B. 平台過濾與筆數
+  const activePlats = S.platforms.filter(p=>p.active);
+  const filterHtml = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; padding: 0 4px;">
+      <div style="font-size:13px; font-weight:800; color:var(--t2);">
+        共 <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:#ea580c;">${totalItems}</span> 筆記錄
+      </div>
+      <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:800; border-radius:12px; background: #f1f5f9;" onchange="S.histPage=1; changeHistFilter(this.value)">
+        <option value="all">全部平台</option>
+        ${activePlats.map(p => `<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
+  // C. 區間總計卡片
+  const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
+  const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
+  const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
+  const tHrs = calcTotalHours(rawRecs);
+  const tBon = rawRecs.reduce((s,r) => s + pf(r.bonus) + pf(r.tempBonus), 0);
+  const tTip = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
+  const summaryCard = buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBon, 0, tTip, 'hist-group-card', labelStr);
+
+  // D. 分頁按鈕
+  const paginationHtml = totalPages > 1 ? `
+    <div class="pagination-ctrl">
+      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage===1?'disabled':''}>上一頁</button>
+      <span class="pg-info">${S.histPage} / ${totalPages}</span>
+      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage===totalPages?'disabled':''}>下一頁</button>
+    </div>
+  ` : '';
+
+  // E. 列表內容 (同日連線邏輯)
   let listHtml = '';
   if (pageItems.length === 0) {
-    listHtml = `<div class="empty-tip">沒有資料</div>`;
+    listHtml = `<div class="empty-tip">✨ 該區間暫無記錄</div>`;
   } else {
-    let i = 0;
-    while (i < pageItems.length) {
-      let currentDate = pageItems[i].date;
-      let sameDayRecs = [];
-      
-      // 找出連續相同日期的記錄
-      while (i < pageItems.length && pageItems[i].date === currentDate) {
-        sameDayRecs.push(pageItems[i]);
-        i++;
+    let cursor = 0;
+    while (cursor < pageItems.length) {
+      let currentDate = pageItems[cursor].date;
+      let group = [];
+      while (cursor < pageItems.length && pageItems[cursor].date === currentDate) {
+        group.push(pageItems[cursor]);
+        cursor++;
       }
 
-      // 如果當天有多筆記錄，加上連接線外框
-      if (sameDayRecs.length > 1) {
+      if (group.length > 1) {
+        // 多筆同日：加上連接線
         listHtml += `
           <div class="rec-group-wrapper">
             <div class="rec-group-line"></div>
-            ${sameDayRecs.map(r => `
+            ${group.map(r => `
               <div style="position:relative; margin-bottom:8px;">
                 <div class="rec-node"></div>
                 ${buildRecItem(r)}
@@ -2363,51 +2394,31 @@ function renderHistGroupView(mode) {
             `).join('')}
           </div>`;
       } else {
-        // 單筆記錄不顯示連接線
-        listHtml += sameDayRecs.map(r => `<div style="margin-bottom:8px;">${buildRecItem(r)}</div>`).join('');
+        // 單筆記錄
+        listHtml += `<div style="margin-bottom:8px;">${buildRecItem(group[0])}</div>`;
       }
     }
   }
 
-  // 4. 分頁控制項 UI
-  const paginationHtml = totalPages > 1 ? `
-    <div class="pagination-ctrl">
-      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage === 1 ? 'disabled' : ''}>上一頁</button>
-      <span class="pg-info">${S.histPage} / ${totalPages}</span>
-      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage === totalPages ? 'disabled' : ''}>下一頁</button>
-    </div>
-  ` : '';
-
-  // 5. 組合最終 HTML (包含原本的總計卡片)
-  const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
-  const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
-  const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
-  const tHrs = calcTotalHours(rawRecs);
-  const tBonus = rawRecs.reduce((s,r) => s + pf(r.bonus), 0);
-  const tTemp = rawRecs.reduce((s,r) => s + pf(r.tempBonus), 0);
-  const tTips = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
-
-  let headerHtml = `
-    <div style="padding: 0 16px;">
-      <!-- ... 原本的日期導航與平台下拉選單 ... -->
-      ${buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr)}
+  // --- 5. 組合渲染 ---
+  content.innerHTML = `
+    <div style="padding: 6px 16px;">
+      ${navHtml}
+      ${filterHtml}
+      ${summaryCard}
       <div style="height:3px; background:#475569; margin: 10px 0 15px 0; border-radius:2px; opacity:0.8;"></div>
-    </div>
-    <div style="padding: 0 16px;">
       ${listHtml}
       ${paginationHtml}
     </div>
   `;
-
-  content.innerHTML = headerHtml;
 }
-// 分頁切換函式
+// 分頁點擊事件
 window.changeHistPage = function(dir) {
   S.histPage += dir;
   renderHistory();
-  // 切換頁面後自動滾動到最上方
+  // 回到歷史記錄區域的頂部
   document.getElementById('hist-content').scrollTop = 0;
-};
+}
 // 修正：當切換標籤或日期時，重置頁碼為 1
 const originalNavHistGroup = navHistGroup;
 navHistGroup = function(dir, mode) {
