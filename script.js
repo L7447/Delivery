@@ -1449,6 +1449,21 @@ document.addEventListener('click', function(e) {
   }
 });
 
+/* ══ 核心修復：獨立的公告檢查函式 (確保生命週期內只執行必要次數) ══ */
+function checkAndShowAnnouncement() {
+  // 1. 檢查 DOM 是否已經有公告了，有就直接跳過
+  if (document.getElementById('home-announcement-overlay')) return;
+
+  // 2. 獲取公告 HTML (內部已包含版本比對邏輯)
+  const annHtml = getFloatingAnnouncementHtml();
+  
+  // 3. 只有在真的需要顯示（未閱讀過）時才插入
+  if (annHtml) {
+    console.log("📢 偵測到新公告，準備顯示...");
+    document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+  }
+}
+
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
@@ -1716,17 +1731,15 @@ function renderHome() {
       // 👇 在 renderHome 結尾正確關閉 requestAnimationFrame
       botEl.innerHTML = bottomHtml;
 
-      // [修改] renderHome 末尾的公告觸發邏輯
-      setTimeout(() => {
-        // 1. 如果公告已經在畫面上，不要重複插入
-        if (document.getElementById('home-announcement-overlay')) return;
-        
-        const annHtml = getFloatingAnnouncementHtml();
-        // 2. 只有當 HTML 產生成功（代表未閱讀且開啟中）才插入
-        if (annHtml) {
-          document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
-        }
-      }, 600); // 稍微延後，確保在重置流程之後
+    setTimeout(() => {
+      if (S.tab !== 'home') return; // 只在首頁顯示
+      if (document.getElementById('home-announcement-overlay')) return;
+      
+      const annHtml = getFloatingAnnouncementHtml();
+      if (annHtml) {
+        document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+      }
+    }, 600);
 
     } catch(e) {
       console.error("renderHome 錯誤:", e);
@@ -2104,7 +2117,11 @@ function navHistGroup(dir, mode) {
   if (mode === 'year') { d.setFullYear(d.getFullYear() + dir); }
   S.histNavDate = d; renderHistory();
 }
-function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
+function changeHistFilter(val) { 
+  S.histFilter = val; 
+  S.histPage = 1;     // ← 切換平台時重置到第一頁
+  renderHistory(); 
+}
 
 /* ══ 替換：統一讓查看紀錄外層負責上下滾動 ══ */
 function renderHistory() { 
@@ -2271,6 +2288,7 @@ function calcTotalHours(recs) {
 }
 
 // 👇 查看記錄-週到年 群組檢視 (已修復智慧工時傳遞與重複宣告錯誤)
+// 👇 全新優化版：區間總計卡片更鮮明 + 預設收合下方列表
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
   const nd = new Date(S.histNavDate);
@@ -2293,20 +2311,28 @@ function renderHistGroupView(mode) {
   } else if (mode === 'halfmonth') {
     let isFirstHalf = nd.getDate() <= 15;
     if (isFirstHalf) {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth(), 15); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (上)`;
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 1); 
+      endD = new Date(nd.getFullYear(), nd.getMonth(), 15); 
+      labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (上)`;
     } else {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 16); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (下)`;
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 16); 
+      endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); 
+      labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (下)`;
     }
   } else if (mode === 'month') {
-    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
+    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); 
+    endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); 
+    labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
   } else if (isYearMode) {
-    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()} 年`;
+    startD = new Date(nd.getFullYear(), 0, 1); 
+    endD = new Date(nd.getFullYear(), 11, 31); 
+    labelStr = `${nd.getFullYear()} 年`;
   }
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
 
-  // --- 2. 資料過濾與排序 ---
+  // --- 2. 資料過濾 ---
   let rawRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
   let displayRecs = rawRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
   
@@ -2315,7 +2341,7 @@ function renderHistGroupView(mode) {
   }
   displayRecs.sort((a,b) => b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||''));
 
-  // --- 3. 分頁計算 (1頁30筆) ---
+  // --- 3. 分頁 ---
   const itemsPerPage = 30;
   const totalItems = displayRecs.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
@@ -2325,22 +2351,21 @@ function renderHistGroupView(mode) {
   const startIdx = (S.histPage - 1) * itemsPerPage;
   const pageItems = displayRecs.slice(startIdx, startIdx + itemsPerPage);
 
-  // --- 4. 構建 UI 組件 ---
-  // A. 導航列 (包含年切換)
+  // --- 4. 導航列 ---
   const navHtml = `
-    <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 12px;">
       <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')" style="width: 42px; height: 42px;">◀</button>
       <span style="font-family:var(--mono); font-size: 20px; font-weight: 900; color: #006eff; text-align: center; flex: 1;">${labelStr}</span>
       <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width: 42px; height: 42px;">▶</button>
     </div>
   `;
 
-  // B. 平台過濾與筆數
+  // --- 5. 平台過濾 ---
   const activePlats = S.platforms.filter(p=>p.active);
   const filterHtml = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; padding: 0 4px;">
       <div style="font-size:13px; font-weight:800; color:var(--t2);">
-        共 <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:#ea580c;">${totalItems}</span> 筆記錄
+        共 <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:#ea580c;">${totalItems}</span> 筆
       </div>
       <select class="fsel" style="width:auto; padding:6px 10px; font-size:13px; font-weight:800; border-radius:12px; background: #f1f5f9;" onchange="S.histPage=1; changeHistFilter(this.value)">
         <option value="all">全部平台</option>
@@ -2349,28 +2374,41 @@ function renderHistGroupView(mode) {
     </div>
   `;
 
-  // C. 區間總計卡片
-  const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
-  const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
-  const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
-  const tHrs = calcTotalHours(rawRecs);
-  const tBon = rawRecs.reduce((s,r) => s + pf(r.bonus) + pf(r.tempBonus), 0);
-  const tTip = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
-  const summaryCard = buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBon, 0, tTip, 'hist-group-card', labelStr);
+  // --- 6. 全新鮮明區間總計卡片 ---
+  const tInc = displayRecs.reduce((s,r) => s + recTotal(r), 0);
+  const tOrd = displayRecs.reduce((s,r) => s + pf(r.orders), 0);
+  const tMil = displayRecs.reduce((s,r) => s + pf(r.mileage), 0);
+  const tHrs = calcTotalHours(displayRecs);
+  const tBon = displayRecs.reduce((s,r) => s + pf(r.bonus) + pf(r.tempBonus), 0);
+  const tTip = displayRecs.reduce((s,r) => s + pf(r.tips), 0);
 
-  // D. 分頁按鈕
-  const paginationHtml = totalPages > 1 ? `
-    <div class="pagination-ctrl">
-      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage===1?'disabled':''}>上一頁</button>
-      <span class="pg-info">${S.histPage} / ${totalPages}</span>
-      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage===totalPages?'disabled':''}>下一頁</button>
-    </div>
-  ` : '';
+  const summaryCard = `
+    <div onclick="toggleHistGroupList()" class="period-summary-card" style="cursor:pointer; margin:8px 4px 16px; border:3px solid #1e40af; border-radius:20px; background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color:#fff; padding:18px 16px; box-shadow:0 12px 30px rgba(30,64,175,0.4); position:relative; overflow:hidden;">
+      <div style="position:absolute; top:14px; right:16px; background:rgba(255,255,255,0.25); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:900; transition:0.3s;" id="hist-toggle-icon">▼</div>
+      
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="flex:1;">
+          <div style="font-size:14px; font-weight:700; opacity:0.95; letter-spacing:0.8px;">${labelStr}</div>
+          <div style="font-size:32px; font-weight:900; font-family:var(--mono); margin:6px 0 4px;">$${fmt(tInc)}</div>
+        </div>
+        <div style="text-align:right; line-height:1.45; font-size:14px; padding-top:4px;">
+          <div><strong>${tOrd}</strong> <span style="font-size:12px; opacity:0.85;">單</span></div>
+          <div><strong>${fmtHours(tHrs)}</strong> <span style="font-size:12px; opacity:0.85;">工時</span></div>
+        </div>
+      </div>
 
-  // E. 列表內容 (同日連線邏輯)
-  let listHtml = '';
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        ${tMil > 0 ? `<span style="background:rgba(255,255,255,0.22); padding:5px 12px; border-radius:999px; font-size:13px; font-weight:700;">🚗 ${fmt(tMil)} km</span>` : ''}
+        ${tBon > 0 ? `<span style="background:rgba(255,255,255,0.22); padding:5px 12px; border-radius:999px; font-size:13px; font-weight:700;">🎁 $${fmt(tBon)}</span>` : ''}
+        ${tTip > 0 ? `<span style="background:rgba(255,255,255,0.22); padding:5px 12px; border-radius:999px; font-size:13px; font-weight:700;">💰 $${fmt(tTip)}</span>` : ''}
+      </div>
+    </div>`;
+
+  // --- 7. 下方列表（預設收合）---
+  const listContainerId = 'hist-group-list';
+  let listContent = '';
   if (pageItems.length === 0) {
-    listHtml = `<div class="empty-tip">✨ 該區間暫無記錄</div>`;
+    listContent = `<div class="empty-tip" style="margin:40px 0;">此區間無符合記錄</div>`;
   } else {
     let cursor = 0;
     while (cursor < pageItems.length) {
@@ -2380,38 +2418,50 @@ function renderHistGroupView(mode) {
         group.push(pageItems[cursor]);
         cursor++;
       }
-
-      if (group.length > 1) {
-        // 多筆同日：加上連接線
-        listHtml += `
-          <div class="rec-group-wrapper">
-            <div class="rec-group-line"></div>
-            ${group.map(r => `
-              <div style="position:relative; margin-bottom:8px;">
-                <div class="rec-node"></div>
-                ${buildRecItem(r)}
-              </div>
-            `).join('')}
-          </div>`;
-      } else {
-        // 單筆記錄
-        listHtml += `<div style="margin-bottom:8px;">${buildRecItem(group[0])}</div>`;
-      }
+      listContent += buildDateGroup(currentDate, group); // 假設你已有此函式
     }
   }
 
-  // --- 5. 組合渲染 ---
-  content.innerHTML = `
-    <div style="padding: 6px 16px;">
-      ${navHtml}
-      ${filterHtml}
-      ${summaryCard}
-      <div style="height:3px; background:#475569; margin: 10px 0 15px 0; border-radius:2px; opacity:0.8;"></div>
-      ${listHtml}
+  const paginationHtml = totalPages > 1 ? `
+    <div class="pagination-ctrl" style="margin:20px 0; text-align:center;">
+      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage===1?'disabled':''}>上一頁</button>
+      <span class="pg-info">${S.histPage} / ${totalPages}</span>
+      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage===totalPages?'disabled':''}>下一頁</button>
+    </div>
+  ` : '';
+
+  const fullHtml = `
+    ${navHtml}
+    ${filterHtml}
+    ${summaryCard}
+    <div id="${listContainerId}" style="max-height:0; overflow:hidden; transition:max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1);">
+      ${listContent}
       ${paginationHtml}
     </div>
   `;
+
+  content.innerHTML = fullHtml;
+
+  // 預設收合列表
+  setTimeout(() => {
+    const listEl = document.getElementById(listContainerId);
+    if (listEl) listEl.style.maxHeight = '0px';
+  }, 100);
 }
+// 切換區間列表展開/收合
+window.toggleHistGroupList = function() {
+  const list = document.getElementById('hist-group-list');
+  const icon = document.getElementById('hist-toggle-icon');
+  if (!list || !icon) return;
+
+  if (list.style.maxHeight === '0px' || !list.style.maxHeight) {
+    list.style.maxHeight = list.scrollHeight + 60 + 'px'; // 多加一點緩衝
+    icon.textContent = '▲';
+  } else {
+    list.style.maxHeight = '0px';
+    icon.textContent = '▼';
+  }
+};
 // 分頁點擊事件
 window.changeHistPage = function(dir) {
   S.histPage += dir;
@@ -8738,7 +8788,7 @@ function doRestore() {
       const text = await file.text(); 
       const data = JSON.parse(text); 
       // 👇 將檔案名稱安全地顯示在確認視窗中
-      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;">覆蓋</span>現有資料？`);
+      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;font-size:15px;font-weight:750;">覆蓋 </span>現有資料？`);
       if (!ok) return; 
       
       if (data.records) { S.records=data.records; saveRecords(); } 
@@ -8905,8 +8955,14 @@ async function doClearData() {
   saveVehicleRecs(); 
   
   toast('✅ 已清除記錄與車輛資料'); 
-  renderHome(); 
-  renderSettings(); 
+  renderSettings(); // 只渲染設定頁，不觸發首頁公告
+  
+  // 切換到首頁（只在需要時才顯示公告）
+  if (S.tab === 'home') {
+    renderHome();
+  } else {
+    goPage('home'); // goPage 內部會呼叫 renderHome，但公告已有防重複機制
+  }
 }
 
 /* ══ 重置所有設定和資料 (含重新呼叫進場動畫與彈窗) ══ */
@@ -8922,34 +8978,41 @@ async function doReset() {
       ⚠️ 此動作極度危險且《 無法復原 》，<br>【 確定 】要重置？
     </div>
   `;
-  const ok = await customConfirm(msg); 
+const ok = await customConfirm(msg); 
   if (!ok) return; 
 
-  // 1. 清空所有資料，恢復至初始狀態
+  // 1. 備份已讀公告的版本號，避免重置後公告又跳出來
+  const dismissedVer = localStorage.getItem('delivery_ann_dismissed_ver');
+
+  // 2. 清空所有資料，恢復至初始狀態
   S.records = []; 
   S.settings = { ...DEFAULT_SETTINGS, shopHistory:[] }; 
-  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); // 預設所有平台 active 皆為 false
+  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); 
   S.vehicles = []; 
   S.vehicleRecs = []; 
   S.punch = null;
 
-  // 2. 寫入儲存空間
+  // 3. 寫入儲存空間（修正後的正確寫法）
   saveRecords(); 
-  saveSettings(); 
+  saveSettings();
   savePlatforms(); 
   saveVehicles(); 
   saveVehicleRecs(); 
   savePunch();
 
-  // 3. 關閉當前設定彈窗並切換底層至首頁
+  // 4. 恢復已讀公告標記
+  if (dismissedVer) {
+    localStorage.setItem('delivery_ann_dismissed_ver', dismissedVer);
+  }
+
+  // 5. 關閉彈窗並切換到首頁
   closeOverlay('sub-page'); 
   S.tab = 'home';
   document.body.setAttribute('data-tab', 'home');
 
-  // 4. 呼叫進場載入動畫 (營造重新啟動的感覺)
+  // 6. 呼叫進場動畫
   window.onSplashFinished();
 
-  // 5. 載入動畫結束後 (onSplashFinished 動畫約耗時 500ms)，觸發平台選擇視窗
   setTimeout(() => {
     toast('✅ 已重置所有設定和資料'); 
     checkAndPromptPlatformSetup();
@@ -9684,19 +9747,11 @@ window.onSplashFinished = function() {
   setTimeout(() => {
     try {
       S.homeSubTab = 'schedule';
-      goPage('home');                    // 強制渲染首頁
+      goPage('home');
       updateNavIndicator('home');
 
-      // 強制再渲染一次公告（防止被 loadingDiv 蓋住）
-      setTimeout(() => {
-        const existing = document.getElementById('home-announcement-overlay');
-        if (!existing) {
-          const annHtml = getFloatingAnnouncementHtml();
-          if (annHtml) {
-            document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
-          }
-        }
-      }, 600);
+      // ✅ 修改點：只在進場動畫結束後「檢查一次」公告
+      checkAndShowAnnouncement();
 
     } catch(e) {
       console.error("首頁渲染失敗", e);
