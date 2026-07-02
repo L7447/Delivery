@@ -7965,40 +7965,40 @@ window.openAdminOnlineUsers = async function() {
 
 /* ✨ 編輯首頁系統公告 */
 window.openAnnouncementEdit = function() {
-  document.getElementById('sub-title').textContent = '編輯公告';
-  
-  // 重置左右按鈕區域（重要！）
+  // 重置所有頂部按鈕
   document.getElementById('sub-top-left').innerHTML = '';
   document.getElementById('sub-top-right').innerHTML = '';
 
-  // 強制隱藏左上角原本的 X 按鈕
+  // 隱藏原本的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
 
-  // 左上角：管理列表按鈕
+  // 左上角：管理列表
   document.getElementById('sub-top-left').innerHTML = `
     <button onclick="openAnnouncementSettings()" 
-      style="background:#1b2f4b; color:#fff; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px;">
+      style="background:#1b2f4b; color:#fff; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700;">
       📋 管理列表
     </button>
   `;
 
-  // 右上角：返回按鈕
+  // 右上角：返回
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { 
       document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; 
-      openAccountStats(); 
-    })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3);">
+      openAnnouncementSettings(); 
+    })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:900;">
       🔙 返回
     </button>
   `;
+
+  document.getElementById('sub-title').textContent = '編輯公告';
 
   const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '', date: '' };
   const tags = ['改版公告', '新功能公告', 'Bug修復公告', '系統公告'];
 
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px; display:flex; flex-direction:column; gap:20px;">
-      <!-- 版本與日期 -->
+      
       <div style="background: #eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#2563eb; margin-bottom:10px;">🏷️ 版本資訊</div>
         <div style="display:flex; gap:10px;">
@@ -8007,45 +8007,41 @@ window.openAnnouncementEdit = function() {
         </div>
       </div>
 
-      <!-- 標題 -->
       <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
         <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告標題</label>
         <div style="display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:4px;">
             ${tags.map(t => `<button type="button" class="tag-btn" onclick="document.getElementById('ann-title').value='${t}'">${t}</button>`).join('')}
         </div>
-        <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="輸入標題或點選上方標籤...">
+        <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="輸入標題...">
       </div>
 
-      <!-- 內容 -->
       <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
         <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告內容</label>
         <textarea class="finp" id="ann-content" rows="8">${safeText(ann.content)}</textarea>
       </div>
 
-      <!-- 進階設定 -->
       <div style="background: #f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#059669; margin-bottom:10px;">⚙️ 進階設定</div>
         <div class="fg" style="margin-bottom:12px;">
           <label>顯示樣式</label>
           <select class="fsel" id="ann-style">
             <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
-            <option value="cute-gold" ${ann.style==='cute-gold'?'selected':''}>萌趣金幣樂園</option>
-            <option value="bear-party" ${ann.style==='bear-party'?'selected':''}>熊熊冒險派對</option>
-            <option value="gem-feast" ${ann.style==='gem-feast'?'selected':''}>華麗寶石盛宴</option>
-            <option value="candy-dream" ${ann.style==='candy-dream'?'selected':''}>夢幻糖果王國</option>
+            <option value="cute-gold" ${ann.style==='cute-gold'?'selected':''}>萌趣金幣</option>
+            <option value="bear-party" ${ann.style==='bear-party'?'selected':''}>熊熊派對</option>
           </select>
         </div>
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
           <span style="font-size:14px; font-weight:800;">是否啟用公告</span>
           <label class="switch"><input type="checkbox" id="ann-enabled" ${ann.enabled?'checked':''}><span class="slider"></span></label>
         </div>
       </div>
 
-      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; background:#1e293b; color:#fff;">
+      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px;">
         💾 儲存並發布
       </button>
     </div>
   `;
+
   openOverlay('sub-page');
 };
 window.saveAnnouncement = function() {
