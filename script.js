@@ -7975,6 +7975,13 @@ window.openAnnouncementEdit = function() {
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
+  // 在左上角（標題區）加入管理列表按鈕
+  document.getElementById('sub-top-left').innerHTML = `
+    <button onclick="openAnnouncementSettings()" 
+      style="background: #1b2f4b; color: #fff; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px;">
+      📋 管理列表
+    </button>
+  `;
 
   const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '', date: '' };
   const tags = ['改版公告', '新功能公告', 'Bug修復公告', '系統公告'];
@@ -8880,7 +8887,7 @@ function doRestore() {
       const text = await file.text(); 
       const data = JSON.parse(text); 
       // 👇 將檔案名稱安全地顯示在確認視窗中
-      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;font-size:18px;font-weight:750;">覆蓋 </span>現有資料？`);
+      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;font-size:20px;font-weight:700;">覆蓋 </span>現有資料？`);
       if (!ok) return; 
       
       if (data.records) { S.records=data.records; saveRecords(); } 
