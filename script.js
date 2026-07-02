@@ -7964,22 +7964,32 @@ window.openAdminOnlineUsers = async function() {
 };
 
 /* ✨ 編輯首頁系統公告 */
-// 編輯公告
 window.openAnnouncementEdit = function() {
   document.getElementById('sub-title').textContent = '編輯公告';
   
-  // 👇 強制隱藏左上角的 X 按鈕
+  // 重置左右按鈕區域（重要！）
+  document.getElementById('sub-top-left').innerHTML = '';
+  document.getElementById('sub-top-right').innerHTML = '';
+
+  // 強制隱藏左上角原本的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-  // 右上角加入強化版返回按鈕
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
-  `;
-  // 在左上角（標題區）加入管理列表按鈕
+
+  // 左上角：管理列表按鈕
   document.getElementById('sub-top-left').innerHTML = `
     <button onclick="openAnnouncementSettings()" 
-      style="background: #1b2f4b; color: #fff; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px;">
+      style="background:#1b2f4b; color:#fff; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px;">
       📋 管理列表
+    </button>
+  `;
+
+  // 右上角：返回按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { 
+      document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; 
+      openAccountStats(); 
+    })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3);">
+      🔙 返回
     </button>
   `;
 
@@ -7988,37 +7998,36 @@ window.openAnnouncementEdit = function() {
 
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px; display:flex; flex-direction:column; gap:20px;">
-      
-      <!-- 區塊 1：版本與日期 (藍色系) -->
+      <!-- 版本與日期 -->
       <div style="background: #eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#2563eb; margin-bottom:10px;">🏷️ 版本資訊</div>
         <div style="display:flex; gap:10px;">
-          <div class="fg" style="flex:1;"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${safeText(ann.version)}" style="padding:8px;"></div>
-          <div class="fg" style="flex:1.2;"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${ann.date || todayStr()}" style="padding:8px;"></div>
+          <div class="fg" style="flex:1;"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${safeText(ann.version)}"></div>
+          <div class="fg" style="flex:1.2;"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${ann.date || todayStr()}"></div>
         </div>
       </div>
 
-      <!-- 區塊 2：公告內容 (橘色系) -->
-      <!-- 標題區塊 -->
+      <!-- 標題 -->
       <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
         <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告標題</label>
         <div style="display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:4px;">
             ${tags.map(t => `<button type="button" class="tag-btn" onclick="document.getElementById('ann-title').value='${t}'">${t}</button>`).join('')}
         </div>
-        <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="輸入標題或點選上方標籤..." style="border:2px solid #3b82f6;">
-      </div>
-      <!-- 內容區塊 -->
-      <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
-        <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告內容</label>
-        <textarea class="finp" id="ann-content" rows="6" style="width:100%; padding:10px;">${safeText(ann.content)}</textarea>
+        <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="輸入標題或點選上方標籤...">
       </div>
 
-      <!-- 區塊 3：進階設定 (綠色系) -->
+      <!-- 內容 -->
+      <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
+        <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告內容</label>
+        <textarea class="finp" id="ann-content" rows="8">${safeText(ann.content)}</textarea>
+      </div>
+
+      <!-- 進階設定 -->
       <div style="background: #f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#059669; margin-bottom:10px;">⚙️ 進階設定</div>
         <div class="fg" style="margin-bottom:12px;">
           <label>顯示樣式</label>
-          <select class="fsel" id="ann-style" style="padding:8px;">
+          <select class="fsel" id="ann-style">
             <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
             <option value="cute-gold" ${ann.style==='cute-gold'?'selected':''}>萌趣金幣樂園</option>
             <option value="bear-party" ${ann.style==='bear-party'?'selected':''}>熊熊冒險派對</option>
