@@ -501,7 +501,6 @@ const S = {
   records: [], platforms: [], settings: { ...DEFAULT_SETTINGS }, punch: null,
   vehicles: [], vehicleRecs: [], editingId: null, selPlatformId: null, charts: {},
   homeSubTab: 'schedule', vehicleTab: 'fuel', newVehIcon: 4, newVehColor: '#555555',
-  histPage: 1, // 新增分頁狀態
   selVehicleId: null, vehY: new Date().getFullYear(), vehM: new Date().getMonth()+1, addVehRecType: 'fuel',
   rptOverviewFilter: 'all', cmpType: 'prev_month', cmpPeriods: [],
   histFullCalY: new Date().getFullYear(), histFullCalM: new Date().getMonth()+1
@@ -1449,21 +1448,6 @@ document.addEventListener('click', function(e) {
   }
 });
 
-/* ══ 核心修復：獨立的公告檢查函式 (確保生命週期內只執行必要次數) ══ */
-function checkAndShowAnnouncement() {
-  // 1. 檢查 DOM 是否已經有公告了，有就直接跳過
-  if (document.getElementById('home-announcement-overlay')) return;
-
-  // 2. 獲取公告 HTML (內部已包含版本比對邏輯)
-  const annHtml = getFloatingAnnouncementHtml();
-  
-  // 3. 只有在真的需要顯示（未閱讀過）時才插入
-  if (annHtml) {
-    console.log("📢 偵測到新公告，準備顯示...");
-    document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
-  }
-}
-
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
   const topEl = document.getElementById('home-top-content');
@@ -1731,15 +1715,13 @@ function renderHome() {
       // 👇 在 renderHome 結尾正確關閉 requestAnimationFrame
       botEl.innerHTML = bottomHtml;
 
-    setTimeout(() => {
-      if (S.tab !== 'home') return; // 只在首頁顯示
-      if (document.getElementById('home-announcement-overlay')) return;
-      
-      const annHtml = getFloatingAnnouncementHtml();
-      if (annHtml) {
-        document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
-      }
-    }, 600);
+      // 強制顯示公告（防止被蓋住）
+      setTimeout(() => {
+        if (!document.getElementById('home-announcement-overlay')) {
+          const annHtml = getFloatingAnnouncementHtml();
+          if (annHtml) document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+        }
+      }, 400);
 
     } catch(e) {
       console.error("renderHome 錯誤:", e);
@@ -2117,11 +2099,7 @@ function navHistGroup(dir, mode) {
   if (mode === 'year') { d.setFullYear(d.getFullYear() + dir); }
   S.histNavDate = d; renderHistory();
 }
-function changeHistFilter(val) { 
-  S.histFilter = val; 
-  S.histPage = 1;     // ← 切換平台時重置到第一頁
-  renderHistory(); 
-}
+function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
 
 /* ══ 替換：統一讓查看紀錄外層負責上下滾動 ══ */
 function renderHistory() { 
@@ -2288,13 +2266,11 @@ function calcTotalHours(recs) {
 }
 
 // 👇 查看記錄-週到年 群組檢視 (已修復智慧工時傳遞與重複宣告錯誤)
-// 👇 最終調整版：獨立列表切換按鈕放在平台選擇右側
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
   const nd = new Date(S.histNavDate);
   let startD, endD, labelStr;
 
-  // 日期區間計算（保持不變）
   if (mode === 'week') {
     const day = nd.getDay() || 7;
     startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
@@ -2307,204 +2283,106 @@ function renderHistGroupView(mode) {
     const cycleOffset = Math.floor(diffDays / 14);
     startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14);
     endD = new Date(startD); endD.setDate(endD.getDate() + 13);
-    labelStr = `${startD.getFullYear() === endD.getFullYear() ? '' : startD.getFullYear()+'/'}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+    let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : '';
+    labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
   } else if (mode === 'halfmonth') {
-    const isFirstHalf = nd.getDate() <= 15;
+    let isFirstHalf = nd.getDate() <= 15;
     if (isFirstHalf) {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 1);
-      endD = new Date(nd.getFullYear(), nd.getMonth(), 15);
-      labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (上)`;
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth(), 15); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (上)`;
     } else {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 16);
-      endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0);
-      labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (下)`;
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 16); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (下)`;
     }
   } else if (mode === 'month') {
-    startD = new Date(nd.getFullYear(), nd.getMonth(), 1);
-    endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0);
-    labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
+    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
   } else if (mode === 'year') {
-    startD = new Date(nd.getFullYear(), 0, 1);
-    endD = new Date(nd.getFullYear(), 11, 31);
-    labelStr = `${nd.getFullYear()} 年`;
+    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()}年`;
   }
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
 
-  // 資料過濾
+  let cardDateStr = '';
+  if (mode === 'week' || mode === 'biweek') {
+      if (startD.getFullYear() === endD.getFullYear()) {
+          cardDateStr = `${startD.getFullYear()}年 ${pad(startD.getMonth()+1)}月${pad(startD.getDate())}日 ~ ${pad(endD.getMonth()+1)}月${pad(endD.getDate())}日`;
+      } else {
+          cardDateStr = `${startD.getFullYear()}年 ${pad(startD.getMonth()+1)}月${pad(startD.getDate())}日 ~ ${endD.getFullYear()}年 ${pad(endD.getMonth()+1)}月${pad(endD.getDate())}日`;
+      }
+  } else {
+      cardDateStr = labelStr;
+  }
+
+  // 1. 取得區間內所有紀錄 (包含純打卡，供智慧工時計算使用)
   let rawRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
+
+  // 若有選擇特定平台過濾，必須「保留純打卡記錄」，否則智慧工時會抓不到！
+  if (S.histFilter !== 'all') {
+    rawRecs = rawRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
+  }
+
+  // 2. 過濾掉純打卡紀錄 與 現金小費，專門用來渲染下方的實體卡片列表
+  // 👇 加上 && !r.isCashTip 排除現金小費
   let displayRecs = rawRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
   
-  if (S.histFilter !== 'all') {
-    displayRecs = displayRecs.filter(r => r.platformId === S.histFilter);
-  }
-  displayRecs.sort((a,b) => b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||''));
+  // 計算實際要顯示的卡片數量 (此時已經不含打卡與現金小費)
+  const recCount = displayRecs.length;
 
-  // 分頁
-  const itemsPerPage = 30;
-  const totalItems = displayRecs.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  if (!S.histPage || S.histPage < 1) S.histPage = 1;
-  if (S.histPage > totalPages) S.histPage = totalPages;
-  
-  const startIdx = (S.histPage - 1) * itemsPerPage;
-  const pageItems = displayRecs.slice(startIdx, startIdx + itemsPerPage);
+  let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}" ${S.histFilter===p.id?'selected':''}>${safeText(p.name)}</option>`).join('');
 
-  // 導航列
-  const navHtml = `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; padding:8px 12px; border-radius:20px; border:1.5px solid #e2e8f0; margin:12px 8px 16px;">
-      <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')" style="width:44px;height:44px;">◀</button>
-      <span style="font-family:var(--mono); font-size:19px; font-weight:900; color:#1e40af; flex:1; text-align:center;">${labelStr}</span>
-      <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width:44px;height:44px;">▶</button>
+  let html = `<div style="padding: 0 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
+      <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')" style="width: 42px; height: 42px;">◀</button>
+      <span style="font-family:var(--mono); font-size: 22px; font-weight: 900; color: #006eff; letter-spacing: 0px; text-align: center; flex: 1;">${labelStr}</span>
+      <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width: 42px; height: 42px;">▶</button>
     </div>
-  `;
-
-  // 平台選擇 + 新增的「列表切換」按鈕
-  const activePlats = S.platforms.filter(p=>p.active);
-  const controlHtml = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin:0 12px 12px; padding:0 4px;">
+    
+    <!-- 👇 修改這裡：左邊顯示筆數，右邊放下拉選單 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; padding: 0 4px;">
       <div style="font-size:13px; font-weight:800; color:var(--t2);">
-        共 <span style="font-family:var(--mono); font-size:18px; font-weight:900; color:#ea580c;">${totalItems}</span> 筆
+        共 <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ea580c; margin:0 2px;">${recCount}</span> 筆記錄
       </div>
-      
-      <div style="display:flex; align-items:center; gap:8px;">
-        <select class="fsel" style="padding:7px 12px; font-size:13.5px; font-weight:800; border-radius:12px;" onchange="S.histPage=1; changeHistFilter(this.value)">
-          <option value="all">全部平台</option>
-          ${activePlats.map(p => `<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('')}
-        </select>
-        
-        <!-- 新增：列表顯示切換按鈕 -->
-        <button onclick="toggleHistGroupList()" id="list-toggle-btn"
-          style="padding:7px 14px; font-size:13px; font-weight:800; border-radius:12px; background:#f1f5f9; border:1.5px solid #cbd5e1; white-space:nowrap;">
-          ▼ 顯示列表
-        </button>
-      </div>
+      <select class="fsel" style="width:auto; padding:6px 14px; font-size:13px; font-weight:800; border-radius:14px; background: #f1f5f9; border: 1.5px solid #cbd5e1; color: var(--t2);" onchange="changeHistFilter(this.value)">${platOpts}</select>
     </div>
-  `;
+  </div>
+  <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:7px;">`;
 
-  // 區間總計卡片（保留原本設計）
-  const tInc = displayRecs.reduce((s,r) => s + recTotal(r), 0);
-  const tOrd = displayRecs.reduce((s,r) => s + pf(r.orders), 0);
-  const tMil = displayRecs.reduce((s,r) => s + pf(r.mileage), 0);
-  const tHrs = calcTotalHours(displayRecs);
-  const tBon = displayRecs.reduce((s,r) => s + pf(r.bonus) + pf(r.tempBonus), 0);
-  const tTip = displayRecs.reduce((s,r) => s + pf(r.tips), 0);
-
-  const summaryCard = buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBon, 0, tTip, 'hist-group-card', labelStr);
-
-  // 下方列表
-  const listContainerId = 'hist-group-list';
-  let listContent = '';
-  
-  if (pageItems.length === 0) {
-    listContent = `<div class="empty-tip" style="margin:40px 0;">此區間無符合記錄</div>`;
+  // 3. 判斷是否有實質行程記錄 (若只有打卡沒跑單，就不顯示該平台)
+  if (displayRecs.length === 0) {
+    html += `<div class="empty-tip">沒有資料</div>`;
   } else {
-    let i = 0;
-    while (i < pageItems.length) {
-      const currentDate = pageItems[i].date;
-      const dayRecs = [];
-      while (i < pageItems.length && pageItems[i].date === currentDate) {
-        dayRecs.push(pageItems[i]);
-        i++;
-      }
-      listContent += buildSimpleDayGroup(currentDate, dayRecs);
+    // 💡 餵給它們包含打卡的 rawRecs，智慧工時就能正確發揮作用
+    const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
+    const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
+    const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
+    const tHrs = calcTotalHours(rawRecs);
+    const tBonus = rawRecs.reduce((s,r) => s + pf(r.bonus), 0);
+    const tTemp = rawRecs.reduce((s,r) => s + pf(r.tempBonus), 0);
+    const tTips = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
+
+    html += buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
+
+    // 深灰色的質感分隔線
+    html += `<div style="height:3px; background:#475569; margin: 0px 0px 4px 0px; border-radius:2px; opacity:0.8;"></div>`;
+
+    // 產生下方卡片時，使用濾除掉打卡紀錄的 displayRecs
+    const sortedDisplayRecs = displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
+    
+    // 👇 極限防護：如果是查看「年」模式，且卡片超過 300 張，予以限制
+    const RENDER_LIMIT = 300;
+    if (mode === 'year' && sortedDisplayRecs.length > RENDER_LIMIT) {
+      html += sortedDisplayRecs.slice(0, RENDER_LIMIT).map(r => buildRecItem(r)).join('');
+      html += `<div style="text-align:center; padding:20px; font-weight:800; color:var(--red); font-size:13px; background:#fef2f2; border-radius:12px; margin-top:8px;">
+         ⚠️ 本年度記錄超過 ${RENDER_LIMIT} 筆，為維持系統流暢，僅顯示最新 ${RENDER_LIMIT} 筆詳細卡片。<br>※ 上方「總計資料」仍為全年精確計算，不受影響。
+       </div>`;
+    } else {
+      html += sortedDisplayRecs.map(r => buildRecItem(r)).join('');
     }
   }
 
-  const paginationHtml = totalPages > 1 ? `
-    <div style="margin:20px 0; text-align:center; padding:0 12px;">
-      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage===1?'disabled':''}>上一頁</button>
-      <span style="margin:0 16px; font-weight:700;">${S.histPage} / ${totalPages}</span>
-      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage===totalPages?'disabled':''}>下一頁</button>
-    </div>
-  ` : '';
-
-  const fullHtml = `
-    <div style="padding:8px 12px 100px 12px;">
-      ${navHtml}
-      ${controlHtml}
-      ${summaryCard}
-      <div id="${listContainerId}" style="max-height:0; overflow:hidden; transition:max-height 0.45s cubic-bezier(0.4,0,0.2,1); margin-top:8px;">
-        ${listContent}
-        ${paginationHtml}
-      </div>
-    </div>
-  `;
-
-  content.innerHTML = fullHtml;
-
-  // 預設隱藏列表
-  setTimeout(() => {
-    const listEl = document.getElementById(listContainerId);
-    if (listEl) listEl.style.maxHeight = '0px';
-  }, 100);
-}
-// 控制下方列表展開/收合
-window.toggleHistGroupList = function() {
-  const list = document.getElementById('hist-group-list');
-  const btn = document.getElementById('list-toggle-btn');
-  if (!list || !btn) return;
-
-  if (list.style.maxHeight === '0px' || !list.style.maxHeight) {
-    list.style.maxHeight = list.scrollHeight + 100 + 'px';
-    btn.innerHTML = '▲ 隱藏列表';
-    btn.style.background = '#e0f2fe';
-    btn.style.borderColor = '#60a5fa';
-  } else {
-    list.style.maxHeight = '0px';
-    btn.innerHTML = '▼ 顯示列表';
-    btn.style.background = '#f1f5f9';
-    btn.style.borderColor = '#cbd5e1';
-  }
-};
-// 分頁點擊事件
-window.changeHistPage = function(dir) {
-  S.histPage += dir;
-  renderHistory();
-  // 回到歷史記錄區域的頂部
-  document.getElementById('hist-content').scrollTop = 0;
-}
-// 修正：當切換標籤或日期時，重置頁碼為 1
-const originalNavHistGroup = navHistGroup;
-navHistGroup = function(dir, mode) {
-  S.histPage = 1; 
-  originalNavHistGroup(dir, mode);
-};
-const originalChangeHistFilter = changeHistFilter;
-changeHistFilter = function(val) {
-  S.histPage = 1;
-  originalChangeHistFilter(val);
-};
-
-// 簡易日期分組（不依賴 buildDateGroup）
-function buildSimpleDayGroup(dateStr, recs) {
-  if (!recs || recs.length === 0) return '';
-
-  const dayTotal = recs.reduce((sum, r) => sum + recTotal(r), 0);
-  let itemsHtml = recs.map(r => {
-    const p = getPlatform(r.platformId);
-    return `
-      <div class="hist-rec-card" onclick="editRecord('${r.id}')" style="margin:6px 0;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <span style="color:${p.color}; font-weight:800;">${p.name}</span>
-            <span style="margin-left:8px; font-family:var(--mono);">${r.time || ''}</span>
-          </div>
-          <span style="font-weight:900; color:var(--text-blue); font-size:17px;">$${fmt(recTotal(r))}</span>
-        </div>
-        ${r.note ? `<div style="margin-top:4px; font-size:12px; color:#64748b;">${safeText(r.note)}</div>` : ''}
-      </div>`;
-  }).join('');
-
-  return `
-    <div style="background:#f8fafc; border-radius:16px; padding:12px; margin:12px 0; border:1px solid #e2e8f0;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1.5px solid #e2e8f0;">
-        <span style="font-weight:800; color:#1e40af;">${dateStr}</span>
-        <span style="font-family:var(--mono); font-size:17px; font-weight:900; color:#1e40af;">$${fmt(dayTotal)}</span>
-      </div>
-      ${itemsHtml}
-    </div>`;
+  html += `</div>`;
+  
+  // 👇 已修復：移除這裡原本錯誤多加的 const 宣告，直接塞入 HTML 即可！
+  content.innerHTML = html;
 }
 
 function openFullCalendar() { document.getElementById('full-calendar-overlay').classList.add('show'); renderFullCalendar(); }
@@ -7964,34 +7842,17 @@ window.openAdminOnlineUsers = async function() {
 };
 
 /* ✨ 編輯首頁系統公告 */
+// 編輯公告
 window.openAnnouncementEdit = function() {
-  // 重置所有頂部按鈕
-  document.getElementById('sub-top-left').innerHTML = '';
-  document.getElementById('sub-top-right').innerHTML = '';
-
-  // 隱藏原本的 X 按鈕
+  document.getElementById('sub-title').textContent = '編輯公告';
+  
+  // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-
-  // 左上角：管理列表
-  document.getElementById('sub-top-left').innerHTML = `
-    <button onclick="openAnnouncementSettings()" 
-      style="background:#1b2f4b; color:#fff; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700;">
-      📋 管理列表
-    </button>
-  `;
-
-  // 右上角：返回
+  // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { 
-      document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; 
-      openAnnouncementSettings(); 
-    })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:900;">
-      🔙 返回
-    </button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
   `;
-
-  document.getElementById('sub-title').textContent = '編輯公告';
 
   const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '', date: '' };
   const tags = ['改版公告', '新功能公告', 'Bug修復公告', '系統公告'];
@@ -7999,49 +7860,54 @@ window.openAnnouncementEdit = function() {
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px; display:flex; flex-direction:column; gap:20px;">
       
+      <!-- 區塊 1：版本與日期 (藍色系) -->
       <div style="background: #eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#2563eb; margin-bottom:10px;">🏷️ 版本資訊</div>
         <div style="display:flex; gap:10px;">
-          <div class="fg" style="flex:1;"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${safeText(ann.version)}"></div>
-          <div class="fg" style="flex:1.2;"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${ann.date || todayStr()}"></div>
+          <div class="fg" style="flex:1;"><label>版本代號</label><input type="text" class="finp" id="ann-ver" value="${safeText(ann.version)}" style="padding:8px;"></div>
+          <div class="fg" style="flex:1.2;"><label>發布日期</label><input type="date" class="finp" id="ann-date" value="${ann.date || todayStr()}" style="padding:8px;"></div>
         </div>
       </div>
 
+      <!-- 區塊 2：公告內容 (橘色系) -->
+      <!-- 標題區塊 -->
       <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
         <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告標題</label>
         <div style="display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:4px;">
             ${tags.map(t => `<button type="button" class="tag-btn" onclick="document.getElementById('ann-title').value='${t}'">${t}</button>`).join('')}
         </div>
-        <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="輸入標題...">
+        <input type="text" class="finp" id="ann-title" value="${safeText(ann.title)}" placeholder="輸入標題或點選上方標籤..." style="border:2px solid #3b82f6;">
       </div>
-
+      <!-- 內容區塊 -->
       <div style="background:#fff7ed; padding:15px; border-radius:16px; border:2px solid #fed7aa;">
         <label style="font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:block;">公告內容</label>
-        <textarea class="finp" id="ann-content" rows="8">${safeText(ann.content)}</textarea>
+        <textarea class="finp" id="ann-content" rows="6" style="width:100%; padding:10px;">${safeText(ann.content)}</textarea>
       </div>
 
+      <!-- 區塊 3：進階設定 (綠色系) -->
       <div style="background: #f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#059669; margin-bottom:10px;">⚙️ 進階設定</div>
         <div class="fg" style="margin-bottom:12px;">
           <label>顯示樣式</label>
-          <select class="fsel" id="ann-style">
+          <select class="fsel" id="ann-style" style="padding:8px;">
             <option value="aurora" ${ann.style==='aurora'?'selected':''}>🌈 極光玻璃</option>
-            <option value="cute-gold" ${ann.style==='cute-gold'?'selected':''}>萌趣金幣</option>
-            <option value="bear-party" ${ann.style==='bear-party'?'selected':''}>熊熊派對</option>
+            <option value="cute-gold" ${ann.style==='cute-gold'?'selected':''}>萌趣金幣樂園</option>
+            <option value="bear-party" ${ann.style==='bear-party'?'selected':''}>熊熊冒險派對</option>
+            <option value="gem-feast" ${ann.style==='gem-feast'?'selected':''}>華麗寶石盛宴</option>
+            <option value="candy-dream" ${ann.style==='candy-dream'?'selected':''}>夢幻糖果王國</option>
           </select>
         </div>
-        <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0;">
           <span style="font-size:14px; font-weight:800;">是否啟用公告</span>
           <label class="switch"><input type="checkbox" id="ann-enabled" ${ann.enabled?'checked':''}><span class="slider"></span></label>
         </div>
       </div>
 
-      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px;">
+      <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; background:#1e293b; color:#fff;">
         💾 儲存並發布
       </button>
     </div>
   `;
-
   openOverlay('sub-page');
 };
 window.saveAnnouncement = function() {
@@ -8072,73 +7938,6 @@ window.saveAnnouncement = function() {
   saveSettings();
   closeOverlay('sub-page');
   toast('✅ 公告已更新');
-};
-function openAnnouncementSettings() {
-  document.getElementById('sub-title').textContent = '公告管理';
-  
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="openAnnouncementEdit()" class="btn-acc" style="padding:6px 14px;">＋ 新增/編輯公告</button>
-  `;
-
-  let html = `
-    <div style="padding:16px;">
-      <div style="background:#fefce8; padding:12px; border-radius:12px; margin-bottom:20px; font-size:13px; color:#854d0e;">
-        💡 目前使用的公告版本： <b>${S.settings.announcement?.version || '無'}</b>
-      </div>
-
-      <h3 style="margin:8px 0 12px; font-size:16px; font-weight:900;">已發布公告紀錄</h3>
-  `;
-
-  const history = S.settings.announcementHistory || [];
-
-  if (history.length === 0) {
-    html += `<div class="empty-tip">目前沒有已發布的公告紀錄</div>`;
-  } else {
-    html += `<div style="display:flex; flex-direction:column; gap:12px;">`;
-    history.forEach((ann, i) => {
-      const isCurrent = S.settings.announcement && S.settings.announcement.version === ann.version;
-      html += `
-        <div style="background:#fff; border:2px solid ${isCurrent ? '#3b82f6' : '#e2e8f0'}; border-radius:16px; padding:14px;">
-          <div style="display:flex; justify-content:space-between; align-items:start;">
-            <div style="flex:1;">
-              <div style="font-weight:900;">${safeText(ann.title)}</div>
-              <div style="font-size:12px; color:#64748b;">v${safeText(ann.version)}　${ann.date || ''}</div>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button onclick="editExistingAnnouncement(${i})" style="padding:6px 12px; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; border-radius:8px; font-size:13px;">編輯</button>
-              <button onclick="deleteAnnouncement(${i})" style="padding:6px 12px; background:#fee2e2; color:#ef4444; border:1px solid #fecdd3; border-radius:8px; font-size:13px;">刪除</button>
-            </div>
-          </div>
-        </div>`;
-    });
-    html += `</div>`;
-  }
-
-  html += `</div>`;
-  document.getElementById('sub-body').innerHTML = html;
-  openOverlay('sub-page');
-}
-// 編輯歷史公告
-window.editExistingAnnouncement = function(index) {
-  const history = S.settings.announcementHistory || [];
-  if (!history[index]) return;
-  
-  S.settings.announcement = { ...history[index] }; // 載入到目前編輯中
-  saveSettings();
-  openAnnouncementEdit(); // 開啟你原本的詳細編輯頁
-};
-// 刪除公告
-window.deleteAnnouncement = function(index) {
-  customConfirm('確定刪除這則公告？').then(ok => {
-    if (ok) {
-      const history = S.settings.announcementHistory || [];
-      history.splice(index, 1);
-      S.settings.announcementHistory = history;
-      saveSettings();
-      toast('✅ 已刪除');
-      openAnnouncementSettings();
-    }
-  });
 };
 
 
@@ -8892,7 +8691,7 @@ function doRestore() {
       const text = await file.text(); 
       const data = JSON.parse(text); 
       // 👇 將檔案名稱安全地顯示在確認視窗中
-      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;font-size:20px;font-weight:700;">覆蓋 </span>現有資料？`);
+      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;">覆蓋</span>現有資料？`);
       if (!ok) return; 
       
       if (data.records) { S.records=data.records; saveRecords(); } 
@@ -9050,22 +8849,17 @@ async function doClearData() {
   const ok = await customConfirm(msg); 
   if (!ok) return; 
 
-  S.records = []; 
-  S.vehicles = []; 
-  S.vehicleRecs = []; 
-
+  S.records=[]; 
+  S.vehicles=[]; 
+  S.vehicleRecs=[]; 
+  
   saveRecords(); 
   saveVehicles(); 
   saveVehicleRecs(); 
-
-  // 清除所有公告相關資料
-  localStorage.removeItem('delivery_ann_dismissed_ver');
-
-  toast('✅ 已清除所有資料（包含公告記錄）'); 
+  
+  toast('✅ 已清除記錄與車輛資料'); 
+  renderHome(); 
   renderSettings(); 
-
-  if (S.tab === 'home') renderHome();
-  else goPage('home');
 }
 
 /* ══ 重置所有設定和資料 (含重新呼叫進場動畫與彈窗) ══ */
@@ -9081,41 +8875,34 @@ async function doReset() {
       ⚠️ 此動作極度危險且《 無法復原 》，<br>【 確定 】要重置？
     </div>
   `;
-const ok = await customConfirm(msg); 
+  const ok = await customConfirm(msg); 
   if (!ok) return; 
 
-  // 1. 備份已讀公告的版本號，避免重置後公告又跳出來
-  const dismissedVer = localStorage.getItem('delivery_ann_dismissed_ver');
-
-  // 2. 清空所有資料，恢復至初始狀態
+  // 1. 清空所有資料，恢復至初始狀態
   S.records = []; 
   S.settings = { ...DEFAULT_SETTINGS, shopHistory:[] }; 
-  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); 
+  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); // 預設所有平台 active 皆為 false
   S.vehicles = []; 
   S.vehicleRecs = []; 
   S.punch = null;
 
-  // 3. 寫入儲存空間（修正後的正確寫法）
+  // 2. 寫入儲存空間
   saveRecords(); 
-  saveSettings();
+  saveSettings(); 
   savePlatforms(); 
   saveVehicles(); 
   saveVehicleRecs(); 
   savePunch();
 
-  // 4. 恢復已讀公告標記
-  if (dismissedVer) {
-    localStorage.setItem('delivery_ann_dismissed_ver', dismissedVer);
-  }
-
-  // 5. 關閉彈窗並切換到首頁
+  // 3. 關閉當前設定彈窗並切換底層至首頁
   closeOverlay('sub-page'); 
   S.tab = 'home';
   document.body.setAttribute('data-tab', 'home');
 
-  // 6. 呼叫進場動畫
+  // 4. 呼叫進場載入動畫 (營造重新啟動的感覺)
   window.onSplashFinished();
 
+  // 5. 載入動畫結束後 (onSplashFinished 動畫約耗時 500ms)，觸發平台選擇視窗
   setTimeout(() => {
     toast('✅ 已重置所有設定和資料'); 
     checkAndPromptPlatformSetup();
@@ -9850,11 +9637,19 @@ window.onSplashFinished = function() {
   setTimeout(() => {
     try {
       S.homeSubTab = 'schedule';
-      goPage('home');
+      goPage('home');                    // 強制渲染首頁
       updateNavIndicator('home');
 
-      // ✅ 修改點：只在進場動畫結束後「檢查一次」公告
-      checkAndShowAnnouncement();
+      // 強制再渲染一次公告（防止被 loadingDiv 蓋住）
+      setTimeout(() => {
+        const existing = document.getElementById('home-announcement-overlay');
+        if (!existing) {
+          const annHtml = getFloatingAnnouncementHtml();
+          if (annHtml) {
+            document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+          }
+        }
+      }, 600);
 
     } catch(e) {
       console.error("首頁渲染失敗", e);
