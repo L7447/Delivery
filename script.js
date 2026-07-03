@@ -501,6 +501,9 @@ const S = {
   records: [], platforms: [], settings: { ...DEFAULT_SETTINGS }, punch: null,
   vehicles: [], vehicleRecs: [], editingId: null, selPlatformId: null, charts: {},
   homeSubTab: 'schedule', vehicleTab: 'fuel', newVehIcon: 4, newVehColor: '#555555',
+  histPage: 1, // 新增分頁狀態
+  histShowList: false, // 控制清單是否展開
+  histFilter: 'all',
   selVehicleId: null, vehY: new Date().getFullYear(), vehM: new Date().getMonth()+1, addVehRecType: 'fuel',
   rptOverviewFilter: 'all', cmpType: 'prev_month', cmpPeriods: [],
   histFullCalY: new Date().getFullYear(), histFullCalM: new Date().getMonth()+1
@@ -1291,7 +1294,16 @@ function switchHomeTab(tab, index) {
   document.getElementById('btn-home-reward')?.classList.toggle('active', tab==='reward'); 
   renderHome(); 
 }
-function switchHistTab(tab, index) { S.histTab = tab; S.histNavDate = new Date(); document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); renderHistory(); }
+
+function switchHistTab(tab, index) { 
+  S.histTab = tab; 
+  S.histPage = 1; // 👈 每次切換模式 (日/週/年)，強制回到第 1 頁
+  S.histNavDate = new Date(); // 👈 確保日期回到「今天」作為基準，避免跨年切換錯誤
+  
+  document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; 
+  document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); 
+  renderHistory(); 
+}
 function switchRptTab(tab, index, btnEl) { 
   S.rptView = tab; 
   document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; 
@@ -1386,7 +1398,7 @@ function getFloatingAnnouncementHtml() {
         <div id="ann-checkbox" data-checked="false" data-ver="${annVer}" 
             style="margin-bottom:25px; display:flex; align-items:center; gap:8px; cursor:pointer; pointer-events:auto; position:relative; z-index:100;">
             <div id="ann-cb-box" style="width:20px;height:20px;border:2px solid #fff;border-radius:5px;flex-shrink:0; pointer-events:none;"></div>
-            <span style="font-size:12px; font-weight:700; color:#fff; pointer-events:none;">不再顯示此版本</span>
+            <span style="font-size:12px; font-weight:700; color:#fff; pointer-events:none;">不再顯示此公告</span>
         </div>
         <!-- 層級 5：確認閱讀 -->
         <button id="close-ann-btn" data-ver="${annVer}" class="ann-btn">確認閱讀</button>
@@ -1447,6 +1459,20 @@ document.addEventListener('click', function(e) {
     }
   }
 });
+
+function checkAndShowAnnouncement() {
+  // 1. 只有在「首頁」且「沒有正在開啟的彈窗」時才檢查
+  if (S.tab !== 'home') return;
+  if (document.querySelector('.overlay-page.show')) return; // 如果有任何子頁面開著，不准跳公告
+  
+  // 2. 如果 DOM 已經有公告了，不要重複插入
+  if (document.getElementById('home-announcement-overlay')) return;
+
+  const annHtml = getFloatingAnnouncementHtml();
+  if (annHtml) {
+    document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
+  }
+}
 
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
@@ -2271,6 +2297,7 @@ function renderHistGroupView(mode) {
   const nd = new Date(S.histNavDate);
   let startD, endD, labelStr;
 
+  // --- 1. 日期區間計算 (維持原邏輯) ---
   if (mode === 'week') {
     const day = nd.getDay() || 7;
     startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
@@ -2283,8 +2310,7 @@ function renderHistGroupView(mode) {
     const cycleOffset = Math.floor(diffDays / 14);
     startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14);
     endD = new Date(startD); endD.setDate(endD.getDate() + 13);
-    let yearPrefix = (startD.getFullYear() !== endD.getFullYear()) ? `${startD.getFullYear()}/` : '';
-    labelStr = `${yearPrefix}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+    labelStr = `${startD.getFullYear() === endD.getFullYear() ? '' : startD.getFullYear()+'/'}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
   } else if (mode === 'halfmonth') {
     let isFirstHalf = nd.getDate() <= 15;
     if (isFirstHalf) {
@@ -2295,95 +2321,134 @@ function renderHistGroupView(mode) {
   } else if (mode === 'month') {
     startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
   } else if (mode === 'year') {
-    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()}年`;
+    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()} 年`;
   }
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
 
-  let cardDateStr = '';
-  if (mode === 'week' || mode === 'biweek') {
-      if (startD.getFullYear() === endD.getFullYear()) {
-          cardDateStr = `${startD.getFullYear()}年 ${pad(startD.getMonth()+1)}月${pad(startD.getDate())}日 ~ ${pad(endD.getMonth()+1)}月${pad(endD.getDate())}日`;
-      } else {
-          cardDateStr = `${startD.getFullYear()}年 ${pad(startD.getMonth()+1)}月${pad(startD.getDate())}日 ~ ${endD.getFullYear()}年 ${pad(endD.getMonth()+1)}月${pad(endD.getDate())}日`;
-      }
-  } else {
-      cardDateStr = labelStr;
-  }
-
-  // 1. 取得區間內所有紀錄 (包含純打卡，供智慧工時計算使用)
-  let rawRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
-
-  // 若有選擇特定平台過濾，必須「保留純打卡記錄」，否則智慧工時會抓不到！
-  if (S.histFilter !== 'all') {
-    rawRecs = rawRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
-  }
-
-  // 2. 過濾掉純打卡紀錄 與 現金小費，專門用來渲染下方的實體卡片列表
-  // 👇 加上 && !r.isCashTip 排除現金小費
-  let displayRecs = rawRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
+  // --- 2. 核心修正：資料篩選 (修正總結卡片不連動的問題) ---
+  // A. 找出該日期區間內「全部」原始資料 (含打卡)
+  let rawDateRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
   
-  // 計算實際要顯示的卡片數量 (此時已經不含打卡與現金小費)
-  const recCount = displayRecs.length;
+  // B. 根據選擇的平台過濾 (如果要算總結，這裡必須先過濾)
+  let filteredRecs = (S.histFilter === 'all') 
+    ? rawDateRecs 
+    : rawDateRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
 
-  let platOpts = `<option value="all">全部平台</option>` + S.platforms.filter(p=>p.active).map(p=>`<option value="${safeText(p.id)}" ${S.histFilter===p.id?'selected':''}>${safeText(p.name)}</option>`).join('');
+  // C. 用過濾後的資料計算總結 (這解決了問題 5)
+  const tInc = filteredRecs.reduce((s,r) => s + recTotal(r), 0);
+  const tOrd = filteredRecs.reduce((s,r) => s + pf(r.orders), 0);
+  const tMil = filteredRecs.reduce((s,r) => s + pf(r.mileage), 0);
+  const tHrs = calcTotalHours(filteredRecs);
+  const tTip = filteredRecs.reduce((s,r) => s + pf(r.tips), 0);
 
-  let html = `<div style="padding: 0 16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
-      <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')" style="width: 42px; height: 42px;">◀</button>
-      <span style="font-family:var(--mono); font-size: 22px; font-weight: 900; color: #006eff; letter-spacing: 0px; text-align: center; flex: 1;">${labelStr}</span>
-      <button class="btn btn1" onclick="navHistGroup(1, '${mode}')" style="width: 42px; height: 42px;">▶</button>
-    </div>
-    
-    <!-- 👇 修改這裡：左邊顯示筆數，右邊放下拉選單 -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; padding: 0 4px;">
-      <div style="font-size:13px; font-weight:800; color:var(--t2);">
-        共 <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ea580c; margin:0 2px;">${recCount}</span> 筆記錄
+  // D. 準備顯示用的卡片列表 (排除純打卡與小費)
+  let displayRecs = filteredRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
+  displayRecs.sort((a,b) => b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
+
+  // --- 3. UI 元件構建 ---
+  
+  // A. 重新設計的平台按鈕組
+  const activePlats = S.platforms.filter(p=>p.active);
+  let platButtonsHtml = `<button class="plat-btn ${S.histFilter==='all'?'active':''}" onclick="setHistFilter('all')">全部</button>`;
+  activePlats.forEach(p => {
+    platButtonsHtml += `<button class="plat-btn ${S.histFilter===p.id?'active':''}" onclick="setHistFilter('${p.id}')">${p.name}</button>`;
+  });
+
+  // B. 顯示/隱藏清單按鈕
+  const toggleBtnHtml = `<button class="toggle-list-btn" onclick="toggleHistList()">
+    ${S.histShowList ? '▲ 隱藏列表' : '▼ 顯示列表'}
+  </button>`;
+
+  // C. 高對比總結卡片
+  let summaryCardHtml = buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tInc-tTip, 0, tTip, 'hist-group-card', labelStr);
+  // 注入加強樣式 Class
+  summaryCardHtml = summaryCardHtml.replace('hist-rec-card', 'hist-rec-card summary-card-enhanced');
+
+  // D. 列表分頁邏輯
+  const itemsPerPage = 30;
+  const totalPages = Math.ceil(displayRecs.length / itemsPerPage) || 1;
+  const pageItems = displayRecs.slice((S.histPage - 1) * itemsPerPage, S.histPage * itemsPerPage);
+
+  // --- 4. 組合輸出 ---
+  content.innerHTML = `
+    <div style="padding: 6px 16px;">
+      <!-- 日期導航 -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 15px;">
+        <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')">◀</button>
+        <span style="font-family:var(--mono); font-size: 20px; font-weight: 900; color: #006eff;">${labelStr}</span>
+        <button class="btn btn1" onclick="navHistGroup(1, '${mode}')">▶</button>
       </div>
-      <select class="fsel" style="width:auto; padding:6px 14px; font-size:13px; font-weight:800; border-radius:14px; background: #f1f5f9; border: 1.5px solid #cbd5e1; color: var(--t2);" onchange="changeHistFilter(this.value)">${platOpts}</select>
+
+      <!-- 按鈕控制區 -->
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+        <div class="plat-select-container hide-scroll">${platButtonsHtml}</div>
+        ${toggleBtnHtml}
+      </div>
+
+      <!-- 強化總結卡片 -->
+      ${summaryCardHtml}
+
+      <!-- 卡片列表區 -->
+      <div id="hist-list-wrapper" class="${S.histShowList ? '' : 'hidden'}">
+        <div style="font-size:12px; font-weight:800; color:var(--t3); margin-bottom:10px; padding:0 4px;">
+          共有 ${displayRecs.length} 筆記錄 (第 ${S.histPage} 頁)
+        </div>
+        ${renderCardList(pageItems)}
+        ${renderPagination(totalPages)}
+      </div>
     </div>
-  </div>
-  <div style="padding: 0 16px 24px; display:flex; flex-direction:column; gap:7px;">`;
-
-  // 3. 判斷是否有實質行程記錄 (若只有打卡沒跑單，就不顯示該平台)
-  if (displayRecs.length === 0) {
-    html += `<div class="empty-tip">沒有資料</div>`;
-  } else {
-    // 💡 餵給它們包含打卡的 rawRecs，智慧工時就能正確發揮作用
-    const tInc = rawRecs.reduce((s,r) => s + recTotal(r), 0);
-    const tOrd = rawRecs.reduce((s,r) => s + pf(r.orders), 0);
-    const tMil = rawRecs.reduce((s,r) => s + pf(r.mileage), 0);
-    const tHrs = calcTotalHours(rawRecs);
-    const tBonus = rawRecs.reduce((s,r) => s + pf(r.bonus), 0);
-    const tTemp = rawRecs.reduce((s,r) => s + pf(r.tempBonus), 0);
-    const tTips = rawRecs.reduce((s,r) => s + pf(r.tips), 0);
-
-    html += buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tBonus, tTemp, tTips, 'hist-group-card', cardDateStr);
-
-    // 深灰色的質感分隔線
-    html += `<div style="height:3px; background:#475569; margin: 0px 0px 4px 0px; border-radius:2px; opacity:0.8;"></div>`;
-
-    // 產生下方卡片時，使用濾除掉打卡紀錄的 displayRecs
-    const sortedDisplayRecs = displayRecs.sort((a,b)=>b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
-    
-    // 👇 極限防護：如果是查看「年」模式，且卡片超過 300 張，予以限制
-    const RENDER_LIMIT = 300;
-    if (mode === 'year' && sortedDisplayRecs.length > RENDER_LIMIT) {
-      html += sortedDisplayRecs.slice(0, RENDER_LIMIT).map(r => buildRecItem(r)).join('');
-      html += `<div style="text-align:center; padding:20px; font-weight:800; color:var(--red); font-size:13px; background:#fef2f2; border-radius:12px; margin-top:8px;">
-         ⚠️ 本年度記錄超過 ${RENDER_LIMIT} 筆，為維持系統流暢，僅顯示最新 ${RENDER_LIMIT} 筆詳細卡片。<br>※ 上方「總計資料」仍為全年精確計算，不受影響。
-       </div>`;
+  `;
+}
+// 輔助功能：切換過濾器
+window.setHistFilter = function(val) {
+  S.histFilter = val;
+  S.histPage = 1;
+  renderHistory();
+};
+// 輔助功能：展開/收起列表
+window.toggleHistList = function() {
+  S.histShowList = !S.histShowList;
+  renderHistory();
+};
+// 輔助功能：渲染列表卡片 (提取原本的 group 邏輯)
+function renderCardList(items) {
+  if (items.length === 0) return `<div class="empty-tip">✨ 目前無行程記錄</div>`;
+  let html = '';
+  let cursor = 0;
+  while (cursor < items.length) {
+    let currentDate = items[cursor].date;
+    let group = [];
+    while (cursor < items.length && items[cursor].date === currentDate) {
+      group.push(items[cursor]);
+      cursor++;
+    }
+    if (group.length > 1) {
+      html += `<div class="rec-group-wrapper"><div class="rec-group-line"></div>${group.map(r => `<div style="position:relative; margin-bottom:8px;"><div class="rec-node"></div>${buildRecItem(r)}</div>`).join('')}</div>`;
     } else {
-      html += sortedDisplayRecs.map(r => buildRecItem(r)).join('');
+      html += `<div style="margin-bottom:8px;">${buildRecItem(group[0])}</div>`;
     }
   }
-
-  html += `</div>`;
-  
-  // 👇 已修復：移除這裡原本錯誤多加的 const 宣告，直接塞入 HTML 即可！
-  content.innerHTML = html;
+  return html;
 }
+// 輔助功能：分頁按鈕
+function renderPagination(total) {
+  if (total <= 1) return '';
+  return `
+    <div class="pagination-ctrl">
+      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage===1?'disabled':''}>上一頁</button>
+      <span class="pg-info">${S.histPage} / ${total}</span>
+      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage===total?'disabled':''}>下一頁</button>
+    </div>`;
+}
+// 分頁處理
+window.changeHistPage = function(dir) {
+  S.histPage += dir;
+  renderHistory();
+  document.getElementById('hist-content').scrollTop = 0;
+};
+
 
 function openFullCalendar() { document.getElementById('full-calendar-overlay').classList.add('show'); renderFullCalendar(); }
 function closeFullCalendar() { document.getElementById('full-calendar-overlay').classList.remove('show'); }
@@ -7846,21 +7911,23 @@ window.openAdminOnlineUsers = async function() {
 window.openAnnouncementEdit = function() {
   document.getElementById('sub-title').textContent = '編輯公告';
   
-  // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-  // 右上角加入強化版返回按鈕
   document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回</button>
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer;">🔙 返回</button>
   `;
 
   const ann = S.settings.announcement || { enabled: true, title: '', content: '', style: 'aurora', version: '', date: '' };
   const tags = ['改版公告', '新功能公告', 'Bug修復公告', '系統公告'];
 
   document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px; display:flex; flex-direction:column; gap:20px;">
+    <div style="padding:16px; display:flex; flex-direction:column; gap:16px;">
       
-      <!-- 區塊 1：版本與日期 (藍色系) -->
+      <!-- 👇 新增：公告管理入口按鈕 -->
+      <button onclick="animateSubPageReturn(this, () => openAnnouncementManagement())" style="width:100%; padding:12px; background:#f1f5f9; color:#475569; border:2px solid #cbd5e1; border-radius:12px; font-weight:800; font-size:14px; cursor:pointer;">
+        📋 進入「公告管理中心」 (查看歷史與回收)
+      </button>
+
       <div style="background: #eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:14px;">
         <div style="font-size:12px; font-weight:900; color:#2563eb; margin-bottom:10px;">🏷️ 版本資訊</div>
         <div style="display:flex; gap:10px;">
@@ -7904,11 +7971,10 @@ window.openAnnouncementEdit = function() {
       </div>
 
       <button onclick="saveAnnouncement()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; background:#1e293b; color:#fff;">
-        💾 儲存並發布
+        🚀 立即發布新公告
       </button>
     </div>
   `;
-  openOverlay('sub-page');
 };
 window.saveAnnouncement = function() {
   const ver = document.getElementById('ann-ver').value.trim();
@@ -7938,6 +8004,85 @@ window.saveAnnouncement = function() {
   saveSettings();
   closeOverlay('sub-page');
   toast('✅ 公告已更新');
+};
+window.openAnnouncementManagement = function() {
+  document.getElementById('sub-title').textContent = '公告管理中心';
+  
+  // 修改 Header 顏色 (深紫色風格)
+  const topBar = document.querySelector('#sub-page .top-bar');
+  topBar.style.background = '#2e1065'; // 深紫
+  document.getElementById('sub-title').style.color = '#f5f3ff';
+  
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { resetHeaderColor(); openAnnouncementEdit(); })" style="background:#f5f3ff; color:#6d28d9; border:none; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer;">🔙 返回編輯</button>
+  `;
+
+  // 取得當前發布中的公告與歷史紀錄
+  const activeAnn = S.settings.announcement;
+  const history = S.settings.annHistory || [];
+
+  let html = `<div style="padding:16px;">`;
+
+  // A. 當前發布中的公告
+  html += `<h4 style="color:#6d28d9; font-size:13px; margin-bottom:10px;">📡 目前發布中 (正在顯示)</h4>`;
+  if (activeAnn && activeAnn.enabled) {
+    html += `
+      <div style="background:#fff; border:2px solid #6d28d9; border-radius:16px; padding:14px; margin-bottom:24px; box-shadow:0 4px 12px rgba(109,40,217,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <span style="background:#6d28d9; color:#fff; padding:2px 8px; border-radius:6px; font-size:11px;">v${activeAnn.version}</span>
+          <span style="color:#64748b; font-size:11px;">${activeAnn.date}</span>
+        </div>
+        <div style="font-weight:800; color:#1e1b4b; margin-bottom:6px;">${activeAnn.title}</div>
+        <div style="font-size:12px; color:#475569; margin-bottom:12px;">${activeAnn.content.substring(0,30)}...</div>
+        <button onclick="deleteActiveAnnouncement()" style="width:100%; padding:8px; background:#fff1f2; color:#be123c; border:1px solid #fecdd3; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">🗑 撤回公告 (停止顯示)</button>
+      </div>`;
+  } else {
+    html += `<div class="empty-tip" style="margin-bottom:24px;">目前沒有正在發布的公告</div>`;
+  }
+
+  // B. 歷史公告紀錄
+  html += `<h4 style="color:#475569; font-size:13px; margin-bottom:10px;">📜 歷史發布紀錄</h4>`;
+  if (history.length === 0) {
+    html += `<div class="empty-tip">無歷史紀錄</div>`;
+  } else {
+    history.forEach((h, idx) => {
+      html += `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:10px; opacity:0.8;">
+          <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+            <span style="color:#64748b;">v${h.version}</span>
+            <span style="color:#94a3b8;">${h.date}</span>
+          </div>
+          <div style="font-size:13px; font-weight:700; color:#475569;">${h.title}</div>
+          <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+            <span onclick="deleteHistoryAnnouncement(${idx})" style="color:#94a3b8; font-size:12px; cursor:pointer;">徹底刪除紀錄</span>
+          </div>
+        </div>`;
+    });
+  }
+
+  html += `</div>`;
+  document.getElementById('sub-body').innerHTML = html;
+};
+// 輔助功能：還原 Header 顏色
+function resetHeaderColor() {
+  const topBar = document.querySelector('#sub-page .top-bar');
+  topBar.style.background = '#ffffff';
+  document.getElementById('sub-title').style.color = '#2563eb';
+}
+// 功能：撤回公告
+window.deleteActiveAnnouncement = async function() {
+  const ok = await customConfirm("確定要撤回此公告嗎？<br>撤回後使用者將不再看到它。");
+  if (!ok) return;
+  
+  // 移入歷史
+  if (!S.settings.annHistory) S.settings.annHistory = [];
+  S.settings.annHistory.unshift(S.settings.announcement);
+  
+  // 清空當前公告
+  S.settings.announcement = null;
+  saveSettings();
+  toast("✅ 已撤回公告");
+  openAnnouncementManagement();
 };
 
 
@@ -8691,7 +8836,7 @@ function doRestore() {
       const text = await file.text(); 
       const data = JSON.parse(text); 
       // 👇 將檔案名稱安全地顯示在確認視窗中
-      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;">覆蓋</span>現有資料？`);
+      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;font-size:20px;font-weight:700;">覆蓋 </span>現有資料？`);
       if (!ok) return; 
       
       if (data.records) { S.records=data.records; saveRecords(); } 
@@ -8837,7 +8982,7 @@ function doExportExcel(targetYear) {
 async function doClearData() { 
   const msg = `
     <div style="font-size:48px; margin-bottom:12px; text-align:center;">🗑️</div>
-    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">清除所有記錄與車輛</div>
+    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">確定清除<span style="color: #0033ff;font-size:18px;font-weight:750;"> 所有記錄 </span>嗎？</div>
     <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
       將清空您的「行程記錄」與「車輛保養/加油資料」<br>
       <span style="color:var(--blue); font-size:12px; font-weight:700;">（但會安全保留您的平台設定與收入目標）</span>
@@ -8849,17 +8994,18 @@ async function doClearData() {
   const ok = await customConfirm(msg); 
   if (!ok) return; 
 
-  S.records=[]; 
-  S.vehicles=[]; 
-  S.vehicleRecs=[]; 
+  // 1. 只清除紀錄資料
+  S.records = []; 
+  S.vehicles = []; 
+  S.vehicleRecs = []; 
   
+  // 2. 儲存
   saveRecords(); 
   saveVehicles(); 
-  saveVehicleRecs(); 
+  saveVehicleRecs();
   
-  toast('✅ 已清除記錄與車輛資料'); 
-  renderHome(); 
-  renderSettings(); 
+  renderSettings();
+  toast('✅ 已清除所有記錄');
 }
 
 /* ══ 重置所有設定和資料 (含重新呼叫進場動畫與彈窗) ══ */
@@ -9640,17 +9786,6 @@ window.onSplashFinished = function() {
       goPage('home');                    // 強制渲染首頁
       updateNavIndicator('home');
 
-      // 強制再渲染一次公告（防止被 loadingDiv 蓋住）
-      setTimeout(() => {
-        const existing = document.getElementById('home-announcement-overlay');
-        if (!existing) {
-          const annHtml = getFloatingAnnouncementHtml();
-          if (annHtml) {
-            document.getElementById('app').insertAdjacentHTML('beforeend', annHtml);
-          }
-        }
-      }, 600);
-
     } catch(e) {
       console.error("首頁渲染失敗", e);
     }
@@ -9658,6 +9793,7 @@ window.onSplashFinished = function() {
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
   }, 600);
+  checkAndShowAnnouncement();
 };
 
 /* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
