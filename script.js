@@ -939,15 +939,22 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
 
   return `
     <div class="hist-rec-card" style="border: 2px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-      <div class="hrc-top" onclick="foldCard('${cardId}', event)" style="padding: 2px 10px; margin:0px 0 4px 0px;">
+      <div class="hrc-top" onclick="foldCard('${cardId}', event)" style="padding: 2px 7px; margin:0px 0 4px 0px;">
         <div class="hrc-toggle" id="${cardId}-btn" style="right: 2px; top: 0px; width: 20px; height: 20px; font-size: 14px;">▼</div>
         <div class="hrc-row1">
           <span style="position:absolute; top:0; left:0; background:#64748b; color:#ffffff; padding:4px 14px; border-radius:0 0 16px 0; font-size:12px; font-weight:800; letter-spacing:1px;">${title}</span>
-          ${dateStr ? `<span style="font-size:12px; font-weight:800; color:var(--text-blue); margin: 3px 0 6px 80px; letter-spacing:0.5px;">${dateStr}</span>` : ''}
+          ${dateStr ? `<span style="justify-content:center;margin: 0px 0 3px 100px;letter-spacing:0.5px;background: #fbff89;border:1px solid #000;border-radius:15px;padding:0.5px 12px;">${dateStr}</span>` : ''}
         </div>
-        <div class="hrc-row2">
-          <span class="hrc-amt" style="color:var(--text-blue);"><span style="font-size:12px;">$ </span><span style="margin-right:10px;">${fmt(total)}</span></span>
-          ${tagsHtml}
+        <div class="hrc-row2" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; width: 100%; gap: 4px;">
+          <!-- 左側金額 -->
+          <span class="hrc-amt" style="color:var(--text-blue); font-weight: 800; flex-shrink: 0;">
+            <span style="font-size:12px;">$ </span>${fmt(total)}
+          </span>
+
+          <!-- 右側標籤 (核心修正：加入 margin-left: auto) -->
+          <div style="margin-left: auto;">
+            ${tagsHtml}
+          </div>
         </div>
       </div>
 
@@ -2107,7 +2114,7 @@ if (!S.histTab) S.histTab = 'day';
 if (!S.histNavDate) S.histNavDate = new Date();
 if (!S.histFilter) S.histFilter = 'all';
 
-function navHistGroup(dir, mode) {
+window.navHistGroup = function(dir, mode) {
   let d = new Date(S.histNavDate);
   if (mode === 'week') { d.setDate(d.getDate() + (dir * 7)); } 
   if (mode === 'biweek') { d.setDate(d.getDate() + (dir * 14)); }
@@ -2123,8 +2130,11 @@ function navHistGroup(dir, mode) {
   }
   if (mode === 'month') { d.setMonth(d.getMonth() + dir); } 
   if (mode === 'year') { d.setFullYear(d.getFullYear() + dir); }
-  S.histNavDate = d; renderHistory();
-}
+  
+  S.histNavDate = d;
+  S.histPage = 1; // 👈 修正：切換區間時強制回到第 1 頁
+  renderHistory();
+};
 function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
 
 /* ══ 替換：統一讓查看紀錄外層負責上下滾動 ══ */
@@ -2291,109 +2301,145 @@ function calcTotalHours(recs) {
   return totalHours;
 }
 
-// 👇 查看記錄-週到年 群組檢視 (已修復智慧工時傳遞與重複宣告錯誤)
+/* ══ 修正：查看記錄 - 智慧日期導航視覺優化版 ══ */
 function renderHistGroupView(mode) {
   const content = document.getElementById('hist-content');
   const nd = new Date(S.histNavDate);
   let startD, endD, labelStr;
 
-  // --- 1. 日期區間計算 (維持原邏輯) ---
+  // 定義樣式組件
+  // styleNum: 藍色大字 (用於數字及上下旬標籤)
+  const styleNum = (val) => `<span style="font-size: 18px; font-weight: 900; color: #006eff; font-family: var(--mono); vertical-align: middle;">${val}</span>`;
+  // styleUnit: 黑色小字 (用於年、月、/ 符號)
+  const styleUnit = (txt) => `<span style="font-size: 13px; font-weight: 800; color: #000000; margin: 0 2px; vertical-align: middle;"> ${txt} </span>`;
+  // styleSep: 黑色中字 (用於 ~ 符號)
+  const styleSep = (sep) => `<span style="font-size: 18px; font-weight: 900; color: #000000; margin: 0 6px; vertical-align: middle;"> ${sep} </span>`;
+
+  // 1. 日期區間計算與標籤 HTML 產生
   if (mode === 'week') {
     const day = nd.getDay() || 7;
     startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
     endD = new Date(startD); endD.setDate(endD.getDate() + 6);
-    labelStr = `${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+    labelStr = `${styleNum(pad(startD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(startD.getDate()))}${styleSep('~')}${styleNum(pad(endD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(endD.getDate()))}`;
   } else if (mode === 'biweek') {
-    const anchor = new Date(2025, 10, 10);
+    const anchor = new Date(2025, 10, 10); 
     const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime();
     const diffDays = Math.floor(diffTime / 86400000);
     const cycleOffset = Math.floor(diffDays / 14);
     startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14);
     endD = new Date(startD); endD.setDate(endD.getDate() + 13);
-    labelStr = `${startD.getFullYear() === endD.getFullYear() ? '' : startD.getFullYear()+'/'}${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
+    
+    let yearPrefix = startD.getFullYear() === endD.getFullYear() ? '' : `${styleNum(startD.getFullYear())}${styleUnit('年')}`;
+    labelStr = `${yearPrefix}${styleNum(pad(startD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(startD.getDate()))}${styleSep('~')}${styleNum(pad(endD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(endD.getDate()))}`;
   } else if (mode === 'halfmonth') {
     let isFirstHalf = nd.getDate() <= 15;
+    const tag = isFirstHalf ? '(上)' : '(下)';
     if (isFirstHalf) {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth(), 15); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (上)`;
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth(), 15); 
     } else {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 16); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月 (下)`;
+      startD = new Date(nd.getFullYear(), nd.getMonth(), 16); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); 
     }
+    // 👇 (上)、(下) 改為套用 styleNum (藍色大字)
+    labelStr = `${styleNum(nd.getFullYear())}${styleUnit('年')}${styleNum(nd.getMonth()+1)}${styleUnit('月')}${styleNum(tag)}`;
   } else if (mode === 'month') {
-    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); labelStr = `${nd.getFullYear()}年 ${nd.getMonth()+1}月`;
+    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); 
+    labelStr = `${styleNum(nd.getFullYear())}${styleUnit('年')}${styleNum(nd.getMonth()+1)}${styleUnit('月')}`;
   } else if (mode === 'year') {
-    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); labelStr = `${nd.getFullYear()} 年`;
+    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); 
+    labelStr = `${styleNum(nd.getFullYear())}${styleUnit('年')}`;
   }
 
   const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
   const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
 
-  // --- 2. 核心修正：資料篩選 (修正總結卡片不連動的問題) ---
-  // A. 找出該日期區間內「全部」原始資料 (含打卡)
+  // 2. 資料過濾 (保持你之前的修正邏輯)
   let rawDateRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
-  
-  // B. 根據選擇的平台過濾 (如果要算總結，這裡必須先過濾)
   let filteredRecs = (S.histFilter === 'all') 
     ? rawDateRecs 
     : rawDateRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
 
-  // C. 用過濾後的資料計算總結 (這解決了問題 5)
+  let displayRecs = filteredRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
+  displayRecs.sort((a,b) => b.date.localeCompare(a.date) || (a.time||'').localeCompare(a.time||''));
+
+  // 3. 按照日期分組 (用於智慧分頁)
+  const dateGroups = [];
+  displayRecs.forEach(r => {
+    let lastGroup = dateGroups[dateGroups.length - 1];
+    if (lastGroup && lastGroup[0].date === r.date) { lastGroup.push(r); } 
+    else { dateGroups.push([r]); }
+  });
+
+  // 4. 【智慧分頁演算法】滿足：21個留、22個進下一頁
+  const pages = [];
+  let currentPage = [];
+  let currentCount = 0;
+
+  dateGroups.forEach(group => {
+    const groupSize = group.length;
+    const projectedTotal = currentCount + groupSize;
+
+    if (currentCount === 0) {
+      currentPage.push(...group);
+      currentCount = groupSize;
+    } else if (projectedTotal <= 20) {
+      currentPage.push(...group);
+      currentCount = projectedTotal;
+    } else if (projectedTotal === 21) {
+      // ✅ 剛好 21 個：允許放在同一頁
+      currentPage.push(...group);
+      currentCount = projectedTotal;
+    } else {
+      // ✅ 總數大於等於 22：這一整組移到下一頁
+      pages.push(currentPage);
+      currentPage = [...group];
+      currentCount = groupSize;
+    }
+  });
+  if (currentPage.length > 0) pages.push(currentPage);
+
+  const totalPages = pages.length || 1;
+  if (S.histPage > totalPages) S.histPage = totalPages;
+  const pageItems = pages[S.histPage - 1] || [];
+
+  // 5. 計算總結 (統計全部，不分分頁)
   const tInc = filteredRecs.reduce((s,r) => s + recTotal(r), 0);
   const tOrd = filteredRecs.reduce((s,r) => s + pf(r.orders), 0);
   const tMil = filteredRecs.reduce((s,r) => s + pf(r.mileage), 0);
   const tHrs = calcTotalHours(filteredRecs);
   const tTip = filteredRecs.reduce((s,r) => s + pf(r.tips), 0);
 
-  // D. 準備顯示用的卡片列表 (排除純打卡與小費)
-  let displayRecs = filteredRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
-  displayRecs.sort((a,b) => b.date.localeCompare(a.date) || (a.time||'').localeCompare(b.time||''));
-
-  // --- 3. UI 元件構建 ---
-  
-  // A. 重新設計的平台按鈕組
+  // 6. 渲染 UI
   const activePlats = S.platforms.filter(p=>p.active);
-  let platButtonsHtml = `<button class="plat-btn ${S.histFilter==='all'?'active':''}" onclick="setHistFilter('all')">全部</button>`;
-  activePlats.forEach(p => {
-    platButtonsHtml += `<button class="plat-btn ${S.histFilter===p.id?'active':''}" onclick="setHistFilter('${p.id}')">${p.name}</button>`;
-  });
-
-  // B. 顯示/隱藏清單按鈕
-  const toggleBtnHtml = `<button class="toggle-list-btn" onclick="toggleHistList()">
-    ${S.histShowList ? '▲ 隱藏列表' : '▼ 顯示列表'}
-  </button>`;
-
-  // C. 高對比總結卡片
+  const currentPlat = S.platforms.find(p => p.id === S.histFilter);
+  const dropdownBg = currentPlat ? currentPlat.color : '#00f7ff';
+  const dropdownText = currentPlat ? '#ffffff' : '#191717';
   let summaryCardHtml = buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tInc-tTip, 0, tTip, 'hist-group-card', labelStr);
-  // 注入加強樣式 Class
-  summaryCardHtml = summaryCardHtml.replace('hist-rec-card', 'hist-rec-card summary-card-enhanced');
 
-  // D. 列表分頁邏輯
-  const itemsPerPage = 30;
-  const totalPages = Math.ceil(displayRecs.length / itemsPerPage) || 1;
-  const pageItems = displayRecs.slice((S.histPage - 1) * itemsPerPage, S.histPage * itemsPerPage);
-
-  // --- 4. 組合輸出 ---
+  // 3. 渲染 UI 時，將 span 的 color 拔掉，因為裡面已經有各自的顏色
   content.innerHTML = `
-    <div style="padding: 6px 16px;">
+    <div style="padding: 5px 16px;">
       <!-- 日期導航 -->
-      <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 15px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 7px;">
         <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')">◀</button>
-        <span style="font-family:var(--mono); font-size: 20px; font-weight: 900; color: #006eff;">${labelStr}</span>
+        <span style="text-align: center; flex: 1; line-height: 1;">${labelStr}</span>
         <button class="btn btn1" onclick="navHistGroup(1, '${mode}')">▶</button>
       </div>
-
-      <!-- 按鈕控制區 -->
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-        <div class="plat-select-container hide-scroll">${platButtonsHtml}</div>
-        ${toggleBtnHtml}
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;justify-content: flex-end;">
+        <select class="plat-dropdown" onchange="setHistFilter(this.value)" style="background:${dropdownBg}; color:${dropdownText}; border-color:${dropdownBg};">
+          <option value="all" ${S.histFilter==='all'?'selected':''}>全部平台</option>
+          ${activePlats.map(p => `<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('')}
+        </select>
+        <button class="toggle-list-btn" onclick="toggleHistList()">
+          ${S.histShowList ? '▲ 隱藏列表' : '▼ 顯示列表'}
+        </button>
       </div>
-
-      <!-- 強化總結卡片 -->
-      ${summaryCardHtml}
-
-      <!-- 卡片列表區 -->
+      <div class="summary-forehead-box">
+        <div class="summary-forehead-top"><span class="summary-forehead-title">📊 區間總結數據</span></div>
+        <div style="padding:4px 2px 2px 2px;">${summaryCardHtml}</div>
+      </div>
       <div id="hist-list-wrapper" class="${S.histShowList ? '' : 'hidden'}">
-        <div style="font-size:12px; font-weight:800; color:var(--t3); margin-bottom:10px; padding:0 4px;">
-          共有 ${displayRecs.length} 筆記錄 (第 ${S.histPage} 頁)
+        <div class="pg-info" style="margin-bottom:5px;">
+          <span style="font-size:14px;font-weight:750;color: #0099ff;">共有 <span style="font-size:15px;font-weight:900;color: #ff7300;">${displayRecs.length}</span> 筆記錄</span> <span style="font-size:15px;font-weight:900;color:#000;">│</span> (第 <span style="font-size:15px;font-weight:900;color: #ff0000;">${S.histPage}</span> 頁 / 總共 <span style="font-size:15px;font-weight:900;color:#000;">${totalPages}</span> 頁)</span>
         </div>
         ${renderCardList(pageItems)}
         ${renderPagination(totalPages)}
