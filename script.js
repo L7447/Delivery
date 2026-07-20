@@ -1861,38 +1861,126 @@ function renderHome() {
 }
 
 /* ══ 打卡里程捕獲介面 ══ */
+// 全域變數，用來存放裁剪實例
+let mileageCropper = null;
+
 function getMileageCaptureHtml(type) {
   const hasKey = !!S.settings.ocrKey;
-  const title = type === 'in' ? '🚀 上線打卡：起始里程' : '🏁 下線打卡：結束里程';
+  const title = type === 'in' ? '🚀 上線打卡' : '🏁 下線打卡';
+  
   return `
-    <div id="mileage-modal" style="padding:20px; text-align:center;">
-      <h2 style="margin-bottom:20px; color:var(--text-blue);">${title}</h2>
+    <div id="mileage-modal" style="padding:16px; text-align:center;">
+      <h2 style="margin-bottom:15px; color:var(--text-blue); font-size:20px;">${title}</h2>
       
-      <!-- 預覽區 -->
-      <div id="ocr-preview-wrap" style="width:100%; height:200px; background:#f1f5f9; border-radius:16px; border:2px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; margin-bottom:20px; overflow:hidden; position:relative;">
-        <span id="ocr-placeholder" style="color:var(--t3); font-size:14px;">尚未拍攝照片</span>
-        <img id="ocr-preview-img" style="display:none; width:100%; height:100%; object-fit:cover;">
-        <!-- 辨識中遮罩 -->
-        <div id="ocr-loading" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.8); flex-direction:column; align-items:center; justify-content:center;">
-           <div class="spin" style="width:30px; height:30px; border:4px solid #e2e8f0; border-top-color:var(--blue); border-radius:50%; animation:spin 1s linear infinite;"></div>
-           <div style="margin-top:10px; font-weight:800; color:var(--blue);">辨識中...</div>
+      <!-- 裁剪容器 -->
+      <div style="width:100%; height:300px; background:#000; border-radius:16px; margin-bottom:15px; overflow:hidden; position:relative;">
+        <img id="ocr-crop-target" style="max-width:100%; display:block;">
+        <div id="ocr-init-tip" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; background:rgba(0,0,0,0.5);">
+          請先拍照或從相簿選擇照片
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:10px; margin-bottom:20px;">
-        <button onclick="document.getElementById('ocr-file-input').click()" style="padding:12px; border-radius:12px; font-weight:800; transition:0.2s;${hasKey ? 'background:var(--sf2); border:1.5px solid var(--border);' : 'background:#f1f5f9; color:#94a3b8; border:1.5px solid #e2e8f0;' }">${hasKey ? '📸 拍照辨識' : '🔒 需設定 Key'}</button>
+      <div style="display:flex; gap:8px; margin-bottom:15px;">
+        <button onclick="document.getElementById('ocr-file-input').click()" style="flex:1; padding:12px; border-radius:12px; background:#fff; border:2px solid var(--blue); font-weight:800; color:var(--blue);">📸 拍照/選圖</button>
+        <button id="start-ocr-btn" onclick="performCropAndOCR()" disabled style="flex:1; padding:12px; border-radius:12px; background:var(--green); color:#fff; border:none; font-weight:800; opacity:0.5;">🔍 裁剪並辨識</button>
+      </div>
+
+      <div style="background:#f1f5f9; padding:15px; border-radius:16px; margin-bottom:15px;">
+        <label style="font-size:12px; font-weight:800; color:var(--t2); display:block; margin-bottom:8px;">確認/修改辨識出的數字</label>
         <div style="position:relative;">
-          <input type="number" id="manual-km" placeholder="辨識結果或手動輸入" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border:2px solid var(--blue); font-family:var(--mono); font-weight:900; font-size:18px;">
-          <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:800; color:var(--t3);">km</span>
+          <input type="number" id="manual-km" placeholder="辨識結果..." inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border:2px solid #cbd5e1; font-family:var(--mono); font-weight:900; font-size:22px; text-align:center; color:var(--blue);">
+          <span style="position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:14px; font-weight:800; color:var(--t3);">km</span>
         </div>
       </div>
 
-      <input type="file" id="ocr-file-input" accept="image/*" capture="camera" style="display:none;" onchange="processMileagePhoto(this)">
-      
-      <button id="confirm-mileage-btn" class="btn-acc" style="width:100%; padding:15px; border-radius:16px; font-size:16px; font-weight:900;">✅ 確認並打卡</button>
+      <input type="file" id="ocr-file-input" accept="image/*" style="display:none;" onchange="initMileageCropper(this)">
+      <button id="confirm-mileage-btn" class="btn-acc" style="width:100%; padding:16px; border-radius:16px; font-size:18px; font-weight:900; box-shadow:0 6px 16px rgba(255,107,53,0.3);">✅ 確認里程並打卡</button>
     </div>
   `;
 }
+// A. 當選取檔案後，初始化裁剪工具
+window.initMileageCropper = function(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const targetImg = document.getElementById('ocr-crop-target');
+  const tip = document.getElementById('ocr-init-tip');
+  const ocrBtn = document.getElementById('start-ocr-btn');
+
+  // 清除舊的裁剪實例
+  if (mileageCropper) {
+    mileageCropper.destroy();
+  }
+
+  const url = URL.createObjectURL(file);
+  targetImg.src = url;
+  if(tip) tip.style.display = 'none';
+
+  // 初始化 Cropper.js
+  mileageCropper = new Cropper(targetImg, {
+    viewMode: 1,
+    dragMode: 'move',
+    autoCropArea: 0.8,
+    restore: false,
+    guides: true,
+    center: true,
+    highlight: false,
+    cropBoxMovable: true,
+    cropBoxResizable: true,
+    toggleDragModeOnDblclick: false,
+  });
+
+  ocrBtn.disabled = false;
+  ocrBtn.style.opacity = '1';
+};
+// B. 執行裁剪並送往雲端辨識
+window.performCropAndOCR = async function() {
+  if (!mileageCropper) return;
+
+  // 1. 取得裁剪範圍的畫布
+  const canvas = mileageCropper.getCroppedCanvas({
+    maxWidth: 1000, // 限制寬度防止過載
+  });
+
+  const loading = document.createElement('div');
+  loading.style.cssText = "position:absolute; inset:0; background:rgba(255,255,255,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100;";
+  loading.innerHTML = '<div class="spin"></div><div style="margin-top:10px; font-weight:800;">辨識中...</div>';
+  document.getElementById('mileage-modal').appendChild(loading);
+
+  try {
+    // 2. 轉為 Base64
+    const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+
+    const formData = new FormData();
+    formData.append("base64Image", base64Image);
+    formData.append("language", "eng");
+    formData.append("filetype", "JPG");
+
+    const response = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: { "apikey": S.settings.ocrKey },
+      body: formData
+    });
+
+    const result = await response.json();
+
+    if (result.ParsedResults && result.ParsedResults.length > 0) {
+      const detectedText = result.ParsedResults[0].ParsedText;
+      const numbers = detectedText.match(/\d+/g);
+      if (numbers) {
+        // 抓取範圍內最長的數字字串（通常就是里程數）
+        const mileage = numbers.sort((a,b) => b.length - a.length)[0];
+        document.getElementById('manual-km').value = mileage;
+        toast('✅ 範圍辨識完成');
+      } else {
+        toast('⚠️ 範圍內找不到數字，請調整裁剪框');
+      }
+    }
+  } catch (err) {
+    toast('❌ 辨識失敗');
+  } finally {
+    loading.remove();
+  }
+};
 /* ══ 修正：上線打卡後跳轉到當日記錄列表 ══ */
 async function punchIn() {
   const active = S.records.find(r => r.isPunchOnly && r.punchOut === '');
@@ -1915,7 +2003,7 @@ async function punchIn() {
       punchIn: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
       punchOut: '',
       hours: 0,
-      startKm: km, // 儲存起始里程
+      startKm: km,
       timestamp: d.getTime(),
       mileage: 0,
       note: ''
@@ -1923,21 +2011,27 @@ async function punchIn() {
 
     S.records.push(rec);
     await saveRecords();
+
+    // 👈 [核心 1] 更新首頁按鈕顏色 (確保下次回來是紅色的)
+    renderHome(); 
+
+    // 👈 [核心 2] 設定跳轉目標 (這就是你問的舊代碼，必須留著)
+    S.histTab = 'day';
+    S.selDate = rec.date;
+    const [y, m] = rec.date.split('-');
+    S.calY = parseInt(y);
+    S.calM = parseInt(m);
+
     closeOverlay('sub-page');
+    if (mileageCropper) {
+      mileageCropper.destroy();
+      mileageCropper = null;
+    }
     toast('▶ 已上線，起始里程：' + km + ' km');
+
+    // 👈 [核心 3] 執行跳轉
+    goPage('history'); 
   };
-
-  // --- 跳轉邏輯 ---
-  S.histTab = 'day';                // 1. 強制切換為「日」檢視模式
-  S.selDate = rec.date;             // 2. 設定選取日期為紀錄日期
-  const [y, m] = rec.date.split('-'); 
-  S.calY = parseInt(y);             // 3. 更新日曆年份
-  S.calM = parseInt(m);             // 4. 更新日曆月份
-
-  // 延遲一點點時間執行跳頁，確保資料寫入與狀態更新穩定
-  setTimeout(() => {
-    goPage('history');              // 5. 切換到查看記錄頁面
-  }, 100);
 }
 /* ══ 修正：下線打卡後跳轉到當日記錄列表 ══ */
 async function punchOut() {
@@ -1950,102 +2044,91 @@ async function punchOut() {
 
   document.getElementById('confirm-mileage-btn').onclick = async () => {
     const endKm = pf(document.getElementById('manual-km').value);
-    
-    // 安全檢查
-    if (endKm <= 0) { toast('⚠️ 請輸入結束里程'); return; }
     if (endKm <= activeRec.startKm) { 
-        toast(`⚠️ 結束里程 (${endKm}) 應大於開始里程 (${activeRec.startKm})`); 
+        toast(`⚠️ 結束里程應大於起始里程 (${activeRec.startKm})`); 
         return; 
     }
 
     const now = new Date();
     const startMs = activeRec.timestamp || new Date(`${activeRec.date}T${activeRec.punchIn}:00`).getTime();
-    
-    // 💡 [核心計算]：計算本次跑單里程
-    const tripMileage = endKm - activeRec.startKm;
+    const diffKm = endKm - activeRec.startKm;
 
     activeRec.punchOut = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     activeRec.hours = (now.getTime() - startMs) / 3600000;
-    activeRec.endKm = endKm;         // 記錄結束里程
-    activeRec.mileage = tripMileage; // 這是計算出的當天行駛里程
+    activeRec.endKm = endKm;
+    activeRec.mileage = diffKm;
 
     await saveRecords();
+
+    // 👈 [核心 1] 更新首頁按鈕顏色 (變回綠色)
+    renderHome(); 
+
+    // 👈 [核心 2] 設定跳轉目標
+    S.histTab = 'day';
+    S.selDate = activeRec.date;
+    const [y, m] = activeRec.date.split('-');
+    S.calY = parseInt(y);
+    S.calM = parseInt(m);
+
     closeOverlay('sub-page');
+    if (mileageCropper) {
+      mileageCropper.destroy();
+      mileageCropper = null;
+    }
     
-    // 彈出成功提示
+    // 結算提示
     customConfirm(`
-      <div style="font-size:40px; margin-bottom:10px;">✅</div>
-      <div style="font-size:18px; font-weight:900; color:var(--green);">下線結算完成</div>
-      <div style="font-size:14px; margin-top:10px; line-height:1.8;">
-        起點：${activeRec.startKm} km<br>
-        終點：${endKm} km<br>
-        <b>本次行駛：<span style="color:var(--acc); font-size:18px;">${tripMileage.toFixed(1)}</span> km</b>
+      <div style="text-align:center; padding:10px;font-family:var(--mono);">
+        <div style="font-size:40px;">🏁<span style="font-size:26px;font-weight:850;color:var(--green);margin-bottom:15px;"> 下線結算完成</div>
+        <div style="font-size:14px;line-height:1.8;margin-bottom:15px;">
+          <span style="color:var(--text-blue)">起點</span>：<span style="color:var(--text-blue);font-size:18px;"> ${activeRec.startKm}</span> km<br>
+          <span style="color: #ff3333;">終點</span>：<span style="color: #ff3333;font-size:18px;"> ${endKm}</span> km<br>
+        </div>
+        <div style="font-size:14px;color:var(--t2);border:1px solid var(--border);border-radius:var(--r);">本次行駛：<b style="color:var(--blue); font-size:24px;"> ${diffKm.toFixed(1)}</b> km</div>
       </div>
     `);
-  }
 
-  // --- 跳轉邏輯 ---
-  S.histTab = 'day';                // 1. 強制切換為「日」檢視模式
-  S.selDate = activeRec.date;       // 2. 設定選取日期為紀錄日期
-  const [y, m] = activeRec.date.split('-');
-  S.calY = parseInt(y);             // 3. 更新日曆年份
-  S.calM = parseInt(m);             // 4. 更新日曆月份
-
-  setTimeout(() => {
-    goPage('history');              // 5. 切換到查看記錄頁面
-  }, 100);
+    // 👈 [核心 3] 執行跳轉
+    goPage('history');
+    renderHistory();
+  };
 }
 
 // 3. 雲端 OCR 辨識邏輯
 window.processMileagePhoto = async function(input) {
   if (!input.files || !input.files[0]) return;
 
-  // 👈 [核心檢查]：檢查是否有填寫 API Key
+  // 1. 檢查有無 Key
   if (!S.settings.ocrKey) {
-    customConfirm(`
-      <div style="font-size:40px; margin-bottom:10px;">🔒</div>
-      <div style="font-size:18px; font-weight:900; color:var(--red);">尚未設定辨識功能</div>
-      <div style="font-size:13px; margin-top:10px; line-height:1.6; color:var(--t2);">
-        為避免共用額度過載，請先至<b>「設定 ➔ 辨識功能設定」</b>填寫您個人的免費 API Key 即可開始使用。
-      </div>
-    `).then(ok => {
-      if (ok) {
-        closeOverlay('sub-page'); // 關閉打卡視窗
-        goPage('settings');
-        setTimeout(openOCRSettings, 300);
-      }
-    });
-    input.value = ''; // 清除檔案選擇
+    toast('⚠️ 請先至設定填寫 OCR API Key');
     return;
   }
 
   const file = input.files[0];
+  const imgPreview = document.getElementById('ocr-preview-img');
+  const loading = document.getElementById('ocr-loading');
+  const placeholder = document.getElementById('ocr-placeholder');
 
-  // 1. 顯示預覽圖
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = document.getElementById('ocr-preview-img');
-    img.src = e.target.result;
-    img.style.display = 'block';
-    document.getElementById('ocr-placeholder').style.display = 'none';
-  };
-  reader.readAsDataURL(file);
-
-  // 2. 顯示辨識中動畫
-  document.getElementById('ocr-loading').style.display = 'flex';
+  // 2. 顯示本地預覽 (加速感)
+  imgPreview.src = URL.createObjectURL(file);
+  imgPreview.style.display = 'block';
+  if(placeholder) placeholder.style.display = 'none';
+  loading.style.display = 'flex';
 
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("language", "eng");
-    
-    // 👈 [核心修改]：使用使用者設定的 Key
-    const apiKey = S.settings.ocrKey; 
+    // 🚀 [核心優化]：壓縮圖片再上傳 (將圖片縮放至寬度 1000px)
+    const compressedBase64 = await compressImage(file, 1000);
 
-    // 3. 發送請求至 OCR.space 伺服器
+    const formData = new FormData();
+    // 使用 base64 格式上傳，穩定性最高
+    const pureBase64 = compressedBase64.split(',')[1]; 
+    formData.append("base64Image", "data:image/jpeg;base64," + pureBase64);
+    formData.append("language", "eng");
+    formData.append("filetype", "JPG");
+
     const response = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
-      headers: { "apikey": apiKey },
+      headers: { "apikey": S.settings.ocrKey },
       body: formData
     });
 
@@ -2053,29 +2136,68 @@ window.processMileagePhoto = async function(input) {
 
     if (result.ParsedResults && result.ParsedResults.length > 0) {
       const detectedText = result.ParsedResults[0].ParsedText;
-      console.log("辨識原始文字:", detectedText);
-
-      // 4. 提取數字邏輯：過濾掉非數字字元
-      // 儀表板常有 "ODO" 或 "km" 字樣，我們只抓取連續的數字
+      // 提取數字邏輯
       const numbers = detectedText.match(/\d+/g);
       if (numbers) {
-        // 通常里程數是畫面上最長的一串數字
         const mileage = Math.max(...numbers.map(n => parseInt(n)));
         document.getElementById('manual-km').value = mileage;
-        toast('✅ 雲端辨識完成：' + mileage);
+        toast('✅ 辨識完成：' + mileage);
       } else {
         toast('⚠️ 辨識成功但找不到數字，請手動校正');
       }
     } else {
-      throw new Error("辨識結果為空");
+      throw new Error("API 傳回錯誤");
     }
   } catch (err) {
-    console.error("OCR 錯誤:", err);
+    console.error("OCR Error:", err);
     toast('❌ 網路辨識失敗，請改用手動輸入');
   } finally {
-    document.getElementById('ocr-loading').style.display = 'none';
+    loading.style.display = 'none';
   }
 };
+
+// 🖼️ 強化版：圖片壓縮與格式轉換函式 (解決 iOS HEIC 問題)
+function compressImage(file, maxWidth) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        
+        // 計算縮放比例
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = height * (maxWidth / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        // 繪製到畫布：這一步會把 HEIC 解碼並轉化為畫布像素
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // 👈 [關鍵]：強制輸出為 image/jpeg，這會徹底解決格式不符的問題
+        // 0.7 是壓縮品質，數值越低檔案越小，辨識速度越快
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // 檢查 DataURL 是否有效
+        if (dataUrl.length < 100) {
+          reject("圖片轉換失敗");
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => reject("圖片載入失敗");
+    };
+    reader.onerror = () => reject("檔案讀取失敗");
+  });
+}
 /* ══ 2. 首頁 結束 ══════════════════════════════════════════ */
 
 /* ══ 3. 查看記錄 開始 ════════════════════════════════════ */
@@ -2152,41 +2274,46 @@ function buildRecItem(r) {
       </div>`;
   }
   
-  // 2. 純打卡紀錄
+  // 2. 純打卡紀錄 (精美標籤版)
   if (r.isPunchOnly) {
     const isOnline = r.punchOut === '';
-    const tagBg = isOnline ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155';
-    const tagShadow = isOnline ? '0 2px 6px rgba(16,185,129,0.3)' : 'none';
-    const outTimeStr = isOnline ? '<span style="color:#10b981; font-weight:900; background:#ecfdf5; padding:2px 6px; border-radius:6px; border:1px solid #a7f3d0;">上線中</span>' : safeText(r.punchOut);
-    const hoursStr = isOnline ? '<span style="color:#10b981; font-size:12px; font-weight:900;">進行中</span>' : fmtHours(r.hours);
+    
+    // 背景與邊框判斷
     const cardBorder = isOnline ? 'border: 2px solid #10b981;' : 'border: 1.5px solid #cbd5e1;';
-    const timeColor = isOnline ? '#0f172a' : '#475569';
+    const tagBg = isOnline ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155';
+    const outTimeStr = isOnline ? '<span style="color:#10b981; font-weight:900; background:#ecfdf5; padding:2px 6px; border-radius:6px; border:1px solid #a7f3d0;">上線中</span>' : safeText(r.punchOut);
 
-    // 👇 這就是新增的：如果里程大於0，就產生一個橘色的里程標籤
-    const mileageStr = r.mileage > 0 
-      ? `<div style="margin-left:8px; background:#fff7ed; color:#ea580c; padding:2px 8px; border-radius:6px; border:1px solid #ffedd5; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:3px;">
-          <span>🛣️</span> ${r.mileage.toFixed(1)} <span style="font-size:9px;">km</span>
-         </div>` 
+    // 1. 里程標籤 (僅在下線後且有里程時顯示)
+    const mileageHtml = (!isOnline && r.mileage > 0) 
+      ? `<div style="margin-left:8px; background:#fff7ed; color:#ea580c; padding:2px 8px; border-radius:8px; border:1.5px solid #ffedd5; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <span style="font-size:13px;">🛣️</span> ${pf(r.mileage).toFixed(1)} <span style="font-size:10px; opacity:0.8;">km</span>
+        </div>` 
       : '';
 
+    // 2. 累計工時精美標籤
+    const hoursHtml = isOnline
+      ? `<div style="margin-left:6px; background:#f0fdf4; color:#10b981; border:1.5px solid #86efac; padding:2px 10px; border-radius:8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; animation: pulse-green 1.5s infinite;"></span> 
+          <span>計時中</span>
+         </div>`
+      : `<div style="margin-left:6px; background:#eff6ff; color:#2563eb; padding:2px 10px; border-radius:8px; border:1.5px solid #bfdbfe; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <span style="font-size:13px;">⏱️</span> ${fmtHours(r.hours)}
+         </div>`;
+
     return `
-      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 8px 10px; margin-bottom: 5px;">
-        <span style="background:${tagBg}; box-shadow:${tagShadow}; color:#fff; font-size:13px; padding:4px 6px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:66px; height:30px; align-content:center;">🕒 打卡</span>
+      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 10px 4px; margin-bottom: 5px;">
+        <span style="background:${tagBg}; color:#fff; font-size:13px; padding:4px 8px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:70px; height:32px; display:flex; align-items:center; justify-content:center;margin-right:5px;">🕒 打卡</span>
         
-        <div class="h-div" style="margin:0 10px; height: 24px;"></div>
-        
-        <div style="font-family:var(--mono); font-size:14px; font-weight:800; color:${timeColor}; flex:1; display:flex; align-items:center; justify-content:center;">
-          <!-- 顯示時間 -->
-          <span style="padding:3px 7px; background:#f1f5f9; border-radius:6px; font-size:11px; font-weight:800; color: #546174; border:1.5px solid #18acbd; margin-right:3px;">${safeText(r.date.replace(/-/g, '/'))}</span> 
-          ${safeText(r.punchIn)} <span style="color: #ff8c00; font-size:17px; font-weight:800; margin:0 4px;">→</span> ${outTimeStr}
+        <div style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--t1); flex:1; display:flex; align-items:center; justify-content:flex-start;">
+          <!-- 移除日期，只保留時間軸 -->
+          <span style="color:var(--green);">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color: #006aff;font-size:16px;font-weight:800;margin:0 3px;">→</span><span style="color:var(--red);">${outTimeStr}</span>
           
-          <!-- 👈 這裡就是把里程標籤塞進來 -->
-          ${mileageStr} 
+          <!-- 組合標籤區 -->
+          <div style="display:flex; align-items:center;">
+            ${mileageHtml}
+            ${hoursHtml}
+          </div>
         </div>
-        
-        <div class="h-div" style="margin:0 10px; height: 24px;"></div>
-        
-        <span style="font-size:14px; font-weight:900; color:var(--text-blue); font-family:var(--mono); flex-shrink:0; min-width: 45px; text-align:right;">${hoursStr}</span>
       </div>`;
   }
 
@@ -3159,6 +3286,7 @@ function openAddPage(record=null, prefill={}) {
     document.getElementById('f-pu-date').value = record.date || todayStr();
     document.getElementById('f-pu-in').value = record.punchIn || '';
     document.getElementById('f-pu-out').value = record.punchOut || '';
+    document.getElementById('f-pu-mileage').value = record.mileage || '';
     let totalHours = pf(record.hours || 0); 
     let h = Math.floor(totalHours); 
     let m = Math.round((totalHours - h) * 60);
@@ -3357,16 +3485,19 @@ function resetAddForm() {
   document.getElementById('f-ct-amount').value = '';
   document.getElementById('f-ct-note').value = '';
 
+  if (document.getElementById('f-pu-mileage')) document.getElementById('f-pu-mileage').value = '';
   document.getElementById('f-pu-date').value = targetDate;
   document.getElementById('f-pu-in').value = '';
   document.getElementById('f-pu-out').value = '';
   document.getElementById('f-pu-hrs').value = '';
-  document.getElementById('f-pu-min').value = '';  
+  document.getElementById('f-pu-min').value = '';
   
   document.getElementById('f-exp-date').value = targetDate;
   document.getElementById('f-exp-amount').value = '';
   document.getElementById('f-exp-note').value = '';
-  document.getElementById('f-exp-cat').value = '平台開通裝備'; // 恢復預設類別
+  document.getElementById('f-exp-cat').value = ''; // 恢復預設類別
+  const tagContainer = document.getElementById('exp-sub-tags');
+  if (tagContainer) tagContainer.innerHTML = '';
 
   S.editingId = null;
   
@@ -3611,6 +3742,7 @@ async function confirmAddRecord() {
     const ph = pf(document.getElementById('f-pu-hrs').value);
     const pm = pf(document.getElementById('f-pu-min').value);
     const totalHours = ph + (pm / 60);
+    const mileage = pf(document.getElementById('f-pu-mileage').value);
     if (totalHours <= 0) { toast('總工時必須大於 0'); return; }
     rec = { 
       ...rec, isPunchOnly: true, isCashTip: false,
@@ -3618,7 +3750,7 @@ async function confirmAddRecord() {
       time: document.getElementById('f-pu-in').value || nowTime(), 
       punchIn: document.getElementById('f-pu-in').value,
       punchOut: document.getElementById('f-pu-out').value,
-      hours: totalHours, orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
+      hours: totalHours, mileage: mileage, orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
     };
   } else if (S.addTab === 'cashtip') {
     const amt = pf(document.getElementById('f-ct-amount').value);
@@ -3672,6 +3804,19 @@ function renderReport() {
     scrollArea.style.display = 'block';
   }
 
+  // 👈 [需求] 注入 UID 浮水印
+  // 先移除舊的（防止重複堆疊）
+  const oldWatermark = scrollArea.querySelector('.watermark-overlay');
+  if (oldWatermark) oldWatermark.remove();
+
+  // 如果已登入且有 UID，則建立浮水印
+  if (USER.loggedIn && USER.uid) {
+    const wm = document.createElement('div');
+    wm.className = 'watermark-overlay';
+    wm.textContent = `UID: #${USER.uid}`;
+    scrollArea.appendChild(wm);
+  }
+  
   if (!S.trendDate) S.trendDate = new Date();
   if (S.rptView === 'overview') renderRptOverview(); 
   if (S.rptView === 'yearOverview') renderRptYearOverview();
@@ -7867,7 +8012,7 @@ async function requestLogin() {
 
           // ✅ 舊用戶，密碼正確，直接瞬間登入
           USER = { 
-            email: email, verified: true, loggedIn: true, 
+            email: email, uid: data.user.uid, verified: true, loggedIn: true, 
             joinDate: new Date(data.user.createdAt).toLocaleDateString(), 
             token: data.token, role: data.user.role, avatar: selectedAvatar,
             isPasswordWeak: isWeak // 👈 新增：記錄他的密碼是不是太弱
@@ -7927,7 +8072,7 @@ async function verifyAuthCode(email) {
     finishProgress(() => {
       if (data.success) {
         // 👈 將 data.user.role (權限) 一併存入
-        USER = { email: email, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
+        USER = { email: email, uid: data.user.uid, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
         saveUser();
         toast('✅ 登入成功');
         closeOverlay('sub-page');
@@ -7997,7 +8142,8 @@ async function openAccountStats() {
     <div style="padding:16px;">
       <div class="card" style="text-align:center; padding:24px 16px; background:#fff; border-color:var(--border);">
         ${avatarImg}
-        <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:6px;">${USER.email}</div>
+        <div style="font-size:16px; font-weight:700; color:var(--t1); margin-bottom:2px;">${USER.email}</div>
+        <div style="font-size:11px; color:var(--t3); font-family:var(--mono); font-weight:800; margin-bottom:8px;">UID: #${USER.uid || '--------'}</div>
         <div style="font-size:12px; color:#fff; background:var(--green); display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700;">✓ 已驗證帳號</div>
       </div>
       
@@ -8360,7 +8506,10 @@ window.renderAdminUserList = function(keyword) {
     html += `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 12px; border-bottom:1px solid var(--border);">
         <div style="flex:1; overflow:hidden; padding-right:10px;">
-          <div style="font-size:15px; font-weight:900; color:var(--t1); margin-bottom:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${roleTag}${u.email}</div>
+          <div style="display:flex; align-items:baseline; gap:8px;">
+            <span style="font-size:15px; font-weight:900; color:var(--t1);">${roleTag}${u.email}</span>
+            <span style="font-size:11px; font-family:var(--mono); color:var(--t3); font-weight:800;">#${u.uid || 'N/A'}</span>
+          </div>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             ${vTag}
             <span style="font-size:11px; color:var(--t3); font-family:var(--mono); font-weight:600;">註冊:${new Date(u.createdAt).toLocaleDateString()}</span>
