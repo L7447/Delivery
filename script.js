@@ -8032,10 +8032,19 @@ function renderAuthContent() {
   }
   document.getElementById('auth-content-area').innerHTML = contentHtml;
 
+  // 1. 先把畫面渲染出來
+  const container = document.getElementById('auth-content-area');
+  if (container) {
+    container.innerHTML = contentHtml;
+  }
+
+  // 2. 【測試用：完全拿掉 Turnstile 邏輯】
+  console.log("Turnstile 已暫時停用進行測試");
+
   // ⚠️ 提醒：appearance: 'always' 僅在前端強制顯示元件。
   // 若要真正要求手動點擊驗證，您必須到 Cloudflare 網頁後台，
   // 將這個 Sitekey 的設定改為「互動式 (Interactive)」。
-  /*
+  /* 
   const renderTurnstileWidget = () => {
     if (document.getElementById('turnstile-widget')) {
       turnstile.render('#turnstile-widget', {
@@ -8045,8 +8054,9 @@ function renderAuthContent() {
       });
     }
   };
-  */
+
   if (typeof turnstile !== 'undefined') { renderTurnstileWidget(); } else { window.onTurnstileLoad = renderTurnstileWidget; const script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad'; script.async = true; script.defer = true; document.body.appendChild(script); }
+  */
 }
 
 /* ══ 新增：更改頭像獨立設定頁 ══ */
