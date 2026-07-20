@@ -1955,6 +1955,9 @@ window.performCropAndOCR = async function() {
     formData.append("language", "eng");
     formData.append("filetype", "JPG");
 
+    // 👈 [關鍵新增] 指定使用 Engine 2
+    formData.append("OCREngine", "2");
+
     const response = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
       headers: { "apikey": S.settings.ocrKey },
@@ -3796,25 +3799,27 @@ function cancelAddRecord() {
 /* ══ 5. 收入分析 開始 ════════════════════════════════════ */
 /* ══ 修正：確保收入分析頁面可正常捲動 ══ */
 function renderReport() {
-  // 👇 改為直接抓取我們在 HTML 新增的獨立滾動區域
+  const reportPage = document.getElementById('page-report');
+  
+  // 1. 處理浮水印
+  // 先移除舊的
+  const oldWm = document.getElementById('rpt-watermark');
+  if (oldWm) oldWm.remove();
+
+  // 如果已登入且有 UID，則建立浮水印並掛在 page-report 最外層
+  if (USER.loggedIn && USER.uid) {
+    const wm = document.createElement('div');
+    wm.id = 'rpt-watermark';
+    wm.className = 'watermark-overlay';
+    wm.textContent = `UID: #${USER.uid}`;
+    reportPage.appendChild(wm);
+  }
+
+  // 2. 處理原本的捲軸邏輯
   const scrollArea = document.getElementById('report-scroll-area');
   if (scrollArea) {
     scrollArea.style.overflowY = 'auto';
-    scrollArea.style.overflowX = 'hidden';
     scrollArea.style.display = 'block';
-  }
-
-  // 👈 [需求] 注入 UID 浮水印
-  // 先移除舊的（防止重複堆疊）
-  const oldWatermark = scrollArea.querySelector('.watermark-overlay');
-  if (oldWatermark) oldWatermark.remove();
-
-  // 如果已登入且有 UID，則建立浮水印
-  if (USER.loggedIn && USER.uid) {
-    const wm = document.createElement('div');
-    wm.className = 'watermark-overlay';
-    wm.textContent = `UID: #${USER.uid}`;
-    scrollArea.appendChild(wm);
   }
   
   if (!S.trendDate) S.trendDate = new Date();
@@ -8072,7 +8077,7 @@ async function verifyAuthCode(email) {
     finishProgress(() => {
       if (data.success) {
         // 👈 將 data.user.role (權限) 一併存入
-        USER = { email: email, uid: data.user.uid, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar };
+        USER = { email: email, uid: data.user.uid, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar, uid: data.user.uid };
         saveUser();
         toast('✅ 登入成功');
         closeOverlay('sub-page');
@@ -9470,13 +9475,32 @@ confirmAddRecord = async function() {
 
 /* ══ 登出清空權限 ══ */
 function logoutAccount() {
-  USER = { email: null, verified: false, loggedIn: false, joinDate: null, token: null, role: 'user' };
-  saveUser();
-  S.settings.autoBackup = false; 
-  saveSettings();
-  toast('已登出帳號');
-  closeOverlay('sub-page');
-  renderSettings();
+  // 1. 重置 USER 物件，確保 uid 也被清為空
+  USER = { 
+    email: null, 
+    verified: false, 
+    loggedIn: false, 
+    joinDate: null, 
+    token: null, 
+    role: 'user', 
+    uid: null // 👈 [新增] 確保登出時清空 UID
+  };
+  
+  saveUser(); // 存入 localStorage
+  
+  // 2. 停用雲端備份 (安全考量)
+  if (S.settings) {
+    S.settings.autoBackup = false; 
+    saveSettings();
+  }
+  
+  toast('✅ 已成功登出帳號');
+  
+  // 3. [關鍵] 立即重新渲染設定頁面
+  renderSettings(); 
+  
+  // 4. 如果目前在設定頁面以外的地方，可以考慮關閉子頁面
+  closeOverlay('sub-page'); 
 }
 
 /* ══ 升級版：外觀與主題設定 (深色模式與自訂背景) ══ */
@@ -10978,6 +11002,21 @@ async function init() {
     if (USER.isPasswordWeak) {
       setTimeout(() => { showForcePasswordChange(true); }, 800);
     }
+  }
+
+  if (USER && USER.loggedIn && !USER.uid) {
+    // 👈 [自動修復邏輯]：如果已登入但本地沒 UID，嘗試從伺服器補抓
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/check`, {
+        headers: { 'Authorization': `Bearer ${USER.token}` }
+      });
+      const data = await res.json();
+      if (data.active && data.user && data.user.uid) {
+        USER.uid = data.user.uid;
+        saveUser();
+        console.log("✅ 已自動補抓 UID:", USER.uid);
+      }
+    } catch(e) {}
   }
 
   // 4. 綁定備註標籤事件
