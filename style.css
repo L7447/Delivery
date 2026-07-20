@@ -146,7 +146,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .slide-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: 999px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s; z-index: 0; }
 body[data-tab="home"] .slide-bg    { background: var(--acc); box-shadow: 0 2px 8px rgba(255,107,53, 0.3); }
 body[data-tab="history"] .slide-bg { background: var(--blue); box-shadow: 0 2px 8px rgba(59,130,246, 0.3); }
-body[data-tab="report"] .slide-bg  { background: var(--green); box-shadow: 0 2px 8px rgba(34,197,94, 0.3); }
+#rpt-tabs .slide-bg  { background: var(--green); box-shadow: 0 2px 8px rgba(34,197,94, 0.3); }
 body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px rgba(139,92,246, 0.3); } 
 .slide-btn { flex: 1; position: relative; z-index: 1; border: none; background: transparent; padding: 10px 0; color: #475569; font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: color 0.3s; -webkit-tap-highlight-color: transparent; outline: none; }
 .slide-btn.active { color: #fff; font-weight: 700; }
@@ -866,7 +866,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 /* --- 1. 修正導航按鈕被壓扁 --- */
 .btn{flex-shrink:0 !important;/* 強制不縮放 */
- width:42px !important;height:42px !important;display:flex !important;align-items:center;justify-content:center;}
+ width:42px;height:42px;display:flex !important;align-items:center;justify-content:center;}
 /* --- 2. 下拉選單樣式 --- */
 .plat-dropdown{padding:6px 12px;border-radius:18px;font-size:16px;font-weight:800;transition:background 0.3s,color 0.3s;letter-spacing:1px;max-width:150px;}
 /* --- 3. 藍底白字隱藏列表按鈕 --- */
@@ -878,3 +878,44 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* 高額頭頂部 (標題區) */
 .summary-forehead-top{background:#1e293b;color:#ffffff;padding:6px 15px;display:flex;justify-content:space-between;align-items:center;}
 .summary-forehead-title{font-size:15px;font-weight:700;letter-spacing:1px;}
+
+/* 淨賺細項折疊動畫 */
+#net-exp-detail{will-change:max-height;}
+#net-exp-arrow{display:inline-block;transition:transform 0.3s ease;}
+
+/* 👈 [需求 5] 支出項目標籤樣式 */
+/* 原本：未選中 */
+.exp-tag-pill{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #ef4444;
+  border: 2px solid #fecdd3;
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  box-shadow: 0 2px 0 #fecdd3;
+}
+
+/* 原本：按下特效（保留） */
+.exp-tag-pill:active{
+  transform: translateY(2px) scale(0.95);
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 transparent;
+  transition: all 0.1s ease;
+}
+
+/* ✅ 新增：選中態（顏色變為選中後的顏色） */
+.exp-tag-pill.is-selected{
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 transparent; /* 選中後也讓底座感一致 */
+}
