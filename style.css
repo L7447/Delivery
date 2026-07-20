@@ -892,8 +892,22 @@ input:checked + .slider:before { transform: translateX(20px); }
 .exp-tag-pill.is-selected{background:#ef4444;color:#ffffff;border-color:#b91c1c;box-shadow:0 0 0 transparent;}
 
 /* ══ UID 浮水印樣式 ══ */
-.watermark-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:32px;font-family:var(--mono);font-weight:900;color:rgba(0,0,0,0.04);/* 極輕微的透明度 */
- white-space:nowrap;pointer-events:none;z-index:0;user-select:none;letter-spacing:5px;}
+.watermark-overlay {
+  position: fixed; /* 改為固定定位 */
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-25deg);
+  font-size: 38px; /* 稍微放大 */
+  font-family: var(--mono);
+  font-weight: 1000;
+  color: rgba(0, 0, 0, 0.05) !important; /* 調深一點點點 */
+  white-space: nowrap;
+  pointer-events: none; /* 👈 絕對關鍵：這行讓浮水印可以被穿透點擊 */
+  z-index: 9999; /* 👈 絕對關鍵：確保在所有卡片之上 */
+  user-select: none;
+  letter-spacing: 3px;
+  display: block;
+}
 /* 確保容器有相對定位 */
 #report-scroll-area{position:relative;}
 
