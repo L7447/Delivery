@@ -1153,14 +1153,23 @@ function calcNextDates(id) {
       if (dw === 4) { addEv('假日獎結算', d); addEv('發薪', d); }
     }
   } else if (id === 'foodpanda') {
+    // 1. 取單率結算：更改為每週三、六、日
+    for(let i=0; i<=35; i++) {
+      let d = new Date(today); d.setDate(d.getDate() + i);
+      let dw = d.getDay(); // 0是週日, 3是週三, 6是週六
+      if (dw === 3 || dw === 6 || dw === 0) {
+        addEv('取單率結算', d);
+      }
+    }
+    // 2. 保留原有的雙週發薪與明細寄發邏輯 (若需維持)
     const anchor = new Date(2023, 11, 24); 
-    // 👇 迴圈檢查天數拉長到 35 天
     for(let i=0; i<=35; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let diffDays = Math.round((d - anchor) / 86400000);
       
-      if (diffDays % 14 === 0) addEv('取單率結算', d);
+      // 每雙週三寄發明細
       if ((diffDays - 3) % 14 === 0) addEv('明細寄發', d);
+      // 每雙週三發薪
       if ((diffDays - 10) % 14 === 0) addEv('發薪', d);
     }
   } else if (id === 'foodomo') {
@@ -2287,9 +2296,9 @@ function buildRecItem(r) {
     const outTimeStr = isOnline ? '<span style="color:#10b981; font-weight:900; background:#ecfdf5; padding:2px 6px; border-radius:6px; border:1px solid #a7f3d0;">上線中</span>' : safeText(r.punchOut);
 
     // 1. 里程標籤 (僅在下線後且有里程時顯示)
-    const mileageHtml = (!isOnline && r.mileage > 0) 
-      ? `<div style="margin-left:8px; background:#fff7ed; color:#ea580c; padding:2px 8px; border-radius:8px; border:1.5px solid #ffedd5; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-          <span style="font-size:13px;">🛣️</span> ${pf(r.mileage).toFixed(1)} <span style="font-size:10px; opacity:0.8;">km</span>
+    const mileageHtml = (pf(r.mileage) > 0) 
+      ? `<div style="margin-left:8px; background:#fff7ed; color:#ea580c; padding:2px 8px; border-radius:8px; border:1px solid #ffedd5; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <span style="font-size:13px;"></span> ${pf(r.mileage).toFixed(1)} <span style="font-size:10px; opacity:0.8;">km</span>
         </div>` 
       : '';
 
@@ -3745,15 +3754,30 @@ async function confirmAddRecord() {
     const ph = pf(document.getElementById('f-pu-hrs').value);
     const pm = pf(document.getElementById('f-pu-min').value);
     const totalHours = ph + (pm / 60);
-    const mileage = pf(document.getElementById('f-pu-mileage').value);
-    if (totalHours <= 0) { toast('總工時必須大於 0'); return; }
+
+    const mileageVal = pf(document.getElementById('f-pu-mileage').value);
+
+    if (totalHours <= 0 && document.getElementById('f-pu-out').value !== ''){toast('總工時必須大於 0');return;}
+
+    // 👈 [關鍵 2] 如果是編輯，先取得舊資料，避免 startKm / endKm 遺失
+    let existingData = {};
+    if (S.editingId) {
+      existingData = S.records.find(x => x.id === S.editingId) || {};
+    }
+
     rec = { 
-      ...rec, isPunchOnly: true, isCashTip: false,
+      ...existingData, // 保留舊有的 startKm, endKm, timestamp 等
+      id: S.editingId || newId(),
+      platformId: S.selPlatformId || '',
+      isPunchOnly: true,
+      isCashTip: false,
       date: document.getElementById('f-pu-date').value || todayStr(),
       time: document.getElementById('f-pu-in').value || nowTime(), 
       punchIn: document.getElementById('f-pu-in').value,
       punchOut: document.getElementById('f-pu-out').value,
-      hours: totalHours, mileage: mileage, orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
+      hours: totalHours, 
+      mileage: mileageVal, // 寫入正確的數字
+      orders: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
     };
   } else if (S.addTab === 'cashtip') {
     const amt = pf(document.getElementById('f-ct-amount').value);
@@ -3801,18 +3825,18 @@ function cancelAddRecord() {
 function renderReport() {
   const reportPage = document.getElementById('page-report');
   
-  // 1. 處理浮水印
-  // 先移除舊的
-  const oldWm = document.getElementById('rpt-watermark');
-  if (oldWm) oldWm.remove();
+  // 1. 移除舊浮水印
+  const oldContainer = document.getElementById('rpt-watermark-container');
+  if (oldContainer) oldContainer.remove();
 
-  // 如果已登入且有 UID，則建立浮水印並掛在 page-report 最外層
+  // 2. 注入平鋪浮水印
   if (USER.loggedIn && USER.uid) {
-    const wm = document.createElement('div');
-    wm.id = 'rpt-watermark';
-    wm.className = 'watermark-overlay';
-    wm.textContent = `UID: #${USER.uid}`;
-    reportPage.appendChild(wm);
+    const container = document.createElement('div');
+    container.id = 'rpt-watermark-container';
+    // 動態將 UID 填入 SVG 內
+    const svgContent = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='150'><text x='20' y='80' fill='rgba(0,0,0,0.06)' font-family='monospace' font-weight='900' font-size='18' transform='rotate(-25 100,100)'>UID: #${USER.uid}</text></svg>`;
+    container.innerHTML = `<div class="watermark-tile" style="background-image: url(\"${svgContent}\");"></div>`;
+    reportPage.appendChild(container);
   }
 
   // 2. 處理原本的捲軸邏輯
@@ -9496,8 +9520,9 @@ function logoutAccount() {
   
   toast('✅ 已成功登出帳號');
   
-  // 3. [關鍵] 立即重新渲染設定頁面
+  // 👈 [核心修復] 登出後直接呼叫這兩個函式
   renderSettings(); 
+  renderHome(); 
   
   // 4. 如果目前在設定頁面以外的地方，可以考慮關閉子頁面
   closeOverlay('sub-page'); 
@@ -11043,9 +11068,20 @@ window.onSplashFinished = function() {
 
   setTimeout(() => {
     try {
-      S.homeSubTab = 'schedule';
-      goPage('home');                    // 強制渲染首頁
-      updateNavIndicator('home');
+      // 👈 [核心修復] 
+      // 檢查：如果使用者目前「已經不在首頁」或是「已經打開了任何彈窗(登入頁)」
+      const isAnyOverlayOpen = document.querySelector('.overlay-page.show');
+      const isUserAlreadyMoved = S.tab !== 'home' || isAnyOverlayOpen;
+
+      if (!isUserAlreadyMoved) {
+          // 只有當使用者還乖乖待在首頁等待時，才執行強制渲染
+          S.homeSubTab = 'schedule';
+          goPage('home'); 
+      } else {
+          // 如果使用者已經跑去別頁了，我們只偷偷在背景更新導覽列對齊就好
+          updateNavIndicator(S.tab);
+          console.log("偵測到使用者已自行導航，取消自動回彈首頁");
+      }
 
     } catch(e) {
       console.error("首頁渲染失敗", e);
@@ -11053,7 +11089,8 @@ window.onSplashFinished = function() {
 
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
-  }, 600);
+  }, 600); // 👈 就是這個 0.6 秒在作怪
+  
   checkAndShowAnnouncement();
 };
 
