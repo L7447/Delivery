@@ -1292,12 +1292,17 @@ function goPage(name) {
   document.getElementById(`page-${name}`)?.classList.add('active');
   document.body.setAttribute('data-tab', name);
   updateNavIndicator(name);
-  // 👇 修復：每次「進入」首頁，都視為新的一次停留，清空本次停留的公告已讀暫存，
-  //    讓未勾選「不再顯示」的公告能在切換頁面後重新出現
+
+  // 🌟 [修正]：離開 report 頁面時立刻移除浮水印容器
+  if (name !== 'report') {
+    const wmContainer = document.getElementById('rpt-watermark-container');
+    if (wmContainer) wmContainer.remove();
+  }
+
   if (name === 'home')     annShownThisVisit.clear();
   if (name === 'home')     renderHome();
   if (name === 'history')  renderHistory();
-  if (name === 'report')   renderReport();
+  if (name === 'report')   renderReport(); // renderReport 會觸發繪製浮水印
   if (name === 'vehicles') renderVehicles(); 
   if (name === 'settings') renderSettings();
 }
@@ -3830,44 +3835,81 @@ function cancelAddRecord() {
  * - 想要換角度、換顏色 → 改 angle / color
  * - 想要「手動指定每個浮水印的座標」而非自動排列 → 把下面的雙層迴圈換成一份固定座標陣列即可，見函式最後的註解範例
  */
+/* ══ 浮水印：範圍與密度自訂版 ══ */
 function renderReportWatermark() {
-  const old = document.getElementById('rpt-watermark-container');
-  if (old) old.remove();
-  if (!(USER && USER.loggedIn && USER.uid)) return;
+  const oldWM = document.getElementById('rpt-watermark-container');
+  if (oldWM) oldWM.remove();
 
-  const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const text = escHtml(`UID: #${USER.uid}`);
+  if (S.tab !== 'report') return;
 
-  // ▼▼▼ 想調整浮水印的「數量、間距、角度、顏色」，改這幾個數字就好 ▼▼▼
-  const gapX = 150;                 // 每個浮水印的水平間距(px)，數字越小排越密
-  const gapY = 120;                  // 垂直間距(px)
-  const angle = -32;                // 旋轉角度
-  const color = 'rgba(0,0,0,0.15)'; // 顏色與濃淡（之前太淺看不到，這裡是唯一控制濃淡的地方，方便直接調整）
-  // ▲▲▲
+  const wmUid = (USER && USER.uid) ? USER.uid : '99999999';
+  const wmContent = `#${wmUid}`;
 
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const cols = Math.ceil(vw / gapX) + 2; // 多算 2 排，確保旋轉後畫面邊緣不會露出空白
-  const rows = Math.ceil(vh / gapY) + 2;
+  // --- 🎨 參數設定區：在這裡調整範圍與外觀 ---
+  const config = {
+    parent: document.getElementById('report-scroll-area'), // 👈 指定範圍：改為報表滾動區 (不會擋到導覽列)
+    gapX: 190,      // 水平間距 (越小越密)
+    gapY: 110,      // 垂直間距 (越小越密)
+    angle: -22,     // 旋轉角度
+    opacity: 0.15,  // 透明度 (0.1 ~ 0.2 較合適)
+    fontSize: '13px',
+    offsetTop: -30,  // 距離頂部邊界多少 px 開始畫
+    offsetBottom: -30 // 距離底部邊界多少 px 停止 (預留給底部導覽列空間)
+  };
 
+  if (!config.parent) return;
+
+  // 建立容器
   const container = document.createElement('div');
   container.id = 'rpt-watermark-container';
+  
+  // 🌟 關鍵：使用 absolute 讓它只在父層容器內活動
+  container.style.cssText = `
+    position: absolute; 
+    inset: 0; 
+    top: ${config.offsetTop}px;
+    height: ${config.parent.scrollHeight - config.offsetBottom}px; 
+    pointer-events: none; 
+    z-index: 9999; 
+    overflow: hidden;
+  `;
+
+  // 自動計算需要填滿範圍的數量 (網格演算法)
+  const containerWidth = config.parent.clientWidth || window.innerWidth;
+  const containerHeight = config.parent.scrollHeight || window.innerHeight;
+  
+  const cols = Math.ceil(containerWidth / config.gapX) + 1;
+  const rows = Math.ceil(containerHeight / config.gapY) + 1;
 
   let html = '';
   for (let r = 0; r < rows; r++) {
-    const rowOffset = (r % 2 === 0) ? 0 : gapX / 2; // 奇數排錯位半格，磚牆式排列，才不會有大片留白
     for (let c = 0; c < cols; c++) {
-      const left = c * gapX + rowOffset - gapX;
-      const top = r * gapY - gapY;
-      html += `<span class="wm-item" style="left:${left}px; top:${top}px; color:${color}; transform:translate(-50%,-50%) rotate(${angle}deg);">${text}</span>`;
+      // 磚牆式排列：奇數行往右偏移半格，視覺上更均勻
+      const shiftX = (r % 2 === 0) ? 0 : config.gapX / 2;
+      const left = c * config.gapX + shiftX;
+      const top = r * config.gapY;
+
+      html += `
+        <span class="wm-item" style="
+          position: absolute; 
+          left: ${left}px; 
+          top: ${top}px; 
+          color: rgba(0,0,0,${config.opacity}); 
+          transform: translate(-50%, -50%) rotate(${config.angle}deg); 
+          font-family: var(--mono, monospace); 
+          font-weight: 900; 
+          font-size: ${config.fontSize}; 
+          white-space: nowrap; 
+          user-select: none;
+        ">
+          ${wmContent}
+        </span>
+      `;
     }
   }
-  /* 若想改成「完全手動指定位置」，把上面 for 迴圈整段換成類似這樣即可（僅供參考，未啟用）：
-     const positions = [ {left:40, top:80}, {left:220, top:260}, {left:120, top:520} ];
-     html = positions.map(p => `<span class="wm-item" style="left:${p.left}px; top:${p.top}px; color:${color}; transform:translate(-50%,-50%) rotate(${angle}deg);">${text}</span>`).join('');
-  */
+
   container.innerHTML = html;
-  document.body.appendChild(container); // position:fixed，蓋在整個畫面上（見 style.css）
+  config.parent.appendChild(container); // 👈 將它塞入滾動區域
 }
 // 螢幕轉向或視窗大小改變時，重新排列浮水印，避免留白或超出畫面
 window.addEventListener('resize', () => {
@@ -7993,6 +8035,7 @@ function renderAuthContent() {
   // ⚠️ 提醒：appearance: 'always' 僅在前端強制顯示元件。
   // 若要真正要求手動點擊驗證，您必須到 Cloudflare 網頁後台，
   // 將這個 Sitekey 的設定改為「互動式 (Interactive)」。
+  /*
   const renderTurnstileWidget = () => {
     if (document.getElementById('turnstile-widget')) {
       turnstile.render('#turnstile-widget', {
@@ -8002,7 +8045,7 @@ function renderAuthContent() {
       });
     }
   };
-
+  */
   if (typeof turnstile !== 'undefined') { renderTurnstileWidget(); } else { window.onTurnstileLoad = renderTurnstileWidget; const script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad'; script.async = true; script.defer = true; document.body.appendChild(script); }
 }
 
