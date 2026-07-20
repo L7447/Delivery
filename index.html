@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+  <!-- 引入圖片裁剪函式庫 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>外送記錄</title>
@@ -265,6 +269,16 @@
           </div>
         </div>
 
+        <div class="card" style="padding:12px 16px; margin-bottom:10px;">
+          <div class="fg" style="margin-bottom:0;">
+            <label style="color:#ea580c; font-weight:800;">🛣️ 累積里程 (km)</label>
+            <div style="position:relative;">
+              <input type="number" class="finp finp-pu" id="f-pu-mileage" placeholder="0" inputmode="decimal" style="font-size:20px; font-family:var(--mono); color:#ea580c; border-color:#fed7aa; background:#fff7ed;">
+              <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:800; color:#94a3b8; pointer-events:none;">km</span>
+            </div>
+          </div>
+        </div>
+
         <div class="card" style="padding:12px 16px;">
           <div class="fg" style="margin-bottom:0;">
             <label style="font-size:14px; font-weight:700; color:#475569;">⏱ 總工時 (自動計算，也可手動修改)</label>
@@ -291,6 +305,7 @@
           <div class="fg" style="margin-bottom:12px;">
             <label>📂 支出大分類</label>
             <select class="fsel" id="f-exp-cat" style="border: 2px solid #f87171; color: #b91c1c; font-weight: 800;" onchange="updateExpSubTags()">
+              <option value="" disabled selected>請選擇類別</option>
               <option value="保險">保險</option>
               <option value="裝備">裝備</option>
               <option value="規費">規費</option>
