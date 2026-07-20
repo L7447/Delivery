@@ -4,6 +4,11 @@
    ══════════════════════════════════════════════════════ */
 
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
+window.__userInteractedSinceLoad = false;
+['pointerdown', 'touchstart', 'click'].forEach(evt => {
+  document.addEventListener(evt, () => { window.__userInteractedSinceLoad = true; }, { capture: true, passive: true });
+});
+
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS =[
@@ -738,7 +743,7 @@ function fmtHours(hVal) {
   const hrs = Math.floor(totalMins / 60); const mins = totalMins % 60;
   
   // 定義單位的專屬樣式 (縮小字體、顏色改為黑色、並與數字保持些微間距)
-  const unitStyle = 'font-size: 9px; color: #000000; margin-left: 1.5px; margin-right: 6px; font-weight: 700;';
+  const unitStyle = 'font-size: 10px; color: #000000; margin:5px 4px 0 1px ; font-weight: 800;';
   
   if (hrs > 0 && mins > 0) return `${hrs}<span style="${unitStyle}">h</span>${mins}<span style="${unitStyle}">m</span>`;
   if (hrs > 0 && mins === 0) return `${hrs}<span style="${unitStyle}">h</span>`;
@@ -2297,24 +2302,24 @@ function buildRecItem(r) {
 
     // 1. 里程標籤 (僅在下線後且有里程時顯示)
     const mileageHtml = (pf(r.mileage) > 0) 
-      ? `<div style="margin-left:8px; background:#fff7ed; color:#ea580c; padding:2px 8px; border-radius:8px; border:1px solid #ffedd5; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-          <span style="font-size:13px;"></span> ${pf(r.mileage).toFixed(1)} <span style="font-size:10px; opacity:0.8;">km</span>
+      ? `<div style="margin-left:6px; background:#fff7ed; color:#ea580c; padding:2px 5px; border-radius:8px; border:1.5px solid #ffd093; font-size:14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+          <span style="font-size:13px;">🛣️</span> ${pf(r.mileage).toFixed(1)} <span style="font-size:10px;letter-spacing:0.6px;margin-top:5px;color:#000;">km</span>
         </div>` 
       : '';
 
     // 2. 累計工時精美標籤
     const hoursHtml = isOnline
-      ? `<div style="margin-left:6px; background:#f0fdf4; color:#10b981; border:1.5px solid #86efac; padding:2px 10px; border-radius:8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+      ? `<div style="margin-left:6px; background:#f0fdf4; color:#10b981; border:1.5px solid #86efac; padding:2px 10px; border-radius:8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:5px;">
           <span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; animation: pulse-green 1.5s infinite;"></span> 
           <span>計時中</span>
          </div>`
-      : `<div style="margin-left:6px; background:#eff6ff; color:#2563eb; padding:2px 10px; border-radius:8px; border:1.5px solid #bfdbfe; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+      : `<div style="margin-left:6px; background:#eff6ff; color:#2563eb; padding:2px 5px; border-radius:8px; border:1.5px solid #bfdbfe; font-size:14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
           <span style="font-size:13px;">⏱️</span> ${fmtHours(r.hours)}
          </div>`;
 
     return `
-      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 10px 4px; margin-bottom: 5px;">
-        <span style="background:${tagBg}; color:#fff; font-size:13px; padding:4px 8px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:70px; height:32px; display:flex; align-items:center; justify-content:center;margin-right:5px;">🕒 打卡</span>
+      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 7px 4px; margin-bottom: 5px;">
+        <span style="background:${tagBg}; color:#fff; font-size:13px; padding:4px 5px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:70px; height:32px; display:flex; align-items:center; justify-content:center;margin-right:5px;">🕒 打卡</span>
         
         <div style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--t1); flex:1; display:flex; align-items:center; justify-content:flex-start;">
           <!-- 移除日期，只保留時間軸 -->
@@ -3834,8 +3839,13 @@ function renderReport() {
     const container = document.createElement('div');
     container.id = 'rpt-watermark-container';
     // 動態將 UID 填入 SVG 內
-    const svgContent = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='150'><text x='20' y='80' fill='rgba(0,0,0,0.06)' font-family='monospace' font-weight='900' font-size='18' transform='rotate(-25 100,100)'>UID: #${USER.uid}</text></svg>`;
-    container.innerHTML = `<div class="watermark-tile" style="background-image: url(\"${svgContent}\");"></div>`;
+    // 👈 [修正] 原本把未編碼的 SVG（含雙引號與 < > #）直接塞進 style="" 屬性，
+    // 導致瀏覽器解析 style 屬性時提早被裡面的雙引號截斷，畫面因此錯亂、浮水印也不會顯示。
+    // 改用 encodeURIComponent 把 SVG 內容編碼成安全字串，並在 style 屬性內用單引號包住 url()，
+    // 避免與外層雙引號衝突。
+    const svgMarkup = `<svg xmlns='http://www.w3.org/2000/svg' width='250' height='150'><text x='20' y='80' fill='rgba(0,0,0,0.06)' font-family='monospace' font-weight='900' font-size='18' transform='rotate(-25 100,100)'>UID: #${USER.uid}</text></svg>`;
+    const svgContent = `data:image/svg+xml,${encodeURIComponent(svgMarkup)}`;
+    container.innerHTML = `<div class="watermark-tile" style="background-image:url('${svgContent}');"></div>`;
     reportPage.appendChild(container);
   }
 
@@ -11069,9 +11079,11 @@ window.onSplashFinished = function() {
   setTimeout(() => {
     try {
       // 👈 [核心修復] 
-      // 檢查：如果使用者目前「已經不在首頁」或是「已經打開了任何彈窗(登入頁)」
+      // 檢查：如果使用者目前「已經不在首頁」、「已經打開了任何彈窗(登入頁)」，
+      // 或是「已經點擊過畫面任何地方」（避免第一次冷啟動時，使用者搶先點了登入帳號，
+      // 卻因為 class/tab 狀態更新的時機差而被誤判成「還沒離開首頁」，導致被強制導回首頁）
       const isAnyOverlayOpen = document.querySelector('.overlay-page.show');
-      const isUserAlreadyMoved = S.tab !== 'home' || isAnyOverlayOpen;
+      const isUserAlreadyMoved = S.tab !== 'home' || isAnyOverlayOpen || window.__userInteractedSinceLoad;
 
       if (!isUserAlreadyMoved) {
           // 只有當使用者還乖乖待在首頁等待時，才執行強制渲染
