@@ -284,28 +284,17 @@
 
       <!-- 4. 支出花費表單 -->
       <div id="add-form-expense" style="display:none;">
-        <div style="color:#b91c1c; font-size:13px; font-weight:800; text-align:center; margin-bottom:12px; background:#fee2e2; padding:8px; border-radius:12px;">💸 記錄與跑單相關的其他雜項支出</div>
+        <div style="color:#b91c1c; font-size:13px; font-weight:800; text-align:center; margin-bottom:12px; background:#fee2e2; padding:8px; border-radius:12px;">💸 記錄跑單相關雜項支出</div>
         
         <div class="card" style="padding:12px 16px; margin-bottom:10px;">
           <div class="fg" style="margin-bottom:12px;"><label>📆 支出日期</label><input type="date" class="finp" id="f-exp-date"></div>
           <div class="fg" style="margin-bottom:12px;">
-            <label>📂 支出類別</label>
-            <select class="fsel" id="f-exp-cat" style="border: 1.5px solid #f87171; color: #b91c1c; font-weight: 800;">
-              <option value="平台開通裝備">平台開通裝備</option>
-              <option value="良民證">良民證</option>
-              <option value="強制險">強制險</option>
-              <option value="第三責任險">第三責任險</option>
-              <option value="職災險">職災險</option>
-              <option value="罰單">罰單</option>
-              <option value="車貸">車貸</option>
-              <option value="行車記錄器">行車記錄器</option>
-              <option value="記憶卡">記憶卡</option>
-              <option value="行動電源">行動電源</option>
-              <option value="手機架">手機架</option>
-              <option value="充電線">充電線</option>
-              <option value="安裝費">安裝費</option>
-              <option value="安全帽">安全帽</option>
-              <option value="其它">其它</option>
+            <label>📂 支出大分類</label>
+            <select class="fsel" id="f-exp-cat" style="border: 2px solid #f87171; color: #b91c1c; font-weight: 800;" onchange="updateExpSubTags()">
+              <option value="保險">保險</option>
+              <option value="裝備">裝備</option>
+              <option value="規費">規費</option>
+              <option value="貸款、分期">貸款、分期</option>
             </select>
           </div>
         </div>
@@ -316,8 +305,14 @@
             <input type="number" class="finp" id="f-exp-amount" placeholder="0" inputmode="numeric" style="font-size:24px; font-family:var(--mono); color:#dc2626; border-color:#f87171;">
           </div>
           <div class="fg" style="margin-bottom:0;">
-            <label>📝 備註 (選填)</label>
-            <input type="text" class="finp" id="f-exp-note" placeholder="記錄細節..." style="border-color:#f87171;">
+            <label>📝 項目備註 (點擊下方標籤快速輸入)</label>
+            <div id="exp-sub-tags" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; min-height:30px;">
+                <!-- 由 JS 動態生成標籤 -->
+            </div>
+            <div style="position:relative;">
+                <input type="text" class="finp" id="f-exp-note" placeholder="例如：強制險、手機架..." style="border-color:#f87171; padding-right: 36px;">
+                <button type="button" onclick="document.getElementById('f-exp-note').value=''" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:var(--border); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:900;">✕</button>
+            </div>
           </div>
         </div>
       </div>
@@ -340,10 +335,15 @@
         <button class="slide-btn" onclick="switchRptTab('top3', 4, this)">TOP 5</button>
         <button class="slide-btn" onclick="switchRptTab('netProfit', 5, this)">淨賺</button>
       </div>
+    
+      <!-- 👈 [新增] 淨賺分析專用的子頁籤固定容器 -->
+      <div id="net-profit-sub-tabs-fixed" style="display: none;margin-bottom:5px;">
+        <!-- 這裡會由 JS 動態注入內容，但位置永遠固定在頂部 -->
+      </div>
     </div>
     
-    <!-- 👇 新增：這個容器將接管剩下的所有高度，並強制開啟原生捲軸 -->
-    <div id="report-scroll-area" style="flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 12px 16px 120px 16px;">
+    <div id="report-scroll-area" style="flex: 1; overflow-y: auto; padding: 12px 16px 120px 16px;">
+      <!-- 各頁面內容容器 -->
       <div id="rv-overview"></div>
       <div id="rv-yearOverview" style="display:none;"></div>
       <div id="rv-trend" style="display:none;"></div>
@@ -351,8 +351,6 @@
       <div id="rv-top3" style="display:none;"></div>
       <div id="rv-netProfit" style="display:none;"></div>
     </div>
-    
-    <div style="display:none;"><button id="rpt-prev"></button><span id="rpt-label"></span><button id="rpt-next"></button></div>
   </section>
 
   <section class="page" id="page-vehicles" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
@@ -859,10 +857,9 @@
       splash.style.pointerEvents = 'none';
       setTimeout(() => {
         splash.remove();
+        // 👇 是否要顯示「初次使用引導視窗」，統一交給 script.js 的 init()
+        //    在資料載入完成後判斷（單一進場入口，避免兩處各自觸發造成重複視窗）。
         if (window.onSplashFinished) window.onSplashFinished();
-        if (window.checkAndPromptPlatformSetup) {
-          setTimeout(() => window.checkAndPromptPlatformSetup(), 400);
-        }
       }, 400); // 0.4秒平滑淡出
     };
 
