@@ -18,6 +18,80 @@ function isLocalDevelopment() {
          location.hostname.includes('192.168.') || 
          location.protocol === 'file:';
 }
+
+// 支出子類別定義
+const EXP_SUB_CATS = {
+  '保險': ['強制險', '第三責任險', '職災險', '其它保險'],
+  '裝備': ['平台開通裝備', '手機架', '行車記錄器', '記憶卡', '行動電源', '充電線', '良民證', '安全帽', '防曬裝備', '禦寒裝備', '其它'],
+  '規費': ['罰單', '停車費'],
+  '貸款、分期': ['車貸', '分期付款']
+};
+
+// 更新支出子類別標籤，並清空備註
+window.updateExpSubTags = function() {
+  const cat = document.getElementById('f-exp-cat').value;
+  const container = document.getElementById('exp-sub-tags');
+  const noteInp = document.getElementById('f-exp-note');
+  
+  if (noteInp) noteInp.value = ''; // 👈 [需求 5] 更改分類時自動清空備註
+  if (!container) return;
+
+  const tags = EXP_SUB_CATS[cat] || [];
+  container.innerHTML = tags.map(t => 
+    `<div class="exp-tag-pill" data-tag="${t}" onclick="setExpNote('${t}', this)">${t}</div>`
+  ).join('');
+};
+window.setExpNote = function(val, el) {
+  // 更新備註/hidden input
+  document.getElementById('f-exp-note').value = val;
+
+  const container = document.getElementById('exp-sub-tags');
+  if (container) {
+    container.querySelectorAll('.exp-tag-pill')
+      .forEach(x => x.classList.remove('is-selected'));
+  }
+
+  if (el) el.classList.add('is-selected');
+
+  // 微動畫（保留你原本的想法，但改成不覆蓋成對的 class）
+  el.animate(
+    [
+      { transform: 'scale(1)' },
+      { transform: 'scale(0.97)' },
+      { transform: 'scale(1)' }
+    ],
+    { duration: 200, easing: 'ease-out' }
+  );
+};
+
+// 👈 [需求 2] 刪除一般支出記錄
+/* --- script.js: 修正刪除功能 --- */
+window.deleteGeneralExpense = async function(id) {
+  const ok = await customConfirm('確定要刪除這筆支出記錄嗎？');
+  if (!ok) return;
+
+  // 1. 濾除資料
+  S.generalExpenses = S.generalExpenses.filter(e => e.id !== id);
+  
+  // 2. 存檔
+  await idbSet('generalExpenses', S.generalExpenses);
+  localStorage.setItem('delivery_general_expenses', JSON.stringify(S.generalExpenses));
+  
+  toast('✅ 支出記錄已刪除');
+  
+  // 3. [關鍵] 觸發全局刷新，確保總額與列表同步更新
+  renderReport(); 
+};
+// 在 openAddPage 裡面補上初始化觸發
+// 修改原本 script.js 裡的 openAddPage 函式結尾
+const originalOpenAddPage = openAddPage;
+openAddPage = function(record=null, prefill={}) {
+  originalOpenAddPage(record, prefill);
+  if (S.addTab === 'expense' || !record) {
+    updateExpSubTags(); 
+  }
+};
+
 /* ════ 基本工資設定區 (預設值)(範圍設定) 開始════ 
  * 未來調薪時，只需更改這裡的 max (最大) 與 min (最小) 數值即可！
  * 預設 Infinity 代表「無限大」。
@@ -294,15 +368,21 @@ function getCashTipTagsHtml(note) {
 
 
 function normalizePlatforms(rawPlatforms) {
-  if (!Array.isArray(rawPlatforms)) return DEFAULT_PLATFORMS.map(p => ({ ...p }));
+  // 如果傳入的資料不是陣列，回傳全部關閉的預設平台
+  if (!Array.isArray(rawPlatforms)) return DEFAULT_PLATFORMS.map(p => ({ ...p, active: false }));
+  
   return DEFAULT_PLATFORMS.map(dp => {
-    const sp = rawPlatforms.find(s => s.id === dp.id) || {};
-    const active = sp.active === true || sp.active === 'true';
+    // 從儲存的資料中找出對應 ID 的平台
+    const sp = rawPlatforms.find(s => s.id === dp.id);
+    
+    // 如果找到了，檢查它的 active 是否為 true (支援布林值或字串)
+    const isActive = sp ? (sp.active === true || sp.active === 'true') : false;
+    
     return {
       id: dp.id,
       name: dp.name,
-      color: typeof sp.color === 'string' && sp.color.trim() ? sp.color : dp.color,
-      active,
+      color: (sp && sp.color) ? sp.color : dp.color,
+      active: isActive, // 👈 這裡確保了儲存的勾選狀態被帶回來
       ruleDesc: dp.ruleDesc
     };
   });
@@ -351,8 +431,8 @@ function formatNoteWithLimit(note) {
 
 /* ====================== IndexedDB 儲存協助函式 ====================== */
 const DB_NAME = 'delivery_records_db';
-const DB_VERSION = 1;
-const DB_STORES = ['records', 'vehicleRecs'];
+const DB_VERSION = 6; // 升級版本
+const DB_STORES = ['records', 'vehicleRecs', 'generalExpenses', 'photos']; // 新增 photos
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -1106,79 +1186,39 @@ function calcNextDates(id) {
 
 /* ══ 加密版 loadAll() ═══════════════════════════════════════════════ */
 async function loadAll() {
-  const storedGeneralExp = await idbGet('generalExpenses');
-  S.generalExpenses = Array.isArray(storedGeneralExp) ? storedGeneralExp : JSON.parse(localStorage.getItem('delivery_general_expenses') || '[]');
-
+  console.log("🚀 資料庫同步中...");
+  
+  // 1. 讀取一般支出 (generalExpenses)
   try {
-    const storedRecords = await idbGet('records');
-    if (Array.isArray(storedRecords)) {
-      S.records = storedRecords;
+    const storedExp = await idbGet('generalExpenses');
+    if (Array.isArray(storedExp)) {
+      S.generalExpenses = storedExp;
     } else {
-      const localRecords = JSON.parse(localStorage.getItem(KEYS.records) || '[]');
-      S.records = Array.isArray(localRecords) ? localRecords : [];
-      if (Array.isArray(S.records)) await idbSet('records', S.records);
+      S.generalExpenses = JSON.parse(localStorage.getItem('delivery_general_expenses') || '[]');
     }
-  } catch (e) {
-    console.warn('IndexedDB records 讀取失敗，使用空陣列', e);
-    S.records = [];
-  }
+  } catch (e) { S.generalExpenses = []; }
 
+  // 2. 讀取行程記錄 (records)
   try {
-    // 讀取 Platforms（這類不敏感資料可保持明文）
-    const savedPlatforms = localStorage.getItem(KEYS.platforms);
-    if (savedPlatforms) {
-      const parsed = JSON.parse(savedPlatforms);
-      S.platforms = normalizePlatforms(parsed);
-    } else {
-      S.platforms = normalizePlatforms([]);
-    }
-  } catch (e) {
-    console.warn('Platforms data invalid, using defaults', e);
-    S.platforms = normalizePlatforms([]);
-  }
+    const storedRecs = await idbGet('records');
+    S.records = Array.isArray(storedRecs) ? storedRecs : JSON.parse(localStorage.getItem(KEYS.records) || '[]');
+  } catch (e) { S.records = []; }
 
+  // 3. 讀取車輛記錄 (vehicleRecs)
   try {
-    const savedSettings = localStorage.getItem(KEYS.settings);
-    if (savedSettings) {
-      const parsed = JSON.parse(savedSettings);
-      S.settings = { ...DEFAULT_SETTINGS, shopHistory: [], ...parsed };
-    } else {
-      S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] };
-    }
-  } catch (e) {
-    console.warn('Settings 讀取失敗，使用預設值', e);
-    S.settings = { ...DEFAULT_SETTINGS, shopHistory: [] };
-  }
+    const storedVeh = await idbGet('vehicleRecs');
+    S.vehicleRecs = Array.isArray(storedVeh) ? storedVeh : JSON.parse(localStorage.getItem(KEYS.vehicleRecs) || '[]');
+  } catch (e) { S.vehicleRecs = []; }
 
+  // 4. 讀取平台與其餘設定 (LocalStorage)
   try {
+    S.platforms = normalizePlatforms(JSON.parse(localStorage.getItem(KEYS.platforms) || '[]'));
+    S.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEYS.settings) || '{}') };
+    S.vehicles = JSON.parse(localStorage.getItem(KEYS.vehicles) || '[]');
     S.punch = JSON.parse(localStorage.getItem(KEYS.punch) || 'null');
-  } catch { S.punch = null; }
+  } catch (e) { console.warn("設定檔載入異常", e); }
 
-  try {
-    const savedVehicles = localStorage.getItem(KEYS.vehicles);
-    if (savedVehicles) {
-      S.vehicles = JSON.parse(savedVehicles);
-    } else {
-      S.vehicles = [];
-    }
-  } catch (e) {
-    console.warn('Vehicles 讀取失敗', e);
-    S.vehicles = [];
-  }
-
-  try {
-    const storedVehRecs = await idbGet('vehicleRecs');
-    if (Array.isArray(storedVehRecs)) {
-      S.vehicleRecs = storedVehRecs;
-    } else {
-      const localVehRecs = JSON.parse(localStorage.getItem(KEYS.vehicleRecs) || '[]');
-      S.vehicleRecs = Array.isArray(localVehRecs) ? localVehRecs : [];
-      if (Array.isArray(S.vehicleRecs)) await idbSet('vehicleRecs', S.vehicleRecs);
-    }
-  } catch (e) {
-    console.warn('IndexedDB vehicleRecs 讀取失敗，使用空陣列', e);
-    S.vehicleRecs = [];
-  }
+  console.log(`✅ 載入完成: 支出 ${S.generalExpenses.length} 筆 / 行程 ${S.records.length} 筆`);
 }
 
 /* 替換原本的 saveRecords 等儲存函式 */
@@ -1333,16 +1373,27 @@ function switchHistTab(tab, index) {
   document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); 
   renderHistory(); 
 }
-function switchRptTab(tab, index, btnEl) { 
-  S.rptView = tab; 
-  document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`; 
-  document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active')); 
+function switchRptTab(tab, index, btnEl) {
+  S.rptView = tab;
+  document.getElementById('rpt-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.querySelectorAll('#rpt-tabs .slide-btn').forEach(btn => btn.classList.remove('active'));
   btnEl.classList.add('active');
   
-  // 更新這行，加入 'netProfit'
+  const subTabsFixed = document.getElementById('net-profit-sub-tabs-fixed');
+  
+  // 👈 核心修改：切換分頁時，如果不是淨賺頁，就清除那個外框 box 的 ID，下次進入才會重新初始化
+  const oldBox = document.getElementById('net-profit-framed-box');
+  if (oldBox) oldBox.remove();
+
+  if (tab === 'netProfit') {
+    subTabsFixed.style.display = 'block';
+  } else {
+    subTabsFixed.style.display = 'none';
+  }
+
   ['overview', 'yearOverview', 'trend', 'compare', 'top3', 'netProfit'].forEach(v => { 
     const el = document.getElementById(`rv-${v}`);
-    if (el) el.style.display = v === S.rptView ? '' : 'none'; 
+    if (el) el.style.display = (v === S.rptView ? '' : 'none'); 
   }); 
   renderReport(); 
 }
@@ -1809,32 +1860,72 @@ function renderHome() {
   });
 }
 
+/* ══ 打卡里程捕獲介面 ══ */
+function getMileageCaptureHtml(type) {
+  const hasKey = !!S.settings.ocrKey;
+  const title = type === 'in' ? '🚀 上線打卡：起始里程' : '🏁 下線打卡：結束里程';
+  return `
+    <div id="mileage-modal" style="padding:20px; text-align:center;">
+      <h2 style="margin-bottom:20px; color:var(--text-blue);">${title}</h2>
+      
+      <!-- 預覽區 -->
+      <div id="ocr-preview-wrap" style="width:100%; height:200px; background:#f1f5f9; border-radius:16px; border:2px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; margin-bottom:20px; overflow:hidden; position:relative;">
+        <span id="ocr-placeholder" style="color:var(--t3); font-size:14px;">尚未拍攝照片</span>
+        <img id="ocr-preview-img" style="display:none; width:100%; height:100%; object-fit:cover;">
+        <!-- 辨識中遮罩 -->
+        <div id="ocr-loading" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.8); flex-direction:column; align-items:center; justify-content:center;">
+           <div class="spin" style="width:30px; height:30px; border:4px solid #e2e8f0; border-top-color:var(--blue); border-radius:50%; animation:spin 1s linear infinite;"></div>
+           <div style="margin-top:10px; font-weight:800; color:var(--blue);">辨識中...</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:10px; margin-bottom:20px;">
+        <button onclick="document.getElementById('ocr-file-input').click()" style="padding:12px; border-radius:12px; font-weight:800; transition:0.2s;${hasKey ? 'background:var(--sf2); border:1.5px solid var(--border);' : 'background:#f1f5f9; color:#94a3b8; border:1.5px solid #e2e8f0;' }">${hasKey ? '📸 拍照辨識' : '🔒 需設定 Key'}</button>
+        <div style="position:relative;">
+          <input type="number" id="manual-km" placeholder="辨識結果或手動輸入" inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border:2px solid var(--blue); font-family:var(--mono); font-weight:900; font-size:18px;">
+          <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:800; color:var(--t3);">km</span>
+        </div>
+      </div>
+
+      <input type="file" id="ocr-file-input" accept="image/*" capture="camera" style="display:none;" onchange="processMileagePhoto(this)">
+      
+      <button id="confirm-mileage-btn" class="btn-acc" style="width:100%; padding:15px; border-radius:16px; font-size:16px; font-weight:900;">✅ 確認並打卡</button>
+    </div>
+  `;
+}
 /* ══ 修正：上線打卡後跳轉到當日記錄列表 ══ */
 async function punchIn() {
   const active = S.records.find(r => r.isPunchOnly && r.punchOut === '');
-  if (active) {
-    toast('⚠️ 已經在打卡上線中囉！');
-    return;
-  }
+  if (active) { toast('⚠️ 已經在打卡上線中囉！'); return; }
 
-  const d = new Date();
-  const rec = {
-    id: newId(),
-    date: todayStr(d),
-    time: nowTime(),
-    platformId: '', 
-    isPunchOnly: true,
-    punchIn: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-    punchOut: '', 
-    hours: 0,
-    timestamp: d.getTime(), 
-    orders: 0, mileage: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
+  document.getElementById('sub-title').textContent = '里程捕獲';
+  document.getElementById('sub-body').innerHTML = getMileageCaptureHtml('in');
+  openOverlay('sub-page');
+
+  document.getElementById('confirm-mileage-btn').onclick = async () => {
+    const km = pf(document.getElementById('manual-km').value);
+    if (km <= 0) { toast('⚠️ 請輸入起始里程'); return; }
+
+    const d = new Date();
+    const rec = {
+      id: newId(),
+      date: todayStr(d),
+      time: nowTime(),
+      isPunchOnly: true,
+      punchIn: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+      punchOut: '',
+      hours: 0,
+      startKm: km, // 儲存起始里程
+      timestamp: d.getTime(),
+      mileage: 0,
+      note: ''
+    };
+
+    S.records.push(rec);
+    await saveRecords();
+    closeOverlay('sub-page');
+    toast('▶ 已上線，起始里程：' + km + ' km');
   };
-
-  S.records.push(rec);
-  await saveRecords(); 
-  
-  toast('▶ 已上線打卡，記錄已建立。');
 
   // --- 跳轉邏輯 ---
   S.histTab = 'day';                // 1. 強制切換為「日」檢視模式
@@ -1853,22 +1944,45 @@ async function punchOut() {
   const activeRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
   if (!activeRec) return;
 
-  const ok = await customConfirm('確定要下線，並結算這筆打卡工時嗎？');
-  if (!ok) return;
+  document.getElementById('sub-title').textContent = '里程捕獲';
+  document.getElementById('sub-body').innerHTML = getMileageCaptureHtml('out');
+  openOverlay('sub-page');
 
-  const now = new Date();
-  const startMs = activeRec.timestamp || new Date(`${activeRec.date}T${activeRec.punchIn}:00`).getTime();
-  const endMs = now.getTime();
-  
-  let hoursVal = (endMs - startMs) / 3600000;
-  if (hoursVal < 0) hoursVal = 0;
+  document.getElementById('confirm-mileage-btn').onclick = async () => {
+    const endKm = pf(document.getElementById('manual-km').value);
+    
+    // 安全檢查
+    if (endKm <= 0) { toast('⚠️ 請輸入結束里程'); return; }
+    if (endKm <= activeRec.startKm) { 
+        toast(`⚠️ 結束里程 (${endKm}) 應大於開始里程 (${activeRec.startKm})`); 
+        return; 
+    }
 
-  activeRec.punchOut = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  activeRec.hours = hoursVal;
+    const now = new Date();
+    const startMs = activeRec.timestamp || new Date(`${activeRec.date}T${activeRec.punchIn}:00`).getTime();
+    
+    // 💡 [核心計算]：計算本次跑單里程
+    const tripMileage = endKm - activeRec.startKm;
 
-  await saveRecords(); 
-  
-  toast('⏹ 已下線打卡，工時已結算。');
+    activeRec.punchOut = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    activeRec.hours = (now.getTime() - startMs) / 3600000;
+    activeRec.endKm = endKm;         // 記錄結束里程
+    activeRec.mileage = tripMileage; // 這是計算出的當天行駛里程
+
+    await saveRecords();
+    closeOverlay('sub-page');
+    
+    // 彈出成功提示
+    customConfirm(`
+      <div style="font-size:40px; margin-bottom:10px;">✅</div>
+      <div style="font-size:18px; font-weight:900; color:var(--green);">下線結算完成</div>
+      <div style="font-size:14px; margin-top:10px; line-height:1.8;">
+        起點：${activeRec.startKm} km<br>
+        終點：${endKm} km<br>
+        <b>本次行駛：<span style="color:var(--acc); font-size:18px;">${tripMileage.toFixed(1)}</span> km</b>
+      </div>
+    `);
+  }
 
   // --- 跳轉邏輯 ---
   S.histTab = 'day';                // 1. 強制切換為「日」檢視模式
@@ -1881,6 +1995,87 @@ async function punchOut() {
     goPage('history');              // 5. 切換到查看記錄頁面
   }, 100);
 }
+
+// 3. 雲端 OCR 辨識邏輯
+window.processMileagePhoto = async function(input) {
+  if (!input.files || !input.files[0]) return;
+
+  // 👈 [核心檢查]：檢查是否有填寫 API Key
+  if (!S.settings.ocrKey) {
+    customConfirm(`
+      <div style="font-size:40px; margin-bottom:10px;">🔒</div>
+      <div style="font-size:18px; font-weight:900; color:var(--red);">尚未設定辨識功能</div>
+      <div style="font-size:13px; margin-top:10px; line-height:1.6; color:var(--t2);">
+        為避免共用額度過載，請先至<b>「設定 ➔ 辨識功能設定」</b>填寫您個人的免費 API Key 即可開始使用。
+      </div>
+    `).then(ok => {
+      if (ok) {
+        closeOverlay('sub-page'); // 關閉打卡視窗
+        goPage('settings');
+        setTimeout(openOCRSettings, 300);
+      }
+    });
+    input.value = ''; // 清除檔案選擇
+    return;
+  }
+
+  const file = input.files[0];
+
+  // 1. 顯示預覽圖
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = document.getElementById('ocr-preview-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('ocr-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+
+  // 2. 顯示辨識中動畫
+  document.getElementById('ocr-loading').style.display = 'flex';
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("language", "eng");
+    
+    // 👈 [核心修改]：使用使用者設定的 Key
+    const apiKey = S.settings.ocrKey; 
+
+    // 3. 發送請求至 OCR.space 伺服器
+    const response = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: { "apikey": apiKey },
+      body: formData
+    });
+
+    const result = await response.json();
+
+    if (result.ParsedResults && result.ParsedResults.length > 0) {
+      const detectedText = result.ParsedResults[0].ParsedText;
+      console.log("辨識原始文字:", detectedText);
+
+      // 4. 提取數字邏輯：過濾掉非數字字元
+      // 儀表板常有 "ODO" 或 "km" 字樣，我們只抓取連續的數字
+      const numbers = detectedText.match(/\d+/g);
+      if (numbers) {
+        // 通常里程數是畫面上最長的一串數字
+        const mileage = Math.max(...numbers.map(n => parseInt(n)));
+        document.getElementById('manual-km').value = mileage;
+        toast('✅ 雲端辨識完成：' + mileage);
+      } else {
+        toast('⚠️ 辨識成功但找不到數字，請手動校正');
+      }
+    } else {
+      throw new Error("辨識結果為空");
+    }
+  } catch (err) {
+    console.error("OCR 錯誤:", err);
+    toast('❌ 網路辨識失敗，請改用手動輸入');
+  } finally {
+    document.getElementById('ocr-loading').style.display = 'none';
+  }
+};
 /* ══ 2. 首頁 結束 ══════════════════════════════════════════ */
 
 /* ══ 3. 查看記錄 開始 ════════════════════════════════════ */
@@ -1960,8 +2155,6 @@ function buildRecItem(r) {
   // 2. 純打卡紀錄
   if (r.isPunchOnly) {
     const isOnline = r.punchOut === '';
-    
-    // 👇 針對「上線中」與「已下線」給予完全不同的色彩配置
     const tagBg = isOnline ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155';
     const tagShadow = isOnline ? '0 2px 6px rgba(16,185,129,0.3)' : 'none';
     const outTimeStr = isOnline ? '<span style="color:#10b981; font-weight:900; background:#ecfdf5; padding:2px 6px; border-radius:6px; border:1px solid #a7f3d0;">上線中</span>' : safeText(r.punchOut);
@@ -1969,16 +2162,26 @@ function buildRecItem(r) {
     const cardBorder = isOnline ? 'border: 2px solid #10b981;' : 'border: 1.5px solid #cbd5e1;';
     const timeColor = isOnline ? '#0f172a' : '#475569';
 
+    // 👇 這就是新增的：如果里程大於0，就產生一個橘色的里程標籤
+    const mileageStr = r.mileage > 0 
+      ? `<div style="margin-left:8px; background:#fff7ed; color:#ea580c; padding:2px 8px; border-radius:6px; border:1px solid #ffedd5; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:3px;">
+          <span>🛣️</span> ${r.mileage.toFixed(1)} <span style="font-size:9px;">km</span>
+         </div>` 
+      : '';
+
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 8px 10px; margin-bottom: 5px;">
         <span style="background:${tagBg}; box-shadow:${tagShadow}; color:#fff; font-size:13px; padding:4px 6px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:66px; height:30px; align-content:center;">🕒 打卡</span>
         
         <div class="h-div" style="margin:0 10px; height: 24px;"></div>
         
-        <div style="font-family:var(--mono); font-size:14px; font-weight:800; color:${timeColor}; flex:1; display:flex; align-items:center; justify-content:center; gap:6px;">
-          <!-- 獨立日期標籤 -->
-          <span style="padding:3px 7px; background:#f1f5f9; border-radius:6px; font-size:11px; font-weight:800; color: #546174; border:1.5px solid #18acbd; margin-right:3px;">${dStr}</span> 
-          ${safeText(r.punchIn)} <span style="color: #ff8c00; font-size:17px; font-weight:800;">→</span> ${outTimeStr}
+        <div style="font-family:var(--mono); font-size:14px; font-weight:800; color:${timeColor}; flex:1; display:flex; align-items:center; justify-content:center;">
+          <!-- 顯示時間 -->
+          <span style="padding:3px 7px; background:#f1f5f9; border-radius:6px; font-size:11px; font-weight:800; color: #546174; border:1.5px solid #18acbd; margin-right:3px;">${safeText(r.date.replace(/-/g, '/'))}</span> 
+          ${safeText(r.punchIn)} <span style="color: #ff8c00; font-size:17px; font-weight:800; margin:0 4px;">→</span> ${outTimeStr}
+          
+          <!-- 👈 這裡就是把里程標籤塞進來 -->
+          ${mileageStr} 
         </div>
         
         <div class="h-div" style="margin:0 10px; height: 24px;"></div>
@@ -2254,10 +2457,29 @@ function renderHistDayView() {
   </div>
   <div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:7px;"></div>`;
   
-  document.getElementById('hist-prev').addEventListener('click', () => { S.calM--; if(S.calM<1){S.calM=12;S.calY--;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
-  document.getElementById('hist-next').addEventListener('click', () => { S.calM++; if(S.calM>12){S.calM=1;S.calY++;} S.selDate=`${S.calY}-${pad(S.calM)}-01`; renderHistory(); });
+  const prevBtn = document.getElementById('hist-prev');
+  const nextBtn = document.getElementById('hist-next');
 
-  renderHistCalendarGrid(); renderHistRecords(S.selDate);
+  // 防呆：確保按鈕存在才綁定
+  if (prevBtn) {
+    prevBtn.onclick = () => { 
+      S.calM--; 
+      if (S.calM < 1) { S.calM = 12; S.calY--; } 
+      S.selDate = `${S.calY}-${pad(S.calM)}-01`; 
+      renderHistory(); 
+    };
+  }
+  if (nextBtn) {
+    nextBtn.onclick = () => { 
+      S.calM++; 
+      if (S.calM > 12) { S.calM = 1; S.calY++; } 
+      S.selDate = `${S.calY}-${pad(S.calM)}-01`; 
+      renderHistory(); 
+    };
+  }
+
+  renderHistCalendarGrid(); 
+  renderHistRecords(S.selDate);
 }
 /* ══ 修正：查看記錄選盤等待 ✔ 邏輯 ══ */
 window.handleHistMonthBlur = function() {
@@ -3357,18 +3579,26 @@ async function confirmAddRecord() {
       } else {
         S.generalExpenses.push(expRec);
       }
-      await saveGeneralExpenses(); 
+
+      await idbSet('generalExpenses', S.generalExpenses);
+      localStorage.setItem('delivery_general_expenses', JSON.stringify(S.generalExpenses));
+
+      // 👈 [關鍵修正]：同步年份與月份，防止跳轉後看到空白
+      const dateParts = expRec.date.split('-'); // "2025-05-17"
+      S.rptY = parseInt(dateParts[0]);
+      S.rptM = parseInt(dateParts[1]);
+      S.rptExpFilter = '全部'; // 確保跳轉後看到的是包含剛新增的那筆
+
       resetAddForm(); 
       checkBtn.disabled = false;
 
-      // ✨ 核心修正：設定跳轉狀態時，強制歸位篩選條件
+      // 跳轉設定
       S.tab = 'report';             
       S.rptView = 'netProfit';      
       S.rptNetMode = 'expense_overview'; 
-      S.rptExpTimeMode = 'year';    // 歸位為：全年
-      S.rptExpFilter = '全部';       // ✨ 強制歸位為：全部類別
+      S.rptExpTimeMode = 'month'; // 強制跳轉到「月」視角，比較容易看到剛加的資料
       
-      goPage('report'); // 執行跳轉
+      goPage('report');
       toast('✅ 支出已記錄並跳轉');
     });
     return;
@@ -3605,8 +3835,23 @@ window.navTrend = function(dir) {
   S.trendDate = d;
   renderRptTrend();
 }
-document.getElementById('rpt-prev').addEventListener('click', ()=>{ S.rptM--; if(S.rptM<1){S.rptM=12;S.rptY--;} renderReport(); });
-document.getElementById('rpt-next').addEventListener('click', ()=>{ S.rptM++; if(S.rptM>12){S.rptM=1;S.rptY++;} renderReport(); });
+
+const globalRptPrev = document.getElementById('rpt-prev');
+const globalRptNext = document.getElementById('rpt-next');
+if (globalRptPrev) {
+  globalRptPrev.onclick = () => { 
+    S.rptM--; 
+    if (S.rptM < 1) { S.rptM = 12; S.rptY--; } 
+    renderReport(); 
+  };
+}
+if (globalRptNext) {
+  globalRptNext.onclick = () => { 
+    S.rptM++; 
+    if (S.rptM > 12) { S.rptM = 1; S.rptY++; } 
+    renderReport(); 
+  };
+}
 
 /* ══ 替換：收入總覽頁面 (修復空白問題、套用淨行程與同排佔比) ══ */
 function renderRptOverview() {
@@ -4952,362 +5197,324 @@ function drawBar(canvasId, labels, data, color) {
 /* ══ 完整替換：淨賺分析 (包含三段式切換與精確淨利計算) ══ */
 // 補上全域狀態初始化 (若 S 中沒有的話)
 if (!S.rptExpTimeMode) S.rptExpTimeMode = 'year'; 
-if (!S.rptExpFilter) S.rptExpFilter = '全部';
+S.rptExpFilter = '全部';
+
 function renderRptNetProfit() {
-  const container = document.getElementById('rv-netProfit');
+  const scrollArea = document.getElementById('rv-netProfit');
+  const fixedArea = document.getElementById('net-profit-sub-tabs-fixed');
+
+  // 定義三種模式的配色與陰影
   const modes = [
-    { key: 'month', label: '月結算', grad: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
-    { key: 'year', label: '年結算', grad: 'linear-gradient(135deg, #10b981, #059669)' },
-    { key: 'expense_overview', label: '支出總覽', grad: 'linear-gradient(135deg, #f43f5e, #be123c)' }
+    { key: 'month', label: '月結算', grad: 'linear-gradient(135deg, #3b82f6, #2563eb)', shadow: 'rgba(37, 99, 235, 0.4)' },
+    { key: 'year', label: '年結算', grad: 'linear-gradient(135deg, #10b981, #059669)', shadow: 'rgba(16, 185, 129, 0.4)' },
+    { key: 'expense_overview', label: '支出總覽', grad: 'linear-gradient(135deg, #f43f5e, #be123c)', shadow: 'rgba(244, 63, 94, 0.4)' }
   ];
   const curIdx = modes.findIndex(m => m.key === S.rptNetMode);
+  const curConfig = modes[curIdx];
 
-  // 1. 如果外殼不在，才畫外殼 (確保滑動特效生效)
-  if (!document.getElementById('net-profit-shell')) {
-    container.innerHTML = `
-      <div id="net-profit-shell">
-        <div class="slide-tabs tabs-3" style="margin-bottom:10px; background:rgba(0,0,0,0.05); padding:4px;">
-          <div id="net-profit-slide-bg" class="slide-bg" style="width:calc(33.33% - 4px); transition:0.3s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-          ${modes.map((m, i) => `<button class="slide-btn" id="btn-net-${m.key}" onclick="setRptNetMode('${m.key}', ${i})">${m.label}</button>`).join('')}
-        </div>
-        <div id="net-profit-sub-content"></div>
+  // 1. 初始化按鈕外殼 (只在不存在時建立一次)
+  if (!document.getElementById('net-profit-sub-tabs-container')) {
+    fixedArea.innerHTML = `
+      <div id="net-profit-sub-tabs-container" class="slide-tabs tabs-3" style="margin-bottom:0; background:rgba(0,0,0,0.06); padding:4px; border-radius: 999px;">
+        <div id="net-profit-slide-bg" class="slide-bg" style="width:calc(33.33% - 4px); border-radius: 999px; transition:0.35s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+        ${modes.map((m, i) => `
+          <button class="slide-btn" id="btn-net-mode-${m.key}" onclick="setRptNetMode('${m.key}', ${i})">${m.label}</button>
+        `).join('')}
       </div>
     `;
   }
+  fixedArea.style.display = 'block';
 
-  // 2. 更新滑動背景位置與顏色 (觸發 Sliding 動畫)
+  // 2. 獲取滑塊元素並強制套用顏色 (使用 setProperty 確保 !important 生效)
   const slideBg = document.getElementById('net-profit-slide-bg');
   if (slideBg) {
     slideBg.style.transform = `translateX(${curIdx * 100}%)`;
-    slideBg.style.background = modes[curIdx].grad;
-    slideBg.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    // 👈 核心修正：強制指定背景與陰影，壓過 CSS 設定
+    slideBg.style.setProperty('background', curConfig.grad, 'important');
+    slideBg.style.setProperty('box-shadow', `0 4px 12px ${curConfig.shadow}`, 'important');
   }
-
-  // 3. 更新按鈕文字狀態
+  
+  // 更新按鈕文字狀態
   modes.forEach(m => {
-    const btn = document.getElementById(`btn-net-${m.key}`);
+    const btn = document.getElementById(`btn-net-mode-${m.key}`);
     if (btn) {
       const isActive = S.rptNetMode === m.key;
-      btn.classList.toggle('active', isActive);
-      btn.style.color = isActive ? '#ffffff' : '#475569';
+      btn.style.color = isActive ? '#fff' : '#475569';
       btn.style.fontWeight = isActive ? '800' : '600';
+      btn.classList.toggle('active', isActive);
     }
   });
 
-  // 4. 根據模式渲染下方內容
+  // 3. 處理內容區域外殼
+  if (!document.getElementById('net-profit-framed-box')) {
+    scrollArea.innerHTML = `
+      <div id="net-profit-framed-box" style="border: 2.5px solid #cbd5e1; border-radius: 24px; background: #ffffff; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.03);">
+        <div id="sub-nav-area"></div>
+        <div id="sub-total-card-area"></div>
+        <div id="sub-list-area"></div>
+      </div>
+      <div style="height:100px;"></div>
+    `;
+  }
+
   renderNetProfitSubContent();
 }
 // 切換模式的入口 (供按鈕點擊)
 window.setRptNetMode = function(mode, idx) {
   S.rptNetMode = mode;
+  const slideBg = document.getElementById('net-profit-slide-bg');
+  if (slideBg) {
+    const colors = {
+      'month': 'linear-gradient(135deg, #3b82f6, #2563eb)',
+      'year': 'linear-gradient(135deg, #10b981, #059669)',
+      'expense_overview': 'linear-gradient(135deg, #f43f5e, #be123c)'
+    };
+    slideBg.style.background = colors[mode] || colors['month'];
+  }
   renderRptNetProfit();
-}
+};
 // ✨ 修正：渲染下方內容 (包含動態判斷 ◀▶ 按鈕功能)
 function renderNetProfitSubContent() {
-  const subContainer = document.getElementById('net-profit-sub-content');
   const isExp = S.rptNetMode === 'expense_overview';
-  
-  const styleNum = (val) => `<span style="font-size: 19px; font-weight: 900; color: #006eff; font-family: var(--mono); vertical-align: middle;">${val}</span>`;
-  const styleUnit = (txt) => `<span style="font-size: 11px; font-weight: 800; color: #000000; margin: 0 1px; vertical-align: middle;"> ${txt} </span>`;
+  const navArea = document.getElementById('sub-nav-area');
+  const totalArea = document.getElementById('sub-total-card-area');
+  const listArea = document.getElementById('sub-list-area');
+
+  if (!navArea || !totalArea || !listArea) return;
 
   if (isExp) {
-    // 支出總覽：最小化篩選 UI
-    const cats = ['全部', '平台開通裝備', '良民證', '強制險', '第三責任險', '職災險', '罰單', '車貸', '行車記錄器', '記憶卡', '行動電源', '手機架', '充電線', '安裝費', '安全帽', '其它'];
-    
-    // ✨ 關鍵修正：◀▶ 按鈕會根據 S.rptExpTimeMode 決定是呼叫 navRptYear 還是 navRptMonth
     const navFunc = S.rptExpTimeMode === 'year' ? 'navRptYear' : 'navRptMonth';
-
-    subContainer.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:3px 10px; border-radius:15px; border:1px solid #cbd5e1; margin-bottom:8px; gap:4px;">
-        <div style="display:flex; align-items:center; gap:3px;">
-          <button class="mbtn" style="width:28px; height:28px; font-size:12px; border-radius:50%;" onclick="${navFunc}(-1)">◀</button>
-          <span style="font-size:13px; font-weight:800; min-width:75px; text-align:center;">
+    // 這裡同樣建議：如果導航列已經存在，只更新文字，不重繪 innerHTML 可進一步減少閃爍
+    navArea.innerHTML = `
+      <div style="position: sticky; top: 0px; z-index: 100; background:#fff; padding-bottom:12px; display:flex; justify-content:space-between; align-items:center; gap:4px; border-bottom:1px dashed #e2e8f0; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:3px; background:#f1f5f9; padding:2px 8px; border-radius:15px; border:1px solid #cbd5e1;">
+          <button class="btn btn2" style="width:32px; height:32px; font-size:28px; border:1px solid #fff;border-radius:50%;" onclick="${navFunc}(-1)">◀</button>
+          <span style="font-size:13px; font-weight:800; min-width:85px; text-align:center;">
              ${S.rptY}<small>年</small>${S.rptExpTimeMode==='year'?'':(S.rptM+'<small>月</small>')}
           </span>
-          <button class="mbtn" style="width:28px; height:28px; font-size:12px; border-radius:50%;" onclick="${navFunc}(1)">▶</button>
+          <button class="btn btn2" style="width:32px; height:32px; font-size:28px; border:1px solid #fff;border-radius:50%;" onclick="${navFunc}(1)">▶</button>
         </div>
-        
-        <button onclick="S.rptExpTimeMode=(S.rptExpTimeMode==='year'?'month':'year'); renderReport();" style="padding:4px 8px; border-radius:10px; border:1px solid #bfdbfe; background:#eff6ff; color:#2563eb; font-size:11px; font-weight:900;">
-          ${S.rptExpTimeMode==='year'?'切換月':'切換全年'}
+        <button onclick="toggleExpTimeMode()" style="padding:6px 12px; border-radius:12px; border:1.5px solid #bfdbfe; background:#eff6ff; color:#2563eb; font-size:11px; font-weight:900;">
+          ${S.rptExpTimeMode==='year'?'切換按月':'切換全年'}
         </button>
-
-        <select onchange="S.rptExpFilter=this.value; renderReport();" style="border:none; background:#f1f5f9; font-size:11px; font-weight:800; color:#475569; padding:4px 8px; border-radius:10px; outline:none; max-width:85px;">
-          ${cats.map(c => `<option value="${c}" ${S.rptExpFilter===c?'selected':''}>${c}</option>`).join('')}
+        <select onchange="S.rptExpFilter=this.value; renderReport();" style="border:1.5px solid #cbd5e1; background:#ffffff; font-size:11px; font-weight:800; color:#475569; padding:5px; border-radius:10px; outline:none; max-width:90px;">
+          ${['全部', '保險', '裝備', '規費', '貸款、分期'].map(c => `<option value="${c}" ${S.rptExpFilter===c?'selected':''}>${c}</option>`).join('')}
         </select>
       </div>
-      <div id="expense-list-area"></div>
     `;
-    renderActualExpenseList();
+    renderActualExpenseList(totalArea, listArea);
   } else {
-    // 月/年 數據結算 UI
-    subContainer.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
-        <button class="btn btn2" style="width:36px; height:36px;" onclick="${S.rptNetMode==='month'?'navRptMonth(-1)':'navRptYear(-1)'}">◀</button>
+    // 渲染結算頁面導航
+    const styleNum = (val) => `<span style="font-size: 20px; font-weight: 900; color: #006eff; font-family: var(--mono); vertical-align: middle;">${val}</span>`;
+    const styleUnit = (txt) => `<span style="font-size: 12px; font-weight: 800; color: #000; margin: 0 1px; vertical-align: middle;">${txt}</span>`;
+    const isMonth = S.rptNetMode === 'month';
+    
+    navArea.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; background: #f8fafc; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 12px;">
+        <button class="btn btn2" style="width:42px; height:42px;" onclick="${isMonth?'navRptMonth(-1)':'navRptYear(-1)'}">◀</button>
         <span style="text-align:center; flex:1;">
-          ${S.rptNetMode==='month'?`${styleNum(S.rptY)}${styleUnit('年')}${styleNum(S.rptM)}${styleUnit('月')}`:`${styleNum(S.rptY)}${styleUnit('年 全年')}`}
+           ${isMonth ? `${styleNum(S.rptY)}${styleUnit('年')}${styleNum(S.rptM)}${styleUnit('月')}` : `${styleNum(S.rptY)}${styleUnit('年 全年')}`}
         </span>
-        <button class="btn btn2" style="width:36px; height:36px;" onclick="${S.rptNetMode==='month'?'navRptMonth(1)':'navRptYear(1)'}">▶</button>
+        <button class="btn btn2" style="width:42px; height:42px;" onclick="${isMonth?'navRptMonth(1)':'navRptYear(1)'}">▶</button>
       </div>
-      <div id="net-profit-stats-area"></div>
     `;
-    renderNetProfitStats();
+    totalArea.innerHTML = ''; 
+    renderNetProfitStats(listArea);
   }
 }
-function renderActualExpenseList() {
-  const area = document.getElementById('expense-list-area');
+function renderActualExpenseList(totalArea, listArea) {
   const isYear = S.rptExpTimeMode === 'year';
   const prefix = isYear ? `${S.rptY}-` : `${S.rptY}-${pad(S.rptM)}`;
   const filter = S.rptExpFilter || '全部';
 
-  // 🔴 關鍵修正：只抓一般支出，排除車輛油錢保養
+  if (!S.generalExpenses) S.generalExpenses = [];
   let list = S.generalExpenses.filter(e => e.date.startsWith(prefix));
-
-  if (filter !== '全部') {
-    list = list.filter(e => e.category === filter);
-  }
+  if (filter !== '全部') list = list.filter(e => e.category === filter);
 
   const total = list.reduce((s, e) => s + pf(e.amount), 0);
   list.sort((a,b) => b.date.localeCompare(a.date));
 
-  let html = `
-    <!-- 縮排到最小的總額顯示 -->
-    <div style="background:linear-gradient(135deg, #1e293b, #334155); color:#fff; border-radius:12px; padding:8px 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
-       <span style="font-size:12px; font-weight:800;">(${S.rptY}年 ${isYear?'全年':S.rptM+'月'}) 支出總金額</span>
-       <span style="font-family:var(--mono); font-size:20px; font-weight:900; color:#fbbf24;">$ ${fmt(total)}</span>
+  // 1. 更新總額卡片區 (在這裡更新就不會閃爍)
+  const rptYear =
+    `<span style="font-size: 18px;color:#f8fafc; font-weight:900;">${S.rptY}</span>` +
+    `<span style="color: #00ddff; font-weight:900;"> 年</span>`;
+
+  const rptMonth = isYear
+    ? `<span style="font-size: 17px;color:#f8fafc; font-weight:800;"> 全年</span>`
+    : `<span style="font-size: 18px;color:#f8fafc; font-weight:900;"> ${S.rptM}</span>` +
+      `<span style="color: #00ddff; font-weight:900;"> 月</span>`;
+
+  totalArea.innerHTML = `
+    <div style="background: #1e293b; border-radius: 14px; padding: 14px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1.5px solid #334155; position: relative; overflow: hidden;">
+      <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: #fbbf24;"></div>
+
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-family: var(--mono);font-size: 14px; font-weight: 900;">
+          ${rptYear}${rptMonth}
+        </span>
+
+        <span style="font-size: 15px; font-weight: 800; color: #94a3b8; border-left: 1px solid #475569; padding-left:10px;">
+          支出累計
+        </span>
+      </div>
+
+      <span style="font-family: var(--mono); font-size: 26px; font-weight: 1000; color: #fbbf24; text-shadow: 0 0 10px rgba(251,191,36,0.3);">
+        <span style="font-size:18px;margin-right:3px;">$</span>${fmt(total)}
+      </span>
     </div>
-    <div style="display:flex; flex-direction:column; gap:5px;">
   `;
 
+  // 2. 更新列表區
   if (list.length === 0) {
-    html += `<div class="empty-tip" style="background:#fff; border-radius:12px; padding:20px;">本區間無雜項支出記錄</div>`;
+    listArea.innerHTML = `<div class="empty-tip" style="padding:40px; border:1px solid #e2e8f0; border-radius:16px;">目前查無支出記錄</div>`;
   } else {
-    list.forEach(e => {
-      html += `
-        <div style="background:#fff; border-radius:10px; border:1px solid #e2e8f0; padding:6px 12px; display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div style="font-size:16px;">💸</div>
-            <div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:13px; font-weight:800; color:#0f172a;">${e.category}</span>
-                <span style="font-size:10px; color:#94a3b8; font-family:var(--mono);">${e.date.substring(5)}</span>
+    listArea.innerHTML = `<div style="display:flex; flex-direction:column; gap:8px;">` + 
+      list.map(e => {
+        const icons = {'保險':'🛡️','裝備':'📦','規費':'📜','貸款、分期':'💳'};
+        return `
+          <div style="background:#ffffff; border-radius:18px; border:1px solid #e2e6eb; padding:14px; display:grid; grid-template-columns: 45px 1fr auto; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); margin-bottom:8px;">
+            <!-- 圖示區 -->
+            <div style="width:40px; height:40px; background:#f8fafc; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px;">
+              ${icons[e.category] || '💸'}
+            </div>
+            <!-- 文字區 -->
+            <div style="padding-left:12px; overflow:hidden;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                <span style="font-size:15px; font-weight:800; color:#1e293b;">${e.category}</span>
+                <span style="background:#eff6ff; color:#2563eb; font-size:10px; font-weight:800; padding:2px 10px; border-radius:20px;">${e.date.substring(5)}</span>
               </div>
-              ${e.note ? `<div style="font-size:11px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">${e.note}</div>` : ''}
+              <div style="font-size:12px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.note || '無備註'}</div>
+            </div>
+            <!-- 金額與刪除 -->
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-family:var(--mono); font-size:18px; font-weight:850; color:#dc2626;"><span style="font-size:10px;margin-right:3px;">$</span>${fmt(e.amount)}</span>
+              <div onclick="deleteGeneralExpense('${e.id}')" style=" width:24px;height:24px;background:#334155;border-radius:99px;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;line-height:1;">✕</div>
             </div>
           </div>
-          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:#dc2626;">-$${fmt(e.amount)}</span>
-        </div>
-      `;
-    });
+        `;
+      }).join('') + `</div>`;
   }
-  area.innerHTML = html + `</div>`;
 }
 
 // 輔助：渲染結算數據 (原本 renderRptNetProfit 的邏輯)
-function renderNetProfitStats() {
+function renderNetProfitStats(container) {
   const isMonth = S.rptNetMode === 'month';
   const prefix = isMonth ? `${S.rptY}-${pad(S.rptM)}` : `${S.rptY}-`;
-  const area = document.getElementById('net-profit-stats-area');
-  if (!area) return;
 
-  // 1. 計算總收入 (不含現金小費)
-  const totalInc = S.records
-    .filter(r => r.date.startsWith(prefix) && !r.isPunchOnly && !r.isCashTip)
-    .reduce((sum, r) => sum + recTotal(r), 0);
-
-  // 2. 分類計算支出
+  const totalInc = S.records.filter(r => r.date.startsWith(prefix) && !r.isPunchOnly && !r.isCashTip).reduce((sum, r) => sum + recTotal(r), 0);
   const vRecs = S.vehicleRecs.filter(r => r.date.startsWith(prefix));
-  const totalFuel  = vRecs.filter(r => r.type === 'fuel').reduce((sum, r) => sum + pf(r.amount), 0);
+  const totalFuel = vRecs.filter(r => r.type === 'fuel').reduce((sum, r) => sum + pf(r.amount), 0);
   const totalMaint = vRecs.filter(r => r.type === 'maintenance').reduce((sum, r) => sum + pf(r.amount), 0);
-  const totalWash  = vRecs.filter(r => r.type === 'wash').reduce((sum, r) => sum + pf(r.amount), 0);
-  const totalGen   = S.generalExpenses.filter(e => e.date.startsWith(prefix)).reduce((sum, e) => sum + pf(e.amount), 0);
+  const totalWash = vRecs.filter(r => r.type === 'wash').reduce((sum, r) => sum + pf(r.amount), 0);
+  const gExps = S.generalExpenses.filter(e => e.date.startsWith(prefix));
+  const totalIns = gExps.filter(e => e.category === '保險').reduce((s, e) => s + pf(e.amount), 0);
+  const totalEquip = gExps.filter(e => e.category === '裝備').reduce((s, e) => s + pf(e.amount), 0);
+  const totalFee = gExps.filter(e => e.category === '規費').reduce((s, e) => s + pf(e.amount), 0);
+  const totalLoan = gExps.filter(e => e.category === '貸款、分期').reduce((s, e) => s + pf(e.amount), 0);
 
-  const totalExp = totalFuel + totalMaint + totalWash + totalGen;
+  const totalExp = totalFuel + totalMaint + totalWash + totalIns + totalEquip + totalFee + totalLoan;
   const netProfit = totalInc - totalExp;
+  
+  // 👈 [需求 2]：% 數值的顏色與背景判斷
+  const totalPct = totalInc > 0 ? ((totalExp / totalInc) * 100).toFixed(1) : '0';
+  const isOverBudget = totalExp > totalInc;
+  const pctColor = isOverBudget ? '#ef4444' : '#16a34a';
+  const pctBg = isOverBudget ? '#fee2e2' : '#f0fdf4';
+  const pctBorder = isOverBudget ? '#f87171' : '#86efac';
 
-  // 3. 百分比計算工具 (相對於總收入)
-  const getPct = (val) => {
-    if (totalInc <= 0) return '0%';
-    return ((val / totalInc) * 100).toFixed(1) + '%';
-  };
-
-  // 4. 判斷損益狀態標籤
   let statusBadge = '';
   if (totalInc > 0) {
-    if (netProfit >= 0) {
-      statusBadge = `<div style="margin-top:8px;"><span style="background:#f0fdf4; color:#16a34a; border:1.5px solid #86efac; padding:4px 12px; border-radius:12px; font-size:14px; font-weight:900; box-shadow:0 2px 8px rgba(22,163,74,0.1);">🎉 獲利狀態</span></div>`;
-    } else {
-      statusBadge = `<div style="margin-top:8px;"><span style="background:#fef2f2; color:#ef4444; border:1.5px solid #fecdd3; padding:4px 12px; border-radius:12px; font-size:14px; font-weight:900; box-shadow:0 2px 8px rgba(239,68,68,0.1);">⚠️ 虧損狀態</span></div>`;
-    }
+    statusBadge = `<div style="margin-bottom:12px; display:inline-flex; align-items:center; gap:8px; background:${netProfit >= 0 ? '#f0fdf4' : '#fef2f2'}; padding:6px 16px; border-radius:16px; border:2px solid ${netProfit >= 0 ? '#16a34a' : '#ef4444'};">
+         <span style="font-size:16px;">${netProfit >= 0 ? '🎉' : '⚠️'}</span>
+         <span style="font-size:15px; font-weight:900; color:${netProfit >= 0 ? '#16a34a' : '#ef4444'};">${netProfit >= 0 ? '目前為獲利狀態' : '目前為虧損狀態'}</span>
+      </div>`;
   }
 
-  // 5. 渲染 HTML
-  let html = `
-    <!-- 區間總淨利卡片 -->
-    <div style="background:#fff; border:2.5px solid #cbd5e1; border-radius:24px; padding:24px 16px; text-align:center; margin-bottom:12px; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
-      <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:4px;">💰 區間總淨利 (收入－總支出)</div>
-      <div style="font-family:var(--mono); font-size:38px; font-weight:900; color:${netProfit >= 0 ? '#16a34a' : '#dc2626'}; line-height:1;">
-        $ ${fmt(netProfit)}
-      </div>
-      ${statusBadge}
-    </div>
+  const getPctBadge = (val, color) => {
+    if (totalInc <= 0) return '';
+    const itemPct = ((val / totalInc) * 100).toFixed(1);
+    return `<span style="background:${color}15; color:${color}; border:1.8px solid ${color}; padding:2px 8px; border-radius:8px; font-size:12px; font-weight:900; font-family:var(--mono); min-width:55px; text-align:center;">${itemPct}%</span>`;
+  };
 
-    <!-- 數據明細列表 -->
-    <div style="display:flex; flex-direction:column; gap:8px;">
-      
-      <!-- 收入總項 -->
-      <div style="background:#fff; border-radius:16px; border:2px solid #bbf7d0; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
-         <span style="font-weight:800; color:#15803d; font-size:15px;">跑單總收入</span>
-         <span style="font-family:var(--mono); font-weight:800; font-size:16px;">$ ${fmt(totalInc)}</span>
-      </div>
-
-      <div style="height:4px;"></div>
-
-      <!-- 支出細項 -->
-      ${renderNetRow('⛽ 燃料 / 換電', totalFuel, '#ef4444', getPct(totalFuel))}
-      ${renderNetRow('🔧 保養 / 維修', totalMaint, '#10b981', getPct(totalMaint))}
-      ${renderNetRow('🧽 洗車 / 美容', totalWash, '#06b6d4', getPct(totalWash))}
-      ${renderNetRow('💸 雜項 (裝備、保險等)', totalGen, '#64748b', getPct(totalGen))}
-
-      <!-- 支出總結 -->
-      <div style="background:#fff; border-radius:16px; border:2.5px solid #f87171; padding:14px; display:flex; justify-content:space-between; align-items:center; margin-top:4px; box-shadow:0 4px 12px rgba(220,38,38,0.05);">
-         <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-weight:900; color:#b91c1c; font-size:15px;">全項總支出</span>
-            <span style="background:#fee2e2; color:#dc2626; font-size:11px; font-weight:800; padding:2px 8px; border-radius:8px;">佔收入 ${getPct(totalExp)}</span>
-         </div>
-         <span style="font-family:var(--mono); font-weight:900; color:#dc2626; font-size:18px;">-$ ${fmt(totalExp)}</span>
-      </div>
-
-    </div>
-    <div style="height: 100px;"></div> <!-- 底部墊高 -->
-  `;
-
-  area.innerHTML = html;
-}
-// 輔助函式：產生每一行支出的 HTML
-function renderNetRow(label, amt, color, pct) {
-  return `
-    <div style="background:#fff; border-radius:12px; border:1px solid #e2e8f0; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-      <span style="font-size:13px; font-weight:700; color:#475569;">${label}</span>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:11px; font-weight:800; color:${color}; background:${color}15; padding:2px 6px; border-radius:6px; min-width:45px; text-align:center;">${pct}</span>
-        <span style="font-family:var(--mono); font-size:14px; font-weight:700; color:#1e293b;">$ ${fmt(amt)}</span>
-      </div>
-    </div>
-  `;
-}
-function renderExpenseOverviewList() {
-  const isYearMode = S.rptExpTimeMode === 'year';
-  const prefix = isYearMode ? `${S.rptY}-` : `${S.rptY}-${pad(S.rptM)}`;
-  const filter = S.rptExpFilter || '全部';
-
-  // 🔴 關鍵修正：只抓取 generalExpenses，不包含 vehicleRecs
-  let list = S.generalExpenses.filter(e => e.date.startsWith(prefix));
-
-  if (filter !== '全部') {
-    list = list.filter(e => e.category === filter || (filter === '保險' && e.category.includes('險')) || (filter === '手機配件' && (e.category === '手機架' || e.category === '充電線')));
-  }
-
-  const total = list.reduce((s, e) => s + pf(e.amount), 0);
-  list.sort((a, b) => b.date.localeCompare(a.date));
-
-  let html = `
-    <!-- 總額顯示卡片 (最小化縮排) -->
-    <div style="background:linear-gradient(135deg, #475569, #1e293b); color:#fff; border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-       <span style="font-size:12px; font-weight:700;">(${S.rptY}年 ${isYearMode ? '全年' : S.rptM + '月'}) 支出總計</span>
-       <span style="font-family:var(--mono); font-size:20px; font-weight:900; color:#fbbf24;">$ ${fmt(total)}</span>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:5px;">
-  `;
-
-  if (list.length === 0) {
-    html += `<div class="empty-tip" style="background:#fff; border-radius:12px; padding:20px;">無符合條件的支出紀錄</div>`;
-  } else {
-    list.forEach(e => {
-      html += `
-        <div style="background:#fff; border-radius:10px; border:1px solid #e2e8f0; padding:6px 12px; display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="font-size:18px;">💸</div>
-            <div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:13px; font-weight:800; color:#1e293b;">${e.category}</span>
-                <span style="font-size:10px; color:#94a3b8; font-family:var(--mono);">${e.date.substring(5)}</span>
-              </div>
-              ${e.note ? `<div style="font-size:11px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">${e.note}</div>` : ''}
-            </div>
-          </div>
-          <div style="font-family:var(--mono); font-size:14px; font-weight:800; color:#dc2626;">-$${fmt(e.amount)}</div>
-        </div>
-      `;
-    });
-  }
-  return html + `</div>`;
-}
-
-// 輔助：原本的淨利數據面板渲染
-function renderNetProfitDataPanel() {
-  const isMonth = S.rptNetMode === 'month';
-  const prefix = isMonth ? `${S.rptY}-${pad(S.rptM)}` : `${S.rptY}-`;
-  const panel = document.getElementById('net-profit-data-panel');
-  if(!panel) return;
-
-  const inc = S.records.filter(r => r.date.startsWith(prefix) && !r.isPunchOnly && !r.isCashTip).reduce((s, r) => s + recTotal(r), 0);
-  const vExp = S.vehicleRecs.filter(r => r.date.startsWith(prefix)).reduce((s, r) => s + pf(r.amount), 0);
-  const gExp = S.generalExpenses.filter(e => e.date.startsWith(prefix)).reduce((s, e) => s + pf(e.amount), 0);
-  
-  const profit = inc - (vExp + gExp);
-
-  panel.innerHTML = `
-    <div class="card" style="text-align:center; padding:15px; margin-bottom:10px; border:2px solid #cbd5e1;">
-      <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:4px;">💰 區間總淨利</div>
-      <div style="font-family:var(--mono); font-size:32px; font-weight:900; color:${profit>=0?'#16a34a':'#dc2626'};">$ ${fmt(profit)}</div>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:6px;">
-      <div style="background:#fff; border-radius:12px; border:1.5px solid #bbf7d0; padding:10px 14px; display:flex; justify-content:space-between; font-size:14px;">
-        <span style="font-weight:700; color:#15803d;">跑單總收入</span>
-        <span style="font-family:var(--mono); font-weight:800;">$ ${fmt(inc)}</span>
-      </div>
-      <div style="background:#fff; border-radius:12px; border:1.5px solid #fecdd3; padding:10px 14px; display:flex; justify-content:space-between; font-size:14px;">
-        <span style="font-weight:700; color:#b91c1c;">全項總支出 (含車輛)</span>
-        <span style="font-family:var(--mono); font-weight:800; color:#dc2626;">-$ ${fmt(vExp + gExp)}</span>
-      </div>
-    </div>
-  `;
-}
-function renderNetProfitData() {
-  const isMonth = S.rptNetMode === 'month';
-  const prefix = isMonth ? `${S.rptY}-${pad(S.rptM)}` : `${S.rptY}-`;
-  const container = document.getElementById('net-profit-content');
-  if(!container) return;
-
-  const totalIncome = S.records
-    .filter(r => r.date.startsWith(prefix) && !r.isPunchOnly && !r.isCashTip)
-    .reduce((sum, r) => sum + recTotal(r), 0);
-
-  const totalFuel = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix) && r.type === 'fuel').reduce((sum, r) => sum + pf(r.amount), 0);
-  const totalMaint = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix) && r.type === 'maintenance').reduce((sum, r) => sum + pf(r.amount), 0);
-  const totalWash = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.date.startsWith(prefix) && r.type === 'wash').reduce((sum, r) => sum + pf(r.amount), 0);
-  const totalGeneral = S.generalExpenses.filter(e => e.date.startsWith(prefix)).reduce((sum, e) => sum + pf(e.amount), 0);
-
-  const totalExpense = totalFuel + totalMaint + totalWash + totalGeneral;
-  const netProfit = totalIncome - totalExpense;
-
+  // 👈 [需求 1]：補回區間總淨利的卡片框線設計
   container.innerHTML = `
-    <div style="background: #fff; border: 2px solid #cbd5e1; border-radius: 24px; padding: 20px; text-align: center; margin-bottom: 12px;">
-      <div style="font-size: 14px; font-weight: 800; color: #64748b; margin-bottom: 4px;">💰 區間總淨利</div>
-      <div style="font-family: var(--mono); font-size: 38px; font-weight: 900; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};">$ ${fmt(netProfit)}</div>
+    <div style="background:#fff; border:3px solid #cbd5e1; border-radius:24px; padding:24px 16px; text-align:center; margin-bottom:12px; box-shadow:0 8px 20px rgba(0,0,0,0.02);">
+      ${statusBadge}
+      <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:4px;">💰 區間總淨利 (收入－總支出)</div>
+      <div style="font-family: var(--mono); font-size: 38px; font-weight: 1000; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};">$ ${fmt(netProfit)}</div>
     </div>
-    <div style="display:flex; flex-direction:column; gap:8px;">
-      <div style="background:#fff; border-radius:16px; border:1.5px solid #bbf7d0; padding:12px; display:flex; justify-content:space-between;">
-         <span style="font-weight:800; color:#15803d;">跑單總收入</span>
-         <span style="font-family:var(--mono); font-weight:800;">$ ${fmt(totalIncome)}</span>
+
+    <div style="background:linear-gradient(135deg, #16a34a, #10b981); border-radius:16px; padding:12px; display:flex; justify-content:space-between; align-items:center; margin: 15px 0; box-shadow:0 4px 12px rgba(22,163,74,0.1);">
+       <span style="font-weight:900; color:#fff; font-size:15px;">跑單總收入</span>
+       <span style="font-family:var(--mono); font-weight:900; font-size:18px; color:#fff;">$ ${fmt(totalInc)}</span>
+    </div>
+
+    <div style="background:#ffffff; border:3px solid #f87171; border-radius:20px; overflow:hidden; box-shadow: 0 8px 20px rgba(220,38,38,0.05);">
+      <div style="padding:16px; background:#fff; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:900; color:#7f1d1d; font-size:16px;">全項總支出</span>
+            <span style="font-family:var(--mono); font-weight:900; color:#ef4444; font-size:22px;">-$ ${fmt(totalExp)}</span>
+        </div>
+        
+        <!-- 👈 [需求 2]：支出占比動態變色標籤 -->
+        <div style="background:${pctBg}; border:2.5px solid ${pctBorder}; padding:8px 30px; border-radius:15px; display:flex; flex-direction:column; align-items:center;">
+            <span style="font-size:11px; font-weight:800; color:#475569; margin-bottom:2px;">佔收入總額</span>
+            <span style="font-family:var(--mono); font-size:28px; font-weight:1000; color:${pctColor};">${totalPct}<small style="font-size:16px;"> %</small></span>
+        </div>
+
+        <button onclick="toggleNetExpDetail()" id="net-exp-toggle-btn" style="width:100%; background:#f1f5f9; border:none; padding:10px; border-radius:10px; color:#475569; font-weight:800; font-size:13px; cursor:pointer;">
+          <span id="net-exp-arrow">▼</span> 展開支出細項
+        </button>
       </div>
-      <div style="background:#fff; border-radius:16px; border:1.5px solid #fecdd3; padding:12px; display:flex; justify-content:space-between;">
-         <span style="font-weight:800; color:#b91c1c;">全項總支出</span>
-         <span style="font-family:var(--mono); font-weight:800; color:#dc2626;">-$ ${fmt(totalExpense)}</span>
+
+      <div id="net-exp-detail" style="max-height:0px; overflow:hidden; transition:max-height 0.4s ease;">
+        <div style="padding:4px 12px 16px 12px; display:flex; flex-direction:column; gap:6px;">
+          <div style="border-top:1px dashed #f87171; margin-bottom:10px;"></div>
+          <!-- 👈 [需求 4]：簡化標籤並傳送數據至均分網格 -->
+          ${renderNetRow('⛽ 燃料 / 換電', totalFuel, '#ef4444', getPctBadge(totalFuel, '#ef4444'))}
+          ${renderNetRow('🔧 保養 / 維修', totalMaint, '#10b981', getPctBadge(totalMaint, '#10b981'))}
+          ${renderNetRow('🧽 洗車 / 美容', totalWash, '#06b6d4', getPctBadge(totalWash, '#06b6d4'))}
+          ${renderNetRow('🛡️ 保險支出', totalIns, '#6366f1', getPctBadge(totalIns, '#6366f1'))}
+          ${renderNetRow('📦 裝備類', totalEquip, '#f59e0b', getPctBadge(totalEquip, '#f59e0b'))}
+          ${renderNetRow('📜 規費', totalFee, '#64748b', getPctBadge(totalFee, '#64748b'))}
+          ${renderNetRow('💳 貸款、分期', totalLoan, '#be123c', getPctBadge(totalLoan, '#be123c'))}
+        </div>
       </div>
     </div>
   `;
 }
+// 輔助函式：展開收起
+window.toggleNetExpDetail = function() {
+  const el = document.getElementById('net-exp-detail');
+  const arrow = document.getElementById('net-exp-arrow');
+  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') {
+    el.style.maxHeight = '1000px';
+    arrow.style.transform = 'rotate(180deg)';
+    arrow.parentElement.innerHTML = '<span id="net-exp-arrow" style="transform:rotate(180deg)">▲</span> 收起支出細項';
+  } else {
+    el.style.maxHeight = '0px';
+    arrow.style.transform = 'rotate(0deg)';
+    arrow.parentElement.innerHTML = '<span id="net-exp-arrow">▼</span> 展開支出細項';
+  }
+};
+// 輔助：更新後的每行支出樣式 (將百分比標籤放在右邊金額旁)
+function renderNetRow(label, amt, color, pctBadge) {
+  return `
+    <div style="background:#fff; border-radius:12px; border:1px solid #e2e8f0; padding:10px 12px; display:grid; grid-template-columns: 1fr 1fr 1fr; align-items:center;">
+      <!-- 第一列：標題 靠左 -->
+      <span style="font-size:13px; font-weight:800; color:#475569; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${label}</span>
+      
+      <!-- 第二列：百分比 置中 -->
+      <div style="display:flex; justify-content:center;">${pctBadge}</div>
+      
+      <!-- 第三列：金額 靠右，使用等寬字體防止數字長度擠壓 -->
+      <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#1e293b; text-align:right; white-space:nowrap;">
+        $${fmt(amt)}
+      </span>
+    </div>
+  `;
+}
+
 // 輔助：切換支出總覽的 全年/按月 模式
 window.toggleExpTimeMode = function() {
   S.rptExpTimeMode = (S.rptExpTimeMode === 'year') ? 'month' : 'year';
@@ -5832,7 +6039,7 @@ function renderVehicleContent() {
       </div>`;
     }
 
-    html += `<div style="height: 70px;"></div>`;
+    html += `<div style="height:70px;"></div>`;
     container.innerHTML = html;
     return;
   }
@@ -7140,29 +7347,32 @@ function renderSettings() {
 
   <div class="set-sec" style="margin-bottom:12px;"><h3>功能設定</h3><div class="set-list">
     <!-- 1. 平台設定: 藍色調 -->
-    <div class="set-row" onclick="openPlatformList()" style="background:#eff6ff; border:2.5px solid #dbeafe;padding:17px 15px;border-radius:14px 14px 0 0;">
+    <div class="set-row" onclick="openPlatformList()" style="background:#eff6ff;border:2.5px solid #dbeafe;padding:17px 15px;border-radius:14px 14px 0 0;margin-bottom:0.5px;">
         <span class="sn" style="color:#1e40af;">🏪 平台列表與設定</span><span class="arr" style="color:#1e40af;">›</span>
     </div>
     <!-- 2. 收入目標: 綠色調 -->
-    <div class="set-row" onclick="openGoalSettings()" style="background:#ecfdf5; border:2.5px solid #d1fae5;padding:17px 15px;">
+    <div class="set-row" onclick="openGoalSettings()" style="background:#ecfdf5;border:2.5px solid #d1fae5;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#065f46;">🎯 收入目標設定</span><span class="arr" style="color:#065f46;">›</span>
     </div>
     <!-- 3. 獎勵項目: 紫色調 -->
-    <div class="set-row" onclick="openRewardSettings()" style="background:#f5f3ff; border:2.5px solid #ede9fe;padding:17px 15px;">
+    <div class="set-row" onclick="openRewardSettings()" style="background:#f5f3ff;border:2.5px solid #ede9fe;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#5b21b6;">🎁 獎勵項目設定</span><span class="arr" style="color:#5b21b6;">›</span>
     </div>
     <!-- 4. 記錄提醒: 粉色調 -->
-    <div class="set-row" onclick="openReminderSettings()" style="background:#fff1f2; border:2.5px solid #ffe4e6;padding:17px 15px;">
+    <div class="set-row" onclick="openReminderSettings()" style="background:#fff1f2;border:2.5px solid #ffe4e6;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#9f1239;">⏰ 每日記錄通知提醒</span><span class="arr" style="color:#9f1239;">›</span>
     </div>
     <!-- 5. 工時分析: 青色調 -->
-    <div class="set-row" onclick="openWageSettings()" style="background:#f0fdfa; border:2.5px solid #ccfbf1;padding:17px 15px;">
+    <div class="set-row" onclick="openWageSettings()" style="background:#f0fdfa;border:2.5px solid #ccfbf1;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#0f766e;">⚖️ 基本工資分析設定</span><span class="arr" style="color:#0f766e;">›</span>
     </div>
-    
-    <!-- 測試格 (不管他) -->
-    <div class="set-row" onclick="openAnnouncementEdit()" style="background:#fff7ed;border:1px solid #ffedd5;margin-top:4px;border-radius:12px;"> 
-        <span class="sn" style="color:#ea580c;font-weight:800;">📢 [測試] 編輯發布公告</span> <span class="arr" style="color:#ea580c;">›</span>
+    <!-- 6. 辨識功能: 橘色調 -->
+    <div class="set-row" onclick="openOCRSettings()" style="background:#fff7ed;border:2.5px solid #ffedd5;padding:17px 15px;border-radius:0 0 14px 14px;">
+        <span class="sn" style="color:#9a3412;">📸 辨識功能 (OCR) 設定</span>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span style="font-size:10px; color:${S.settings.ocrKey ? 'var(--green)' : 'var(--red)'}; font-weight:800;">${S.settings.ocrKey ? '● 已啟用' : '● 未設定'}</span>
+          <span class="arr" style="color:#9a3412;">›</span>
+        </div>
     </div>
   </div></div>
 
@@ -7181,6 +7391,56 @@ function renderSettings() {
   
   document.getElementById('settings-content').innerHTML = html;
 }
+
+window.openOCRSettings = function() {
+  document.getElementById('sub-title').textContent = '辨識功能設定';
+  document.getElementById('sub-top-right').innerHTML = '';
+  
+  const currentKey = S.settings.ocrKey || '';
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px; padding-bottom:32px;">
+      <div style="background:#fff7ed; border:2px solid #fed7aa; border-radius:16px; padding:16px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.02);">
+        <div style="display:flex; align-items:center; gap:8px; color:#ea580c; font-weight:900; font-size:16px; margin-bottom:12px;">
+          <span>📸</span> 智慧里程辨識 (OCR)
+        </div>
+        <p style="font-size:13px; color:#9a3412; line-height:1.6; font-weight:600;">
+          本功能使用外部 AI 辨識技術。為了確保服務穩定且不產生額外費用，請使用者自行申請免費的 <b>OCR.space API Key</b>。
+        </p>
+      </div>
+
+      <div class="card" style="padding:16px; border:1.5px solid #e2e8f0;">
+        <div class="fg" style="margin-bottom:16px;">
+          <label style="font-weight:800; color:var(--t1);">您的 OCR API Key</label>
+          <input type="text" id="ocr-key-input" class="finp" value="${currentKey}" placeholder="請貼上您的 API Key" style="font-family:var(--mono); border-color:#fb923c;">
+        </div>
+        
+        <div style="background:var(--sf2); padding:12px; border-radius:12px; border:1px dashed #cbd5e1;">
+          <div style="font-size:12px; font-weight:800; color:var(--t2); margin-bottom:8px;">如何取得 Key？</div>
+          <ol style="font-size:12px; color:var(--t3); padding-left:18px; line-height:1.8; font-weight:600;">
+            <li>點擊下方連結前往 OCR.space 官網</li>
+            <li>輸入您的 Email 並勾選免費方案</li>
+            <li>至信箱收信，複製產生的 API Key 並貼回此處</li>
+          </ol>
+          <a href="https://ocr.space/ocrapi" target="_blank" style="display:inline-block; margin-top:10px; color:var(--text-blue); font-weight:800; text-decoration:none;">🌐 前往申請免費 Key (官網) ➔</a>
+        </div>
+      </div>
+
+      <button onclick="saveOCRSettings()" class="btn-acc" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:16px; background:#ea580c; box-shadow:0 8px 24px rgba(234,88,12,0.3); margin-top:24px;">
+        💾 儲存設定
+      </button>
+    </div>
+  `;
+  openOverlay('sub-page');
+};
+window.saveOCRSettings = function() {
+  const key = document.getElementById('ocr-key-input').value.trim();
+  S.settings.ocrKey = key;
+  saveSettings();
+  toast(key ? '✅ 辨識功能已啟用' : '⚠️ 已停用辨識功能');
+  closeOverlay('sub-page');
+  renderSettings();
+};
 
 /* ✨ 重新設計：每日記錄提醒彈窗 */
 function openReminderSettings() {
@@ -9793,7 +10053,7 @@ async function doClearData() {
   toast('✅ 已清除所有記錄');
 }
 
-/* ══ 重置所有設定和資料 (含重新呼叫進場動畫與彈窗) ══ */
+/* ══ 重置所有設定和資料 ══ */
 async function doReset() { 
   const msg = `
     <div style="font-size:48px; margin-bottom:12px; text-align:center; animation: waveHand 2s infinite;">🚨</div>
@@ -9809,33 +10069,40 @@ async function doReset() {
   const ok = await customConfirm(msg); 
   if (!ok) return; 
 
-  // 1. 清空所有資料，恢復至初始狀態
+  // 1. ✨ 清除 LocalStorage 標記與資料
+  localStorage.removeItem('delivery_setup_completed'); // 清除初次使用標記
+  localStorage.removeItem(KEYS.platforms);
+  localStorage.removeItem(KEYS.settings);
+  localStorage.removeItem(KEYS.punch);
+  localStorage.removeItem(KEYS.vehicles);
+  localStorage.removeItem('delivery_general_expenses');
+
+  // 2. ✨ 清除 IndexedDB 資料
+  await idbDelete('records');
+  await idbDelete('vehicleRecs');
+  await idbDelete('generalExpenses');
+
+  // 3. ✨ 重置記憶體中的狀態
   S.records = []; 
   S.settings = { ...DEFAULT_SETTINGS, shopHistory:[] }; 
-  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p})); // 預設所有平台 active 皆為 false
+  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p, active: false})); // 全部重置為關閉
   S.vehicles = []; 
   S.vehicleRecs = []; 
   S.punch = null;
 
-  // 2. 寫入儲存空間
-  saveRecords(); 
-  saveSettings(); 
-  savePlatforms(); 
-  saveVehicles(); 
-  saveVehicleRecs(); 
-  savePunch();
-
-  // 3. 關閉當前設定彈窗並切換底層至首頁
+  // 4. ✨ 儲存初始狀態並關閉彈窗
+  savePlatforms();
+  saveSettings();
+  
   closeOverlay('sub-page'); 
   S.tab = 'home';
   document.body.setAttribute('data-tab', 'home');
 
-  // 4. 呼叫進場載入動畫 (營造重新啟動的感覺)
+  // 5. ✨ 重新呼叫啟動流程
   window.onSplashFinished();
 
-  // 5. 載入動畫結束後 (onSplashFinished 動畫約耗時 500ms)，觸發平台選擇視窗
   setTimeout(() => {
-    toast('✅ 已重置所有設定和資料'); 
+    toast('✅ 已成功重置至初始狀態'); 
     checkAndPromptPlatformSetup();
   }, 600);
 }
@@ -10409,13 +10676,28 @@ function updateLocalBackupTime() {
   renderSettings(); // 重新渲染設定頁面，更新顯示的時間
 }
 
-/* ══ 初次使用平台懸浮設定 (全新專屬色彩美化版) ══ */
+/* ══ 初次使用平台懸浮設定 (全新專屬色彩美化版) ══
+   🛡️ 防重複保護：本函式可能會被多個進場流程各自呼叫一次
+   （例如：資料載入完成後 / 啟動動畫結束後），
+   加入 __initSetupPending 旗標，確保「引導視窗」全程只會被排程開啟一次。 ══ */
 window.checkAndPromptPlatformSetup = function() {
+  // 0. 若已經排程要開啟、或視窗目前正顯示中，直接跳過，避免重複開兩個視窗
+  if (window.__initSetupPending || document.getElementById('init-setup-overlay')) return;
+
+  // 1. 檢查標記
+  const isSetupCompleted = localStorage.getItem('delivery_setup_completed') === 'true';
+  
+  // 2. 檢查目前記憶體中的平台狀態
   const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
-  if (!hasActivePlatform) {
+
+  // ✨ 只有「從未完成設定」且「目前沒有任何平台被開啟」時，才跳出視窗
+  if (!isSetupCompleted && !hasActivePlatform) {
+    console.log("偵測到初次使用，開啟引導視窗...");
+    window.__initSetupPending = true;
     setTimeout(() => {
+      window.__initSetupPending = false;
       showInitialSetupModal();
-    }, 400);
+    }, 600); // 稍微延遲確保 UI 穩定
   }
 };
 
@@ -10441,7 +10723,13 @@ window.toggleInitPlat = function(row, platId, color) {
 }
 
 function showInitialSetupModal() {
+  // 🛡️ 二次防呆：若畫面上已經有一份引導視窗，就不要再疊加第二份
+  //    （避免出現「兩個視窗疊在一起、按鈕點不到」的狀況）
+  const existing = document.getElementById('init-setup-overlay');
+  if (existing) existing.remove();
+
   const ov = document.createElement('div');
+  ov.id = 'init-setup-overlay';
   // 使用更清新的毛玻璃背景
   ov.style.cssText = "position:fixed; inset:0; background:rgba(241, 245, 249, 0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; transition:0.4s;";
   
@@ -10495,6 +10783,9 @@ function showInitialSetupModal() {
 
     savePlatforms();
     
+    // ✨ 核心修正：記錄「已經完成過初始化設定」
+    localStorage.setItem('delivery_setup_completed', 'true');
+
     // 平滑退場
     ov.style.opacity = '0';
     document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
@@ -10512,46 +10803,43 @@ function showInitialSetupModal() {
 /* ══ 讓「底部導覽列的滑動背景膠囊」能夠在手機轉向（直向轉橫向）、或是螢幕大小改變時，自動重新計算位置並對齊圖示。 ══ */
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
-/* ══ 系統啟動主流程 (分離架構：資料先載入，等待進場) ══ */
+/* ══ 系統啟動主流程 ══ */
 async function init() {
   if (!S.settings) S.settings = {...DEFAULT_SETTINGS};
-  if (!Array.isArray(S.platforms)) S.platforms = normalizePlatforms([]);
 
-  try { await loadAll(); } catch (e) { console.error(e); }
+  // 1. ✨ 第一步：等待資料從 IndexedDB 與 LocalStorage 完整載入
+  try { 
+    await loadAll(); 
+    console.log("✅ 資料載入成功，目前平台狀態：", S.platforms);
+  } catch (e) { 
+    console.error("❌ 載入失敗:", e); 
+  }
   
+  // 2. ✨ 第二步：資料載入完畢後，才判斷是否要跳出「初次使用引導」
+  checkAndPromptPlatformSetup();
+
+  // 3. ✨ 第三步：其他功能初始化
   applyBackground();
-  fetchSystemSettings(); // 啟動時向伺服器拉取權限設定
+  fetchSystemSettings(); 
   if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
   initReminderCheck();
 
-  // 👇 新增這行：無論是冷啟動還是重整網頁，立刻向後端報到並更新「最後上線時間」
   if (USER && USER.loggedIn) {
     checkAccountStatus();
-    
-    // 🚨 終極防線：如果他在登入時被判定密碼過弱，卻直接關閉 APP，啟動時直接再次攔截鎖死！
     if (USER.isPasswordWeak) {
-      setTimeout(() => {
-        showForcePasswordChange(true);
-      }, 800); // 稍微延遲，等畫面載入完畢再彈出，避免被蓋掉
+      setTimeout(() => { showForcePasswordChange(true); }, 800);
     }
   }
 
-  if (!S.platforms || S.platforms.length === 0) {
-    S.platforms = DEFAULT_PLATFORMS.map(p => ({...p}));
-    savePlatforms();
-  }
-  
-  // 綁定備註輸入框事件，讓手動打字時標籤也會自動亮燈/熄燈
+  // 4. 綁定備註標籤事件
   const fNote = document.getElementById('f-note');
   const ctNote = document.getElementById('f-ct-note');
   if (fNote) fNote.addEventListener('input', syncTagsUI);
   if (ctNote) ctNote.addEventListener('input', syncTagsUI);
 
-  // 檢查是否因為沒有動畫 (例如重整頁面) 而無法觸發進場
+  // 檢查進場動畫
   const splash = document.getElementById('splash');
-  if (!splash) {
-    window.onSplashFinished();
-  }
+  if (!splash) { window.onSplashFinished(); }
 }
 
 /* ══ ★ 核心修復：這是在動畫結束後，被呼叫的「進場載入函式」 ══ */
