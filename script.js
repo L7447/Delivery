@@ -4,11 +4,6 @@
    ══════════════════════════════════════════════════════ */
 
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
-window.__userInteractedSinceLoad = false;
-['pointerdown', 'touchstart', 'click'].forEach(evt => {
-  document.addEventListener(evt, () => { window.__userInteractedSinceLoad = true; }, { capture: true, passive: true });
-});
-
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS =[
@@ -3838,13 +3833,25 @@ function renderReport() {
   if (USER.loggedIn && USER.uid) {
     const container = document.createElement('div');
     container.id = 'rpt-watermark-container';
-    // 動態將 UID 填入 SVG 內
-    // 👈 [修正] 原本把未編碼的 SVG（含雙引號與 < > #）直接塞進 style="" 屬性，
-    // 導致瀏覽器解析 style 屬性時提早被裡面的雙引號截斷，畫面因此錯亂、浮水印也不會顯示。
-    // 改用 encodeURIComponent 把 SVG 內容編碼成安全字串，並在 style 屬性內用單引號包住 url()，
-    // 避免與外層雙引號衝突。
-    const svgMarkup = `<svg xmlns='http://www.w3.org/2000/svg' width='250' height='150'><text x='20' y='80' fill='rgba(0,0,0,0.06)' font-family='monospace' font-weight='900' font-size='18' transform='rotate(-25 100,100)'>UID: #${USER.uid}</text></svg>`;
-    const svgContent = `data:image/svg+xml,${encodeURIComponent(svgMarkup)}`;
+
+    // 👈 [修正 1] encodeURIComponent 不會把單引號 ' 編碼掉，
+    // 之前 SVG 屬性用單引號、外層 url() 又用單引號包住，兩邊撞在一起，
+    // 導致 background-image 這行 CSS 直接失效（瀏覽器判定語法錯誤而整條忽略），
+    // 結果畫面顯示的其實是 CSS 檔裡的「備援樣式」佔位字串，才會看到 #-------- 而不是真正的 UID。
+    // 這裡改成 SVG 屬性一律用雙引號（encodeURIComponent 會把雙引號正確編碼成 %22），
+    // 並且對 UID 做 XML 轉義，避免特殊字元把 SVG 弄壞或造成號碼跑版。
+    const escXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+    const uidText = escXml(`UID: #${USER.uid}`);
+
+    // 👈 [修正 2] 顏色太淺看不出來：拿掉外層容器又疊一層 opacity（等於「淡上加淡」），
+    // 改成只靠文字本身的透明度控制濃淡，並把數值調高，讓浮水印真的看得見。
+    // 👈 [修正 3] 排列有空白：一個 tile 內放兩組文字（左上、右下錯開），
+    // 平鋪起來才不會有大片留白；tile 的 viewBox 也加大，確保文字旋轉後完整落在框內，不會被裁切。
+    const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">` +
+      `<text x="8" y="55" fill="rgba(0,0,0,0.16)" font-family="monospace" font-weight="900" font-size="15" transform="rotate(-22 8,55)">${uidText}</text>` +
+      `<text x="138" y="155" fill="rgba(0,0,0,0.16)" font-family="monospace" font-weight="900" font-size="15" transform="rotate(-22 138,155)">${uidText}</text>` +
+      `</svg>`;
+    const svgContent = `data:image/svg+xml,${encodeURIComponent(svgMarkup).replace(/'/g, '%27')}`;
     container.innerHTML = `<div class="watermark-tile" style="background-image:url('${svgContent}');"></div>`;
     reportPage.appendChild(container);
   }
@@ -11023,10 +11030,20 @@ async function init() {
     console.error("❌ 載入失敗:", e); 
   }
   
-  // 2. ✨ 第二步：資料載入完畢後，才判斷是否要跳出「初次使用引導」
+  // 2. ✨ [安全架構重點] 資料一讀完就「立刻、確定地」渲染首頁一次。
+  // 不再靠計時器去「猜」使用者有沒有點別的地方，才決定要不要渲染首頁 ——
+  // 這種用猜的方式，猜錯兩種情況都會出事：
+  //   (a) 猜「使用者還沒動作」但其實已經點了登入 → 硬把登入頁蓋掉、跳回首頁
+  //   (b) 猜「使用者已經動作」但其實只是誤觸/巧合 → 首頁從頭到尾都沒被渲染，畫面卡住
+  // 這裡改成：首頁渲染只在這裡發生一次，是「資料就緒」觸發的，不受使用者後續點擊影響、
+  // 也不會被使用者的點擊影響到（因為登入等彈窗是獨立的 overlay，蓋在首頁上面，兩者互不干擾）。
+  S.homeSubTab = 'schedule';
+  goPage('home');
+
+  // 3. ✨ 第三步：資料載入完畢後，才判斷是否要跳出「初次使用引導」
   checkAndPromptPlatformSetup();
 
-  // 3. ✨ 第三步：其他功能初始化
+  // 4. ✨ 第四步：其他功能初始化
   applyBackground();
   fetchSystemSettings(); 
   if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
@@ -11054,7 +11071,7 @@ async function init() {
     } catch(e) {}
   }
 
-  // 4. 綁定備註標籤事件
+  // 5. 綁定備註標籤事件
   const fNote = document.getElementById('f-note');
   const ctNote = document.getElementById('f-ct-note');
   if (fNote) fNote.addEventListener('input', syncTagsUI);
@@ -11065,10 +11082,13 @@ async function init() {
   if (!splash) { window.onSplashFinished(); }
 }
 
-/* ══ ★ 核心修復：這是在動畫結束後，被呼叫的「進場載入函式」 ══ */
+/* ══ ★ 進場載入函式：現在只負責「顯示/淡出讀取動畫」這個純視覺工作 ══
+ * 首頁的渲染已經在 init() 資料載入完成當下就確定完成了（見上方），
+ * 這裡不再做任何「猜使用者在不在首頁 / 要不要強制導回首頁」的邏輯，
+ * 因此不會有任何時機差造成的競爭條件，也不會蓋掉使用者已經打開的登入頁等畫面。 */
 window.onSplashFinished = function() {
   const loadingDiv = document.createElement('div');
-  loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out;";
+  loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out; pointer-events:none;";
   loadingDiv.innerHTML = `
     <div style="width:44px; height:44px; border:4px solid #e2e8f0; border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;"></div>
     <div style="font-weight:800; color:var(--t2); font-size:15px; letter-spacing:1px;">載入首頁...</div>
@@ -11076,33 +11096,15 @@ window.onSplashFinished = function() {
   `;
   document.body.appendChild(loadingDiv);
 
+  // 👈 純粹的視覺淡出，時間到就收掉讀取動畫；不做任何頁面/導覽判斷或強制跳轉。
+  // 加上 pointer-events:none，讓使用者在這段過場動畫期間，
+  // 仍然可以正常點擊按鈕（例如登入帳號），不會被這層蓋住而點擊落空。
   setTimeout(() => {
-    try {
-      // 👈 [核心修復] 
-      // 檢查：如果使用者目前「已經不在首頁」、「已經打開了任何彈窗(登入頁)」，
-      // 或是「已經點擊過畫面任何地方」（避免第一次冷啟動時，使用者搶先點了登入帳號，
-      // 卻因為 class/tab 狀態更新的時機差而被誤判成「還沒離開首頁」，導致被強制導回首頁）
-      const isAnyOverlayOpen = document.querySelector('.overlay-page.show');
-      const isUserAlreadyMoved = S.tab !== 'home' || isAnyOverlayOpen || window.__userInteractedSinceLoad;
-
-      if (!isUserAlreadyMoved) {
-          // 只有當使用者還乖乖待在首頁等待時，才執行強制渲染
-          S.homeSubTab = 'schedule';
-          goPage('home'); 
-      } else {
-          // 如果使用者已經跑去別頁了，我們只偷偷在背景更新導覽列對齊就好
-          updateNavIndicator(S.tab);
-          console.log("偵測到使用者已自行導航，取消自動回彈首頁");
-      }
-
-    } catch(e) {
-      console.error("首頁渲染失敗", e);
-    }
-
+    updateNavIndicator(S.tab);
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
-  }, 600); // 👈 就是這個 0.6 秒在作怪
-  
+  }, 300);
+
   checkAndShowAnnouncement();
 };
 
