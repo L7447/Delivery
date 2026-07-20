@@ -891,22 +891,21 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* ✅ 新增：選中態（顏色變為選中後的顏色） */
 .exp-tag-pill.is-selected{background:#ef4444;color:#ffffff;border-color:#b91c1c;box-shadow:0 0 0 transparent;}
 
-/* ══ UID 浮水印樣式 ══ */
-.watermark-overlay {
-  position: fixed; /* 改為固定定位 */
-  top: 55%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-25deg);
-  font-size: 38px; /* 稍微放大 */
-  font-family: var(--mono);
-  font-weight: 1000;
-  color: rgba(0, 0, 0, 0.05) !important; /* 調深一點點點 */
-  white-space: nowrap;
-  pointer-events: none; /* 👈 絕對關鍵：這行讓浮水印可以被穿透點擊 */
-  z-index: 9999; /* 👈 絕對關鍵：確保在所有卡片之上 */
-  user-select: none;
-  letter-spacing: 3px;
+/* ══ 強化版：全螢幕平鋪浮水印 ══ */
+#rpt-watermark-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* 穿透點擊 */
+  z-index: 9999;
   display: block;
+  opacity: 0.5; /* 總體透明度 */
+}
+.watermark-tile {
+  width: 100%;
+  height: 100%;
+  /* 使用 SVG 產生平鋪文字 */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' transform='rotate(-25)'><text x='0' y='100' fill='rgba(0,0,0,0.05)' font-family='monospace' font-weight='900' font-size='16'>UID: #{{UID}}</text></svg>");
+  background-repeat: repeat;
 }
 /* 確保容器有相對定位 */
 #report-scroll-area{position:relative;}
