@@ -586,6 +586,7 @@ const S = {
   histFilter: 'all',
   selVehicleId: null, vehY: new Date().getFullYear(), vehM: new Date().getMonth()+1, addVehRecType: 'fuel',
   rptOverviewFilter: 'all', cmpType: 'prev_month', cmpPeriods: [],
+  trendMode: 'month', // 👈 [修正] 補上預設值，避免剛進入趨勢頁、還沒點過頁籤時 navTrend() 判斷不到模式而卡住不動
   histFullCalY: new Date().getFullYear(), histFullCalM: new Date().getMonth()+1,
   generalExpenses: [], // 存放一般支出紀錄
   rptNetMode: 'month', // 淨賺頁面的子頁籤：month, year, expense_overview
@@ -3821,6 +3822,58 @@ function cancelAddRecord() {
 /* ══ 4. 新增記錄 結束 ════════════════════════════════════ */
 
 /* ══ 5. 收入分析 開始 ════════════════════════════════════ */
+
+/* ══ 浮水印：改用「DOM 元素排版」而非 SVG data URI ══
+ * 比起 SVG data URI（要處理跳脫字元、編碼，一個字元沒處理好整個 background-image 就失效），
+ * 改用一般 <span> 排版更直覺，也更容易「自由控制數量與位置」：
+ * - 想要密一點/疏一點 → 改 gapX / gapY
+ * - 想要換角度、換顏色 → 改 angle / color
+ * - 想要「手動指定每個浮水印的座標」而非自動排列 → 把下面的雙層迴圈換成一份固定座標陣列即可，見函式最後的註解範例
+ */
+function renderReportWatermark() {
+  const old = document.getElementById('rpt-watermark-container');
+  if (old) old.remove();
+  if (!(USER && USER.loggedIn && USER.uid)) return;
+
+  const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const text = escHtml(`UID: #${USER.uid}`);
+
+  // ▼▼▼ 想調整浮水印的「數量、間距、角度、顏色」，改這幾個數字就好 ▼▼▼
+  const gapX = 150;                 // 每個浮水印的水平間距(px)，數字越小排越密
+  const gapY = 120;                  // 垂直間距(px)
+  const angle = -32;                // 旋轉角度
+  const color = 'rgba(0,0,0,0.15)'; // 顏色與濃淡（之前太淺看不到，這裡是唯一控制濃淡的地方，方便直接調整）
+  // ▲▲▲
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const cols = Math.ceil(vw / gapX) + 2; // 多算 2 排，確保旋轉後畫面邊緣不會露出空白
+  const rows = Math.ceil(vh / gapY) + 2;
+
+  const container = document.createElement('div');
+  container.id = 'rpt-watermark-container';
+
+  let html = '';
+  for (let r = 0; r < rows; r++) {
+    const rowOffset = (r % 2 === 0) ? 0 : gapX / 2; // 奇數排錯位半格，磚牆式排列，才不會有大片留白
+    for (let c = 0; c < cols; c++) {
+      const left = c * gapX + rowOffset - gapX;
+      const top = r * gapY - gapY;
+      html += `<span class="wm-item" style="left:${left}px; top:${top}px; color:${color}; transform:translate(-50%,-50%) rotate(${angle}deg);">${text}</span>`;
+    }
+  }
+  /* 若想改成「完全手動指定位置」，把上面 for 迴圈整段換成類似這樣即可（僅供參考，未啟用）：
+     const positions = [ {left:40, top:80}, {left:220, top:260}, {left:120, top:520} ];
+     html = positions.map(p => `<span class="wm-item" style="left:${p.left}px; top:${p.top}px; color:${color}; transform:translate(-50%,-50%) rotate(${angle}deg);">${text}</span>`).join('');
+  */
+  container.innerHTML = html;
+  document.body.appendChild(container); // position:fixed，蓋在整個畫面上（見 style.css）
+}
+// 螢幕轉向或視窗大小改變時，重新排列浮水印，避免留白或超出畫面
+window.addEventListener('resize', () => {
+  if (document.getElementById('rpt-watermark-container') && S.tab === 'report') renderReportWatermark();
+});
+
 /* ══ 修正：確保收入分析頁面可正常捲動 ══ */
 function renderReport() {
   const reportPage = document.getElementById('page-report');
@@ -3829,32 +3882,8 @@ function renderReport() {
   const oldContainer = document.getElementById('rpt-watermark-container');
   if (oldContainer) oldContainer.remove();
 
-  // 2. 注入平鋪浮水印
-  if (USER.loggedIn && USER.uid) {
-    const container = document.createElement('div');
-    container.id = 'rpt-watermark-container';
-
-    // 👈 [修正 1] encodeURIComponent 不會把單引號 ' 編碼掉，
-    // 之前 SVG 屬性用單引號、外層 url() 又用單引號包住，兩邊撞在一起，
-    // 導致 background-image 這行 CSS 直接失效（瀏覽器判定語法錯誤而整條忽略），
-    // 結果畫面顯示的其實是 CSS 檔裡的「備援樣式」佔位字串，才會看到 #-------- 而不是真正的 UID。
-    // 這裡改成 SVG 屬性一律用雙引號（encodeURIComponent 會把雙引號正確編碼成 %22），
-    // 並且對 UID 做 XML 轉義，避免特殊字元把 SVG 弄壞或造成號碼跑版。
-    const escXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-    const uidText = escXml(`UID: #${USER.uid}`);
-
-    // 👈 [修正 2] 顏色太淺看不出來：拿掉外層容器又疊一層 opacity（等於「淡上加淡」），
-    // 改成只靠文字本身的透明度控制濃淡，並把數值調高，讓浮水印真的看得見。
-    // 👈 [修正 3] 排列有空白：一個 tile 內放兩組文字（左上、右下錯開），
-    // 平鋪起來才不會有大片留白；tile 的 viewBox 也加大，確保文字旋轉後完整落在框內，不會被裁切。
-    const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="200" viewBox="0 0 260 200">` +
-      `<text x="8" y="55" fill="rgba(0,0,0,0.16)" font-family="monospace" font-weight="900" font-size="15" transform="rotate(-22 8,55)">${uidText}</text>` +
-      `<text x="138" y="155" fill="rgba(0,0,0,0.16)" font-family="monospace" font-weight="900" font-size="15" transform="rotate(-22 138,155)">${uidText}</text>` +
-      `</svg>`;
-    const svgContent = `data:image/svg+xml,${encodeURIComponent(svgMarkup).replace(/'/g, '%27')}`;
-    container.innerHTML = `<div class="watermark-tile" style="background-image:url('${svgContent}');"></div>`;
-    reportPage.appendChild(container);
-  }
+  // 2. 注入平鋪浮水印（改用 DOM 元素排版，見上方 renderReportWatermark）
+  renderReportWatermark();
 
   // 2. 處理原本的捲軸邏輯
   const scrollArea = document.getElementById('report-scroll-area');
@@ -3863,7 +3892,10 @@ function renderReport() {
     scrollArea.style.display = 'block';
   }
   
+  // 👈 [修正] S.trendMode 之前沒有預設值，導致剛進入「月趨勢」還沒點過任何頁籤時，
+  // navTrend() 裡的切換邏輯抓不到符合的模式、日期完全不會變化（見 navTrend 內的說明）
   if (!S.trendDate) S.trendDate = new Date();
+  if (!S.trendMode) S.trendMode = 'month';
   if (S.rptView === 'overview') renderRptOverview(); 
   if (S.rptView === 'yearOverview') renderRptYearOverview();
   if (S.rptView === 'trend') renderRptTrend();
@@ -4019,11 +4051,16 @@ window.navRptMonth = function(dir) {
 /* ══ 替換：趨勢導航時間切換 ══ */
 window.navTrend = function(dir) {
   let d = new Date(S.trendDate || new Date());
-  if (S.trendMode === 'week') d.setDate(d.getDate() + dir * 7);
-  else if (S.trendMode === '4week') d.setDate(d.getDate() + dir * 28); // 👈 加入4週(28天)切換
-  else if (S.trendMode === 'month') d.setMonth(d.getMonth() + dir);
-  else if (S.trendMode === 'year') d.setFullYear(d.getFullYear() + dir);
+  // 👈 [修正] 原本直接用 S.trendMode 比對，若 S.trendMode 還沒被設定過(undefined)，
+  // 四個 if/else if 全部不成立，d 完全不會被修改，日期就會「卡住不動」。
+  // 這裡跟畫面頁籤高亮邏輯（curT = S.trendMode || 'month'）保持一致，一律給預設值 'month'。
+  const mode = S.trendMode || 'month';
+  if (mode === 'week') d.setDate(d.getDate() + dir * 7);
+  else if (mode === '4week') d.setDate(d.getDate() + dir * 28); // 👈 加入4週(28天)切換
+  else if (mode === 'month') d.setMonth(d.getMonth() + dir);
+  else if (mode === 'year') d.setFullYear(d.getFullYear() + dir);
   S.trendDate = d;
+  S.trendMode = mode;
   renderRptTrend();
 }
 
@@ -10907,14 +10944,31 @@ window.checkAndPromptPlatformSetup = function() {
 
   // ✨ 只有「從未完成設定」且「目前沒有任何平台被開啟」時，才跳出視窗
   if (!isSetupCompleted && !hasActivePlatform) {
-    console.log("偵測到初次使用，開啟引導視窗...");
+    console.log("偵測到初次使用，準備開啟引導視窗...");
     window.__initSetupPending = true;
-    setTimeout(() => {
-      window.__initSetupPending = false;
-      showInitialSetupModal();
-    }, 600); // 稍微延遲確保 UI 穩定
+    setTimeout(() => waitForSafeMomentThenShowSetup(), 600); // 稍微延遲確保 UI 穩定
   }
 };
+
+/* ══ ✨ [找到真正原因並修正]：這才是「第一次使用時點登入帳號會跳回首頁」的真正原因 ══
+ * 原本這裡是「時間到了(600ms)就不管使用者在幹嘛，直接跳出引導視窗」，
+ * 而這個引導視窗的 z-index 比登入彈窗還高、蓋在最上面，關閉時又會強制 goPage('home')。
+ * 所以只要使用者剛好在這 600ms 內點了「登入帳號」，就會被這個引導視窗蓋掉、
+ * 關閉引導視窗後又被強制導回首頁——這跟先前排查的 splash 進場流程完全是兩件事。
+ * 修正方式：不要「時間到了就硬跳出」，而是持續確認「現在方便打斷使用者嗎（人在首頁、沒有開著其他彈窗）」，
+ * 安全的時候才顯示；如果使用者正在忙（例如正在登入），就先不要顯示，稍後再檢查一次，
+ * 絕不會蓋掉使用者正在操作的畫面。 */
+function waitForSafeMomentThenShowSetup(attempt = 0) {
+  const isAnyOverlayOpen = document.querySelector('.overlay-page.show');
+  const isSafeMoment = S.tab === 'home' && !isAnyOverlayOpen;
+
+  if (isSafeMoment || attempt >= 50) { // 最多等 15 秒（50 x 300ms），避免萬一條件一直不成立而永遠不出現
+    window.__initSetupPending = false;
+    showInitialSetupModal();
+  } else {
+    setTimeout(() => waitForSafeMomentThenShowSetup(attempt + 1), 300);
+  }
+}
 
 // 獨立出來的點擊切換樣式邏輯
 window.toggleInitPlat = function(row, platId, color) {
@@ -11006,6 +11060,8 @@ function showInitialSetupModal() {
     document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
     setTimeout(() => {
       ov.remove();
+      // 👈 因為這個視窗現在只會在「使用者停留在首頁、且沒有開著其他彈窗」時才出現，
+      // 這裡的 goPage('home') 不會有蓋掉登入頁等其他畫面的風險，純粹是刷新首頁內容用的。
       S.homeSubTab = 'schedule';
       goPage('home');
       renderSettings();
