@@ -885,37 +885,31 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 /* 👈 [需求 5] 支出項目標籤樣式 */
 /* 原本：未選中 */
-.exp-tag-pill{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff;
-  color: #ef4444;
-  border: 2px solid #fecdd3;
-  padding: 8px 16px;
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  user-select: none;
-  box-shadow: 0 2px 0 #fecdd3;
-}
-
+.exp-tag-pill{display:inline-flex;align-items:center;justify-content:center;background:#ffffff;color:#ef4444;border:2px solid #fecdd3;padding:8px 16px;border-radius:14px;font-size:13px;font-weight:900;cursor:pointer;transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);user-select:none;box-shadow:0 2px 0 #fecdd3;}
 /* 原本：按下特效（保留） */
-.exp-tag-pill:active{
-  transform: translateY(2px) scale(0.95);
-  background: #ef4444;
-  color: #ffffff;
-  border-color: #b91c1c;
-  box-shadow: 0 0 0 transparent;
-  transition: all 0.1s ease;
+.exp-tag-pill:active{transform:translateY(2px) scale(0.95);background:#ef4444;color:#ffffff;border-color:#b91c1c;box-shadow:0 0 0 transparent;transition:all 0.1s ease;}
+/* ✅ 新增：選中態（顏色變為選中後的顏色） */
+.exp-tag-pill.is-selected{background:#ef4444;color:#ffffff;border-color:#b91c1c;box-shadow:0 0 0 transparent;}
+
+/* ══ UID 浮水印樣式 ══ */
+.watermark-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:32px;font-family:var(--mono);font-weight:900;color:rgba(0,0,0,0.04);/* 極輕微的透明度 */
+ white-space:nowrap;pointer-events:none;z-index:0;user-select:none;letter-spacing:5px;}
+/* 確保容器有相對定位 */
+#report-scroll-area{position:relative;}
+
+/* ══ 「計時中」的綠色小圓點有呼吸燈效果 ══ */
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* ✅ 新增：選中態（顏色變為選中後的顏色） */
-.exp-tag-pill.is-selected{
-  background: #ef4444;
-  color: #ffffff;
-  border-color: #b91c1c;
-  box-shadow: 0 0 0 transparent; /* 選中後也讓底座感一致 */
+/* ══ 確保裁剪框在 App 裡面不會被截斷 ══ */
+.cropper-view-box,.cropper-face{border-radius:0;/* 裁剪框維持方形比較好辨識 */
 }
+/* 讓裁剪中的圖片維持在黑色背景中 */
+.cropper-container{background-color:#000 !important;}
+/* 旋轉動畫 */
+@keyframes spin{100%{transform:rotate(360deg);}
+}
+.spin{width:30px;height:30px;border:4px solid #e2e8f0;border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;}
