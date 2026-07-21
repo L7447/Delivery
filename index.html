@@ -4,7 +4,7 @@
   <!-- 引入圖片裁剪函式庫 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-  
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>外送記錄</title>
@@ -51,6 +51,7 @@
   <!-- [修復4] 移除 ios-pwa-splash CDN（被內容阻擋器封鎖時會卡住）-->
   <link rel="stylesheet" href="/style.css?v=1.6.0">
 
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body data-tab="home" ontouchstart="">
 
@@ -410,10 +411,12 @@
             <div id="veh-current-info" style="display:flex; align-items: center; justify-content:center; text-align:center; gap:4px; flex-wrap:wrap;"></div>
           </div>
         </div>
-        <!-- 右下：新增記錄按鈕 -->
+        <!-- 右下：新增記錄按鈕（24px 小尺寸 + 邊框彩色漸層） -->
         <div style="display:flex; justify-content:flex-end; padding-bottom:2px;">
-          <button onclick="openAddVehRec()" style="position: relative; z-index: 10; padding: 6px 14px; height:36px; background: #ffffff; border: 2px solid #ff0000; border-radius: 20px; color: #3b82f6; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content:center; white-space:nowrap; box-shadow:0 2px 6px rgba(255,0,0,0.15); transition:0.2s;">
-            + 新增記錄
+          <button onclick="openAddVehRec()" style=" position:relative;z-index:10;padding:5px 10px;height:12px;background:#FFEA38;border:none;border-radius:9999px;color:#ffffff;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;margin:15px 0 12px 0;transition:all 0.15s ease;text-shadow:-2px -2px 0 #C80000,2px -2px 0 #C80000,-2px 2px 0 #C80000,2px 2px 0 #C80000;overflow:visible;" onmouseover="this.style.transform='translateY(-1px) scale(1.1)';" onmouseout="this.style.transform='translateY(0) scale(1)';" >
+            <span style="font-size:29px;margin:0 6px 5px 0;">+</span>新增記錄
+            <!-- 獨立彩色邊框（重點加強） -->
+            <div style=" position:absolute;inset:-6px;border-radius:9999px;background:repeating-linear-gradient( 40deg,#FF1A1A 0px,#FF1A1A 4px,#FF6B6B 4px,#FF6B6B 8px );z-index:-1;box-shadow:0 0 0 3px #B30000,0 0 0 6px #FF4444;pointer-events:none;"></div>
           </button>
         </div>
       </div>
@@ -680,7 +683,7 @@
         <div class="card" style="padding:10px 14px; margin-bottom:10px;">
           
           <!-- 補回遺失的里程與店家輸入框 -->
-          <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="display:flex; gap:10px; margin-bottom:7px;">
             <div class="fg" style="flex:1; margin-bottom:0;">
               <label>🛣️ 保養時里程</label>
               <input type="number" class="finp" style="padding:8px;" id="vm-km" placeholder="0" inputmode="numeric">
@@ -690,10 +693,19 @@
               <input type="text" class="finp" style="padding:8px;" id="vm-shop" placeholder="例: 機車行">
             </div>
           </div>
+
+          <div class="fg" style="margin-top:3px;">
+            <label style="font-size:13px;font-weight:700;color:#fa46eb;">設定下次保養里程 <span style="color:var(--blue);font-size:13px;font-weight:800;">(記錄搜尋頁列表，會自動計算)</span></label>
+            <div style="position:relative;">
+              <input type="number" id="vm-next-km" class="finp" placeholder="系統將自動計算間隔" inputmode="numeric" style="font-family:var(--mono); color:var(--text-red); font-weight:800; border-color:#cbd5e1;">
+              <span style="position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:800; color:var(--t3);">km</span>
+            </div>
+          </div>
+
           <!-- 補回歷史店家標籤的容器 -->
-          <div id="shop-history-container" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;"></div>
+          <div id="shop-history-container" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1px;"></div>
           
-          <div style="border-top:1px dashed var(--border); margin:12px 0;"></div>
+          <div style="border-top:2px dashed var(--t3); margin:1px 0 8px 0;"></div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <div style="font-size:12px; font-weight:800; color:var(--green);">🔧 保養項目與單項金額明細</div>
@@ -777,6 +789,8 @@
     
     <div class="overlay-body" style="padding:0; display:flex; flex-direction:column; align-items:center;">
       <div style="font-size:12px; color:var(--t2); font-weight:600; margin-bottom:1px; margin-top:24px;">Copyright © 2026 黒崎. All Rights Reserved.</div>
+      <!-- 🌟 新增版本號資訊 -->
+      <div style="font-size:11px; color:var(--t3); margin-top:4px; font-weight:600; font-family:var(--mono);">版本號：v1.0（2026/07/21）</div>
       
       <div style="width:100%; margin-top:22px; padding:0 24px;">
         
