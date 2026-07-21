@@ -4,6 +4,7 @@
    ══════════════════════════════════════════════════════ */
 
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
+let isAppInitialized = false; // 紀錄是否已經初始化過
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS =[
@@ -77,7 +78,7 @@ window.deleteGeneralExpense = async function(id) {
   await idbSet('generalExpenses', S.generalExpenses);
   localStorage.setItem('delivery_general_expenses', JSON.stringify(S.generalExpenses));
   
-  toast('✅ 支出記錄已刪除');
+  toast('✅ 支出記錄，已刪除');
   
   // 3. [關鍵] 觸發全局刷新，確保總額與列表同步更新
   renderReport(); 
@@ -310,7 +311,7 @@ function saveWageSettings() {
   const l4 = parseInt(document.getElementById('w-l4').value) || 0;
   
   if (isEnabled && (l1 >= l2 || l2 >= l3 || l3 >= l4)) {
-    toast('⚠️ 設定錯誤：金額必須依序遞增 (第一階 < 第二階 < 第三階 < 第四階)');
+    toast('⚠️ 設定錯誤：金額必須依序遞增，<br>(第一階 < 第二階 < 第三階 < 第四階)');
     return;
   }
 
@@ -327,7 +328,7 @@ function saveWageSettings() {
 
   saveSettings();
   closeOverlay('sub-page');
-  toast('✅ 基本工資設定已儲存');
+  toast('✅ 基本工資設定，已儲存');
   
   if (S.tab === 'history') renderHistory();
   if (S.tab === 'home') renderHome();
@@ -339,7 +340,7 @@ function resetWageSettings() {
     if (ok) {
       S.settings.wageRules = null; // 清空設定即可自動套用 DEFAULT_WAGE_RULES
       saveSettings();
-      toast('✅ 已重設為預設值');
+      toast('✅ 已重設為：『預設值』');
       openWageSettings(); // 重新渲染設定彈窗
       
       if (S.tab === 'history') renderHistory();
@@ -1282,6 +1283,13 @@ function savePunch() {
 }
 
 function goPage(name) {
+  // 🌟 [核心安全修正]：同時攔截「收入分析」與「新增紀錄」
+  /*
+  if ((name === 'report' || name === 'add') && !USER.loggedIn) {
+    showLoginRequiredWarning(); 
+    return; // 徹底攔截，不執行任何 UI 渲染
+  }
+  */
   S.tab = name;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
@@ -1293,7 +1301,7 @@ function goPage(name) {
   document.body.setAttribute('data-tab', name);
   updateNavIndicator(name);
 
-  // 🌟 [修正]：離開 report 頁面時立刻移除浮水印容器
+  // 離開 report 頁面時移除浮水印
   if (name !== 'report') {
     const wmContainer = document.getElementById('rpt-watermark-container');
     if (wmContainer) wmContainer.remove();
@@ -1302,7 +1310,7 @@ function goPage(name) {
   if (name === 'home')     annShownThisVisit.clear();
   if (name === 'home')     renderHome();
   if (name === 'history')  renderHistory();
-  if (name === 'report')   renderReport(); // renderReport 會觸發繪製浮水印
+  if (name === 'report')   renderReport(); 
   if (name === 'vehicles') renderVehicles(); 
   if (name === 'settings') renderSettings();
 }
@@ -1339,13 +1347,15 @@ function updateNavIndicator(activePg) {
 /* 替換導覽列切換邏輯，未登入禁止進入新增頁面 */
 function _bindNavEvents() {
   document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
-    const pg = el.dataset.pg; 
+    const pg = el.dataset.pg;
     if (pg === 'add') {
-      // 👇 檢查雲端權限是否要求登入
-      if (GLOBAL_REQUIRE_LOGIN && !USER.loggedIn) { 
+      // 🌟 直接檢查登入狀態
+      /*
+      if (!USER.loggedIn) { 
         showLoginRequiredWarning(); 
         return; 
       }
+      */
       if (S.tab !== 'add') openAddPage(); 
     } else {
       goPage(pg); 
@@ -1702,6 +1712,7 @@ function renderHome() {
                     let cardBorder = '#ffffff'; // 預設白色外框
                     let tagBorder = '#cbd5e1';  // 預設灰色標籤框
                     let isToday = false;        // 判斷是否啟動跑馬燈
+                    let pulseClass = '';
 
                     if (ev.diff === 0) { 
                       diffBg = '#dcfce7'; diffColor = '#15803d'; diffIcon = '🔥'; diffText = '今天'; 
@@ -1710,11 +1721,13 @@ function renderHome() {
                     } 
                     else if (ev.diff === 1) { 
                       diffBg = '#ffedd5'; diffColor = '#c2410c'; diffIcon = '⚡'; 
-                      cardBorder = '#fdba74'; tagBorder = '#fdba74'; 
+                      cardBorder = '#fdba74'; tagBorder = '#fdba74';
+                      pulseClass = 'pulse-tomorrow'; // 明日
                     } 
                     else if (ev.diff <= 3) { 
                       diffBg = '#e0f2fe'; diffColor = '#0369a1'; diffIcon = '🔜'; 
-                      cardBorder = '#7dd3fc'; tagBorder = '#7dd3fc'; 
+                      cardBorder = '#7dd3fc'; tagBorder = '#7dd3fc';
+                      pulseClass = 'pulse-near';    // 近3天
                     }
 
                     // 依據是否為今天，切換不同的外框樣式
@@ -1727,7 +1740,7 @@ function renderHome() {
                     let headerRadius = isToday ? 'border-radius:25px 25px 0 0;' : '';
 
                     return `
-                      <div class="${cardClass}" style="${cardStyle}">
+                      <div class="${cardClass} ${pulseClass}" style="${cardStyle}">
                         <div style="background:${titleColor}25; padding:6px 2px; border-bottom:1.5px dashed ${titleColor}30; ${headerRadius} position:relative; z-index:1;">
                           <span style="font-size:16px; color:${titleColor}; font-weight:750;">${safeText(ev.name)}</span>
                         </div>
@@ -2002,7 +2015,7 @@ window.performCropAndOCR = async function() {
 /* ══ 修正：上線打卡後跳轉到當日記錄列表 ══ */
 async function punchIn() {
   const active = S.records.find(r => r.isPunchOnly && r.punchOut === '');
-  if (active) { toast('⚠️ 已經在打卡上線中囉！'); return; }
+  if (active) { toast('⚠️ 已經打卡，正在線上中囉！'); return; }
 
   document.getElementById('sub-title').textContent = '里程捕獲';
   document.getElementById('sub-body').innerHTML = getMileageCaptureHtml('in');
@@ -2010,7 +2023,7 @@ async function punchIn() {
 
   document.getElementById('confirm-mileage-btn').onclick = async () => {
     const km = pf(document.getElementById('manual-km').value);
-    if (km <= 0) { toast('⚠️ 請輸入起始里程'); return; }
+    if (km <= 0) { toast('⚠️ 請輸入：起始里程'); return; }
 
     const d = new Date();
     const rec = {
@@ -2063,7 +2076,7 @@ async function punchOut() {
   document.getElementById('confirm-mileage-btn').onclick = async () => {
     const endKm = pf(document.getElementById('manual-km').value);
     if (endKm <= activeRec.startKm) { 
-        toast(`⚠️ 結束里程應大於起始里程 (${activeRec.startKm})`); 
+        toast(`⚠️ 「結束里程」應大於「起始里程」 (${activeRec.startKm})`); 
         return; 
     }
 
@@ -3295,6 +3308,13 @@ function resetSearch() {
 
 /* ══ 4. 新增記錄 開始 ════════════════════════════════════ */
 function openAddPage(record=null, prefill={}) {
+  // 🌟 [防禦性程式碼]：防止從 Console 呼叫函式繞過權限
+  /*
+  if (!USER.loggedIn) {
+    showLoginRequiredWarning();
+    return;
+  }
+  */
   S.editingId = record ? record.id : null; 
   S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
@@ -3652,7 +3672,7 @@ function calcAutoReward() {
           bonusEl.value = totalAutoBonus;
           bonusEl.dataset.lastAuto = totalAutoBonus; 
           bonusEl.dataset.achieved = totalAutoBonus; 
-          toast(`🎁 達標！自動帶入獎金差額 $${totalAutoBonus}`);
+          toast(`🎁 達標！自動帶入獎金差額 $ ${totalAutoBonus}`);
       }
   } else {
       delete bonusEl.dataset.achieved;
@@ -3748,7 +3768,7 @@ async function confirmAddRecord() {
       S.rptExpTimeMode = 'month'; // 強制跳轉到「月」視角，比較容易看到剛加的資料
       
       goPage('report');
-      toast('✅ 支出已記錄並跳轉');
+      toast('✅ 支出已記錄，並跳轉');
     });
     return;
   }
@@ -3763,7 +3783,7 @@ async function confirmAddRecord() {
 
     const mileageVal = pf(document.getElementById('f-pu-mileage').value);
 
-    if (totalHours <= 0 && document.getElementById('f-pu-out').value !== ''){toast('總工時必須大於 0');return;}
+    if (totalHours <= 0 && document.getElementById('f-pu-out').value !== ''){toast('總工時，必須大於 0');return;}
 
     // 👈 [關鍵 2] 如果是編輯，先取得舊資料，避免 startKm / endKm 遺失
     let existingData = {};
@@ -3787,14 +3807,14 @@ async function confirmAddRecord() {
     };
   } else if (S.addTab === 'cashtip') {
     const amt = pf(document.getElementById('f-ct-amount').value);
-    if (amt <= 0) { toast('請輸入現金小費金額'); return; }
+    if (amt <= 0) { toast('請輸入「現金小費」金額'); return; }
     rec = { ...rec, isCashTip: true, date: document.getElementById('f-ct-date').value, time: document.getElementById('f-ct-time').value, givenAmt: pf(document.getElementById('f-ct-given').value), costAmt: pf(document.getElementById('f-ct-cost').value), cashTipAmt: amt, note: document.getElementById('f-ct-note').value.trim() };
   } else {
     const income = pf(document.getElementById('f-income').value); 
     const bonus = pf(document.getElementById('f-bonus').value); 
     const temp = safeEvalMath(document.getElementById('f-temp-bonus').value); 
     const tips = pf(document.getElementById('f-tips').value);
-    if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項收入金額'); return; }
+    if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項「收入金額」'); return; }
     const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
     rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: document.getElementById('f-time').value || nowTime(), hours: totalHours, orders: pf(document.getElementById('f-orders').value), mileage: pf(document.getElementById('f-mileage').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim(), updatedAt: Date.now() };
   }
@@ -3808,7 +3828,7 @@ async function confirmAddRecord() {
     if (S.editingId) { 
       const idx = S.records.findIndex(r => r.id === S.editingId); 
       if (idx >= 0) S.records[idx] = rec; 
-      toast('✅ 記錄已更新'); 
+      toast('✅ 記錄，已更新'); 
     } else { 
       S.records.push(rec); 
       toast('✅ 記錄成功！'); 
@@ -3842,8 +3862,10 @@ function renderReportWatermark() {
 
   if (S.tab !== 'report') return;
 
-  const wmUid = (USER && USER.uid) ? USER.uid : '99999999';
-  const wmContent = `#${wmUid}`;
+  // 🌟 [正式版邏輯]：未登入或沒有 UID 則不顯示並直接結束
+  if (!USER.loggedIn || !USER.uid || S.tab !== 'report') return;
+
+  const wmContent = `UID: #${USER.uid}`;
 
   // --- 🎨 參數設定區：在這裡調整範圍與外觀 ---
   const config = {
@@ -6617,7 +6639,7 @@ function renderVehicleContent() {
 async function deleteVehicle(id) {
   const ok = await customConfirm('確定要刪除這台車輛嗎？<br><span style="color:var(--red); font-size:12px;">⚠️ 該車的所有記錄將一併刪除且無法復原</span>'); if(!ok) return;
   S.vehicles = S.vehicles.filter(v => v.id !== id); S.vehicleRecs = S.vehicleRecs.filter(r => r.vehicleId !== id); 
-  if (S.selVehicleId === id) S.selVehicleId = null; saveVehicles(); saveVehicleRecs(); renderVehicles(); toast('車輛與記錄已刪除');
+  if (S.selVehicleId === id) S.selVehicleId = null; saveVehicles(); saveVehicleRecs(); renderVehicles(); toast('車輛與記錄，已刪除');
 }
 
 let editingVehRecId = null; 
@@ -6669,7 +6691,7 @@ function calcMaintTotal() {
   return total;
 }
 // 點擊標籤快速加入與切換特效
-function clickMaintTag(tagName, el) {
+window.clickMaintTag = function(tagName, el) {
   // 如果已經是亮起狀態，再次點擊就取消它
   if (el.classList.contains('on')) {
     el.classList.remove('on');
@@ -6688,6 +6710,23 @@ function clickMaintTag(tagName, el) {
 
   // 👇 如果還沒亮起，就加上 'on' 讓 CSS 特效生效
   el.classList.add('on');
+
+  const currentKm = pf(document.getElementById('vm-km').value);
+  
+  // 1. 從歷史記錄中尋找該車輛、該項目最後一次設定的「保養間隔」
+  // 邏輯：找到最後一筆含有此 item 且 nextKm > km 的記錄
+  const lastRec = S.vehicleRecs.slice().reverse().find(r => 
+    r.vehicleId === S.selVehicleId && 
+    r.type === 'maintenance' && 
+    (r.items && r.items.includes(tagName)) &&
+    r.nextKm > r.km
+  );
+
+  if (lastRec && currentKm > 0) {
+    const interval = pf(lastRec.nextKm) - pf(lastRec.km);
+    document.getElementById('vm-next-km').value = currentKm + interval;
+    toast(`已根據上次紀錄自動加算 ${interval}km`);
+  }
 
   // 找尋第一個 name 為空的欄位
   const emptyIdx = tempMaintItems.findIndex(t => t.name.trim() === '');
@@ -6791,7 +6830,7 @@ window.openAddVehRec = function(recordId = null) {
     ).join('');
   }
 
-  const vmKm = document.getElementById('vm-km'); if (vmKm) vmKm.value = (r && r.type === 'maintenance') ? (r.km || '') : ''; 
+  const vmKm = document.getElementById('vm-km'); if (vmKm) vmKm.value = (r && r.type === 'maintenance') ? (r.km || '') : '';
   const vmShop = document.getElementById('vm-shop'); if (vmShop) vmShop.value = (r && r.type === 'maintenance') ? (r.shop || '') : ''; 
   const vmPay = document.getElementById('vm-pay-method'); if (vmPay) vmPay.value = (r && r.type === 'maintenance') ? (r.payMethod || '現金') : '現金'; 
   const vmNote = document.getElementById('vm-note'); if (vmNote) vmNote.value = (r && r.type === 'maintenance') ? (r.note || '') : ''; 
@@ -6848,7 +6887,7 @@ window.deleteVehRecFromEdit = async function() {
   
   // 4. 重新渲染畫面並提示
   renderVehicles();
-  toast('✅ 記錄已刪除');
+  toast('✅ 記錄，已刪除');
 };
 
 
@@ -7001,7 +7040,7 @@ function confirmAddVehRec() {
   } else {
     // 整理明細陣列並防呆
     finalItemDetails = tempMaintItems.filter(t => t.name.trim() !== '' && pf(t.amount) > 0);
-    if (finalItemDetails.length === 0) { toast('請至少輸入一項保養名稱與對應金額'); return; }
+    if (finalItemDetails.length === 0) { toast('請至少輸入一項「保養名稱與對應金額」'); return; }
     
     // 計算總額
     finalAmount = finalItemDetails.reduce((sum, t) => sum + pf(t.amount), 0);
@@ -7014,6 +7053,7 @@ function confirmAddVehRec() {
   runSaveProgress(() => {
     const commonData = { id: editingVehRecId || newId(), vehicleId: S.selVehicleId, type: S.addVehRecType, date: document.getElementById('vr-date').value, time: document.getElementById('vr-time').value, amount: finalAmount }; 
     let specificData = {};
+    const nextKm = pf(document.getElementById('vm-next-km').value);
     
     if (S.addVehRecType === 'fuel') { 
       specificData = { 
@@ -7036,7 +7076,8 @@ function confirmAddVehRec() {
       if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } 
       specificData = { 
         maintCategory: currentMaintCategory, 
-        km: pf(document.getElementById('vm-km').value), 
+        km: pf(document.getElementById('vm-km').value),
+        nextKm: nextKm,
         items: finalItems,             
         itemDetails: finalItemDetails, 
         shop: shop, 
@@ -7046,8 +7087,8 @@ function confirmAddVehRec() {
     }
     
     const finalRec = { ...commonData, ...specificData }; 
-    if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } 
-    else { S.vehicleRecs.push(finalRec); toast('✅ 記錄已新增'); }
+    if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄，已更新'); } 
+    else { S.vehicleRecs.push(finalRec); toast('✅ 記錄，已新增'); }
     
     editingVehRecId = null; 
     saveVehicleRecs(); 
@@ -7143,7 +7184,7 @@ function selectNewVehIcon(id) {
 function updateVehIconUI() { for (let i = 4; i <= 14; i++) { const box = document.getElementById(`veh-icon-box-${i}`); const mask = document.getElementById(`veh-icon-mask-${i}`); if (!box || !mask) continue; if (i === S.newVehIcon) { box.style.borderColor = 'var(--acc)'; mask.style.backgroundColor = S.newVehColor; } else { box.style.borderColor = 'transparent'; mask.style.backgroundColor = '#ccc'; } } }
 function saveNewVehicle() { 
   const name = document.getElementById('v-name').value.trim(); 
-  if (!name) { toast('請輸入車輛名稱'); return; } 
+  if (!name) { toast('請輸入「車輛名稱」'); return; } 
   const fuel = document.getElementById('v-fuel').value; 
   
   // 抓取新的選填欄位
@@ -7165,7 +7206,7 @@ function saveNewVehicle() {
   
   saveVehicles(); 
   closeOverlay('vehicle-add-page'); 
-  toast('✅ 成功新增車輛！'); 
+  toast('✅ 成功新增「車輛」！'); 
   renderVehicles(); 
 }
 
@@ -7573,7 +7614,7 @@ window.saveEditVehicle = function(id) {
   if(!v) return;
 
   const name = document.getElementById('v-name').value.trim(); 
-  if (!name) { toast('請輸入車輛名稱'); return; } 
+  if (!name) { toast('請輸入「車輛名稱」'); return; } 
   
   v.name = name;
   v.icon = S.newVehIcon;
@@ -7585,7 +7626,7 @@ window.saveEditVehicle = function(id) {
 
   saveVehicles(); 
   closeOverlay('vehicle-add-page'); 
-  toast('✅ 車輛資訊已更新！'); 
+  toast('✅ 車輛資訊，已更新！'); 
   
   // 重新渲染底層介面並刷新詳細資訊彈窗
   renderVehicles(); 
@@ -7707,7 +7748,7 @@ window.saveOCRSettings = function() {
   const key = document.getElementById('ocr-key-input').value.trim();
   S.settings.ocrKey = key;
   saveSettings();
-  toast(key ? '✅ 辨識功能已啟用' : '⚠️ 已停用辨識功能');
+  toast(key ? '✅ 辨識功能，已啟用' : '⚠️ 已停用「辨識功能」');
   closeOverlay('sub-page');
   renderSettings();
 };
@@ -7792,7 +7833,7 @@ function requestNotificationPermission(checkbox) {
       Notification.requestPermission().then(permission => {
         if (permission !== "granted") {
           checkbox.checked = false;
-          toast('⚠️ 請允許系統通知才能使用提醒功能');
+          toast('⚠️ 請允許「系統通知」，才能使用「提醒功能」');
         }
       });
     }
@@ -7804,7 +7845,7 @@ function saveReminderSettings() {
   S.settings.reminder.enabled = document.getElementById('rem-enabled').checked;
   S.settings.reminder.time = document.getElementById('rem-time').value || '22:00';
   saveSettings();
-  toast('✅ 提醒設定已儲存');
+  toast('✅ 提醒設定，已儲存');
   closeOverlay('sub-page');
 }
 
@@ -8030,33 +8071,26 @@ function renderAuthContent() {
       </div>
     `;
   }
+
+  // 1. 注入 HTML
   document.getElementById('auth-content-area').innerHTML = contentHtml;
 
-  // 1. 先把畫面渲染出來
-  const container = document.getElementById('auth-content-area');
-  if (container) {
-    container.innerHTML = contentHtml;
-  }
-
-  // 2. 【測試用：完全拿掉 Turnstile 邏輯】
-  console.log("Turnstile 已暫時停用進行測試");
-
-  // ⚠️ 提醒：appearance: 'always' 僅在前端強制顯示元件。
-  // 若要真正要求手動點擊驗證，您必須到 Cloudflare 網頁後台，
-  // 將這個 Sitekey 的設定改為「互動式 (Interactive)」。
-  /* 
-  const renderTurnstileWidget = () => {
-    if (document.getElementById('turnstile-widget')) {
-      turnstile.render('#turnstile-widget', {
-        sitekey: '0x4AAAAAADC958xr-t5UGd36',
-        theme: 'light',
-        appearance: 'always' 
-      });
+  // 2. 🌟 執行手動渲染 (核心修正)
+  // 使用 requestAnimationFrame 確保 DOM 已經真正畫在螢幕上
+  requestAnimationFrame(() => {
+    if (window.turnstile && document.getElementById('turnstile-widget')) {
+      try {
+        // 先嘗試重設，防止切換登入/註冊模式時發生重複渲染錯誤
+        window.turnstile.render('#turnstile-widget', {
+          sitekey: '0x4AAAAAADC958xr-t5UGd36',
+          theme: 'light',
+          appearance: 'always'
+        });
+      } catch (e) {
+        console.warn("Turnstile render warning:", e);
+      }
     }
-  };
-
-  if (typeof turnstile !== 'undefined') { renderTurnstileWidget(); } else { window.onTurnstileLoad = renderTurnstileWidget; const script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad'; script.async = true; script.defer = true; document.body.appendChild(script); }
-  */
+  });
 }
 
 /* ══ 新增：更改頭像獨立設定頁 ══ */
@@ -8087,7 +8121,7 @@ window.openAvatarSettings = function() {
 window.applyNewAvatar = function() {
   USER.avatar = selectedAvatar;
   saveUser();
-  toast('🎨 頭像已更新！');
+  toast('🎨 頭像，已更新！');
   openAccountStats(); // 切回帳號資訊頁面
 }
 
@@ -8103,7 +8137,7 @@ async function requestLogin() {
   if (typeof turnstile !== 'undefined') {
     turnstileToken = turnstile.getResponse();
     if (!turnstileToken) {
-      toast('⚠️ 請等待或點擊完成人機驗證');
+      toast('⚠️ 請等待，或點擊完成人機驗證');
       return;
     }
   }
@@ -8118,7 +8152,7 @@ async function requestLogin() {
     return;
   }
   if (authMode === 'login' && pwd === '') {
-    toast('⚠️ 請輸入密碼');
+    toast('⚠️ 請輸入「密碼」');
     return;
   }
 
@@ -8194,7 +8228,7 @@ async function requestLogin() {
 /* ══ 驗證 Email 驗證碼 (儲存權限 role) ══ */
 async function verifyAuthCode(email) {
   const code = document.getElementById('auth-code').value.trim();
-  if(code.length < 4) { toast('請輸入正確的驗證碼'); return; }
+  if(code.length < 4) { toast('請輸入「正確的驗證碼」'); return; }
   
   showProgress('帳號驗證中...');
   try {
@@ -8684,7 +8718,7 @@ window.adminDeleteUser = async function(targetEmail) {
   `);
   
   if (!finalCheck) {
-    toast('已取消刪除操作');
+    toast('已取消「刪除操作」');
     return;
   }
   
@@ -8699,7 +8733,7 @@ window.adminDeleteUser = async function(targetEmail) {
     
     finishProgress(() => {
       if(data.success) {
-        toast('✅ 帳號已徹底刪除');
+        toast('✅ 帳號，已徹底刪除');
         if (targetEmail === USER.email) {
           logoutAccount(); 
         } else {
@@ -8758,7 +8792,7 @@ window.adminCreateUserSubmit = async function() {
   const email = document.getElementById('adm-new-email').value.trim();
   const pwd = document.getElementById('adm-new-pwd').value.trim();
 
-  if (!email || !pwd) { toast('⚠️ 信箱與密碼不可為空'); return; }
+  if (!email || !pwd) { toast('⚠️ 信箱與密碼，不可為空'); return; }
 
   showProgress('建立帳號中...');
 
@@ -8775,7 +8809,7 @@ window.adminCreateUserSubmit = async function() {
 
     finishProgress(() => {
       if (data.success) {
-        toast('✅ 帳號已成功建立並開通！');
+        toast('✅ 帳號已成功建立，並開通！');
         // 自動導回會員名單，並重拉最新資料
         openAdminUserList(); 
       } else {
@@ -8954,7 +8988,7 @@ async function saveAdminSystemSettings() {
       if (data.success) {
         GLOBAL_REQUIRE_LOGIN = reqLogin;
         GLOBAL_ALLOW_REGISTRATION = allowReg; 
-        toast('✅ 系統存取權限已更新');
+        toast('✅ 系統存取權限，已更新');
         document.getElementById('sub-page').style.zIndex = '200';
         openAccountStats();
       } else {
@@ -9035,7 +9069,7 @@ async function saveAdminGasPrice() {
       if (data.success) {
         // 同步成功後，也更新自己手機的本地暫存
         localStorage.setItem('delivery_global_gas_prices', JSON.stringify(gp));
-        toast('✅ 全域油價已更新並同步至雲端');
+        toast('✅ 全域油價「已更新」，並同步至雲端');
         document.getElementById('sub-page').style.zIndex = '200';
         openAccountStats();
       } else {
@@ -9192,7 +9226,7 @@ window.saveAnnouncement = function() {
     const style = document.getElementById('ann-style').value;
     const date = document.getElementById('ann-date').value || todayStr();
 
-    if (!ver) { toast('⚠️ 錯誤：版本號不能為空！'); return; }
+    if (!ver) { toast('⚠️ 錯誤：「版本號」不能為空！'); return; }
 
     // 初始化容器
     if (!Array.isArray(S.settings.announcements)) S.settings.announcements = [];
@@ -9203,7 +9237,7 @@ window.saveAnnouncement = function() {
                        S.settings.annHistory.some(h => h.version === ver);
     
     if (isDuplicate) {
-        toast(`⚠️ 版本 v${ver} 已存在，請更換版本號`);
+        toast(`⚠️ 版本 v${ver} 已存在，請更換「版本號」`);
         return;
     }
 
@@ -9226,7 +9260,7 @@ window.saveAnnouncement = function() {
 
     saveSettings();
     closeOverlay('sub-page');
-    toast(`✅ 公告 v${ver} 已成功發布`);
+    toast(`✅ 公告 v${ver} ，已成功發布`);
     
     // 💡 [修正] 這裡使用 true，強行穿透視窗檢查邏輯
     setTimeout(() => checkAndShowAnnouncement(true), 800);
@@ -9255,7 +9289,7 @@ function performSaveAnnouncement(ver, title, content, style, date) {
 
     saveSettings();
     closeOverlay('sub-page');
-    toast(`✅ 公告 v${ver} 已成功發布`);
+    toast(`✅ 公告 v${ver} ，已成功發布`);
     
     // 發布後立刻嘗試在首頁顯示
     if (S.tab === 'home') setTimeout(() => checkAndShowAnnouncement(), 500);
@@ -9362,7 +9396,7 @@ window.archiveSpecificToHistory = function(idx) {
     S.settings.annHistory.unshift(target);
     S.settings.announcements.splice(idx, 1);
     saveSettings();
-    toast('✅ 公告已即時收回');
+    toast('✅ 公告，已即時收回');
     openAnnouncementManagement();
 };
 
@@ -9381,7 +9415,7 @@ window.restoreAnnouncement = function(idx) {
     annShownThisVisit.delete(ver); // 同步清除本次停留的暫存記錄，避免剛發布/還原的公告被誤擋
     
     saveSettings();
-    toast(`🚀 v${ver} 已重新發布`);
+    toast(`🚀 v${ver} ，已重新發布`);
     openAnnouncementManagement();
 };
 window.deleteHistoryAnnouncement = function(idx) {
@@ -9411,7 +9445,7 @@ window.deleteActiveAnnouncement = async function() {
   // 清空當前公告
   S.settings.announcement = null;
   saveSettings();
-  toast("✅ 已撤回公告");
+  toast("✅ 已撤回「公告」");
   openAnnouncementManagement();
 };
 
@@ -9506,7 +9540,7 @@ window.saveNewVersion = function() {
   });
   
   saveSettings();
-  toast('✅ 版本紀錄已新增');
+  toast('✅ 版本紀錄，已新增');
   openVersionHistory(); // 直接呼叫函式重新渲染即可，無需 setTimeout
 };
 // 編輯版本
@@ -9542,7 +9576,7 @@ window.saveEditVersion = function() {
     v.note = note;
     v.date = date;
     saveSettings();
-    toast('✅ 版本已更新');
+    toast('✅ 版本，已更新');
     openVersionHistory();
   }
 };
@@ -9553,7 +9587,7 @@ window.deleteVersion = async function(ver) {
 
   S.settings.versions = S.settings.versions.filter(x => x.ver !== ver);
   saveSettings();
-  toast('🗑️ 版本紀錄已刪除');
+  toast('🗑️ 版本紀錄，已刪除');
   openVersionHistory();
 };
 
@@ -9571,7 +9605,7 @@ async function checkAccountStatus() {
     if (!data.active) {
       if (data.reason === 'kicked') {
         const kickTime = new Date(data.kickedAt).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-        toast(`⚠️ 此帳號已於 [${kickTime}] 在其他裝置登入，您已被強制登出`, 5000);
+        toast(`⚠️ 此帳號已於 [${kickTime}] 在其他裝置登入，您已被「強制登出」`, 5000);
       } else if (data.reason === 'inactive_31_days') {
         // 👇 處理 31 天未登入的專屬警告
         customConfirm(`
@@ -9625,7 +9659,7 @@ function logoutAccount() {
     saveSettings();
   }
   
-  toast('✅ 已成功登出帳號');
+  toast('✅ 已成功「登出帳號」');
   
   // 👈 [核心修復] 登出後直接呼叫這兩個函式
   renderSettings(); 
@@ -9823,7 +9857,7 @@ function saveGoals() {
   closeOverlay('sub-page'); 
   renderSettings(); 
   if(S.tab === 'home') renderHome();
-  toast('✅ 目標已儲存'); 
+  toast('✅ 目標設定，已儲存'); 
 }
 
 /* ══ 進階獎勵項目清單與設定 (支援折疊、停用、刪除) ══ */
@@ -9956,7 +9990,7 @@ window.toggleRewardActive = function(id, isChecked) {
     saveSettings();
     openRewardSettings(); // 重新渲染刷新透明度
     if(S.tab === 'home') renderHome();
-    toast(isChecked ? '✅ 獎勵已啟用' : '⏸️ 獎勵已停用');
+    toast(isChecked ? '✅ 獎勵已「啟用」' : '⏸️ 獎勵已「停用」');
   }
 }
 
@@ -9964,14 +9998,14 @@ window.toggleRewardActive = function(id, isChecked) {
 window.deleteReward = async function(id) {
   const r = S.settings.rewards.find(x => x.id === id);
   if (!r) return;
-  const ok = await customConfirm(`確定要刪除「${r.name}」嗎？<br><span style="color:var(--t3); font-size:12px;">刪除後無法復原</span>`); 
+  const ok = await customConfirm(`確定要刪除「${r.name}」嗎？<br><span style="color:var(--t3); font-size:12px;">刪除後，無法復原</span>`); 
   if (!ok) return; 
   
   S.settings.rewards = S.settings.rewards.filter(x => x.id !== id);
   saveSettings(); 
   openRewardSettings(); 
   if(S.tab === 'home') renderHome();
-  toast('✅ 獎勵已刪除'); 
+  toast('✅ 獎勵，已刪除'); 
 }
 
 /* ══ 新增與編輯表單共用邏輯 ══ */
@@ -10032,7 +10066,7 @@ window.addRewardTier = function() {
 }
 
 window.removeRewardTier = function(idx) {
-  if (tempTiers.length <= 1) { toast('⚠️ 至少需要保留一階獎勵'); return; }
+  if (tempTiers.length <= 1) { toast('⚠️ 至少需要「保留一階獎勵」'); return; }
   const savedState = saveTempFormState();
   tempTiers.splice(idx, 1);
   renderRewardForm(savedState);
@@ -10139,11 +10173,11 @@ function renderRewardForm(data = null) {
 
 window.submitRewardSave = function() { 
   const name = document.getElementById('rw-name').value.trim(); 
-  if (!name) { toast('請輸入獎勵名稱'); return; } 
+  if (!name) { toast('請輸入「獎勵名稱」'); return; } 
   if (!S.settings.rewards) S.settings.rewards=[]; 
   
   const tiers = tempTiers.map(t => ({ orders: pf(t.orders), amount: pf(t.amount) })).filter(t => t.orders > 0 && t.amount > 0);
-  if(tiers.length === 0) { toast('請至少設定一階有效的獎勵'); return; }
+  if(tiers.length === 0) { toast('請至少設定「一階有效的獎勵」'); return; }
 
   const newRewardData = { 
     id: editingRewardId || newId(), 
@@ -10172,7 +10206,7 @@ window.submitRewardSave = function() {
   saveSettings(); 
   openRewardSettings(); // 直接切回清單頁
   if(S.tab === 'home') renderHome();
-  toast('✅ 獎勵已儲存'); 
+  toast('✅ 獎勵，已儲存'); 
 }
 
 function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
@@ -10195,11 +10229,11 @@ function doRestore() {
       if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } 
       if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } 
       
-      toast('✅ 還原成功'); 
+      toast('✅ 還原「成功」'); 
       renderSettings(); 
       renderHome(); 
     } catch { 
-      toast('❌ 檔案格式錯誤'); 
+      toast('❌ 檔案格式「錯誤」'); 
     } 
     fi.value=''; 
   }; 
@@ -10355,7 +10389,7 @@ async function doClearData() {
   saveVehicleRecs();
   
   renderSettings();
-  toast('✅ 已清除所有記錄');
+  toast('✅ 已清除「所有記錄」');
 }
 
 /* ══ 重置所有設定和資料 ══ */
@@ -10407,7 +10441,7 @@ async function doReset() {
   window.onSplashFinished();
 
   setTimeout(() => {
-    toast('✅ 已成功重置至初始狀態'); 
+    toast('✅ 已成功重置至：「初始狀態」'); 
     checkAndPromptPlatformSetup();
   }, 600);
 }
@@ -10438,7 +10472,7 @@ function openContactUs() {
 function copyEmailToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(() => {
-      toast('✅ 信箱已複製成功！');
+      toast('✅ 「信箱已複製」成功！');
     }).catch(() => {
       fallbackCopyTextToClipboard(text);
     });
@@ -10459,9 +10493,9 @@ function fallbackCopyTextToClipboard(text) {
   textArea.select();
   try {
     document.execCommand('copy');
-    toast('✅ 信箱已複製成功！');
+    toast('✅ 「信箱已複製」成功！');
   } catch (err) {
-    toast('⚠️ 複製失敗，請長按信箱手動複製');
+    toast('⚠️ 複製失敗，請「長按信箱」手動複製');
   }
   document.body.removeChild(textArea);
 }
@@ -10707,7 +10741,7 @@ window.showForcePasswordChange = function(isForced = false) {
     document.getElementById('sub-top-right').innerHTML = ''; // 強制狀態，不給退路
     document.getElementById('sub-page').style.pointerEvents = 'auto'; 
     document.getElementById('sub-page').dataset.forced = 'true'; 
-    toast('⚠️ 您的密碼強度過低或為初始密碼，請立即更改！', 5000);
+    toast('⚠️ 您的密碼「強度過低」，或為「初始密碼」，請立即更改！', 5000);
   } else {
     // 主動修改狀態，右上角加入返回按鈕
     document.getElementById('sub-top-right').innerHTML = `
@@ -10779,9 +10813,9 @@ window.submitChangePassword = async function() {
   const p1 = document.getElementById('cp-new1').value;
   const p2 = document.getElementById('cp-new2').value;
 
-  if (p1 !== p2) { toast('⚠️ 兩次密碼輸入不一致'); return; }
+  if (p1 !== p2) { toast('⚠️ 兩次密碼，輸入不一致'); return; }
   const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9\s])\S{12,}$/;
-  if (!pwdRegex.test(p1)) { toast('⚠️ 密碼強度不足，請確認是否符合所有規則'); return; }
+  if (!pwdRegex.test(p1)) { toast('⚠️ 密碼「強度不足」，請確認是否「符合所有規則」'); return; }
 
   showProgress('密碼更新中...');
   try {
@@ -10793,7 +10827,7 @@ window.submitChangePassword = async function() {
     const data = await res.json();
     finishProgress(() => {
       if (data.success) {
-        toast('✅ 密碼已成功更改！');
+        toast('✅ 密碼已「成功更改」！');
         
         // 👇 解除密碼過弱的標記，並重新儲存 USER
         USER.isPasswordWeak = false;
@@ -10839,7 +10873,7 @@ window.openForgotPassword = function() {
 
 window.requestForgotPassword = async function() {
   const email = document.getElementById('fp-email').value.trim();
-  if(!email.includes('@')) { toast('請輸入有效的 E-mail'); return; }
+  if(!email.includes('@')) { toast('請輸入「有效的 E-mail」'); return; }
 
   showProgress('發送請求中...');
   try {
@@ -10851,7 +10885,7 @@ window.requestForgotPassword = async function() {
     const data = await res.json();
     finishProgress(() => {
       if (data.success) {
-        toast('✅ 驗證碼已寄出！');
+        toast('✅ 驗證碼，已寄出！');
         showResetPasswordUI(email);
       } else {
         toast('⚠️ ' + data.message);
@@ -10891,7 +10925,7 @@ window.submitResetPassword = async function(email) {
   const pwd = document.getElementById('rp-new').value;
 
   const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9\s])\S{12,}$/;
-  if (!pwdRegex.test(pwd)) { toast('⚠️ 密碼強度不足，請確認是否符合規則'); return; }
+  if (!pwdRegex.test(pwd)) { toast('⚠️ 密碼「強度不足」，請確認「是否符合規則」'); return; }
 
   showProgress('驗證與重設中...');
   try {
@@ -10946,7 +10980,7 @@ async function doBackupToFile() {
       
       // ✅ 只有在這裡 (真正寫入檔案完畢後) 才會更新備份時間
       updateLocalBackupTime();
-      toast('✅ 成功儲存至本機！');
+      toast('✅ 「成功儲存」至本機！');
       
     } else {
       // 蘋果 iOS / Safari 降級使用傳統下載模式
@@ -11101,7 +11135,7 @@ function showInitialSetupModal() {
       if (chk.checked) hasChecked = true;
     });
 
-    if (!hasChecked) { toast('⚠️ 請至少選擇一個平台'); return; }
+    if (!hasChecked) { toast('⚠️ 請至少選擇「一個平台」'); return; }
 
     savePlatforms();
     
@@ -11129,6 +11163,9 @@ window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); 
 
 /* ══ 系統啟動主流程 ══ */
 async function init() {
+  if (isAppInitialized) return; // 如果跑過了，就別再跑第二次 (防止重複跳轉)
+  isAppInitialized = true;
+
   if (!S.settings) S.settings = {...DEFAULT_SETTINGS};
 
   // 1. ✨ 第一步：等待資料從 IndexedDB 與 LocalStorage 完整載入
@@ -11139,13 +11176,6 @@ async function init() {
     console.error("❌ 載入失敗:", e); 
   }
   
-  // 2. ✨ [安全架構重點] 資料一讀完就「立刻、確定地」渲染首頁一次。
-  // 不再靠計時器去「猜」使用者有沒有點別的地方，才決定要不要渲染首頁 ——
-  // 這種用猜的方式，猜錯兩種情況都會出事：
-  //   (a) 猜「使用者還沒動作」但其實已經點了登入 → 硬把登入頁蓋掉、跳回首頁
-  //   (b) 猜「使用者已經動作」但其實只是誤觸/巧合 → 首頁從頭到尾都沒被渲染，畫面卡住
-  // 這裡改成：首頁渲染只在這裡發生一次，是「資料就緒」觸發的，不受使用者後續點擊影響、
-  // 也不會被使用者的點擊影響到（因為登入等彈窗是獨立的 overlay，蓋在首頁上面，兩者互不干擾）。
   S.homeSubTab = 'schedule';
   goPage('home');
 
@@ -11286,7 +11316,7 @@ window.openOfficialWebsite = function() {
 window.copyWebsiteUrl = function(text) {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(() => {
-      toast('✅ 網址已複製成功！');
+      toast('✅ 網址已「複製成功！」');
     }).catch(() => fallbackCopy(text));
   } else {
     fallbackCopy(text);
@@ -11296,8 +11326,8 @@ window.copyWebsiteUrl = function(text) {
     const ta = document.createElement("textarea");
     ta.value = t; ta.style.position = "fixed"; ta.style.top = "0"; ta.style.left = "0"; 
     document.body.appendChild(ta); ta.focus(); ta.select();
-    try { document.execCommand('copy'); toast('✅ 網址已複製成功！'); } 
-    catch (err) { toast('⚠️ 複製失敗，請長按手動複製'); }
+    try { document.execCommand('copy'); toast('✅ 網址已「複製成功！」'); } 
+    catch (err) { toast('⚠️ 複製失敗，請「長按」手動複製'); }
     document.body.removeChild(ta);
   }
 };
