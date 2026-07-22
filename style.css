@@ -152,7 +152,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 .slide-btn.active { color: #fff; font-weight: 700; }
 
 /* ══ 7. 首頁專區 (打卡按鈕) ══ */
-.punch-card-new { background: var(--sf); border: 1px solid var(--border); border-radius: 20px; padding: 1px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
+.punch-card-new { background: var(--sf); border: 1px solid var(--border); border-radius: 20px; padding: 3px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .punch-status-left { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--t2); }
 
 /* 👇 選項 B 特效：科技能量旋轉環 */
@@ -172,7 +172,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
   /* 均速持續旋轉 */
   animation: spinRing 0.8s linear infinite; 
 }
-.punch-btn-right { padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+.punch-btn-right { padding: 7px 18px; border-radius: 12px; font-size: 16px; font-weight: 750; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
 .punch-btn-right:active { transform: scale(0.95); }
 .btn-go-online { background: var(--green); color: #fff; box-shadow: 0 4px 12px rgba(34,197,94,0.25); }
 .btn-go-offline { background: var(--red); color: #fff; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
@@ -892,23 +892,8 @@ input:checked + .slider:before { transform: translateX(20px); }
 .exp-tag-pill.is-selected{background:#ef4444;color:#ffffff;border-color:#b91c1c;box-shadow:0 0 0 transparent;}
 
 /* ══ 強化版：全螢幕平鋪浮水印（改用 DOM 元素排版，見 script.js 的 renderReportWatermark） ══ */
-#rpt-watermark-container {
-  position: fixed;
-  inset: 0;
-  pointer-events: none; /* 穿透點擊，不擋住畫面操作 */
-  z-index: 9999;
-  overflow: hidden; /* 排列時邊緣會多算幾顆超出容器，這裡裁掉，確保不會超出畫面造成橫向捲動 */
-}
-.wm-item {
-  position: absolute;
-  font-family: var(--mono);
-  font-weight: 850;
-  font-size: 13px;
-  white-space: nowrap; /* 避免號碼太長時換行，跟旁邊的浮水印疊在一起 */
-  user-select: none;
-  /* 顏色/透明度、旋轉角度都由 JS 直接帶入 inline style（color / transform），
-     這裡不寫死，方便之後想再微調時直接改 script.js 裡的 gapX/gapY/angle/color 幾個變數即可 */
-}
+#rpt-watermark-container{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;}
+.wm-item{position:absolute;font-family:var(--mono);font-weight:850;font-size:13px;white-space:nowrap;user-select:none;}
 /* 確保容器有相對定位 */
 #report-scroll-area{position:relative;}
 
@@ -941,12 +926,65 @@ input:checked + .slider:before { transform: translateX(20px); }
   100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); border-color: #bfdbfe; }
 }
 /* 套用到明日標籤 */
-.pulse-tomorrow {
-  animation: pulse-orange-glow 2s infinite !important;
-  border-width: 2px !important;
-}
+.pulse-tomorrow{animation:pulse-orange-glow 2s infinite !important;border-width:2px !important;}
 /* 套用到近3天標籤 */
-.pulse-near {
-  animation: pulse-blue-glow 2s infinite !important;
-  border-width: 2px !important;
-}
+.pulse-near{animation:pulse-blue-glow 2s infinite !important;border-width:2px !important;}
+
+/* ════ 子頁籤與保養提醒卡片樣式 ════ */
+/* 🚗 車輛子分頁：智慧彩色滑動頁籤 */
+.veh-search-tabs{position:relative;display:flex;background:rgba(0,0,0,0.08);border-radius:16px;padding:4px;margin-bottom:16px;/* 確保動畫流暢 */
+ isolation:isolate;}
+/* 確保滑動背景有基準位移與時間 */
+.veh-search-tabs .slide-bg{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:12px;z-index:0;/* 🌟 核心：確保這行存在 */
+ transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),background 0.3s;}
+/* 用 transform 控制位移，這是滑動感最流暢的方式 */
+.veh-search-tabs[data-active="search"] .slide-bg{transform:translateX(0);background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%);}
+.veh-search-tabs[data-active="remind"] .slide-bg{transform:translateX(100%);background:linear-gradient(135deg,#7c3aed 0%,#ec4899 100%);}
+.veh-search-tabs .slide-btn{flex:1;position:relative;z-index:1;border:none;background:transparent;padding:12px 0;color:#64748b;font-size:14px;font-weight:800;cursor:pointer;transition:color 0.3s;outline:none;-webkit-tap-highlight-color:transparent;}
+/* 被選中時文字變白 */
+.veh-search-tabs .slide-btn.active{color:#ffffff;}
+/* 保養提醒零件卡片 */
+.maint-alert-card{background:#ffffff;border-radius:16px;padding:5px 16px;margin-bottom:10px;border:2px solid #e2e8f0;display:flex;align-items:center;gap:12px;box-shadow:0 4px 10px rgba(0,0,0,0.02);position:relative;overflow:hidden;}
+.maint-alert-card.expired{border-color:#ef4444;background:#fff1f2;}
+.maint-alert-card.near{border-color:#f97316;background:#fff7ed;}
+.ma-icon{width:44px;height:44px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.ma-info{flex:1;min-width:0;}
+.ma-name{font-size:16px;font-weight:900;color:#1e293b;margin-bottom:4px;}
+.ma-status-text{font-size:12px;font-weight:700;margin-bottom:6px;}
+/* 剩餘里程進度條 */
+.ma-progress-bg{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;}
+.ma-progress-fill{height:100%;transition:width 0.4s;}
+.ma-km-info{text-align:right;flex-shrink:0;}
+.ma-rem-val{font-family:var(--mono);font-size:18px;font-weight:900;}
+.ma-rem-unit{font-size:11px;color:#64748b;font-weight:700;}
+
+
+/* ════ 記錄搜尋頁籤 ════ */
+/* 歷史搜尋標籤：預設樣式 */
+.search-quick-tag{font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;background:#f1f5f9;color:#64748b;border:1.5px solid #cbd5e1;cursor:pointer;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);}
+/* 🌟 新增：選中後的樣式 (藍底白字) */
+.search-quick-tag.on{background:#2563eb !important;color:#ffffff !important;border-color:#2563eb !important;transform:translateY(-1px);}
+.search-quick-tag:active { transform:scale(0.9); background:var(--blue-d); color:var(--blue); border-color:var(--blue); }
+/* ════ 新增車輛記錄-保養維修-金額 ════ */
+.myInput::placeholder{color:#ff0000;font-size:15px;font-weight:700;opacity:1;}
+input.myInput:focus::placeholder{color:transparent;opacity:0;}
+/* ════ 車輛管理-記錄搜尋-保養提醒-輸入現在里程 ════ */
+.myInput1::placeholder{color:#00ff66;font-size:20px;font-weight:850;letter-spacing:1px;opacity:1;}
+input.myInput1:focus::placeholder{color:transparent;opacity:0;}
+
+
+/* ════ 🎁 獎勵子頁籤：智慧滑動設計 ════ */
+/* 🎁 獎勵專用子頁籤樣式 */
+.reward-sub-tabs{position:relative;display:flex;background:rgba(0,0,0,0.08);/* 灰底背景 */
+ border-radius:14px;padding:4px;/* 容器內距 */
+ isolation:isolate;}
+.reward-sub-tabs .slide-bg{position:absolute;top:4px;bottom:4px;left:4px;/* 🌟 修正點：寬度扣除 4px 確保不撞牆 */
+ width:calc(50% - 4px);border-radius:11px;z-index:0;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),background 0.3s;}
+/* 狀態 A：今日進度 (綠色漸層) */
+.reward-sub-tabs[data-active="current"] .slide-bg{transform:translateX(0);background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 4px 12px rgba(16,185,129,0.3);}
+/* 狀態 B：即將到來 (紫色漸層) */
+.reward-sub-tabs[data-active="upcoming"] .slide-bg{/* 🌟 修正點：位移 100% 剛好會對齊右側邊界 */
+ transform:translateX(100%);background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);box-shadow:0 4px 12px rgba(124,58,237,0.3);}
+.reward-sub-tabs .slide-btn{flex:1;position:relative;z-index:1;border:none;background:transparent;padding:10px 0;color:#64748b;/* 未選中文字顏色 */
+ font-size:13px;font-weight:800;cursor:pointer;transition:color 0.3s;outline:none;}
+.reward-sub-tabs .slide-btn.active{color:#ffffff;}
