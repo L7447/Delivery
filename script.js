@@ -6,6 +6,9 @@
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
 let isAppInitialized = false; // 紀錄是否已經初始化過
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
+let editingVehRecId = null; 
+const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '傳動皮帶', '傳動保養', '大保養'];
+const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '傳動鍊條', '煞車油', '前煞車皮', '後煞車皮', '後輪', '前輪', '其它'];
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS =[
   { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一及週四趟獎結算。｜每週四發薪。' },
@@ -592,6 +595,8 @@ const S = {
   generalExpenses: [], // 存放一般支出紀錄
   rptNetMode: 'month', // 淨賺頁面的子頁籤：month, year, expense_overview
   rptExpFilter: 'all', // 支出總覽的類別過濾
+  rewardSubTab: 'current',
+  vehSearchTab: 'search' 
 };
 
 async function saveGeneralExpenses() {
@@ -1368,6 +1373,13 @@ function switchHomeTab(tab, index) {
   const tabBg = document.getElementById('home-tab-bg');
   tabBg.style.transform = `translateX(${index * 100}%)`; 
   
+  // 🌟 控制獎勵子頁籤的顯示/隱藏
+  const rewardSubWrap = document.getElementById('reward-sub-tabs-wrap');
+  if (rewardSubWrap) {
+    // 只有在主分頁點選「獎勵進度」時才顯示這組子按鈕
+    rewardSubWrap.style.display = (tab === 'reward') ? 'block' : 'none';
+  }
+
   // 判斷套用不同的四色漸層與陰影
   if (tab === 'schedule') {
     // 平台日程表：日出橘紅金
@@ -1434,7 +1446,13 @@ function switchVehicleTab(tab, index) {
   if (container) container.style.display = '';
   if (monthNav) monthNav.style.display = 'flex';
 
-  S.vehicleTab = tab; 
+  S.vehicleTab = tab;
+
+  // 🌟 [新增]：如果點擊的是「記錄搜尋」主按鈕，強制回到第一個子頁籤
+  if (tab === 'search') {
+    S.vehSearchTab = 'search'; 
+  }
+
   const tabBg = document.getElementById('veh-tab-bg');
   tabBg.style.transform = `translateX(${index * 100}%)`; 
   
@@ -1629,13 +1647,13 @@ function renderHome() {
 
       // === 今日概況 Top 區塊 ===
       let topHtml = `
-        <div style="padding:16px 16px 0;">
+        <div style="padding:10px 16px 0;">
           <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-            <div style="font-family:var(--title); font-size:24px; font-weight:700; color:var(--t1);">今日概況</div>
-            <div style="font-size:14px; color:var(--t2); font-weight:500; background:var(--sf); padding:6px 12px; border-radius:20px; border:1px solid var(--border);">
-              <b style="color:#ff4400;">${dateObj.getFullYear()}</b> 年 
-              <b style="color:#ff4400;">${dateObj.getMonth()+1}</b> 月 
-              <b style="color:#ff4400;">${dateObj.getDate()}</b> 日（星期 <b style="color:#ff4400;">${dow}</b>）
+            <div style="font-family:var(--title);font-size:24px;font-weight:800;color:var(--t1);letter-spacing:1.5px;">今日概況</div>
+            <div style="font-size:14px;color:var(--t2);font-weight:500;background:var(--sf);padding:6px 12px;border-radius:20px;border:1px solid var(--border);font-family:var(--mono);">
+              <span style="font-size:16px;color:#ff4400;font-weight:900;">${dateObj.getFullYear()}</span> 年 
+              <span style="font-size:16px;color:#ff4400;font-weight:900;">${dateObj.getMonth()+1}</span> 月 
+              <span style="font-size:16px;color:#ff4400;font-weight:900;">${dateObj.getDate()}</span> 日（星期 <span style="font-size:16px;color:#ff4400;font-weight:900;">${dow}</span> ）
             </div>
           </div>`;
 
@@ -1645,7 +1663,7 @@ function renderHome() {
       let punchStatus = isPunched ? '上線中' : '離線';
       
       topHtml += `
-        <div class="punch-card-new" style="margin:8px 0 16px 0;">
+        <div class="punch-card-new" style="margin:8px 0 8px 0;">
           <div class="punch-status-left">
             <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
             <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatus}</span>
@@ -1669,11 +1687,11 @@ function renderHome() {
         } else {
           bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
           bottomHtml += `
-            <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 12px 10px; margin-bottom: -2px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+            <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 7px 10px; margin-bottom: -2px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
               <!-- 頂部四色漸層飾條 -->
               <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #16a34a, #ea580c, #0284c7, #475569);"></div>
               
-              <div style="font-size: 13px; font-weight: 900; color: #334155; margin-bottom: 10px; letter-spacing: 1px;">💡 狀態標籤圖例</div>
+              <div style="font-size: 13px; font-weight: 750; color: #334155; margin-bottom: 7px; letter-spacing: 1px;">💡 狀態標籤圖例</div>
               
               <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
                 <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; box-shadow: 0 2px 6px rgba(22,163,74,0.15);">
@@ -1914,7 +1932,7 @@ function getMileageCaptureHtml(type) {
       </div>
 
       <div style="background:#f1f5f9; padding:15px; border-radius:16px; margin-bottom:15px;">
-        <label style="font-size:12px; font-weight:800; color:var(--t2); display:block; margin-bottom:8px;">確認/修改辨識出的數字</label>
+        <label style="font-size:12px; font-weight:800; color:var(--t2); display:block; margin-bottom:8px;">確認辨識出的數字（可修改），可手動輸入</label>
         <div style="position:relative;">
           <input type="number" id="manual-km" placeholder="辨識結果..." inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border:2px solid #cbd5e1; font-family:var(--mono); font-weight:900; font-size:22px; text-align:center; color:var(--blue);">
           <span style="position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:14px; font-weight:800; color:var(--t3);">km</span>
@@ -2107,8 +2125,13 @@ async function punchOut() {
       mileageCropper = null;
     }
     
+    // 🌟 1. 取得取消按鈕元素
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+    // 🌟 2. 暫時隱藏取消按鈕
+    if (cancelBtn) cancelBtn.style.display = 'none';
+
     // 結算提示
-    customConfirm(`
+    await customConfirm(`
       <div style="text-align:center; padding:10px;font-family:var(--mono);">
         <div style="font-size:40px;">🏁<span style="font-size:26px;font-weight:850;color:var(--green);margin-bottom:15px;"> 下線結算完成</div>
         <div style="font-size:14px;line-height:1.8;margin-bottom:15px;">
@@ -2118,6 +2141,11 @@ async function punchOut() {
         <div style="font-size:14px;color:var(--t2);border:1px solid var(--border);border-radius:var(--r);">本次行駛：<b style="color:var(--blue); font-size:24px;"> ${diffKm.toFixed(1)}</b> km</div>
       </div>
     `);
+
+    // 🌟 4. 視窗關閉後，恢復取消按鈕的顯示 (還原狀態給其他功能使用)
+    if (cancelBtn) cancelBtn.style.display = '';
+    
+    toast('✅ 已完成結算');
 
     // 👈 [核心 3] 執行跳轉
     goPage('history');
@@ -3975,22 +4003,22 @@ window.navRptYear = function(dir) {
 
 /* ══ 替換：獎勵進度 (改移至首頁，並回傳 HTML 字串) ══ */
 function getRewardsHtml() {
-  if (!S.rewardSubTab) S.rewardSubTab = 'current';
+  // 🌟 [修改]：移除原本這裡生成的頁籤 HTML 與提示文字
+  let html = ''; 
 
-  // 👇 判斷目前選中的頁籤，給予專屬的背景色與陰影
+  // 同步 HTML 上的滑動狀態
   const isCurrent = S.rewardSubTab === 'current';
-  const slideBgColor = isCurrent ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
-  const slideShadow = isCurrent ? 'rgba(16, 185, 129, 0.4)' : 'rgba(139, 92, 246, 0.4)';
+  const tabsEl = document.getElementById('reward-tabs-el');
+  if (tabsEl) {
+    tabsEl.setAttribute('data-active', S.rewardSubTab);
+    document.getElementById('rsb-current').classList.toggle('active', isCurrent);
+    document.getElementById('rsb-upcoming').classList.toggle('active', !isCurrent);
+  }
 
-  let html = `
-    <div class="slide-tabs tabs-2" style="margin-bottom:12px;">
-      <div class="slide-bg" style="transform: translateX(${isCurrent ? '0%' : '100%'}); background: ${slideBgColor}; box-shadow: 0 4px 12px ${slideShadow};"></div>
-      <button class="slide-btn ${isCurrent ? 'active' : ''}" onclick="S.rewardSubTab='current'; renderHome()">今日進度</button>
-      <button class="slide-btn ${!isCurrent ? 'active' : ''}" onclick="S.rewardSubTab='upcoming'; renderHome()">即將到來</button>
-    </div>
-    <div style="font-size:13px; color:var(--hint-color); margin-bottom:12px; text-align:center; font-weight:700;">
-      ${isCurrent ? '「今日」生效中之獎勵進度' : '「 下一個獎勵起，至下週日止 」之即將到來獎勵'}
-    </div>`;
+  // 加入原本按鈕下方的提示文字 (保持在列表上方)
+  html += `<div style="font-size:13px; color:var(--hint-color); margin-bottom:12px; text-align:center; font-weight:700;">
+    ${isCurrent ? '「今日」生效中之獎勵進度' : '「下一個獎勵起」之即將到來獎勵'}
+  </div>`;
 
   const today = new Date(); today.setHours(0,0,0,0);
   const dayOfWeek = today.getDay() || 7;
@@ -4104,6 +4132,20 @@ function getRewardsHtml() {
   
   return html;
 }
+// 2. 加入子按鈕點擊處理函式
+window.setRewardSubTab = function(tab) {
+  S.rewardSubTab = tab;
+  
+  // 更新 HTML 上的屬性，觸發 CSS 動畫
+  const tabsEl = document.getElementById('reward-tabs-el');
+  if (tabsEl) {
+    tabsEl.setAttribute('data-active', tab);
+    document.getElementById('rsb-current').classList.toggle('active', tab === 'current');
+    document.getElementById('rsb-upcoming').classList.toggle('active', tab === 'upcoming');
+  }
+  
+  renderHome(); // 重新渲染列表內容
+};
 
 window.navRptMonth = function(dir) {
   S.rptM += dir;
@@ -6012,7 +6054,6 @@ function renderVehicles() {
   selectorHtml += `</div>`; 
   selectorContainer.innerHTML = selectorHtml;
   
-  // 👇 修改這裡：用 switchVehicleTab 取代原本的 renderVehicleContent()
   // 這樣一進到車輛頁面，就會自動判定目前是油車還是電車，並套用正確的顏色！
   const tabIndexMap = { 'fuel': 0, 'maintenance': 1, 'wash': 2, 'yearly': 3, 'search': 4 };
   switchVehicleTab(S.vehicleTab, tabIndexMap[S.vehicleTab] || 0);
@@ -6049,40 +6090,68 @@ function _syncVehSelectorActive(id) {
 
 /* ══ 替換：車輛管理內容 (支援月度燃料/保養、年總覽與記錄搜尋) ══ */
 function renderVehicleContent() {
-  const container = document.getElementById('vehicle-content'); 
-  if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
+  const container = document.getElementById('vehicle-content');
+  const subWrap = document.getElementById('veh-search-sub-wrap'); // 取得靜態頁籤容器
   
+  if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
+
+  // 🌟 控制靜態頁籤的顯隱：只有在主分頁是「記錄搜尋」時才顯示
+  if (subWrap) subWrap.style.display = (S.vehicleTab === 'search') ? 'block' : 'none';
+
   let html = '';
 
-  // ── 1. 記錄搜尋頁籤 ──
   if (S.vehicleTab === 'search') {
-    const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
+    const isSearch = S.vehSearchTab === 'search';
+    const v = S.vehicles.find(x => x.id === S.selVehicleId);
+    const isEV = v && v.defaultFuel === 'electric';
     const maintList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
-    
-    html += `
-      <style>
-        .search-quick-tag { font-size:11px; padding:4px 10px; background:var(--sf2); color:var(--t2); border-radius:8px; border:1px solid var(--border); cursor:pointer; transition:0.2s; font-weight:700; }
-        .search-quick-tag:active { transform:scale(0.9); background:var(--blue-d); color:var(--blue); border-color:var(--blue); }
-      </style>
-      <div style="background:var(--sf); padding:12px; border-radius:16px; margin-bottom:12px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.02);">
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
-          <input type="text" class="finp" id="veh-search-kw" placeholder="🔍 搜尋項目、店家或備註..." oninput="doVehSearch(false)" style="flex:1; padding:8px 12px; font-size:14px; border-radius:12px; border:1.5px solid var(--text-blue); background:#f8fafc;">
-          
-          <!-- 👇 改為「放大至懸浮視窗」按鈕 -->
-          <button onclick="openVehSearchFullscreen()" style="width:42px; height:42px; border-radius:12px; background:#eff6ff; color:#2563eb; border:1.5px solid #bfdbfe; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; cursor:pointer; flex-shrink:0; transition:0.2s; box-shadow:0 2px 4px rgba(37,99,235,0.1);">
-            ⤢
-          </button>
+
+    // 🌟 同步更新靜態頁籤的 data-active 屬性與按鈕 active class
+    const tabsEl = document.getElementById('veh-search-tabs-el');
+    if (tabsEl) {
+      tabsEl.setAttribute('data-active', S.vehSearchTab);
+      document.getElementById('stb-search').classList.toggle('active', isSearch);
+      document.getElementById('stb-remind').classList.toggle('active', !isSearch);
+    }
+
+    if (isSearch) {
+      // 模式 A：歷史搜尋 (只畫輸入框與結果)
+      html = `
+        <div style="background:var(--sf); padding:12px; border-radius:16px; border:1px solid var(--border);margin:-12px 0 12px 0;">
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+            <input type="text" class="finp" id="veh-search-kw" placeholder="🔍 搜尋零件、店家或備註..." oninput="doVehSearch(false)" style="flex:1; border:1.5px solid #bfdbfe; padding:10px;">
+            <button onclick="openVehSearchFullscreen()" style="width:42px; height:42px; border-radius:12px; background:#eff6ff; color:#2563eb; border:1.5px solid #bfdbfe; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900;">⤢</button>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            ${maintList.map(item => `<div class="search-quick-tag" onclick="selectSearchTag('${item}', this)">${item}</div>`).join('')}
+          </div>
         </div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          ${maintList.map(item => `<div class="search-quick-tag" onclick="document.getElementById('veh-search-kw').value='${item}'; doVehSearch(false);">${item}</div>`).join('')}
+        <div id="veh-search-results"></div>
+        <div style="height:200px;"></div>
+      `;
+      container.innerHTML = html;
+      if (document.getElementById('veh-search-kw').value) doVehSearch(false);
+      else document.getElementById('veh-search-results').innerHTML = '<div class="empty-tip">請輸入或點選標籤開始搜尋</div>';
+    } else {
+      // 模式 B：保養提醒 (加入清除按鈕與新設計)
+      const lastKm = localStorage.getItem(`last_km_${S.selVehicleId}`) || '';
+      html = `
+        <div style="background:linear-gradient(135deg, #1e293b, #334155); padding:8px 16px; border-radius:20px; margin:-12px 0 12px 0; color:#fff;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <label style="font-size:20px; font-weight:800; color: #00f7ff; letter-spacing:1px;">🏍️ 儀表板里程</label>
+            <button onclick="openMaintCycleSettings()" style="background:#3b82f6; color:#fff; border:none; padding:4px 12px; border-radius:8px; font-size:14px; font-weight:800; cursor:pointer;">⚙️ 設定週期</button>
+          </div>
+          <div style="position:relative;">
+            <input type="number" class="finp myInput1" id="veh-remind-km" value="${lastKm}" placeholder="輸入現在里程" oninput="renderMaintReminderList()" style="background:rgba(255,255,255,0.1); border:2px solid #3b82f6; color:#fff; font-size:24px; font-family:var(--mono); font-weight:900; text-align:center; padding-right:45px;">
+            <button onclick="clearRemindKm()" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.2); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;font-weight:900;">✕</button>
+          </div>
         </div>
-      </div>
-      <div id="veh-search-results" style="display:flex; flex-direction:column; gap:8px;">
-        <div class="empty-tip">請輸入或點選上方標籤開始搜尋</div>
-      </div>
-    `;
-    container.innerHTML = html;
-    if(document.getElementById('veh-search-kw') && document.getElementById('veh-search-kw').value) doVehSearch(false);
+        <div id="veh-remind-list"></div>
+        <div style="height:200px;"></div>
+      `;
+      container.innerHTML = html;
+      renderMaintReminderList();
+    }
     return;
   }
 
@@ -6635,16 +6704,229 @@ function renderVehicleContent() {
   }
   container.innerHTML = html;
 }
+window.setVehSearchSubTab = function(tab) {
+  S.vehSearchTab = tab;
+  renderVehicleContent();
+};
+window.clearRemindKm = function() {
+  const kmInp = document.getElementById('veh-remind-km');
+  if (kmInp) {
+    kmInp.value = '';
+    localStorage.removeItem(`last_km_${S.selVehicleId}`);
+    renderMaintReminderList();
+  }
+};
+window.renderMaintReminderList = function() {
+  const kmInp = document.getElementById('veh-remind-km');
+  const resEl = document.getElementById('veh-remind-list');
+  if (!kmInp || !resEl) return;
+
+  const inputKm = pf(kmInp.value);
+  if (inputKm > 0) localStorage.setItem(`last_km_${S.selVehicleId}`, inputKm);
+
+  const cycles = (S.settings.maintCycles && S.settings.maintCycles[S.selVehicleId]) ? S.settings.maintCycles[S.selVehicleId] : {};
+  const alertThreshold = cycles.alertThreshold || 200;
+
+  // 1. 找出這台車所有保養過的零件
+  const lastDone = {};
+  const recs = S.vehicleRecs.filter(r => r.vehicleId === S.selVehicleId && r.type === 'maintenance');
+  
+  recs.sort((a, b) => pf(a.km) - pf(b.km)).forEach(r => {
+    if (r.items) {
+      r.items.forEach(item => {
+        lastDone[item] = { km: pf(r.km), id: r.id, date: r.date };
+      });
+    }
+  });
+
+  // 2. 獲取所有需要追蹤的項目 (週期表裡的項目 + 歷史紀錄有的項目)
+  const allItems = new Set([...Object.keys(cycles), ...Object.keys(lastDone)]);
+  allItems.delete('alertThreshold');
+
+  const displayList = [];
+  allItems.forEach(name => {
+    const last = lastDone[name];
+    const interval = cycles[name];
+    
+    // 如果沒有歷史紀錄，且也沒設定週期，跳過 (代表這零件完全沒碰過)
+    if (!last && !interval) return;
+
+    // 計算狀態
+    let status = 'none'; // 無設定週期
+    let nextKm = 0;
+    let remaining = 999999;
+    let progress = 0;
+
+    if (interval) {
+        const lastKm = last ? last.km : 0;
+        nextKm = lastKm + interval;
+        remaining = nextKm - inputKm;
+        progress = Math.max(0, Math.min(100, ((inputKm - lastKm) / interval) * 100));
+        
+        if (remaining <= 0) status = 'expired';
+        else if (remaining <= alertThreshold) status = 'near';
+        else status = 'safe';
+    }
+
+    // 🌟 如果沒設週期 (status === 'none')，一定要顯示
+    // 或者符合預警條件的項目也要顯示
+    if (status === 'none' || status === 'expired' || status === 'near') {
+        displayList.push({ 
+            name, 
+            lastKm: last ? last.km : 0, 
+            nextKm, 
+            remaining, 
+            progress, 
+            lastId: last ? last.id : '',
+            status 
+        });
+    }
+  });
+
+  if (displayList.length === 0) {
+    resEl.innerHTML = `
+      <div style="text-align:center; padding:60px 20px;">
+        <div style="font-size:54px; margin-bottom:20px; opacity:0.8;">🍃</div>
+        <div style="font-size:16px; font-weight:800; color:#10b981;">車況良好</div>
+        <div style="font-size:12px; color:var(--t3); margin-top:8px;">目前沒有項目接近預警里程 (${alertThreshold} km)</div>
+      </div>`;
+    return;
+  }
+
+  // 排序：沒設週期的排最後，其餘依嚴重度排序
+  displayList.sort((a, b) => {
+    if (a.status === 'none' && b.status !== 'none') return 1;
+    if (a.status !== 'none' && b.status === 'none') return -1;
+    return a.remaining - b.remaining;
+  });
+
+  let html = '';
+  displayList.forEach(item => {
+    let color = '#64748b', icon = '⚙️', stateText = '尚未設定保養週期', cardClass = '';
+    let nextKmStr = '---';
+
+    if (item.status === 'expired') {
+      color = '#ef4444'; icon = '🚨'; stateText = `已超過 ${Math.abs(item.remaining)} km！`; cardClass = 'expired';
+      nextKmStr = `${fmt(item.nextKm)}`;
+    } else if (item.status === 'near') {
+      color = '#f97316'; icon = '⚠️'; stateText = `即將到期 (剩 ${item.remaining} km)`; cardClass = 'near';
+      nextKmStr = `${fmt(item.nextKm)}`;
+    } else if (item.status === 'none') {
+      color = '#3b82f6'; icon = 'ℹ️'; stateText = '請點擊「設定週期」以追蹤';
+      cardClass = ''; // 藍色提示樣式
+    }
+
+    html += `
+      <div class="maint-alert-card ${cardClass}" onclick="${item.status === 'none' ? 'openMaintCycleSettings()':''}" style="cursor:${item.status === 'none' ? 'pointer':'default'};">
+        <div class="ma-icon" style="color:${color}; background:${color}15;">${icon}</div>
+        <div class="ma-info">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span class="ma-name">${item.name}</span>
+            <span style="font-size:10px; color:var(--t3); font-weight:800;">上次：${fmt(item.lastKm)} km</span>
+          </div>
+          <div class="ma-status-text" style="color:${color}">${stateText}</div>
+          <div class="ma-progress-bg">
+            <div class="ma-progress-fill" style="width:${item.progress}%; background:${color}"></div>
+          </div>
+        </div>
+        <div class="ma-km-info">
+          <div class="ma-rem-val" style="color:${color}">${nextKmStr}</div>
+          <div class="ma-rem-unit">${item.status === 'none' ? '尚未設定' : '預計更換'}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  resEl.innerHTML = html;
+};
+window.clearRemindKm = function() {
+  const kmInp = document.getElementById('veh-remind-km');
+  if (kmInp) {
+    kmInp.value = '';
+    // 執行一次重新渲染清單
+    renderMaintReminderList(); 
+    // 也同步清除快取
+    localStorage.removeItem(`last_km_${S.selVehicleId}`);
+  }
+};
+window.openMaintCycleSettings = function() {
+  const v = S.vehicles.find(x => x.id === S.selVehicleId);
+  const isEV = v && v.defaultFuel === 'electric';
+  const itemList = isEV ? MAINT_ITEMS_EV : MAINT_ITEMS_GAS;
+  
+  if (!S.settings.maintCycles) S.settings.maintCycles = {};
+  if (!S.settings.maintCycles[S.selVehicleId]) S.settings.maintCycles[S.selVehicleId] = {};
+  
+  const cycles = S.settings.maintCycles[S.selVehicleId];
+  // 🌟 讀取預警設定，若無則預設為 200
+  const alertThreshold = cycles.alertThreshold || 200;
+
+  document.getElementById('sub-title').textContent = '保養週期設定';
+  document.getElementById('sub-top-right').innerHTML = `<button onclick="saveMaintCycles()" class="btn-acc" style="padding:6px 16px; border-radius:12px;">儲存</button>`;
+
+  let html = `<div style="padding:16px;">
+    <!-- 🌟 新增：預警里程設定區塊 -->
+    <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border: 2px solid #3b82f6; border-radius: 16px; padding: 16px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <span style="font-size:20px;">🔔</span>
+        <span style="font-size:15px; font-weight:900; color:#1e3a8a;">保養預警里程 (橘色狀態)</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <input type="number" id="cfg-alert-threshold" value="${alertThreshold}" placeholder="200" style="flex:1; padding:12px; border:1.5px solid #bfdbfe; border-radius:10px; font-family:var(--mono); font-weight:900; font-size:18px; color:#2563eb; text-align:center; outline:none;">
+        <span style="font-size:14px; color:#64748b; font-weight:800;">km 前提醒</span>
+      </div>
+      <p style="font-size:11px; color:#3b82f6; margin-top:8px; font-weight:600; line-height:1.4;">
+        ※ 當「剩餘里程」低於此數值時，零件將顯示為橘色警告。
+      </p>
+    </div>
+
+    <div style="font-size:13px; color:var(--t3); margin-bottom:12px; font-weight:700; padding-left:4px;">📋 各項目保養週期 (km)</div>
+    <div class="card" style="padding:0; overflow:hidden; border:1px solid #e2e8f0;">`;
+
+  itemList.forEach(item => {
+    const val = cycles[item] || '';
+    html += `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #f1f5f9; background:#fff;">
+        <span style="font-size:15px; font-weight:800; color:var(--t1);">${item}</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="number" class="cycle-input" data-item="${item}" value="${val}" placeholder="未設定" style="width:100px; padding:8px; border:1.5px solid #cbd5e1; border-radius:8px; text-align:right; font-family:var(--mono); font-weight:800; color:#0f172a;">
+          <span style="font-size:12px; color:var(--t3); font-weight:700;">km</span>
+        </div>
+      </div>`;
+  });
+
+  html += `</div></div>`;
+  document.getElementById('sub-body').innerHTML = html;
+  openOverlay('sub-page');
+};
+window.saveMaintCycles = function() {
+  if (!S.settings.maintCycles[S.selVehicleId]) S.settings.maintCycles[S.selVehicleId] = {};
+  const cycles = S.settings.maintCycles[S.selVehicleId];
+
+  // 🌟 儲存預警里程設定
+  const thresholdVal = pf(document.getElementById('cfg-alert-threshold').value);
+  cycles.alertThreshold = thresholdVal > 0 ? thresholdVal : 200; // 防呆：至少要有值，否則預設200
+
+  // 儲存各零件週期
+  const inputs = document.querySelectorAll('.cycle-input');
+  inputs.forEach(input => {
+    const item = input.dataset.item;
+    const val = pf(input.value);
+    if (val > 0) cycles[item] = val;
+    else delete cycles[item];
+  });
+
+  saveSettings();
+  toast('✅ 週期與預警設定已更新');
+  closeOverlay('sub-page');
+  renderMaintReminderList(); 
+};
 
 async function deleteVehicle(id) {
   const ok = await customConfirm('確定要刪除這台車輛嗎？<br><span style="color:var(--red); font-size:12px;">⚠️ 該車的所有記錄將一併刪除且無法復原</span>'); if(!ok) return;
   S.vehicles = S.vehicles.filter(v => v.id !== id); S.vehicleRecs = S.vehicleRecs.filter(r => r.vehicleId !== id); 
   if (S.selVehicleId === id) S.selVehicleId = null; saveVehicles(); saveVehicleRecs(); renderVehicles(); toast('車輛與記錄，已刪除');
 }
-
-let editingVehRecId = null; 
-const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '煞車油', '前煞車皮', '後煞車皮', '傳動皮帶', '傳動保養', '大保養'];
-const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '傳動鍊條', '煞車油', '前煞車皮', '後煞車皮', '後輪', '前輪', '其它'];
 
 /* ══ 動態保養項目全域變數與邏輯 ══ */
 let tempMaintItems = []; // 存放 [{ name: '', amount: '' }]
@@ -6656,7 +6938,7 @@ function renderMaintDynamicList() {
   container.innerHTML = tempMaintItems.map((item, idx) => `
     <div style="display:flex; gap:6px; align-items:center;">
       <input type="text" class="finp" style="flex:1.5; padding:8px 10px; font-size:13px; border-color:var(--green); color:#ec4899;" placeholder="項目名稱 (如:機油)" value="${safeText(item.name)}" oninput="updateMaintItem(${idx}, 'name', this.value)">
-      <input type="number" class="finp" style="flex:1; padding:8px 10px; font-size:14px; font-family:var(--mono); border-color:var(--green); color:#ec4899; font-weight:800;" placeholder="金額" inputmode="numeric" value="${item.amount}" oninput="updateMaintItem(${idx}, 'amount', this.value)">
+      <input type="number" class="finp myInput" style="flex:1; padding:8px 10px; font-size:14px; font-family:var(--mono); border-color:var(--green); color:#ec4899; font-weight:800;" placeholder="金額" class="myInput" inputmode="numeric" value="${item.amount}" oninput="updateMaintItem(${idx}, 'amount', this.value)">
       <button onclick="removeMaintItemRow(${idx})" style="background:var(--red-d); color:var(--red); border:none; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; cursor:pointer;">✕</button>
     </div>
   `).join('');
@@ -6710,23 +6992,6 @@ window.clickMaintTag = function(tagName, el) {
 
   // 👇 如果還沒亮起，就加上 'on' 讓 CSS 特效生效
   el.classList.add('on');
-
-  const currentKm = pf(document.getElementById('vm-km').value);
-  
-  // 1. 從歷史記錄中尋找該車輛、該項目最後一次設定的「保養間隔」
-  // 邏輯：找到最後一筆含有此 item 且 nextKm > km 的記錄
-  const lastRec = S.vehicleRecs.slice().reverse().find(r => 
-    r.vehicleId === S.selVehicleId && 
-    r.type === 'maintenance' && 
-    (r.items && r.items.includes(tagName)) &&
-    r.nextKm > r.km
-  );
-
-  if (lastRec && currentKm > 0) {
-    const interval = pf(lastRec.nextKm) - pf(lastRec.km);
-    document.getElementById('vm-next-km').value = currentKm + interval;
-    toast(`已根據上次紀錄自動加算 ${interval}km`);
-  }
 
   // 找尋第一個 name 為空的欄位
   const emptyIdx = tempMaintItems.findIndex(t => t.name.trim() === '');
@@ -7040,7 +7305,7 @@ function confirmAddVehRec() {
   } else {
     // 整理明細陣列並防呆
     finalItemDetails = tempMaintItems.filter(t => t.name.trim() !== '' && pf(t.amount) > 0);
-    if (finalItemDetails.length === 0) { toast('請至少輸入一項「保養名稱與對應金額」'); return; }
+    if (finalItemDetails.length === 0) { toast('請至少輸入一項保養名稱與對應金額'); return; }
     
     // 計算總額
     finalAmount = finalItemDetails.reduce((sum, t) => sum + pf(t.amount), 0);
@@ -7053,7 +7318,6 @@ function confirmAddVehRec() {
   runSaveProgress(() => {
     const commonData = { id: editingVehRecId || newId(), vehicleId: S.selVehicleId, type: S.addVehRecType, date: document.getElementById('vr-date').value, time: document.getElementById('vr-time').value, amount: finalAmount }; 
     let specificData = {};
-    const nextKm = pf(document.getElementById('vm-next-km').value);
     
     if (S.addVehRecType === 'fuel') { 
       specificData = { 
@@ -7076,8 +7340,7 @@ function confirmAddVehRec() {
       if (shop && !S.settings.shopHistory.includes(shop)) { S.settings.shopHistory.push(shop); saveSettings(); } 
       specificData = { 
         maintCategory: currentMaintCategory, 
-        km: pf(document.getElementById('vm-km').value),
-        nextKm: nextKm,
+        km: pf(document.getElementById('vm-km').value), 
         items: finalItems,             
         itemDetails: finalItemDetails, 
         shop: shop, 
@@ -7087,8 +7350,8 @@ function confirmAddVehRec() {
     }
     
     const finalRec = { ...commonData, ...specificData }; 
-    if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄，已更新'); } 
-    else { S.vehicleRecs.push(finalRec); toast('✅ 記錄，已新增'); }
+    if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } 
+    else { S.vehicleRecs.push(finalRec); toast('✅ 記錄已新增'); }
     
     editingVehRecId = null; 
     saveVehicleRecs(); 
@@ -7266,7 +7529,7 @@ window.openVehSearchFullscreen = function() {
           <input type="text" class="finp" id="fs-veh-search-kw" value="${currentKw}" placeholder="🔍 搜尋項目、店家或備註..." oninput="doVehSearch(true)" style="flex:1; padding:10px 14px; font-size:15px; border-radius:12px; border:2px solid var(--text-blue); background:#ffffff; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          ${maintList.map(item => `<div class="search-quick-tag" onclick="document.getElementById('fs-veh-search-kw').value='${item}'; doVehSearch(true);">${item}</div>`).join('')}
+          ${maintList.map(item => `<div class="search-quick-tag" onclick="selectSearchTag('${item}', this)">${item}</div>`).join('')}
         </div>
       </div>
 
@@ -7275,6 +7538,7 @@ window.openVehSearchFullscreen = function() {
         <div class="empty-tip">請輸入或點選上方標籤開始搜尋</div>
       </div>
     </div>
+    <div style="height:200px;"></div>
   `;
 
   document.getElementById('sub-body').innerHTML = html;
@@ -7286,9 +7550,35 @@ window.openVehSearchFullscreen = function() {
   }
 };
 
+window.selectSearchTag = function(item, el) {
+  // 1. 偵測目前是「全螢幕模式」還是「一般模式」
+  const isFs = !!document.getElementById('fs-veh-search-kw');
+  const inputId = isFs ? 'fs-veh-search-kw' : 'veh-search-kw';
+  const input = document.getElementById(inputId);
+
+  if (!input) return;
+
+  // 2. 判斷是否已經選中 (切換狀態)
+  const isAlreadyOn = el.classList.contains('on');
+
+  // 3. 清除該標籤容器內所有標籤的選中狀態
+  const parent = el.parentElement;
+  parent.querySelectorAll('.search-quick-tag').forEach(tag => tag.classList.remove('on'));
+
+  if (isAlreadyOn) {
+    // 取消選中
+    input.value = '';
+  } else {
+    // 選中並填入文字
+    el.classList.add('on');
+    input.value = item;
+  }
+
+  // 4. 執行搜尋：帶入正確的模式參數
+  doVehSearch(isFs);
+};
 // 執行車輛保養記錄搜尋與渲染精美時間軸 (全連接線與標籤設計)
 window.doVehSearch = function(isFullScreen = false) {
-  // 👇 根據模式抓取對應的輸入框與結果容器
   const inputId = isFullScreen ? 'fs-veh-search-kw' : 'veh-search-kw';
   const resultId = isFullScreen ? 'fs-veh-search-results' : 'veh-search-results';
 
@@ -7299,18 +7589,45 @@ window.doVehSearch = function(isFullScreen = false) {
 
   const kw = kwEl.value.trim().toLowerCase();
 
-  if (!kw) { resEl.innerHTML = '<div class="empty-tip">請輸入或點選上方標籤開始搜尋</div>'; return; }
+  // 🌟 自動同步標籤的高亮狀態 (.on)
+  // 找到輸入框附近的標籤容器 (通常是父層的下一個兄弟元素)
+  const tagContainer = kwEl.closest('div').nextElementSibling; 
+  if (tagContainer) {
+    tagContainer.querySelectorAll('.search-quick-tag').forEach(tag => {
+      if (kw === tag.textContent.trim().toLowerCase()) {
+        tag.classList.add('on');
+      } else {
+        tag.classList.remove('on');
+      }
+    });
+  }
+
+  // 🌟 [修正點 2]：取得目前里程輸入框的值（如果你有新增這個欄位）
+  const kmId = isFullScreen ? 'fs-veh-search-km' : 'veh-search-km';
+  const kmEl = document.getElementById(kmId);
+  const inputKm = pf(kmEl?.value || 0);
+
+  if (!kw && inputKm <= 0) { 
+    resEl.innerHTML = '<div class="empty-tip">請輸入或點選「上方標籤」開始搜尋</div>'; 
+    return; 
+  }
   
-  // 過濾當前車輛的保養記錄
-  let recs = S.vehicleRecs.filter(r => 
-    r.vehicleId === S.selVehicleId && 
-    r.type === 'maintenance' && 
-    ((r.items && r.items.some(i => i.toLowerCase().includes(kw))) || 
-     (r.note && r.note.toLowerCase().includes(kw)) ||
-     (r.shop && r.shop.toLowerCase().includes(kw)))
-  );
+  // 過濾邏輯
+  let recs = S.vehicleRecs.filter(r => {
+    if (r.vehicleId !== S.selVehicleId || r.type !== 'maintenance') return false;
+
+    // A. 里程優先
+    if (inputKm > 0 && r.nextKm) {
+      return inputKm >= (r.nextKm - 200); // 這裡改用你設定的預警邏輯
+    }
+
+    // B. 關鍵字搜尋
+    const matchKw = (r.items && r.items.some(i => i.toLowerCase().includes(kw))) || 
+                    (r.note && r.note.toLowerCase().includes(kw)) ||
+                    (r.shop && r.shop.toLowerCase().includes(kw));
+    return kw ? matchKw : false;
+  });
   
-  // 依日期與時間由新到舊排序 (大到小)
   recs.sort((a,b) => b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||''));
 
   if (!recs.length) {
@@ -7318,37 +7635,28 @@ window.doVehSearch = function(isFullScreen = false) {
     return;
   }
 
-  // 頂部標題區：追蹤標籤與總筆數 + 虛線
+  // 渲染 HTML (保持你原本的時間軸樣式)
   let html = `
   <div style="background:#ffffff; border-radius:16px; padding:8px 16px; border:2px solid #e2e8f0;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
       <div style="display:flex; align-items:center; letter-spacing:1px; gap:8px;">
         <span style="font-size:16px; font-weight:900; color: #475569;">搜尋</span>
-        <span style="background:#3b82f6; color:#ffffff; padding:2px 14px; border-radius:8px; font-size:16px; font-weight:800;">${safeText(kw)}</span>
+        <span style="background:#3b82f6; color:#ffffff; padding:2px 14px; border-radius:8px; font-size:16px; font-weight:800;">${safeText(kw || inputKm + 'km')}</span>
       </div>
-      <div style="font-size:15px; font-weight:800; color:#475569;">
-        共 <span style="font-family:var(--mono); color: #f97316; font-size:20px; margin:0 2px;">${recs.length}</span> 筆
-      </div>
+      <div style="font-size:15px; font-weight:800; color:#475569;">共 <span style="font-family:var(--mono); color: #f97316; font-size:20px; margin:0 2px;">${recs.length}</span> 筆</div>
     </div>
     <div style="border-bottom: 2.5px dashed #e2e8f0; margin-bottom: 6px;"></div>
-    
-    <!-- 時間軸主體 -->
     <div style="position:relative; padding-left:18px;">
-      <!-- 貫穿的左側灰線 -->
       <div style="position:absolute; left:5px; top:12px; bottom:20px; width:2px; background: #e2e8f0; z-index:1;"></div>`;
       
   recs.forEach((r, idx) => {
+    // ... 這裡是你原本 recs.forEach 內的所有繪製邏輯，請保留 ...
+    // (包括 isLatest, isRepair, baseColor, diffHtml, matchedItems 等等)
     const isLatest = idx === 0;
     const isRepair = r.maintCategory === 'repair';
-    
-    // 👇 依據類別與是否為最新，設定色彩
-    let baseColor = isRepair ? '#3b82f6' : '#10b981'; // 藍 vs 綠
-    
-    // 時間軸圓點與卡片邊框
+    let baseColor = isRepair ? '#3b82f6' : '#10b981';
     const boxBorder = isLatest ? baseColor : '#cbd5e1'; 
     const bottomBg = isLatest ? (isRepair ? '#eff6ff' : '#ebfcf0') : '#f8fafc'; 
-    
-    // 下方標籤顏色
     const capLeftBg = isLatest ? (isRepair ? '#2563eb' : '#059669') : '#475569'; 
     const capRightBg = isLatest ? (isRepair ? '#dbeafe' : '#beffde') : '#f1f5f9'; 
     const capRightText = isLatest ? (isRepair ? '#1d4ed8' : '#059669') : '#334155';
@@ -7358,28 +7666,7 @@ window.doVehSearch = function(isFullScreen = false) {
       const olderRec = recs[idx + 1];
       const kmDiff = pf(r.km) - pf(olderRec.km);
       const daysDiff = Math.round((new Date(r.date) - new Date(olderRec.date)) / 86400000);
-      
-      diffHtml = `
-        <div style="display:flex; flex-direction:column; align-items:center; position:relative; z-index:2;">
-          <div style="width:2px; height:8px; background: ${baseColor};"></div>
-
-          <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:8px; display:inline-flex; align-items:stretch; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-            <div style="padding:1px 10px; display:flex; align-items:center;">
-              <span style="font-size:13px; font-weight:900; color:#3b82f6;">間隔</span>
-            </div>
-            <div style="width:2px; background:#e2e8f0;"></div>
-            <div style="padding:1px 10px; display:flex; align-items:baseline; gap:3px;">
-              <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #10b981;">${fmt(kmDiff)}</span>
-              <span style="font-size:11px; font-weight:900; color: #475569;">km</span>
-            </div>
-            <div style="width:2px; background:#e2e8f0;"></div>
-            <div style="padding:1px 10px; display:flex; align-items:baseline; gap:3px;">
-              <span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ea580c;">${daysDiff}</span>
-              <span style="font-size:11px; font-weight:900; color: #475569;">天</span>
-            </div>
-          </div>
-          <div style="width:2px; height:4px; background: #cbd5e1;"></div>
-        </div>`;
+      diffHtml = `<div style="display:flex; flex-direction:column; align-items:center; position:relative; z-index:2;"><div style="width:2px; height:8px; background: ${baseColor};"></div><div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:8px; display:inline-flex; align-items:stretch; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.02);"><div style="padding:1px 10px; display:flex; align-items:center;"><span style="font-size:13px; font-weight:900; color:#3b82f6;">間隔</span></div><div style="width:2px; background:#e2e8f0;"></div><div style="padding:1px 10px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #10b981;">${fmt(kmDiff)}</span><span style="font-size:11px; font-weight:900; color: #475569;">km</span></div><div style="width:2px; background:#e2e8f0;"></div><div style="padding:1px 10px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:900; color: #ea580c;">${daysDiff}</span><span style="font-size:11px; font-weight:900; color: #475569;">天</span></div></div><div style="width:2px; height:4px; background: #cbd5e1;"></div></div>`;
     }
 
     let matchedItems = (r.items || []).filter(i => i.toLowerCase().includes(kw));
@@ -7387,23 +7674,14 @@ window.doVehSearch = function(isFullScreen = false) {
     const itemText = matchedItems.length > 0 ? safeText(matchedItems.join('、')) : '未填寫';
 
     html += `
-      <!-- 卡片外層，包含圓點與縮排 -->
       <div style="position:relative; z-index:2; margin-bottom:${diffHtml ? '0' : '10px'};">
         <div style="position:absolute; left:-18px; top:12px; width:14px; height:14px; border-radius:50%; background:${boxBorder}; border:2px solid #ffffff; box-shadow:0 0 0 1px ${boxBorder};"></div>
-        
         <div onclick="openAddVehRec('${safeText(r.id)}')" style="border:2.5px solid ${boxBorder}; border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:0 4px 8px rgba(0,0,0,0.03); transition:transform 0.1s;">
           <div style="background: rgb(236, 241, 244); padding:8px 12px; display:flex; align-items:center; border-bottom:2.5px solid #cbd5e1;">
-            <div style="flex:1; text-align:left; font-family:var(--mono); font-size:14px; font-weight:900; color: #334155;">
-              ${r.date.replace(/-/g, '/')}
-            </div>
-            <div style="flex:1; text-align:center; font-family:var(--mono); font-size:18px; font-weight:900; color: #2a69fc; line-height:1; letter-spacing:1px;">
-              ${fmt(r.km)}<span style="font-size:11px; color: #282a2d; margin-left:2px;"> km</span>
-            </div>
-            <div style="flex:1; text-align:right; height:18px;">
-              ${isLatest ? `<span style="background: #10b981; color:#ffffff; padding:2px 8px; border-radius:6px; font-size:14px; font-weight:750; letter-spacing:1px;">最新</span>` : ''}
-            </div>
+            <div style="flex:1; text-align:left; font-family:var(--mono); font-size:14px; font-weight:900; color: #334155;">${r.date.replace(/-/g, '/')}</div>
+            <div style="flex:1; text-align:center; font-family:var(--mono); font-size:18px; font-weight:900; color: #2a69fc;">${fmt(r.km)}<span style="font-size:11px; color: #282a2d; margin-left:2px;"> km</span></div>
+            <div style="flex:1; text-align:right; height:18px;">${isLatest && !kw ? `<span style="background: #10b981; color:#ffffff; padding:2px 8px; border-radius:6px; font-size:14px; font-weight:750; letter-spacing:1px;">最新</span>` : ''}</div>
           </div>
-          
           <div style="background:${bottomBg}; padding:7px 12px; display:flex; justify-content:flex-start;">
             <div style="display:inline-flex; border-radius:6px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.06);">
               <span style="background:${capLeftBg}; color: #ffffff; font-size:14px; font-weight:750; padding:4px 12px; letter-spacing:0.5px;">${itemText}</span>
@@ -7412,8 +7690,7 @@ window.doVehSearch = function(isFullScreen = false) {
           </div>
         </div>
       </div>
-      ${diffHtml}
-    `;
+      ${diffHtml}`;
   });
 
   html += `</div></div>`;
