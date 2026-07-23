@@ -385,7 +385,7 @@
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         
         <!-- 左上：新增車輛 -->
-        <div style="flex: 1; display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+        <div style="flex: 1; display:flex; flex-direction:column; align-items:flex-start; gap:4px;margin-top:-10px;">
           <div style="display:flex; flex-direction:column; align-items:center; width:60px;">
             <span style="font-size:11px; font-weight:700; color:var(--text-red); margin-bottom:3px;">新增車輛</span>
             <button onclick="openAddVehicle()" title="新增車輛" style="width:46px; height:46px; border-radius:50%; background:#e0e7ff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
@@ -397,7 +397,7 @@
 
         <!-- 中間：車輛管理 + 月份導航 -->
         <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
-          <div class="pg-title" style="margin:0;">車輛管理</div>
+          <div class="pg-title" style="margin:-10px 0 -5px 0;">車輛管理</div>
           <div class="veh-month-nav">
             <button class="veh-month-btn" onclick="changeVehMonth(-1)">◀</button>
             <div id="veh-month-label" class="veh-month-text"></div>
@@ -406,7 +406,7 @@
         </div>
 
         <!-- 右上：車輛清單 (綠色摺疊按鈕與文字，精準放置於新增紀錄正上方) -->
-        <div style="flex: 1; display:flex; flex-direction:column; align-items:flex-end; gap:4px; padding-top:2px; margin-top:27px;">
+        <div style="flex: 1; display:flex; flex-direction:column; align-items:flex-end; gap:4px; padding-top:2px;">
           <span style="font-size:11px; font-weight:800; color:var(--text-blue); margin-right:3px;">車輛清單</span>
           <div id="veh-selector-toggle-btn" onclick="toggleVehSelector()" style="background: #bbf7d0; color: #1d5d48; font-size:26px; font-weight:900; width:39px; height:39px; border:1.5px solid #255b0c; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.3s; transform: rotate(180deg);">▲</div>
         </div>
@@ -415,10 +415,10 @@
       <!-- ================= 底部第二排 ================= -->
       <div style="display:flex; justify-content:space-between; align-items:flex-end;">
         <!-- 左下：選擇的車輛 (文字在上，標籤在下) -->
-        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;margin:-15px 0 0 0;">
           <span style="font-size:11px; font-weight:800; color:var(--chart-text); margin-left:4px;">選擇的車輛</span>
-          <div style="background: linear-gradient(135deg, hsl(312, 100%, 80%), hsl(55, 100%, 99%), hsl(0, 0%, 100%)); border:1.5px solid #138c9c; padding: 2px 6px; border-radius: 18px; display:flex; align-items: center; justify-content:center; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
-            <div id="veh-current-info" style="display:flex; align-items: center; justify-content:center; text-align:center; gap:4px; flex-wrap:wrap;"></div>
+          <div style="background:linear-gradient(90deg,#ff99eb 0%,#ff99eb 50%,#fffbcc 51%,#fffbcc 100%); border:1.5px solid #138c9c; padding:2px 6px; border-radius:18px; display:flex; align-items:center; justify-content:center; text-align:center; max-width:500px; min-width:190px; overflow:hidden;">
+            <div id="veh-current-info" style="display:flex; align-items: center; justify-content: flex-start; text-align:center; gap:4px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; max-width:250px;"></div>
           </div>
         </div>
         <!-- 右下：新增記錄按鈕（24px 小尺寸 + 邊框彩色漸層） -->
@@ -433,6 +433,7 @@
 
       <!-- 包裝層以支援折疊動畫 -->
       <div id="veh-selector-wrapper" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease, opacity 0.3s ease; opacity:0;">
+        <div style="border-top:2px dashed #12d775; margin:5px 0 2px 0;"></div>
         <div id="veh-selector-container" style="margin-bottom:16px; min-height:80px;"></div>
       </div>
 
