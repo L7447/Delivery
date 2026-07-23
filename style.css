@@ -1,7 +1,6 @@
 /* ══════════════════════════════════════════════════════
    外送記錄 App — style.css (終極乾淨整理版)
    ══════════════════════════════════════════════════════ */
-
 :root {
   --bg: #f8fafc; 
   --sf: #ffffff; 
@@ -35,7 +34,7 @@
   --gold: #f59e0b;
   --gold-d: rgba(245,158,11,0.1);
 
-  --mono: 'SF Mono', ui-monospace, 'Menlo', monospace;  
+  --mono: 'SF Mono', ui-monospace, 'Menlo', monospace;
   --title: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;   
   --sans: -apple-system, 'SF Pro Text', 'Noto Sans TC', 'Helvetica Neue', sans-serif; 
   --rs: 10px;
@@ -67,43 +66,20 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 /* ══ 3. 彈出視窗與毛玻璃頂部 ══ */
 .overlay-page { position: fixed; inset: 0; background: var(--overlay-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 200; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow: hidden; pointer-events: none; }
 .overlay-page.show { transform: translateY(0); pointer-events: auto; }
-.top-bar { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  padding: 16px 16px 7px; /* 統一內外距，與下方內容距離 7px */
-  border-bottom: 1px solid var(--border); 
-  flex-shrink: 0; 
-  background: #ffffff; /* 統一白色背景 */
-  position: relative;
-}
-.top-bar h2 { 
-  font-size: 24px; 
-  font-weight: 700; 
-  font-family: var(--title); 
-  color: #2563eb; /* 統一為藍色 */
-  margin: 0;
-  position: absolute;left: 50%;transform: translateX(-50%);padding: 0 40px;text-align: center;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;
-}
-.bar-btn { width: 32px; height: 32px; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; padding: 0; outline: none; }
-.overlay-body { flex: 1; overflow-y: auto; padding: 5px; -webkit-overflow-scrolling: touch; }
-.fixed-header { 
-  padding: 16px 16px 7px; /* 頂部 16px、左右 16px、與下方內容距離 7px */
-  flex-shrink: 0; 
-  background: #ffffff; /* 統一白色背景 */
-  z-index: 20; 
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05); 
-}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 7px;/* 統一內外距，與下方內容距離 7px */
+ border-bottom:1px solid var(--border);flex-shrink:0;background:#ffffff;/* 統一白色背景 */
+ position:relative;}
+.top-bar h2{font-size:24px;font-weight:700;font-family:var(--title);color:#2563eb;/* 統一為藍色 */
+ margin:0;position:absolute;left:50%;transform:translateX(-50%);padding:0 40px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-btn{width:32px;height:32px;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;padding:0;outline:none;}
+.overlay-body{flex:1;overflow-y:auto;padding:5px;-webkit-overflow-scrolling:touch;}
+.fixed-header{padding:16px 16px 7px;/* 頂部 16px、左右 16px、與下方內容距離 7px */
+ flex-shrink:0;background:#ffffff;/* 統一白色背景 */
+ z-index:20;border-bottom:1px solid rgba(0,0,0,0.05);}
 
 /* ══ 4. 共用 UI 元件 ══ */
-.pg-title { 
-  font-family: var(--title); 
-  font-size: 24px; 
-  font-weight: 700; 
-  text-align: center; 
-  margin: 0 0 5px 0; /* 標題與下方切換按鈕距離 5px */
-  color: var(--t1); 
-}
+.pg-title{font-family:var(--title);font-size:24px;font-weight:700;text-align:center;margin:0 0 5px 0;/* 標題與下方切換按鈕距離 5px */
+ color:var(--t1);}
 .sec-title { font-size: 11px; font-weight: 600; color: var(--t3); letter-spacing: .8px; margin-bottom: 6px; }
 .mbtn { width: 36px; height: 36px; border-radius: 12px; background: var(--sf); border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--acc); font-weight: 900; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
 .mbtn:active { transform: translateY(2px); background: var(--sf2); }
@@ -162,16 +138,9 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 }
 /* 稍微放大一點點讓軌道看得更清楚 */
 .punch-dot-new { width: 16px; height: 16px; border-radius: 50%; background: #e2e8f0; }
-.punch-dot-new.online { 
-  background: transparent; 
-  /* 產生圓環軌道 */
-  border: 3px solid rgba(16, 185, 129, 0.2); 
-  border-top-color: #10b981; 
-  border-right-color: #10b981; 
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
-  /* 均速持續旋轉 */
-  animation: spinRing 0.8s linear infinite; 
-}
+.punch-dot-new.online{background:transparent;/* 產生圓環軌道 */
+ border:3px solid rgba(16,185,129,0.2);border-top-color:#10b981;border-right-color:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.4);/* 均速持續旋轉 */
+ animation:spinRing 0.8s linear infinite;}
 .punch-btn-right { padding: 7px 18px; border-radius: 12px; font-size: 16px; font-weight: 750; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
 .punch-btn-right:active { transform: scale(0.95); }
 .btn-go-online { background: var(--green); color: #fff; box-shadow: 0 4px 12px rgba(34,197,94,0.25); }
@@ -232,89 +201,32 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 #fc-dow { padding-top: 1px; }
 .fc-dow-cell { text-align: center; font-size: 13px; font-weight: 750; color: #00b6d2; padding: 0.5px 0; letter-spacing: 1.5px; }
 /* 日曆網格底板 */
-#fc-grid { 
-  background: var(--border); 
-  display: grid; 
-  grid-template-columns: repeat(7, 1fr); 
-  gap: 1px; 
-  border-top: 1px solid var(--border); 
-  border-bottom: 1px solid var(--border); 
-  padding: 0; 
-  grid-auto-rows: 1fr; 
-}
+#fc-grid{background:var(--border);display:grid;grid-template-columns:repeat(7,1fr);gap:1px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;grid-auto-rows:1fr;}
 /* 單個日曆格子 */
-.fc-cell { 
-  background: var(--sf); 
-  display: flex; 
-  flex-direction: column; 
-  padding: 4px; 
-  min-height: 80px; /* 拉高格子，確保底部的色塊不會擠壓到日期 */
-  position: relative; 
-}
-.fc-cell.empty { background: transparent; }
+.fc-cell{background:var(--sf);display:flex;flex-direction:column;padding:4px;min-height:80px;/* 拉高格子，確保底部的色塊不會擠壓到日期 */
+ position:relative;}
+.fc-cell.empty{background:transparent;}
 /* 日期數字 */
-.fc-date { 
-  font-family: var(--sans); 
-  font-size: 13px; 
-  font-weight: 700; 
-  color: var(--t2); 
-  margin-bottom: auto; 
-  line-height: 1; 
-  padding: 2px;
-}
+.fc-date{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--t2);margin-bottom:auto;line-height:1;padding:2px;}
 .fc-cell.empty .fc-date { color: var(--t3); opacity: 0.5; }
 /* 標記「今天」的日期圓圈與背景 */
 .fc-cell.today { background: var(--bg-input); }
-.fc-cell.today .fc-date { 
-  color: #fff; 
-  background: #2563eb; 
-  width: 24px; 
-  height: 24px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  border-radius: 50%; 
-  margin: -2px 0 0 -2px; 
-}
+.fc-cell.today .fc-date{color:#fff;background:#2563eb;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:-2px 0 0 -2px;}
 /* 收入熱力圖色塊 (置底滿版) */
-.fc-amt { 
-  font-family: var(--mono); 
-  font-size: 13px; 
-  margin-top: auto; /* 自動把色塊推到格子最底部 */
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
-  line-height: 1.2;
-}
+.fc-amt{font-family:var(--mono);font-size:13px;margin-top:auto;/* 自動把色塊推到格子最底部 */
+ text-align:center;width:100%;box-sizing:border-box;line-height:1.2;}
 
 /* ══ 11. 車輛管理：月份導航與標籤 ══ */
-.veh-month-nav { 
-  background: #ffffff; 
-  border-radius: 99px; 
-  padding: 6px; 
-  display: inline-flex; align-items: center; 
-  box-shadow: 0 8px 16px rgba(0,0,0,0.03); 
-  border: 1.5px solid #e2e8f0; 
+.veh-month-nav{background:#ffffff;border-radius:99px;padding:6px;display:inline-flex;align-items:center;box-shadow:0 8px 16px rgba(0,0,0,0.03);border:1.5px solid #e2e8f0;}
+.veh-month-btn{width:34px;height:34px;border-radius:50%;border:none;outline:none;background:#eff6ff;color:#2563eb;font-size:26px;font-weight:900;cursor:pointer;transition:0.2s;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;/* 消除點擊透明方框 */
 }
-.veh-month-btn { 
-  width: 34px; height: 34px; border-radius: 50%; border: none; outline: none;
-  background: #eff6ff; color: #2563eb; font-size: 26px; font-weight: 900; 
-  cursor: pointer; transition: 0.2s; 
-  display: flex; align-items: center; justify-content: center;
-  -webkit-tap-highlight-color: transparent; /* 消除點擊透明方框 */
-}
+
 @keyframes ripplePulse {
   0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
   100% { box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); }
 }
-.veh-month-btn:active { 
-  background: #2563eb; color: #ffffff; 
-  animation: ripplePulse 0.4s ease-out forwards;
-}
-.veh-month-text { 
-  font-size: 15px; font-weight: 900; color: #1e293b; 
-  padding: 0 16px; min-width: 115px; text-align: center; 
-}
+.veh-month-btn:active{background:#2563eb;color:#ffffff;animation:ripplePulse 0.4s ease-out forwards;}
+.veh-month-text{font-size:15px;font-weight:900;color:#1e293b;padding:0 16px;min-width:115px;text-align:center;}
 
 .vr-chip { padding: 4px 8px; font-size: 11px; font-weight: 800; border-radius: 6px; display: inline-flex; align-items: center; white-space: nowrap; }
 .chip-item  { background: #eff6ff; color: #4f46e5; border: 1px solid #c7d2fe; }
@@ -363,7 +275,6 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
   transition: opacity 0.5s ease, transform 0.1s ease;
   letter-spacing: 1.3px; line-height: 45px;
 }
-
 #toast.show {
   opacity: 1; transform: translate(-50%, 50%) scale(1) !important;
   animation: jellyBounce 0.7s cubic-bezier(0.25, 1.5, 0.5, 1) forwards;
@@ -380,14 +291,9 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
    🌟 背景模糊連動特效 (排除 Toast 本身)
    ==================================================== */
 /* 讓 APP 內「除了 Toast 以外」的所有元素都具備模糊漸變能力 */
-#app > *:not(#toast) {
-  transition: filter 0.4s ease;
-}
-
+#app > *:not(#toast){transition:filter 0.4s ease;}
 /* 當 Toast 出現 (.show) 時，只模糊其他的元素，Toast 本身保持清晰！ */
-body:has(#toast.show) #app > *:not(#toast) {
-  filter: blur(5px);
-}
+body:has(#toast.show) #app > *:not(#toast){filter:blur(5px);}
 
 #confirm-msg { font-size: 16px; font-weight: 700; color: var(--t1); line-height: 1.6; margin-bottom: 24px; text-align: center; }
 
@@ -409,26 +315,16 @@ body:has(#toast.show) #app > *:not(#toast) {
 /* ══════════════════════════════════════════════════════
    模組化共用樣式 (天氣標籤、平台標籤、全新 Auth 介面)
    ══════════════════════════════════════════════════════ */
-
 /* ── 1. 共用平台圓角標籤 (Platform Badge) ── */
 .plat-badge{color:#fff;font-size:12px;font-weight:700;padding:5px 5px;border-radius:30px;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
 
 /* ── 2. 天氣標籤模組化 (多彩設計 & 選中特效) ── */
 .w-tag, .ct-tag { padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.3s; opacity: 0.65; filter: grayscale(20%); }
-.ct-tag { 
-  font-size: 14px; 
-  font-weight: 800; 
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
-  color: #0369a1; 
-  border: 1.5px solid #bae6fd; 
-  margin-left: 5px; /* 👈 左邊間隔加 5px */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
+.ct-tag{font-size:14px;font-weight:800;background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);color:#0369a1;border:1.5px solid #bae6fd;margin-left:5px;/* 👈 左邊間隔加 5px */
+ box-shadow:0 2px 4px rgba(0,0,0,0.05);}
 .w-tag:hover, .ct-tag:hover { opacity: 0.85; }
 .w-tag:active { transform: scale(0.92); filter: brightness(0.9); }
 .ct-tag:active { transform: translateY(0) scale(0.92); filter: brightness(0.9); }
-
 /* 各別天氣顏色 */
 .w-rain    { background: #e0f2fe; color: #0284c7; border: 1.5px solid #bae6fd; }
 .w-hot     { background: #ffedd5; color: #ea580c; border: 1.5px solid #fed7aa; }
@@ -436,13 +332,8 @@ body:has(#toast.show) #app > *:not(#toast) {
 .w-cold    { background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; }
 .w-flood   { background: #ccfbf1; color: #0d9488; border: 1.5px solid #99f6e4; }
 .w-typhoon { background: #fce7f3; color: #db2777; border: 1.5px solid #fbcfe8; }
-
 /* 🌟 選中狀態特效 (天氣) */
-.w-tag.on { 
-  opacity: 1; filter: grayscale(0%);
-  transform: scale(1.05); font-weight: 800;
-  box-shadow: 0 4px 10px currentColor; 
-}
+.w-tag.on{opacity:1;filter:grayscale(0%);transform:scale(1.05);font-weight:800;box-shadow:0 4px 10px currentColor;}
 
 /* 🌟 現金小費專屬備註標籤 (色彩豐富版) */
 .ct-tag { font-size: 14px; font-weight: 800; margin-left: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.3s; opacity: 0.65; filter: grayscale(30%); }
@@ -527,59 +418,27 @@ input:checked + .slider:before { transform: translateX(20px); }
   animation: pageFlipRight 2s forwards cubic-bezier(0.25, 0.1, 0.25, 1) !important;
 }
 @keyframes pageFlipRight {
-  0% { 
-    transform: perspective(1200px) rotateY(0deg) translateX(0); 
-    opacity: 1; 
-  }
+  0%{transform:perspective(1200px) rotateY(0deg) translateX(0);opacity:1;}
   15% { 
     /* 前段製造「提起來停留」的感覺 */
-    transform: perspective(1200px) rotateY(-5deg) translateX(2%); 
-    opacity: 1; 
-  }
+    transform:perspective(1200px) rotateY(-5deg) translateX(2%);opacity:1;}
+
   100% { 
     /* 後段向右翻轉並滑出畫面 */
-    transform: perspective(1200px) rotateY(-70deg) translateX(120%); 
-    opacity: 0; 
-  }
+    transform:perspective(1200px) rotateY(-70deg) translateX(120%);opacity:0;}
 }
 
 /* ══ 1. 霓虹微光呼吸感 (Neon Glow) ══ */
-.item-chip { 
-  padding: 6px 12px; 
-  border-radius: 12px; 
-  border: 1.5px solid #334155; 
-  background: #1e293b; 
-  color: #94a3b8; 
-  font-size: 13px; 
-  font-weight: 700; 
-  cursor: pointer; 
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-  white-space: nowrap; 
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-}
+.item-chip{padding:6px 12px;border-radius:12px;border:1.5px solid #334155;background:#1e293b;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);}
 /* 點擊加入時的動態效果 */
-.item-chip:active { 
-  transform: scale(0.92); 
-}
+.item-chip:active{transform:scale(0.92);}
 /* 被選中/高亮狀態 */
-.item-chip.on { 
-  color: #ec4899; 
-  background: #fdf2f8; 
-  border: 1.5px solid #f472b6; 
-  box-shadow: 0 0 12px rgba(236, 72, 153, 0.4), inset 0 0 8px rgba(255,255,255,0.8); 
-}
+.item-chip.on{color:#ec4899;background:#fdf2f8;border:1.5px solid #f472b6;box-shadow:0 0 12px rgba(236,72,153,0.4),inset 0 0 8px rgba(255,255,255,0.8);}
+
 
 /* ══ 搜尋彈窗：快速標籤樣式 ══ */
-.search-quick-tag {
-  font-size: 12px;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1.5px solid transparent; /* 邊框顏色由 JS 動態指定 */
-  cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-}
+.search-quick-tag{font-size:12px;font-weight:800;padding:4px 10px;border-radius:8px;border:1.5px solid transparent;/* 邊框顏色由 JS 動態指定 */
+ cursor:pointer;transition:transform 0.2s cubic-bezier(0.4,0,0.2,1),box-shadow 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.03);}
 .search-quick-tag:active{transform:scale(0.9);box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);}
 
 /* ══ 首頁日程表：今日專屬跑馬燈雷射外框 ══ */
@@ -972,9 +831,7 @@ input.myInput:focus::placeholder{color:transparent;opacity:0;}
 .myInput1::placeholder{color:#00ff66;font-size:20px;font-weight:850;letter-spacing:1px;opacity:1;}
 input.myInput1:focus::placeholder{color:transparent;opacity:0;}
 
-
 /* ════ 🎁 獎勵子頁籤：智慧滑動設計 ════ */
-/* 🎁 獎勵專用子頁籤樣式 */
 .reward-sub-tabs{position:relative;display:flex;background:rgba(0,0,0,0.08);/* 灰底背景 */
  border-radius:14px;padding:4px;/* 容器內距 */
  isolation:isolate;}
