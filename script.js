@@ -1646,16 +1646,21 @@ function renderHome() {
       const dow = ['日','一','二','三','四','五','六'][dateObj.getDay() || 0];
 
       // === 今日概況 Top 區塊 ===
-      let topHtml = `
+      topHtml = `
         <div style="padding:10px 16px 0;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <div style="font-family:var(--title);font-size:24px;font-weight:800;color:var(--t1);letter-spacing:1.5px;">今日概況</div>
-            <div style="font-size:14px;color:var(--t2);font-weight:500;background:var(--sf);padding:6px 12px;border-radius:20px;border:1px solid var(--border);font-family:var(--mono);">
-              <span style="font-size:16px;color:#ff4400;font-weight:900;">${dateObj.getFullYear()}</span> 年 
-              <span style="font-size:16px;color:#ff4400;font-weight:900;">${dateObj.getMonth()+1}</span> 月 
-              <span style="font-size:16px;color:#ff4400;font-weight:900;">${dateObj.getDate()}</span> 日（星期 <span style="font-size:16px;color:#ff4400;font-weight:900;">${dow}</span> ）
+
+            <div style=" display:flex;align-items:center;font-size:14px;color:var(--t2);font-weight:600;background:var(--sf);padding:3px 12px;border-radius:20px;border:2px solid var(--border);font-family:var(--mono);gap:4px;" >
+              <span style="font-size:18px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 1px 3px 0px;">${dateObj.getFullYear()}</span>年
+              <span style="font-size:18px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 0px 3px 2px;">${dateObj.getMonth()+1}</span>月
+              <span style="font-size:18px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 0px 3px 2px;">${dateObj.getDate()}</span>日
+              <span style="border-radius:20px;border:1px solid var(--t3);padding:3px 10px;display:flex;align-items:center;line-height:1;margin-left:5px;"> 星期 
+              <span style="font-size:18px;color:var(--text-blue);font-weight:900;margin-left:5px;">${dow}</span>
+              </span>
             </div>
-          </div>`;
+          </div>
+      `;
 
       // 打卡狀態卡片
       const activePunch = S.records.find(r => r.isPunchOnly && !r.punchOut);
@@ -1663,7 +1668,7 @@ function renderHome() {
       let punchStatus = isPunched ? '上線中' : '離線';
       
       topHtml += `
-        <div class="punch-card-new" style="margin:8px 0 8px 0;">
+        <div class="punch-card-new" style="margin:4px 0 6px 0;">
           <div class="punch-status-left">
             <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
             <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatus}</span>
@@ -1687,7 +1692,7 @@ function renderHome() {
         } else {
           bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
           bottomHtml += `
-            <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 7px 10px; margin-bottom: -2px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+            <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 7px 10px; margin-bottom: -10px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
               <!-- 頂部四色漸層飾條 -->
               <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #16a34a, #ea580c, #0284c7, #475569);"></div>
               
@@ -3890,8 +3895,8 @@ function renderReportWatermark() {
 
   if (S.tab !== 'report') return;
 
-  // 🌟 [正式版邏輯]：未登入或沒有 UID 則不顯示並直接結束
-  if (!USER.loggedIn || !USER.uid || S.tab !== 'report') return;
+  // 🌟 [修正重點]：若 USER.removeWatermark 為 true，則不顯示浮水印
+  if (!USER.loggedIn || !USER.uid || S.tab !== 'report' || USER.removeWatermark === true) return;
 
   const wmContent = `UID: #${USER.uid}`;
 
@@ -5624,12 +5629,13 @@ function renderNetProfitSubContent() {
         <div style="display:flex; align-items:center; gap:3px; background:#f1f5f9; padding:2px 8px; border-radius:15px; border:1px solid #cbd5e1;">
           <button class="btn btn2" style="width:32px; height:32px; font-size:28px; border:1px solid #fff;border-radius:50%;" onclick="${navFunc}(-1)">◀</button>
           <span style="font-size:13px; font-weight:800; min-width:85px; text-align:center;">
-             ${S.rptY}<small>年</small>${S.rptExpTimeMode==='year'?'':(S.rptM+'<small>月</small>')}
+             <!-- 👇 年份數字：藍色 + 間距 -->
+             <span style="color:#2563eb;margin:0 4px;font-size:14px;">${S.rptY}</span><small>年</small>${S.rptExpTimeMode==='year' ? '' : `<!-- 👇 月份數字：藍色 + 間距 --><span style="color:#2563eb;margin:0 4px;font-size:14px;">${S.rptM}</span><small>月</small>`}
           </span>
           <button class="btn btn2" style="width:32px; height:32px; font-size:28px; border:1px solid #fff;border-radius:50%;" onclick="${navFunc}(1)">▶</button>
         </div>
         <button onclick="toggleExpTimeMode()" style="padding:6px 12px; border-radius:12px; border:1.5px solid #bfdbfe; background:#eff6ff; color:#2563eb; font-size:11px; font-weight:900;">
-          ${S.rptExpTimeMode==='year'?'切換按月':'切換全年'}
+          ${S.rptExpTimeMode==='year'?'切換「月」':'切換「全年」'}
         </button>
         <select onchange="S.rptExpFilter=this.value; renderReport();" style="border:1.5px solid #cbd5e1; background:#ffffff; font-size:11px; font-weight:800; color:#475569; padding:5px; border-radius:10px; outline:none; max-width:90px;">
           ${['全部', '保險', '裝備', '規費', '貸款、分期'].map(c => `<option value="${c}" ${S.rptExpFilter===c?'selected':''}>${c}</option>`).join('')}
@@ -5687,13 +5693,13 @@ function renderActualExpenseList(totalArea, listArea) {
           ${rptYear}${rptMonth}
         </span>
 
-        <span style="font-size: 15px; font-weight: 800; color: #94a3b8; border-left: 1px solid #475569; padding-left:10px;">
+        <span style="font-size: 16px; font-weight: 800; color: #b1c2da; border-left: 2px solid #475569; padding-left:10px;">
           支出累計
         </span>
       </div>
 
       <span style="font-family: var(--mono); font-size: 26px; font-weight: 1000; color: #fbbf24; text-shadow: 0 0 10px rgba(251,191,36,0.3);">
-        <span style="font-size:18px;margin-right:3px;">$</span>${fmt(total)}
+        <span style="font-size:14px;margin-right:6px;">$</span>${fmt(total)}
       </span>
     </div>
   `;
@@ -5706,7 +5712,7 @@ function renderActualExpenseList(totalArea, listArea) {
       list.map(e => {
         const icons = {'保險':'🛡️','裝備':'📦','規費':'📜','貸款、分期':'💳'};
         return `
-          <div style="background:#ffffff; border-radius:18px; border:1px solid #e2e6eb; padding:14px; display:grid; grid-template-columns: 45px 1fr auto; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); margin-bottom:8px;">
+          <div style="background:#ffffff;border-radius:18px;border:1.5px solid #e2e6eb;padding:10px 14px;display:grid;grid-template-columns:45px 1fr auto;align-items:center;margin-bottom:5px;">
             <!-- 圖示區 -->
             <div style="width:40px; height:40px; background:#f8fafc; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px;">
               ${icons[e.category] || '💸'}
@@ -5715,7 +5721,7 @@ function renderActualExpenseList(totalArea, listArea) {
             <div style="padding-left:12px; overflow:hidden;">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
                 <span style="font-size:15px; font-weight:800; color:#1e293b;">${e.category}</span>
-                <span style="background:#eff6ff; color:#2563eb; font-size:10px; font-weight:800; padding:2px 10px; border-radius:20px;">${e.date.substring(5)}</span>
+                <span style="background: #e1eeff; color:#2563eb; font-size:12px; font-weight:900; padding:3px 10px; border-radius:20px;margin-left:5px;letter-spacing:0.8px;">${e.date.substring(5)}</span>
               </div>
               <div style="font-size:12px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.note || '無備註'}</div>
             </div>
@@ -5758,9 +5764,11 @@ function renderNetProfitStats(container) {
 
   let statusBadge = '';
   if (totalInc > 0) {
-    statusBadge = `<div style="margin-bottom:12px; display:inline-flex; align-items:center; gap:8px; background:${netProfit >= 0 ? '#f0fdf4' : '#fef2f2'}; padding:6px 16px; border-radius:16px; border:2px solid ${netProfit >= 0 ? '#16a34a' : '#ef4444'};">
+    statusBadge = `<div style="margin-bottom:16px; display:inline-flex; align-items:center; gap:8px; background:${netProfit >= 0 ? '#f0fdf4' : '#fef2f2'}; padding:6px 16px; border-radius:16px; border:2px solid ${netProfit >= 0 ? '#37e075' : '#f55f5f'};">
          <span style="font-size:16px;">${netProfit >= 0 ? '🎉' : '⚠️'}</span>
-         <span style="font-size:15px; font-weight:900; color:${netProfit >= 0 ? '#16a34a' : '#ef4444'};">${netProfit >= 0 ? '目前為獲利狀態' : '目前為虧損狀態'}</span>
+         <span style="font-size:13px; font-weight:700; color:#000000;letter-spacing:0.6px;">
+            目前為<span style="font-weight:750;font-size:15px;margin:0 2px;color:${netProfit >= 0 ? '#088737' : '#ff0000'};">${netProfit >= 0 ? '獲利' : '虧損'}</span>狀態
+         </span>
       </div>`;
   }
 
@@ -5772,38 +5780,38 @@ function renderNetProfitStats(container) {
 
   // 👈 [需求 1]：補回區間總淨利的卡片框線設計
   container.innerHTML = `
-    <div style="background:#fff; border:3px solid #cbd5e1; border-radius:24px; padding:24px 16px; text-align:center; margin-bottom:12px; box-shadow:0 8px 20px rgba(0,0,0,0.02);">
+    <div style="background:#fff; border:3px solid #cbd5e1; border-radius:24px; padding:10px 16px 16px 16px; text-align:center; margin-bottom:10px;">
       ${statusBadge}
-      <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:4px;">💰 區間總淨利 (收入－總支出)</div>
-      <div style="font-family: var(--mono); font-size: 38px; font-weight: 1000; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};">$ ${fmt(netProfit)}</div>
+      <div style="font-size:15px; font-weight:800; color:#64748b; margin-bottom:12px;">💰 區間總淨利 (收入－總支出)</div>
+      <div style="font-family: var(--mono); font-size: 36px; font-weight: 1000; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};"><span style="font-size:18px;margin-right:6px;">$</span>${fmt(netProfit)}</div>
     </div>
 
-    <div style="background:linear-gradient(135deg, #16a34a, #10b981); border-radius:16px; padding:12px; display:flex; justify-content:space-between; align-items:center; margin: 15px 0; box-shadow:0 4px 12px rgba(22,163,74,0.1);">
-       <span style="font-weight:900; color:#fff; font-size:15px;">跑單總收入</span>
-       <span style="font-family:var(--mono); font-weight:900; font-size:18px; color:#fff;">$ ${fmt(totalInc)}</span>
+    <div style="background:#16a34a;border-radius:16px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;margin:8px 0;">
+       <span style="font-weight:700; color:#fff; font-size:16px;">外送總收入</span>
+       <span style="font-family:var(--mono); font-weight:800; font-size:18px; color:#fff;"><span style="font-size:11px;margin-right:6px;">$</span>${fmt(totalInc)}</span>
     </div>
 
-    <div style="background:#ffffff; border:3px solid #f87171; border-radius:20px; overflow:hidden; box-shadow: 0 8px 20px rgba(220,38,38,0.05);">
+    <div style="background:#ffffff; border:3px solid var(--acc); border-radius:20px; overflow:hidden;">
       <div style="padding:16px; background:#fff; display:flex; flex-direction:column; align-items:center; gap:10px;">
         <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-weight:900; color:#7f1d1d; font-size:16px;">全項總支出</span>
-            <span style="font-family:var(--mono); font-weight:900; color:#ef4444; font-size:22px;">-$ ${fmt(totalExp)}</span>
+            <span style="font-weight:800; color:var(--text-blue); font-size:16px;">全項總支出</span>
+            <span style="font-family:var(--mono); font-weight:900; color:#ef4444; font-size:22px;"><span style="font-size:12px;margin-right:6px;">$</span>${totalExp === 0 ? '0' : fmt(-totalExp)}</span>
         </div>
         
         <!-- 👈 [需求 2]：支出占比動態變色標籤 -->
         <div style="background:${pctBg}; border:2.5px solid ${pctBorder}; padding:8px 30px; border-radius:15px; display:flex; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:800; color:#475569; margin-bottom:2px;">佔收入總額</span>
-            <span style="font-family:var(--mono); font-size:28px; font-weight:1000; color:${pctColor};">${totalPct}<small style="font-size:16px;"> %</small></span>
+            <span style="font-size:13px; font-weight:800; color:#475569; margin-bottom:2px;">佔收入總額</span>
+            <span style="font-family:var(--mono); font-size:28px; font-weight:900; color:${pctColor};">${totalPct}<small style="font-size:13px;"> %</small></span>
         </div>
 
-        <button onclick="toggleNetExpDetail()" id="net-exp-toggle-btn" style="width:100%; background:#f1f5f9; border:none; padding:10px; border-radius:10px; color:#475569; font-weight:800; font-size:13px; cursor:pointer;">
+        <button onclick="toggleNetExpDetail()" id="net-exp-toggle-btn" style="width:100%; background:#f1f5f9; border:none; padding:10px; border-radius:10px; color:#475569; font-weight:800; font-size:13px; cursor:pointer; margin-bottom:-10px;">
           <span id="net-exp-arrow">▼</span> 展開支出細項
         </button>
       </div>
 
       <div id="net-exp-detail" style="max-height:0px; overflow:hidden; transition:max-height 0.4s ease;">
         <div style="padding:4px 12px 16px 12px; display:flex; flex-direction:column; gap:6px;">
-          <div style="border-top:1px dashed #f87171; margin-bottom:10px;"></div>
+          <div style="border-top:3px dashed #f87171; margin-bottom:5px;"></div>
           <!-- 👈 [需求 4]：簡化標籤並傳送數據至均分網格 -->
           ${renderNetRow('⛽ 燃料 / 換電', totalFuel, '#ef4444', getPctBadge(totalFuel, '#ef4444'))}
           ${renderNetRow('🔧 保養 / 維修', totalMaint, '#10b981', getPctBadge(totalMaint, '#10b981'))}
@@ -5843,7 +5851,7 @@ function renderNetRow(label, amt, color, pctBadge) {
       
       <!-- 第三列：金額 靠右，使用等寬字體防止數字長度擠壓 -->
       <span style="font-family:var(--mono); font-size:14px; font-weight:800; color:#1e293b; text-align:right; white-space:nowrap;">
-        $${fmt(amt)}
+        <span style="font-size:9px;margin-right:6px;">$</span>${fmt(amt)}
       </span>
     </div>
   `;
@@ -5971,7 +5979,7 @@ window.toggleVehSelector = function() {
   const wrap = document.getElementById('veh-selector-wrapper');
   const btn = document.getElementById('veh-selector-toggle-btn');
   if (wrap.style.maxHeight === '0px' || wrap.style.maxHeight === '') {
-    wrap.style.maxHeight = '160px'; // 展開
+    wrap.style.maxHeight = '140px'; // 展開
     wrap.style.opacity = '1';
     btn.style.transform = 'rotate(0deg)';
   } else {
@@ -8922,6 +8930,7 @@ window.renderAdminUserList = function(keyword) {
 
   let html = '';
   filtered.forEach(u => {
+    const isWatermarkRemoved = u.remove_watermark === 1;
     const vTag = u.verified 
       ? '<span style="color:var(--green); font-weight:900; background:var(--green-d); padding:3px 8px; border-radius:6px; font-size:10px; border:1px solid #bbf7d0;">已開通</span>' 
       : '<span style="color:var(--t3); font-weight:900; background:var(--bg-input); padding:3px 8px; border-radius:6px; font-size:10px; border:1px solid #e2e8f0;">未驗證</span>';
@@ -8954,21 +8963,43 @@ window.renderAdminUserList = function(keyword) {
       <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 12px; border-bottom:1px solid var(--border);">
         <div style="flex:1; overflow:hidden; padding-right:10px;">
           <div style="display:flex; align-items:baseline; gap:8px;">
-            <span style="font-size:15px; font-weight:900; color:var(--t1);">${roleTag}${u.email}</span>
-            <span style="font-size:11px; font-family:var(--mono); color:var(--t3); font-weight:800;">#${u.uid || 'N/A'}</span>
+            <span style="font-size:15px; font-weight:900;">${u.email}</span>
           </div>
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            ${vTag}
-            <span style="font-size:11px; color:var(--t3); font-family:var(--mono); font-weight:600;">註冊:${new Date(u.createdAt).toLocaleDateString()}</span>
-            <!-- 👇 顯示最後上線時間與狀態 -->
-            <span style="font-size:11px; color:#2563eb; background:#eff6ff; padding:2px 6px; border-radius:6px; font-weight:800; border:1px solid #bfdbfe;">上線: ${lastActiveStr}</span>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+            <!-- 🌟 浮水印控制區 -->
+            <div style="display:flex; align-items:center; gap:6px; background:var(--sf2); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
+              <span style="font-size:11px; font-weight:800; color:var(--t2);">移除浮水印</span>
+              <label class="switch" style="transform: scale(0.7); margin-left:-5px;">
+                <input type="checkbox" ${isWatermarkRemoved ? 'checked' : ''} onchange="adminToggleWatermark('${u.email}', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
           </div>
         </div>
-        <button onclick="adminDeleteUser('${u.email}')" style="background:var(--red-d); color:var(--red); border:1px solid #fecdd3; padding:8px 14px; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; flex-shrink:0; box-shadow:0 2px 4px rgba(225,29,72,0.1); transition:0.2s;">刪除</button>
+        <button onclick="adminDeleteUser('${u.email}')" class="btn-danger" style="padding:6px 12px; font-size:12px;">刪除</button>
       </div>
     `;
   });
   container.innerHTML = html;
+}
+/* 新增管理員操作函式 */
+window.adminToggleWatermark = async function(targetEmail, isChecked) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/update-watermark`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ 
+        targetEmail: targetEmail, 
+        removeWatermark: isChecked ? 1 : 0 
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast('✅ 已更新浮水印權限');
+    }
+  } catch(e) {
+    toast('❌ 更新失敗');
+  }
 }
 
 /* 3. 刪除會員 (支援獨立詢問是否封鎖，並加入最後取消防線) */
@@ -9869,6 +9900,7 @@ window.deleteVersion = async function(ver) {
 };
 
 /* ══ 踢下線檢查 (處理強制登出與 31 天未活動) ══ */
+/* ══ 檢查帳號狀態 (新增同步浮水印設定) ══ */
 async function checkAccountStatus() {
   if (!USER.loggedIn) return false;
   try {
@@ -9879,6 +9911,13 @@ async function checkAccountStatus() {
     });
     const data = await res.json();
     
+    // 🌟 [新增處]：如果帳號狀態正常，順便更新本地的浮水印權限
+    if (data.active) {
+      USER.removeWatermark = data.removeWatermark; // 把伺服器最新的設定存入本地變數
+      saveUser(); // 儲存到手機 LocalStorage，這樣重開 App 才會記得
+      // 不需要 return true，讓它繼續跑後面的邏輯也沒關係，或者直接在最後 return
+    }
+
     if (!data.active) {
       if (data.reason === 'kicked') {
         const kickTime = new Date(data.kickedAt).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
