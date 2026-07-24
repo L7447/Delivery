@@ -942,19 +942,14 @@ function closeOverlay(id) {
     return;
   }
 
-  appendAuthDebugLog(`關閉彈窗`, `overlay=${id}`);
   el.classList.remove('show');
   
   if (id === 'sub-page') {
-    const closeBtn = el.querySelector('.top-bar .bar-btn');
-    if (closeBtn) closeBtn.style.display = 'flex'; 
-    
-    el.style.zIndex = '';
-    
-    // 👈 [核心修正]：變數與硬碟紀錄一併清除！
     window.__authFlowLocked = false;
     window.__authTurnstileActive = false;
+    // 👈 [關鍵]：手動關閉彈窗，就代表流程結束了，移除復活標記
     localStorage.removeItem('auth_flow_active'); 
+    localStorage.removeItem('auth_last_active');
     localStorage.removeItem('auth_origin_tab');
   }
 }
@@ -8323,22 +8318,16 @@ window.switchAuthTab = function(mode) {
 };
 function openAuthModal() {
   window.__authFlowLocked = true;
-  localStorage.setItem('auth_flow_active', 'true'); // 存入硬碟
-  window.__authFlowOriginTab = S.tab || 'home';
-  localStorage.setItem('auth_origin_tab', window.__authFlowOriginTab); // 存入硬碟
-
   window.__authTurnstileActive = true;
-  appendAuthDebugLog(`開啟帳號管理頁`, `mode=${authMode}`);
-
-  // 👇 強制覆蓋外層標題字體大小
-  const subTitleEl = document.getElementById('sub-title');
-  subTitleEl.textContent = '帳號管理';
-  // ...
-  document.getElementById('sub-top-right').innerHTML = '';
-  authMode = 'login'; 
-  privacyAgreed = false; 
   
-  // 移除舊版的 slide-tabs，直接載入內容區域
+  // 👈 存入標記與當下時間戳記
+  localStorage.setItem('auth_flow_active', 'true'); 
+  localStorage.setItem('auth_last_active', Date.now().toString()); 
+  
+  window.__authFlowOriginTab = S.tab || 'home';
+  localStorage.setItem('auth_origin_tab', window.__authFlowOriginTab);
+  
+  document.getElementById('sub-title').textContent = '帳號管理';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;" id="auth-content-area"></div>
     <div id="auth-debug-panel"></div>
@@ -11496,12 +11485,13 @@ function isAuthFlowBusy() {
 function restoreAuthOriginPage() {
   const targetTab = localStorage.getItem('auth_origin_tab') || S.tab || 'home';
   
-  // 👈 [關鍵]：流程結束，徹底清除硬碟標記
+  // 👈 成功登入後，清理硬碟紀錄
   localStorage.removeItem('auth_flow_active'); 
+  localStorage.removeItem('auth_last_active');
   localStorage.removeItem('auth_origin_tab');
   window.__authFlowLocked = false;
   
-  goPage(targetTab, true); // 強制跳轉回來源頁
+  goPage(targetTab, true);
 }
 
 function shouldBlockAuthSensitiveUi(action = 'ui') {
@@ -11712,12 +11702,17 @@ async function init() {
 window.onSplashFinished = function() {
   const loadingDiv = document.createElement('div');
   loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out; pointer-events:none;";
-  loadingDiv.innerHTML = `<div class="spin"></div><div style="margin-top:16px; font-weight:800; color:var(--t2);">正在恢復連線...</div>`;
+  loadingDiv.innerHTML = `<div class="spin"></div><div style="margin-top:16px; font-weight:800; color:var(--t2);">讀取中...</div>`;
   document.body.appendChild(loadingDiv);
 
-  // 1. 讀取狀態
-  const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
-  const isBusy = localStorage.getItem('auth_flow_active') === 'true';
+  // 1. 偵測啟動類型
+  const isResume = sessionStorage.getItem('app_session_active') === 'true';
+  const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
+  const lastActiveTime = parseInt(localStorage.getItem('auth_last_active') || '0');
+  const now = Date.now();
+  
+  // 判定：如果超過 15 分鐘沒動，就算有標記也過期，不自動跳轉帳號頁
+  const isAuthExpired = (now - lastActiveTime) > 15 * 60 * 1000; 
 
   setTimeout(() => {
     loadingDiv.style.opacity = '0';
@@ -11726,22 +11721,32 @@ window.onSplashFinished = function() {
 
   window.__suppressNavigation = false;
 
-  // 2. 執行恢復邏輯
-  if (isBusy) {
-    appendAuthDebugLog('PWA 原地復活', `恢復至 ${lastTab} 登入狀態`);
+  // 2. 核心路徑判斷
+  if (isAuthActive && !isAuthExpired) {
+    // 🚀 情境 A：正在登入中且沒過期 (包含 PWA 切換回來)
+    appendAuthDebugLog('帳號流程恢復', '重啟帳號管理彈窗');
+    const originTab = localStorage.getItem('auth_origin_tab') || 'settings';
+    goPage(originTab, true); // 回到來源分頁
     
-    // 👈 [關鍵]：強制開啟原本所在的頁面
-    goPage(lastTab, true); 
-    
-    // 👈 [關鍵]：手動重新打開被 iOS 關掉的登入彈窗
-    openOverlay('sub-page'); 
+    // 重新打開彈窗
+    openOverlay('sub-page');
     document.getElementById('sub-title').textContent = '帳號管理';
-    document.getElementById('sub-body').innerHTML = `
-      <div style="padding:16px;" id="auth-content-area"></div>
-      <div id="auth-debug-panel"></div>
-    `;
-    renderAuthContent(); // 重新畫出登入/註冊表單
-  } else {
+    document.getElementById('sub-body').innerHTML = `<div style="padding:16px;" id="auth-content-area"></div><div id="auth-debug-panel"></div>`;
+    renderAuthContent();
+  } 
+  else if (!isResume) {
+    // 🏠 情境 B：全新的開啟 (手動關掉再開) -> 一律回首頁
+    appendAuthDebugLog('全新啟動', '強制導向首頁');
+    sessionStorage.setItem('app_session_active', 'true'); // 標記工作階段已開始
+    
+    // 清除可能殘留的舊標記
+    localStorage.removeItem('auth_flow_active');
+    
+    goPage('home', true);
+  } 
+  else {
+    // 🔄 情境 C：一般的 PWA 恢復或重新整理 -> 回到上次的分頁
+    const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
     goPage(lastTab, true);
   }
 
