@@ -2,7 +2,12 @@
    外送記錄 App — script.js
    設計：由上到下分區註解，結構清晰，不閃爍，功能完整
    ══════════════════════════════════════════════════════ */
-
+// 每當使用者點擊螢幕，就更新「最後活動時間」，防止流程在操作中途過期
+document.addEventListener('click', () => {
+  if (localStorage.getItem('auth_flow_active') === 'true') {
+    localStorage.setItem('auth_last_active', Date.now().toString());
+  }
+});
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
 let isAppInitialized = false; // 紀錄是否已經初始化過
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
@@ -937,13 +942,9 @@ function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
 
-  if (id === 'sub-page') {
-    // 徹底清除 auth 狀態
-    localStorage.removeItem('auth_flow_active');
-    localStorage.removeItem('auth_origin_tab');
-    localStorage.removeItem('auth_last_active');
-    window.__authFlowLocked = false;
-    window.__authTurnstileActive = false;
+  if (id === 'sub-page' && el.dataset.forced === 'true') {
+    toast('⚠️ 安全要求：請先完成密碼修改');
+    return;
   }
 
   el.classList.remove('show');
@@ -11457,34 +11458,32 @@ function updateLocalBackupTime() {
    （例如：資料載入完成後 / 啟動動畫結束後），
    加入 __initSetupPending 旗標，確保「引導視窗」全程只會被排程開啟一次。 ══ */
 window.checkAndPromptPlatformSetup = function() {
+  // 0. 若已經排程要開啟、或視窗目前正顯示中，直接跳過，避免重複開兩個視窗
   if (window.__initSetupPending || document.getElementById('init-setup-overlay')) return;
 
+  // 1. 檢查標記
   const isSetupCompleted = localStorage.getItem('delivery_setup_completed') === 'true';
-  const hasActivePlatform = S.platforms?.some(p => p.active) || false;
+  
+  // 2. 檢查目前記憶體中的平台狀態
+  const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
 
+  // ✨ 只有「從未完成設定」且「目前沒有任何平台被開啟」時，才跳出視窗
   if (!isSetupCompleted && !hasActivePlatform) {
+    console.log("偵測到初次使用，準備開啟引導視窗...");
     window.__initSetupPending = true;
-    // 強制關閉任何可能存在的 overlay
-    document.querySelectorAll('.overlay-page.show').forEach(el => el.classList.remove('show'));
-    setTimeout(() => showInitialSetupModal(), 150);
+    setTimeout(() => waitForSafeMomentThenShowSetup(), 600); // 稍微延遲確保 UI 穩定
   }
 };
 
 /* --- 修正：讓帳號忙碌狀態在 PWA 重啟後依然有效 --- */
 function isAuthFlowBusy() {
-  // 強制優先檢查「首次設定」狀態
-  if (localStorage.getItem('delivery_setup_completed') !== 'true') {
-    return false;
-  }
-
+  // 👈 [關鍵]：重啟後，DOM 的 class 會消失，所以必須先看硬碟標記
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
-  const lastActive = parseInt(localStorage.getItem('auth_last_active') || '0');
-  const now = Date.now();
+  const subPage = document.getElementById('sub-page');
+  const isSubPageShow = !!(subPage && subPage.classList.contains('show'));
   
-  // 超過 8 分鐘就視為過期（原本是15分鐘，改短更安全）
-  const isExpired = (now - lastActive) > 8 * 60 * 1000;
-
-  return isAuthActive && !isExpired;
+  // 如果硬碟說在忙，或者視窗真的開著，就算忙碌
+  return isAuthActive || isSubPageShow || window.__authFlowLocked || window.__authTurnstileActive;
 }
 
 /* --- 修正：登入成功後，精準回到來源頁面而非首頁 --- */
@@ -11617,7 +11616,6 @@ function showInitialSetupModal() {
     savePlatforms();
     localStorage.setItem('delivery_setup_completed', 'true');
     ov.remove();
-    goPage('home', true);   // 強制 force = true
 
     if (!isAuthFlowBusy()) {
         // 只有真的沒事才跳回首頁
@@ -11636,100 +11634,129 @@ window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); 
 
 /* ══ 系統啟動主流程 ══ */
 async function init() {
-  if (isAppInitialized) {
-    console.log('🔄 init 已執行過，跳過重複初始化');
-    return;
+  if (isAppInitialized) return; // 如果跑過了，就別再跑第二次 (防止重複跳轉)
+  isAppInitialized = true;
+
+  if (!S.settings) S.settings = {...DEFAULT_SETTINGS};
+
+  // 1. ✨ 第一步：等待資料從 IndexedDB 與 LocalStorage 完整載入
+  try { 
+    await loadAll(); 
+    console.log("✅ 資料載入成功，目前平台狀態：", S.platforms);
+  } catch (e) { 
+    console.error("❌ 載入失敗:", e); 
   }
   
-  isAppInitialized = true;
-  console.log('🚀 APP 初始化開始');
-
-  // 1. 先載入資料
-  try {
-    await loadAll();
-  } catch (e) {
-    console.error("❌ 資料載入失敗", e);
+  window.__suppressNavigation = true;
+  appendAuthDebugLog('APP 啟動', '開始初始化');
+  S.homeSubTab = 'schedule';
+  const splashEl = document.getElementById('splash');
+  if (splashEl && splashEl.isConnected) {
+    window.__pendingHomeRender = true;
+  } else {
+    window.__pendingHomeRender = false;
+    S.tab = 'home';
+    document.body.setAttribute('data-tab', 'home');
+    updateNavIndicator('home');
+    renderHome();
   }
 
-  // 2. 強制清理 splash 與 loading 狀態（防止殘留）
-  const splash = document.getElementById('splash');
-  if (splash) {
-    splash.style.display = 'none';
-    splash.style.opacity = '0';
-  }
+  // 3. ✨ 第三步：資料載入完畢後，才判斷是否要跳出「初次使用引導」
+  checkAndPromptPlatformSetup();
 
-  // 3. 清理所有可能導致 timing 錯亂的旗標
-  window.__suppressNavigation = false;
-  window.__pendingHomeRender = false;
-  window.__initSetupPending = false;
-
-  // 4. 交給 onSplashFinished 統一處理後續流程
-  setTimeout(() => {
-    window.onSplashFinished();
-  }, 80); // 給 DOM 一點時間穩定
-
-  // 5. 其他非畫面相關初始化
+  // 4. ✨ 第四步：其他功能初始化
   applyBackground();
-  fetchSystemSettings();
-  if (typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
+  fetchSystemSettings(); 
+  if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
   initReminderCheck();
 
   if (USER && USER.loggedIn) {
     checkAccountStatus();
     if (USER.isPasswordWeak) {
-      setTimeout(() => showForcePasswordChange(true), 1200);
+      setTimeout(() => { showForcePasswordChange(true); }, 800);
     }
   }
+
+  if (USER && USER.loggedIn && !USER.uid) {
+    // 👈 [自動修復邏輯]：如果已登入但本地沒 UID，嘗試從伺服器補抓
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/check`, {
+        headers: { 'Authorization': `Bearer ${USER.token}` }
+      });
+      const data = await res.json();
+      if (data.active && data.user && data.user.uid) {
+        USER.uid = data.user.uid;
+        saveUser();
+        console.log("✅ 已自動補抓 UID:", USER.uid);
+      }
+    } catch(e) {}
+  }
+
+  // 5. 綁定備註標籤事件
+  const fNote = document.getElementById('f-note');
+  const ctNote = document.getElementById('f-ct-note');
+  if (fNote) fNote.addEventListener('input', syncTagsUI);
+  if (ctNote) ctNote.addEventListener('input', syncTagsUI);
+
+  // 檢查進場動畫
+  const splash = document.getElementById('splash');
+  if (!splash) { window.onSplashFinished(); }
 }
 
+/* --- 修正：iOS PWA 重啟時原地恢復，絕不跳轉 --- */
 window.onSplashFinished = function() {
-  console.log('🎯 onSplashFinished 執行');
+  const splash = document.getElementById('splash');
+  if (!splash) return; // 防止重複執行
 
-  // 強制清理可能殘留的 loading / splash
-  document.querySelectorAll('#splash, div[style*="z-index:999998"]').forEach(el => {
-    el.style.display = 'none';
-    el.style.opacity = '0';
-  });
-
-  const isFirstTime = localStorage.getItem('delivery_setup_completed') !== 'true';
-
-  // ==================== 首次使用 ====================
-  if (isFirstTime) {
-    localStorage.removeItem('auth_flow_active');
-    localStorage.removeItem('auth_origin_tab');
-    localStorage.removeItem('auth_last_active');
-    
-    setTimeout(() => {
-      checkAndPromptPlatformSetup();
-    }, 120);
-    return;
-  }
-
-  // ==================== 正常開啟 ====================
+  // 1. 偵測啟動狀態
+  // app_session_active 在 sessionStorage 中，App 徹底關閉就會消失
+  const isResume = sessionStorage.getItem('app_session_active') === 'true';
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
   const lastActiveTime = parseInt(localStorage.getItem('auth_last_active') || '0');
-  const isAuthExpired = (Date.now() - lastActiveTime) > 8 * 60 * 1000; // 8分鐘逾時
+  const now = Date.now();
+  
+  // 判定：如果超過 10 分鐘沒動，就算 PWA 恢復也不要自動跳帳號頁
+  const isAuthExpired = (now - lastActiveTime) > 10 * 60 * 1000; 
 
-  // 清理過期 auth 狀態
-  if (isAuthExpired || !isAuthActive) {
-    localStorage.removeItem('auth_flow_active');
-    localStorage.removeItem('auth_origin_tab');
-    localStorage.removeItem('auth_last_active');
+  // 2. 執行淡出動畫
+  splash.style.opacity = '0';
+  splash.style.pointerEvents = 'none';
+  
+  window.__suppressNavigation = false;
+
+  // 3. 核心判定路徑
+  if (isAuthActive && isResume && !isAuthExpired) {
+    // 🔄 情境 A：這是「App 切換回來」導致的重新整理 (恢復模式)
+    appendAuthDebugLog('PWA 恢復', '恢復帳號流程');
+    const originTab = localStorage.getItem('auth_origin_tab') || 'settings';
+    goPage(originTab, true);
+    
+    openOverlay('sub-page');
+    document.getElementById('sub-title').textContent = '帳號管理';
+    document.getElementById('sub-body').innerHTML = `<div style="padding:16px;" id="auth-content-area"></div><div id="auth-debug-panel"></div>`;
+    renderAuthContent();
+  } 
+  else {
+    // 🏠 情境 B：這是「全新開啟」或「過期了」 (冷啟動模式)
+    if (!isResume) {
+      appendAuthDebugLog('全新冷啟動', '重置為首頁');
+      sessionStorage.setItem('app_session_active', 'true');
+      
+      // 🚨 這是最重要的一行：全新開啟時，手動清除掉殘留的帳號鎖定標記
+      localStorage.removeItem('auth_flow_active'); 
+      localStorage.removeItem('auth_origin_tab');
+      
+      goPage('home', true); // 強制回首頁
+    } else {
+      // 一般的頁面重整，回到上次分頁
+      const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
+      goPage(lastTab, true);
+    }
   }
 
-  let targetTab = localStorage.getItem('delivery_current_tab') || 'home';
-
-  if (isAuthActive && !isAuthExpired) {
-    targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
-    console.log(`恢復 auth 流程 → ${targetTab}`);
-  }
-
-  // 最終只執行一次 goPage
-  console.log(`最終導向頁面: ${targetTab}`);
-  goPage(targetTab, true);
-
-  // 最後再檢查一次公告
-  setTimeout(checkAndShowAnnouncement, 600);
+  // 動畫結束後移除 DOM
+  setTimeout(() => { if (splash) splash.remove(); }, 400);
+  checkAndShowAnnouncement();
 };
 
 /* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
