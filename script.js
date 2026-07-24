@@ -937,26 +937,23 @@ function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
 
-  // 🛡️ 攔截檢查：如果是強制改密碼期間，不准關閉 sub-page
+  // 🛡️ 攔截：強制修改密碼時不能關閉
   if (id === 'sub-page' && el.dataset.forced === 'true') {
-    toast('⚠️ 安全要求：請先完成密碼修改');
+    toast('⚠️ 請先完成密碼修改');
     return;
   }
 
   appendAuthDebugLog(`關閉彈窗`, `overlay=${id}`);
   el.classList.remove('show');
   
-  // 💡 當 sub-page 關閉時，清空帳號流程的所有鎖定狀態
   if (id === 'sub-page') {
     const closeBtn = el.querySelector('.top-bar .bar-btn');
-    if (closeBtn) closeBtn.style.display = 'flex'; // 恢復左上角 X 顯示
+    if (closeBtn) closeBtn.style.display = 'flex'; 
     
     el.style.zIndex = '';
-    window.__authFlowLocked = false;      // 解除頁面切換鎖定
-    window.__authTurnstileActive = false; // 解除人機驗證鎖定
-    
-    // 清除強制標記，避免影響下次開啟
-    el.dataset.forced = 'false';
+    // 💡 關閉子頁面時，只清空鎖定狀態，不准呼叫 goPage('home')
+    window.__authFlowLocked = false;
+    window.__authTurnstileActive = false;
   }
 }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
@@ -11694,17 +11691,17 @@ function showInitialSetupModal() {
     setTimeout(() => {
       ov.remove();
       
-      /* --- 關鍵修正：只有在「使用者沒在忙」的時候才跳轉 --- */
+      /* ══ 關鍵修正：若使用者正在登入，則安靜地消失 ══ */
       if (!isAuthFlowBusy()) {
-        // 使用者沒在登入，可以安全跳轉回首頁看結果
+        // 使用者沒在忙，才跳轉首頁顯示成果
         S.tab = 'home';
         goPage('home');
-        toast('✅ 啟用平台，設定完成！');
+        toast('✅ 設定完成！');
       } else {
-        // 使用者正在「登入中」，我們只在背景更新資料，絕對不去動他的畫面！
+        // 如果正在忙帳號，只在背景重繪，不干擾畫面
         renderHome();
         renderSettings();
-        console.log("偵測到帳號流程進行中，初始設定僅更新數據，不干擾頁面。");
+        appendAuthDebugLog('初次設定完成', '帳號流程忙碌中，不進行跳轉');
       }
     }, 400);
   });
@@ -11791,29 +11788,36 @@ async function init() {
 /* --- 修正：進場動畫結束後，尊重目前的 S.tab 狀態 --- */
 window.onSplashFinished = function() {
   const loadingDiv = document.createElement('div');
-  // ... (樣式部分保持不變)
+  loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out; pointer-events:none;";
+  loadingDiv.innerHTML = `
+    <div style="width:44px; height:44px; border:4px solid #e2e8f0; border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;"></div>
+    <div style="font-weight:800; color:var(--t2); font-size:15px; letter-spacing:1px;">載入中...</div>
+  `;
   document.body.appendChild(loadingDiv);
 
   setTimeout(() => {
-    updateNavIndicator(S.tab);
+    // 讓讀取條淡出，但不強制切換頁面
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
   }, 300);
 
-  window.__suppressNavigation = false;
-  
-  // 👈 [核心修正]：不再強制 setActiveTab('home')
-  // 如果 S.tab 已經有值（從 init 載入的），就維持現狀並渲染
+  window.__suppressNavigation = false; 
+
+  /* ══ 關鍵修正：尊重使用者的當下動作 ══ */
   if (!isAuthFlowBusy()) {
+    // 只有在「沒在操作帳號」時，才根據 S.tab 決定要畫哪一頁
     const currentTab = S.tab || 'home';
-    setActiveTab(currentTab, { force: true }); 
+    setActiveTab(currentTab, { force: true });
     
-    // 根據當前 Tab 執行對應渲染
     if (currentTab === 'home') renderHome();
     else if (currentTab === 'settings') renderSettings();
     else if (currentTab === 'history') renderHistory();
     else if (currentTab === 'report') renderReport();
     else if (currentTab === 'vehicles') renderVehicles();
+    
+    updateNavIndicator(currentTab);
+  } else {
+    appendAuthDebugLog('進場動畫結束', '偵測到帳號流程中，維持原樣');
   }
 
   checkAndShowAnnouncement();
