@@ -1288,13 +1288,13 @@ function savePunch() {
 }
 
 function goPage(name) {
-  // 🌟 [核心安全修正]：同時攔截「收入分析」與「新增紀錄」
-  /*
-  if ((name === 'report' || name === 'add') && !USER.loggedIn) {
-    showLoginRequiredWarning(); 
-    return; // 徹底攔截，不執行任何 UI 渲染
+  // 🔍 如果目標是首頁，但現在有彈窗開著，我們只改標籤不換頁面，避免蓋掉登入窗
+  if (name === 'home' && document.querySelector('.overlay-page.show')) {
+    console.warn("⚠️ 嘗試跳往首頁但彈窗開啟中，僅更新狀態，不執行介面切換");
+    S.tab = 'home';
+    return;
   }
-  */
+
   S.tab = name;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
@@ -8363,18 +8363,17 @@ function renderAuthContent() {
   // 2. 🌟 執行手動渲染 (核心修正)
   // 使用 requestAnimationFrame 確保 DOM 已經真正畫在螢幕上
   requestAnimationFrame(() => {
-    if (window.turnstile && document.getElementById('turnstile-widget')) {
-      try {
-        // 先嘗試重設，防止切換登入/註冊模式時發生重複渲染錯誤
-        window.turnstile.render('#turnstile-widget', {
-          sitekey: '0x4AAAAAADC958xr-t5UGd36',
-          theme: 'light',
-          appearance: 'always'
-        });
-      } catch (e) {
-        console.warn("Turnstile render warning:", e);
+    setTimeout(() => { // 🌟 增加 100ms 延遲，確保容器完全穩定
+      if (window.turnstile && document.getElementById('turnstile-widget')) {
+        try {
+          window.turnstile.render('#turnstile-widget', {
+            sitekey: '0x4AAAAAADC958xr-t5UGd36',
+            theme: 'light',
+            appearance: 'always'
+          });
+        } catch (e) {}
       }
-    }
+    }, 100);
   });
 }
 
@@ -11479,26 +11478,34 @@ window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); 
 
 /* ══ 系統啟動主流程 ══ */
 async function init() {
-  if (isAppInitialized) return; // 如果跑過了，就別再跑第二次 (防止重複跳轉)
-  isAppInitialized = true;
-
+  if (isAppInitialized) return;
+  
   if (!S.settings) S.settings = {...DEFAULT_SETTINGS};
 
-  // 1. ✨ 第一步：等待資料從 IndexedDB 與 LocalStorage 完整載入
   try { 
     await loadAll(); 
-    console.log("✅ 資料載入成功，目前平台狀態：", S.platforms);
+    console.log("✅ 資料載入成功");
   } catch (e) { 
     console.error("❌ 載入失敗:", e); 
   }
   
-  S.homeSubTab = 'schedule';
-  goPage('home');
+  // 🌟 [核心修正點]
+  // 檢查：1. 目前分頁是否還是預設的首頁 2. 是否沒有任何彈窗正在顯示
+  const isAnyOverlayShow = !!document.querySelector('.overlay-page.show');
+  
+  if (S.tab === 'home' && !isAnyOverlayShow) {
+    console.log("📍 使用者尚在首頁且無彈窗，執行初始頁面渲染");
+    S.homeSubTab = 'schedule';
+    goPage('home');
+  } else {
+    console.log(`🚫 偵測到使用者已在 ${S.tab} 或有彈窗，取消自動跳回首頁`);
+    // 雖然不跳轉頁面，但我們還是要偷偷在背景把數據畫好
+    // 這樣使用者關閉登入窗回到首頁時，資料才是最新的
+    renderHome(); 
+  }
 
-  // 3. ✨ 第三步：資料載入完畢後，才判斷是否要跳出「初次使用引導」
-  checkAndPromptPlatformSetup();
-
-  // 4. ✨ 第四步：其他功能初始化
+  // 標記初始化完成，剩下的流程繼續...
+  isAppInitialized = true;
   applyBackground();
   fetchSystemSettings(); 
   if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
