@@ -11453,25 +11453,22 @@ function updateLocalBackupTime() {
    （例如：資料載入完成後 / 啟動動畫結束後），
    加入 __initSetupPending 旗標，確保「引導視窗」全程只會被排程開啟一次。 ══ */
 window.checkAndPromptPlatformSetup = function() {
-  // 0. 若已經排程要開啟、或視窗目前正顯示中，直接跳過，避免重複開兩個視窗
   if (window.__initSetupPending || document.getElementById('init-setup-overlay')) return;
 
-  // 1. 檢查標記
   const isSetupCompleted = localStorage.getItem('delivery_setup_completed') === 'true';
-  
-  // 2. 檢查目前記憶體中的平台狀態
-  const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
+  const hasActivePlatform = S.platforms?.some(p => p.active) || false;
 
-  // ✨ 只有「從未完成設定」且「目前沒有任何平台被開啟」時，才跳出視窗
   if (!isSetupCompleted && !hasActivePlatform) {
-    console.log("偵測到初次使用，準備開啟引導視窗...");
     window.__initSetupPending = true;
-    setTimeout(() => waitForSafeMomentThenShowSetup(), 600); // 稍微延遲確保 UI 穩定
+    // 強制關閉任何可能存在的 overlay
+    document.querySelectorAll('.overlay-page.show').forEach(el => el.classList.remove('show'));
+    setTimeout(() => showInitialSetupModal(), 150);
   }
 };
 
 /* --- 修正：讓帳號忙碌狀態在 PWA 重啟後依然有效 --- */
 function isAuthFlowBusy() {
+  if (localStorage.getItem('delivery_setup_completed') !== 'true') return false; // 首次使用不擋
   // 👈 [關鍵]：重啟後，DOM 的 class 會消失，所以必須先看硬碟標記
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
   const subPage = document.getElementById('sub-page');
@@ -11611,6 +11608,7 @@ function showInitialSetupModal() {
     savePlatforms();
     localStorage.setItem('delivery_setup_completed', 'true');
     ov.remove();
+    goPage('home', true);   // 強制 force = true
 
     if (!isAuthFlowBusy()) {
         // 只有真的沒事才跳回首頁
@@ -11700,6 +11698,22 @@ async function init() {
 
 /* --- 修正：iOS PWA 重啟時原地恢復，絕不跳轉 --- */
 window.onSplashFinished = function() {
+  // === 新增：首次使用強制保護 ===
+  const isFirstTime = localStorage.getItem('delivery_setup_completed') !== 'true';
+  
+  if (isFirstTime) {
+    console.log('首次使用，強制走設定流程，不執行一般恢復邏輯');
+    window.__suppressNavigation = false;
+    // 確保不跑 auth 恢復
+    localStorage.removeItem('auth_flow_active');
+    localStorage.removeItem('auth_origin_tab');
+    
+    setTimeout(() => {
+      checkAndPromptPlatformSetup();
+    }, 100);
+    return;
+  }
+
   const loadingDiv = document.createElement('div');
   loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out; pointer-events:none;";
   loadingDiv.innerHTML = `<div class="spin"></div><div style="margin-top:16px; font-weight:800; color:var(--t2);">讀取中...</div>`;
