@@ -946,6 +946,7 @@ function closeOverlay(id) {
     }
     el.style.zIndex = '';
     window.__authFlowLocked = false;
+    window.__authTurnstileActive = false;
   }
 }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
@@ -1381,9 +1382,16 @@ function goPage(name) {
     return;
   }
 
-  if (isAuthFlowBusy() && (name === 'home' || name === 'settings')) {
-    appendAuthDebugLog(`攔截首頁/設定導向`, `帳號流程正在進行中`);
-    console.warn('🚫 已攔截首頁/設定導向：帳號流程仍在進行中');
+  const subPage = document.getElementById('sub-page');
+  const authOverlayOpen = !!(
+    window.__authFlowLocked ||
+    window.__authTurnstileActive ||
+    (subPage && subPage.classList.contains('show') && (document.getElementById('auth-content-area') || document.getElementById('turnstile-widget')))
+  );
+
+  if (authOverlayOpen && name !== S.tab) {
+    appendAuthDebugLog(`攔截主頁切換`, `target=${name} reason=auth-flow-active`);
+    console.warn('🚫 已攔截主頁切換：帳號流程仍在進行中');
     return;
   }
   
@@ -8339,6 +8347,8 @@ window.switchAuthTab = function(mode) {
 };
 function openAuthModal() {
   window.__authFlowLocked = true;
+  window.__authTurnstileActive = true;
+  window.__authFlowOriginTab = S.tab || 'home';
   appendAuthDebugLog(`開啟帳號管理頁`, `mode=${authMode}`);
 
   // 👇 強制覆蓋外層標題字體大小
@@ -8496,8 +8506,10 @@ function renderAuthContent() {
   // 2. 🌟 執行手動渲染 (核心修正)
   // 使用 requestAnimationFrame 確保 DOM 已經真正畫在螢幕上
   requestAnimationFrame(() => {
-    if (window.turnstile && document.getElementById('turnstile-widget')) {
+    const widget = document.getElementById('turnstile-widget');
+    if (window.turnstile && widget) {
       try {
+        window.__authTurnstileActive = true;
         // 先嘗試重設，防止切換登入/註冊模式時發生重複渲染錯誤
         window.turnstile.render('#turnstile-widget', {
           sitekey: '0x4AAAAAADC958xr-t5UGd36',
@@ -8556,6 +8568,7 @@ async function requestLogin() {
   if (typeof turnstile !== 'undefined') {
     turnstileToken = turnstile.getResponse();
     if (!turnstileToken) {
+      window.__authTurnstileActive = true;
       toast('⚠️ 請等待，或點擊完成人機驗證');
       return;
     }
@@ -8619,7 +8632,7 @@ async function requestLogin() {
           appendAuthDebugLog(`登入成功`, `role=${data.user?.role || 'unknown'}`);
           toast('✅ 登入成功');
           closeOverlay('sub-page');
-          renderSettings();
+          restoreAuthOriginPage();
         } else {
           appendAuthDebugLog(`進入驗證碼階段`, `email=${email}`);
           // 📧 新用戶或未驗證帳號，顯示驗證碼輸入畫面
@@ -8673,7 +8686,7 @@ async function verifyAuthCode(email) {
         appendAuthDebugLog(`驗證成功`, `role=${data.user?.role || 'unknown'}`);
         toast('✅ 登入成功');
         closeOverlay('sub-page');
-        renderSettings();
+        restoreAuthOriginPage();
       } else {
         toast('⚠️ ' + data.message);
       }
@@ -8692,6 +8705,7 @@ async function openAccountStats() {
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = '';
 
+  window.__authTurnstileActive = false;
   document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div><div id="auth-debug-panel"></div>`;
   openOverlay('sub-page');
 
@@ -11512,9 +11526,28 @@ function isAuthFlowBusy() {
   const subPage = document.getElementById('sub-page');
   const subTitle = document.getElementById('sub-title');
   const authArea = document.getElementById('auth-content-area');
+  const turnstileWidget = document.getElementById('turnstile-widget');
   const isSubPageOpen = !!(subPage && subPage.classList.contains('show'));
   const isAccountManagement = !!(subTitle && ['帳號管理', '帳號資訊'].includes(subTitle.textContent.trim()));
-  return !!(window.__authFlowLocked || (isSubPageOpen && isAccountManagement) || (isSubPageOpen && authArea));
+  return !!(
+    window.__authFlowLocked ||
+    window.__authTurnstileActive ||
+    (isSubPageOpen && isAccountManagement) ||
+    (isSubPageOpen && (authArea || turnstileWidget))
+  );
+}
+
+function restoreAuthOriginPage() {
+  const targetTab = window.__authFlowOriginTab || S.tab || 'home';
+  try {
+    if (targetTab === 'home') renderHome();
+    else if (targetTab === 'history') renderHistory();
+    else if (targetTab === 'report') renderReport();
+    else if (targetTab === 'vehicles') renderVehicles();
+    else renderSettings();
+  } catch (e) {
+    console.warn('恢復原頁面失敗', e);
+  }
 }
 
 function waitForSafeMomentThenShowSetup(attempt = 0) {
