@@ -1381,42 +1381,37 @@ function savePunch() {
   localStorage.setItem(KEYS.punch, JSON.stringify(S.punch));
 }
 
-function goPage(name) {
-  const stack = new Error().stack;
-  appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab || 'unknown'}`);
+function goPage(name, force = false) {
+  appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab}`);
 
-  if (window.__suppressNavigation) return;
+  if (window.__suppressNavigation && !force) return;
 
-  // 🛡️ 只有在「非重啟/非初始化」狀態下，才執行忙碌攔截
-  if (isAppInitialized && isAuthFlowBusy() && name !== S.tab) {
+  // 🛡️ 忙碌攔截：除非是 force (強制恢復)，否則忙碌時不准切換
+  if (!force && isAuthFlowBusy() && name !== S.tab) {
     appendAuthDebugLog(`攔截頁面切換`, `target=${name} reason=auth-flow-active`);
-    return; // 這裡擋住是對的，但後面的 render 邏輯不能死掉
-  }
-  
-  if (name === S.tab && isAppInitialized) {
-    if (name === 'home') renderHome();
-    if (name === 'settings') renderSettings();
     return;
   }
 
-  // 👈 [關鍵修正]：更新 S.tab 並永久存入硬碟
   S.tab = name;
   localStorage.setItem('delivery_current_tab', name);
 
+  // 切換 Page 顯示狀態
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const targetPage = document.getElementById(`page-${name}`);
+  if (targetPage) targetPage.classList.add('active');
+
+  // 更新導覽列 UI
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
     const isActive = n.dataset.pg === name;
     n.classList.toggle('active', isActive);
-    const img = n.querySelector('.ni-img'); if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
+    const img = n.querySelector('.ni-img'); 
+    if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
-  
-  const targetPage = document.getElementById(`page-${name}`);
-  if (targetPage) targetPage.classList.add('active');
   
   document.body.setAttribute('data-tab', name);
   updateNavIndicator(name);
 
-  // 根據頁面執行渲染
+  // 執行對應頁面渲染
   if (name === 'home')     renderHome();
   if (name === 'history')  renderHistory();
   if (name === 'report')   renderReport(); 
@@ -11488,33 +11483,25 @@ window.checkAndPromptPlatformSetup = function() {
 
 /* --- 修正：讓帳號忙碌狀態在 PWA 重啟後依然有效 --- */
 function isAuthFlowBusy() {
+  // 👈 [關鍵]：重啟後，DOM 的 class 會消失，所以必須先看硬碟標記
+  const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
   const subPage = document.getElementById('sub-page');
   const isSubPageShow = !!(subPage && subPage.classList.contains('show'));
   
-  // 👈 [核心修正]：只有在「有標記」且「視窗真的開著」時，才攔截頁面切換
-  const isLocked = (window.__authFlowLocked || localStorage.getItem('auth_flow_active') === 'true') && isSubPageShow; 
-  
-  const subTitle = document.getElementById('sub-title');
-  const authArea = document.getElementById('auth-content-area');
-  const turnstileWidget = document.getElementById('turnstile-widget');
-  const isAccountManagement = !!(subTitle && ['帳號管理', '帳號資訊', '更改密碼'].includes(subTitle.textContent.trim()));
-
-  return !!(
-    isLocked || 
-    window.__authTurnstileActive ||
-    (isSubPageShow && (authArea || turnstileWidget || isAccountManagement))
-  );
+  // 如果硬碟說在忙，或者視窗真的開著，就算忙碌
+  return isAuthActive || isSubPageShow || window.__authFlowLocked || window.__authTurnstileActive;
 }
 
 /* --- 修正：登入成功後，精準回到來源頁面而非首頁 --- */
 function restoreAuthOriginPage() {
   const targetTab = localStorage.getItem('auth_origin_tab') || S.tab || 'home';
   
-  window.__authFlowLocked = false;
-  localStorage.removeItem('auth_flow_active'); // 清理硬碟
+  // 👈 [關鍵]：流程結束，徹底清除硬碟標記
+  localStorage.removeItem('auth_flow_active'); 
   localStorage.removeItem('auth_origin_tab');
+  window.__authFlowLocked = false;
   
-  goPage(targetTab);
+  goPage(targetTab, true); // 強制跳轉回來源頁
 }
 
 function shouldBlockAuthSensitiveUi(action = 'ui') {
@@ -11725,34 +11712,37 @@ async function init() {
 window.onSplashFinished = function() {
   const loadingDiv = document.createElement('div');
   loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out; pointer-events:none;";
-  loadingDiv.innerHTML = `
-    <div style="width:44px; height:44px; border:4px solid #e2e8f0; border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;"></div>
-    <div style="font-weight:800; color:var(--t2); font-size:15px;">載入中...</div>
-  `;
+  loadingDiv.innerHTML = `<div class="spin"></div><div style="margin-top:16px; font-weight:800; color:var(--t2);">正在恢復連線...</div>`;
   document.body.appendChild(loadingDiv);
 
-  // 1. 先從硬碟抓回最後所在的頁面
+  // 1. 讀取狀態
   const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
-  const isBusy = isAuthFlowBusy();
+  const isBusy = localStorage.getItem('auth_flow_active') === 'true';
 
   setTimeout(() => {
-    updateNavIndicator(S.tab);
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
   }, 300);
 
   window.__suppressNavigation = false;
 
-  // 2. 🚨 [絕對關鍵]：不要呼叫 goPage()，直接原地切換 class 與渲染
+  // 2. 執行恢復邏輯
   if (isBusy) {
-    appendAuthDebugLog('PWA 流程恢復', `保持在 ${S.tab} 處理登入中`);
-    // 正在忙帳號，我們只需要確保背景的 Tab 內容正確即可
-    if (S.tab === 'settings') renderSettings();
-    else if (S.tab === 'home') renderHome();
+    appendAuthDebugLog('PWA 原地復活', `恢復至 ${lastTab} 登入狀態`);
+    
+    // 👈 [關鍵]：強制開啟原本所在的頁面
+    goPage(lastTab, true); 
+    
+    // 👈 [關鍵]：手動重新打開被 iOS 關掉的登入彈窗
+    openOverlay('sub-page'); 
+    document.getElementById('sub-title').textContent = '帳號管理';
+    document.getElementById('sub-body').innerHTML = `
+      <div style="padding:16px;" id="auth-content-area"></div>
+      <div id="auth-debug-panel"></div>
+    `;
+    renderAuthContent(); // 重新畫出登入/註冊表單
   } else {
-    // 沒在忙，恢復到上次所在的頁面
-    appendAuthDebugLog('PWA 啟動恢復', `回到 ${lastTab}`);
-    goPage(lastTab);
+    goPage(lastTab, true);
   }
 
   checkAndShowAnnouncement();
