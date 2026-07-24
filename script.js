@@ -662,7 +662,7 @@ function showLoginRequiredWarning() {
 }
 
 const S = {
-  tab: 'home', rptY: new Date().getFullYear(), rptM: new Date().getMonth()+1, rptView: 'overview',
+  tab: localStorage.getItem('delivery_current_tab') || 'home', rptY: new Date().getFullYear(), rptM: new Date().getMonth()+1, rptView: 'overview',
   calY: new Date().getFullYear(), calM: new Date().getMonth()+1, selDate: todayStr(),
   records: [], platforms: [], settings: { ...DEFAULT_SETTINGS }, punch: null,
   vehicles: [], vehicleRecs: [], editingId: null, selPlatformId: null, charts: {},
@@ -1427,6 +1427,10 @@ function goPage(name) {
   }
   */
   if (!setActiveTab(name)) return;
+
+  // 👈 [關鍵]：把目前所在頁面存進硬碟
+  localStorage.setItem('delivery_current_tab', name);
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
     const isActive = n.dataset.pg === name;
@@ -8355,8 +8359,11 @@ window.switchAuthTab = function(mode) {
 };
 function openAuthModal() {
   window.__authFlowLocked = true;
-  window.__authTurnstileActive = true;
+  localStorage.setItem('auth_flow_active', 'true'); // 存入硬碟
   window.__authFlowOriginTab = S.tab || 'home';
+  localStorage.setItem('auth_origin_tab', window.__authFlowOriginTab); // 存入硬碟
+
+  window.__authTurnstileActive = true;
   appendAuthDebugLog(`開啟帳號管理頁`, `mode=${authMode}`);
 
   // 👇 強制覆蓋外層標題字體大小
@@ -11536,36 +11543,27 @@ window.checkAndPromptPlatformSetup = function() {
  * 絕不會蓋掉使用者正在操作的畫面。 */
 function isAuthFlowBusy() {
   const subPage = document.getElementById('sub-page');
+  const isAuthLocked = window.__authFlowLocked || localStorage.getItem('auth_flow_active') === 'true';
+  
   const subTitle = document.getElementById('sub-title');
   const authArea = document.getElementById('auth-content-area');
-  const turnstileWidget = document.getElementById('turnstile-widget');
   const isSubPageOpen = !!(subPage && subPage.classList.contains('show'));
-  const isAccountManagement = !!(subTitle && ['帳號管理', '帳號資訊'].includes(subTitle.textContent.trim()));
+  
   return !!(
-    window.__authFlowLocked ||
-    window.__authTurnstileActive ||
-    (isSubPageOpen && isAccountManagement) ||
-    (isSubPageOpen && (authArea || turnstileWidget))
+    isAuthLocked || 
+    (isSubPageOpen && authArea)
   );
 }
 
 /* --- 修正：登入成功後，精準回到來源頁面而非首頁 --- */
 function restoreAuthOriginPage() {
-  // 取得進入帳號流程前的分頁，若無則留在目前分頁，最後才考慮 home
-  const targetTab = window.__authFlowOriginTab || S.tab || 'home';
+  const targetTab = localStorage.getItem('auth_origin_tab') || S.tab || 'home';
   
-  appendAuthDebugLog(`恢復原始頁面`, `target=${targetTab}`);
-  
-  // 徹底清除鎖定狀態，否則 goPage 會被攔截
   window.__authFlowLocked = false;
-  window.__authTurnstileActive = false;
-
-  // 使用 goPage 確保導覽列動畫、標題、內容全部同步更新
-  // 如果原本就在 settings，goPage('settings') 會負責重繪內容
-  goPage(targetTab);
+  localStorage.removeItem('auth_flow_active'); // 清理硬碟
+  localStorage.removeItem('auth_origin_tab');
   
-  // 重置來源標記
-  window.__authFlowOriginTab = null;
+  goPage(targetTab);
 }
 
 function shouldBlockAuthSensitiveUi(action = 'ui') {
@@ -11796,31 +11794,30 @@ window.onSplashFinished = function() {
   document.body.appendChild(loadingDiv);
 
   setTimeout(() => {
-    // 讓讀取條淡出，但不強制切換頁面
+    updateNavIndicator(S.tab);
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
   }, 300);
 
-  window.__suppressNavigation = false; 
+  window.__suppressNavigation = false;
 
-  /* ══ 關鍵修正：尊重使用者的當下動作 ══ */
-  if (!isAuthFlowBusy()) {
-    // 只有在「沒在操作帳號」時，才根據 S.tab 決定要畫哪一頁
-    const currentTab = S.tab || 'home';
-    setActiveTab(currentTab, { force: true });
-    
-    if (currentTab === 'home') renderHome();
-    else if (currentTab === 'settings') renderSettings();
-    else if (currentTab === 'history') renderHistory();
-    else if (currentTab === 'report') renderReport();
-    else if (currentTab === 'vehicles') renderVehicles();
-    
-    updateNavIndicator(currentTab);
+  // 👈 [關鍵修正]：讀取硬碟，看看原本在哪裡
+  const savedTab = localStorage.getItem('delivery_current_tab') || 'home';
+  const isDuringAuth = localStorage.getItem('auth_flow_active') === 'true';
+
+  if (isDuringAuth) {
+    // 如果重啟時發現正在忙帳號，絕對不要動頁面，讓使用者留在原地繼續
+    appendAuthDebugLog('iOS PWA 重啟', '偵測到帳號流程中，維持原地');
   } else {
-    appendAuthDebugLog('進場動畫結束', '偵測到帳號流程中，維持原樣');
+    // 沒在忙帳號，則恢復到最後一次所在的頁面
+    setActiveTab(savedTab, { force: true });
+    
+    if (savedTab === 'home') renderHome();
+    else if (savedTab === 'settings') renderSettings();
+    else if (savedTab === 'history') renderHistory();
+    else if (savedTab === 'report') renderReport();
+    else if (savedTab === 'vehicles') renderVehicles();
   }
-
-  checkAndShowAnnouncement();
 };
 
 /* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
