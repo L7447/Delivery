@@ -11599,6 +11599,7 @@ async function init() {
   if (splashEl && splashEl.isConnected) {
     window.__pendingHomeRender = true;
   } else {
+    window.__pendingHomeRender = false;
     goPage('home');
   }
 
@@ -11669,12 +11670,7 @@ window.onSplashFinished = function() {
 
   if (window.__pendingHomeRender) {
     window.__pendingHomeRender = false;
-    if (!isAuthFlowBusy()) {
-      appendAuthDebugLog('完成啟動畫面，渲染首頁', 'splash-finished');
-      goPage('home');
-    } else {
-      appendAuthDebugLog('略過首頁渲染', '帳號流程正在進行中');
-    }
+    appendAuthDebugLog('完成啟動畫面', '只顯示過場，不做頁面切換');
   }
 
   checkAndShowAnnouncement();
