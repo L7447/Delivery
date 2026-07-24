@@ -16,6 +16,15 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="外送記錄">
+
+  <style>
+    /* 預防 PWA 載入時先閃過首頁 */
+    .page { display: none !important; }
+    .page.active { display: flex !important; } /* 只有被 JS 啟動的頁面才準顯示 */
+    
+    #splash { opacity: 1; visibility: visible; }
+  </style>
+
   <!-- ══════════════════════════════════════════════════════
        iOS PWA 白屏完整修復方案
        ══════════════════════════════════════════════════════ -->
@@ -884,19 +893,18 @@
     const skipHint = document.getElementById('skip-hint');
     if (!splash) return;
 
-    // 1. 顯示「點擊跳過」提示 (稍微延遲)
-    setTimeout(() => { if (skipHint) skipHint.style.opacity = '1'; }, 1000);
+    // 1. 很快就顯示跳過提示
+    setTimeout(() => { if (skipHint) skipHint.style.opacity = '1'; }, 500);
 
-    // 2. 點擊螢幕任意處強制結束動畫
+    // 2. 點擊後標記「使用者想跳過」
     splash.addEventListener('click', () => {
-      if (window.onSplashFinished) window.onSplashFinished();
+      window.__userWantsToSkip = true; // 👈 新增這個標記
+      if (typeof window.onSplashFinished === 'function') {
+        window.onSplashFinished();
+      }
     });
-    
-    // 💡 移除原本的 120ms 自动结束，現在由 script.js 載入完畢後呼叫 window.onSplashFinished()
   }
-
-  if (document.readyState === 'complete') runSplashAnimation();
-  else window.addEventListener('load', runSplashAnimation);
+  requestAnimationFrame(runSplashAnimation);
 </script>
 
 <!-- ⚡ 專屬數字計算鍵盤 ⚡ -->
