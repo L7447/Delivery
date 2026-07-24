@@ -62,7 +62,7 @@ function renderAuthDebugPanel() {
 
   const logs = getAuthDebugLogs().slice(-10).reverse();
   panel.innerHTML = `
-    <div style="margin-top:14px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
+    <div style="margin-top:14px; padding:10px 12px 24px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; margin-bottom:24px; max-height:280px; overflow-y:auto; padding-right:6px;">
       <div style="font-size:12px; font-weight:800; color:#334155; margin-bottom:8px;">🧪 帳號流程偵錯日誌</div>
       ${logs.length ? logs.map(item => `
         <div style="font-size:11px; color:#475569; line-height:1.45; margin-bottom:6px;">
@@ -11595,7 +11595,12 @@ async function init() {
   }
   
   S.homeSubTab = 'schedule';
-  goPage('home');
+  const splashEl = document.getElementById('splash');
+  if (splashEl && splashEl.isConnected) {
+    window.__pendingHomeRender = true;
+  } else {
+    goPage('home');
+  }
 
   // 3. ✨ 第三步：資料載入完畢後，才判斷是否要跳出「初次使用引導」
   checkAndPromptPlatformSetup();
@@ -11661,6 +11666,16 @@ window.onSplashFinished = function() {
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
   }, 300);
+
+  if (window.__pendingHomeRender) {
+    window.__pendingHomeRender = false;
+    if (!isAuthFlowBusy()) {
+      appendAuthDebugLog('完成啟動畫面，渲染首頁', 'splash-finished');
+      goPage('home');
+    } else {
+      appendAuthDebugLog('略過首頁渲染', '帳號流程正在進行中');
+    }
+  }
 
   checkAndShowAnnouncement();
 };
