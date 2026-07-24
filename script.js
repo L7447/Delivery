@@ -1381,54 +1381,24 @@ function savePunch() {
 
 function goPage(name) {
   const stack = new Error().stack;
-  console.log(`%c[路由追蹤] 目標: ${name} | 當前頁面: ${S.tab}`, "background: #2563eb; color: #fff; padding: 2px 5px;");
   appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab || 'unknown'}`);
 
-  if (window.__suppressNavigation) {
-    appendAuthDebugLog(`攔截自動切頁`, `to=${name}`);
-    return;
-  }
+  if (window.__suppressNavigation) return;
 
-  const subPage = document.getElementById('sub-page');
-  const authOverlayOpen = !!(
-    window.__authFlowLocked ||
-    window.__authTurnstileActive ||
-    (subPage && subPage.classList.contains('show') && (document.getElementById('auth-content-area') || document.getElementById('turnstile-widget')))
-  );
-
-  if (authOverlayOpen && name !== S.tab) {
-    appendAuthDebugLog(`攔截主頁切換`, `target=${name} reason=auth-flow-active`);
-    console.warn('🚫 已攔截主頁切換：帳號流程仍在進行中');
-    return;
+  // 🛡️ 只有在「非重啟/非初始化」狀態下，才執行忙碌攔截
+  if (isAppInitialized && isAuthFlowBusy() && name !== S.tab) {
+    appendAuthDebugLog(`攔截頁面切換`, `target=${name} reason=auth-flow-active`);
+    return; // 這裡擋住是對的，但後面的 render 邏輯不能死掉
   }
   
-  if (name === 'home' && isAppInitialized) {
-     console.warn("偵測到跳回首頁，來源堆疊：", stack);
-     appendAuthDebugLog(`偵測到跳回首頁`, stack.split('\n').slice(1, 4).join(' | '));
+  if (name === S.tab && isAppInitialized) {
+    if (name === 'home') renderHome();
+    if (name === 'settings') renderSettings();
+    return;
   }
 
-  if (name === S.tab) {
-    if (name === 'home') {
-      appendAuthDebugLog(`重複切到當前頁`, `home`);
-      renderHome();
-      return;
-    }
-    if (name === 'settings') {
-      appendAuthDebugLog(`重複切到當前頁`, `settings`);
-      renderSettings();
-      return;
-    }
-  }
-  // 🌟 [核心安全修正]：同時攔截「收入分析」與「新增紀錄」
-  /*
-  if ((name === 'report' || name === 'add') && !USER.loggedIn) {
-    showLoginRequiredWarning(); 
-    return; // 徹底攔截，不執行任何 UI 渲染
-  }
-  */
-  if (!setActiveTab(name)) return;
-
-  // 👈 [關鍵]：把目前所在頁面存進硬碟
+  // 👈 [關鍵修正]：更新 S.tab 並永久存入硬碟
+  S.tab = name;
   localStorage.setItem('delivery_current_tab', name);
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1437,17 +1407,14 @@ function goPage(name) {
     n.classList.toggle('active', isActive);
     const img = n.querySelector('.ni-img'); if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
-  document.getElementById(`page-${name}`)?.classList.add('active');
+  
+  const targetPage = document.getElementById(`page-${name}`);
+  if (targetPage) targetPage.classList.add('active');
+  
   document.body.setAttribute('data-tab', name);
   updateNavIndicator(name);
 
-  // 離開 report 頁面時移除浮水印
-  if (name !== 'report') {
-    const wmContainer = document.getElementById('rpt-watermark-container');
-    if (wmContainer) wmContainer.remove();
-  }
-
-  if (name === 'home')     annShownThisVisit.clear();
+  // 根據頁面執行渲染
   if (name === 'home')     renderHome();
   if (name === 'history')  renderHistory();
   if (name === 'report')   renderReport(); 
@@ -11533,25 +11500,25 @@ window.checkAndPromptPlatformSetup = function() {
   }
 };
 
-/* ══ ✨ [找到真正原因並修正]：這才是「第一次使用時點登入帳號會跳回首頁」的真正原因 ══
- * 原本這裡是「時間到了(600ms)就不管使用者在幹嘛，直接跳出引導視窗」，
- * 而這個引導視窗的 z-index 比登入彈窗還高、蓋在最上面，關閉時又會強制 goPage('home')。
- * 所以只要使用者剛好在這 600ms 內點了「登入帳號」，就會被這個引導視窗蓋掉、
- * 關閉引導視窗後又被強制導回首頁——這跟先前排查的 splash 進場流程完全是兩件事。
- * 修正方式：不要「時間到了就硬跳出」，而是持續確認「現在方便打斷使用者嗎（人在首頁、沒有開著其他彈窗）」，
- * 安全的時候才顯示；如果使用者正在忙（例如正在登入），就先不要顯示，稍後再檢查一次，
- * 絕不會蓋掉使用者正在操作的畫面。 */
+/* --- 修正：讓帳號忙碌狀態在 PWA 重啟後依然有效 --- */
 function isAuthFlowBusy() {
   const subPage = document.getElementById('sub-page');
-  const isAuthLocked = window.__authFlowLocked || localStorage.getItem('auth_flow_active') === 'true';
+  
+  // 👈 [核心關鍵]：除了檢查 JS 變數，也要檢查硬碟裡的 'auth_flow_active'
+  const isLocked = window.__authFlowLocked || 
+                   localStorage.getItem('auth_flow_active') === 'true'; 
   
   const subTitle = document.getElementById('sub-title');
   const authArea = document.getElementById('auth-content-area');
-  const isSubPageOpen = !!(subPage && subPage.classList.contains('show'));
+  const turnstileWidget = document.getElementById('turnstile-widget');
   
+  const isSubPageOpen = !!(subPage && subPage.classList.contains('show'));
+  const isAccountManagement = !!(subTitle && ['帳號管理', '帳號資訊', '更改密碼'].includes(subTitle.textContent.trim()));
+
   return !!(
-    isAuthLocked || 
-    (isSubPageOpen && authArea)
+    isLocked || 
+    window.__authTurnstileActive ||
+    (isSubPageOpen && (authArea || turnstileWidget || isAccountManagement))
   );
 }
 
@@ -11682,26 +11649,17 @@ function showInitialSetupModal() {
 
     savePlatforms();
     localStorage.setItem('delivery_setup_completed', 'true');
+    ov.remove();
 
-    ov.style.opacity = '0';
-    document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
-
-    setTimeout(() => {
-      ov.remove();
-      
-      /* ══ 關鍵修正：若使用者正在登入，則安靜地消失 ══ */
-      if (!isAuthFlowBusy()) {
-        // 使用者沒在忙，才跳轉首頁顯示成果
-        S.tab = 'home';
-        goPage('home');
+    if (!isAuthFlowBusy()) {
+        // 只有真的沒事才跳回首頁
+        goPage('home'); 
         toast('✅ 設定完成！');
-      } else {
-        // 如果正在忙帳號，只在背景重繪，不干擾畫面
+    } else {
+        // iOS PWA 恢復中，安靜消失
         renderHome();
         renderSettings();
-        appendAuthDebugLog('初次設定完成', '帳號流程忙碌中，不進行跳轉');
-      }
-    }, 400);
+    }
   });
 }
 
@@ -11779,19 +11737,19 @@ async function init() {
   if (!splash) { window.onSplashFinished(); }
 }
 
-/* ══ ★ 進場載入函式：現在只負責「顯示/淡出讀取動畫」這個純視覺工作 ══
- * 首頁的渲染已經在 init() 資料載入完成當下就確定完成了（見上方），
- * 這裡不再做任何「猜使用者在不在首頁 / 要不要強制導回首頁」的邏輯，
- * 因此不會有任何時機差造成的競爭條件，也不會蓋掉使用者已經打開的登入頁等畫面。 */
-/* --- 修正：進場動畫結束後，尊重目前的 S.tab 狀態 --- */
+/* --- 修正：iOS PWA 重啟時原地恢復，絕不跳轉 --- */
 window.onSplashFinished = function() {
   const loadingDiv = document.createElement('div');
   loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out; pointer-events:none;";
   loadingDiv.innerHTML = `
     <div style="width:44px; height:44px; border:4px solid #e2e8f0; border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;"></div>
-    <div style="font-weight:800; color:var(--t2); font-size:15px; letter-spacing:1px;">載入中...</div>
+    <div style="font-weight:800; color:var(--t2); font-size:15px;">載入中...</div>
   `;
   document.body.appendChild(loadingDiv);
+
+  // 1. 先從硬碟抓回最後所在的頁面
+  const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
+  const isBusy = isAuthFlowBusy();
 
   setTimeout(() => {
     updateNavIndicator(S.tab);
@@ -11801,23 +11759,19 @@ window.onSplashFinished = function() {
 
   window.__suppressNavigation = false;
 
-  // 👈 [關鍵修正]：讀取硬碟，看看原本在哪裡
-  const savedTab = localStorage.getItem('delivery_current_tab') || 'home';
-  const isDuringAuth = localStorage.getItem('auth_flow_active') === 'true';
-
-  if (isDuringAuth) {
-    // 如果重啟時發現正在忙帳號，絕對不要動頁面，讓使用者留在原地繼續
-    appendAuthDebugLog('iOS PWA 重啟', '偵測到帳號流程中，維持原地');
+  // 2. 🚨 [絕對關鍵]：不要呼叫 goPage()，直接原地切換 class 與渲染
+  if (isBusy) {
+    appendAuthDebugLog('PWA 流程恢復', `保持在 ${S.tab} 處理登入中`);
+    // 正在忙帳號，我們只需要確保背景的 Tab 內容正確即可
+    if (S.tab === 'settings') renderSettings();
+    else if (S.tab === 'home') renderHome();
   } else {
-    // 沒在忙帳號，則恢復到最後一次所在的頁面
-    setActiveTab(savedTab, { force: true });
-    
-    if (savedTab === 'home') renderHome();
-    else if (savedTab === 'settings') renderSettings();
-    else if (savedTab === 'history') renderHistory();
-    else if (savedTab === 'report') renderReport();
-    else if (savedTab === 'vehicles') renderVehicles();
+    // 沒在忙，恢復到上次所在的頁面
+    appendAuthDebugLog('PWA 啟動恢復', `回到 ${lastTab}`);
+    goPage(lastTab);
   }
+
+  checkAndShowAnnouncement();
 };
 
 /* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
