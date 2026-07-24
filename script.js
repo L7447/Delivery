@@ -937,9 +937,8 @@ function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
 
-  // 🛡️ 攔截：強制修改密碼時不能關閉
   if (id === 'sub-page' && el.dataset.forced === 'true') {
-    toast('⚠️ 請先完成密碼修改');
+    toast('⚠️ 安全要求：請先完成密碼修改');
     return;
   }
 
@@ -951,9 +950,12 @@ function closeOverlay(id) {
     if (closeBtn) closeBtn.style.display = 'flex'; 
     
     el.style.zIndex = '';
-    // 💡 關閉子頁面時，只清空鎖定狀態，不准呼叫 goPage('home')
+    
+    // 👈 [核心修正]：變數與硬碟紀錄一併清除！
     window.__authFlowLocked = false;
     window.__authTurnstileActive = false;
+    localStorage.removeItem('auth_flow_active'); 
+    localStorage.removeItem('auth_origin_tab');
   }
 }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
@@ -10096,36 +10098,20 @@ confirmAddRecord = async function() {
 }
 
 /* ══ 登出清空權限 ══ */
-/* --- 修正：登出時不再強制跳轉首頁 --- */
 function logoutAccount() {
-  USER = { 
-    email: null, 
-    verified: false, 
-    loggedIn: false, 
-    joinDate: null, 
-    token: null, 
-    role: 'user', 
-    uid: null 
-  };
+  USER = { email: null, verified: false, loggedIn: false, role: 'user', uid: null };
   saveUser();
   
-  if (S.settings) {
-    S.settings.autoBackup = false; 
-    saveSettings();
-  }
-  
+  // 👈 [核心修正]：確保登出後解除所有頁面鎖定
+  window.__authFlowLocked = false;
+  localStorage.removeItem('auth_flow_active');
+  localStorage.removeItem('auth_origin_tab');
+
   toast('✅ 已成功「登出帳號」');
   
-  // 👈 [核心修正]：不再呼叫 renderHome()。
-  // 只重繪目前所在的分頁內容（例如你在「設定」頁點登出，就留在設定頁重繪成「未登入狀態」）
-  if (S.tab === 'settings') {
-    renderSettings();
-  } else if (S.tab === 'home') {
-    renderHome();
-  } else {
-    // 如果在其它頁面（如報表），因為登出可能導致資料無法查看，則此時才考慮回首頁
-    goPage('home');
-  }
+  if (S.tab === 'settings') renderSettings();
+  else if (S.tab === 'home') renderHome();
+  else goPage('home');
   
   closeOverlay('sub-page'); 
 }
@@ -11503,22 +11489,20 @@ window.checkAndPromptPlatformSetup = function() {
 /* --- 修正：讓帳號忙碌狀態在 PWA 重啟後依然有效 --- */
 function isAuthFlowBusy() {
   const subPage = document.getElementById('sub-page');
+  const isSubPageShow = !!(subPage && subPage.classList.contains('show'));
   
-  // 👈 [核心關鍵]：除了檢查 JS 變數，也要檢查硬碟裡的 'auth_flow_active'
-  const isLocked = window.__authFlowLocked || 
-                   localStorage.getItem('auth_flow_active') === 'true'; 
+  // 👈 [核心修正]：只有在「有標記」且「視窗真的開著」時，才攔截頁面切換
+  const isLocked = (window.__authFlowLocked || localStorage.getItem('auth_flow_active') === 'true') && isSubPageShow; 
   
   const subTitle = document.getElementById('sub-title');
   const authArea = document.getElementById('auth-content-area');
   const turnstileWidget = document.getElementById('turnstile-widget');
-  
-  const isSubPageOpen = !!(subPage && subPage.classList.contains('show'));
   const isAccountManagement = !!(subTitle && ['帳號管理', '帳號資訊', '更改密碼'].includes(subTitle.textContent.trim()));
 
   return !!(
     isLocked || 
     window.__authTurnstileActive ||
-    (isSubPageOpen && (authArea || turnstileWidget || isAccountManagement))
+    (isSubPageShow && (authArea || turnstileWidget || isAccountManagement))
   );
 }
 
