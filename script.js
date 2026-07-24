@@ -1344,6 +1344,12 @@ function goPage(name) {
   const stack = new Error().stack;
   console.log(`%c[路由追蹤] 目標: ${name} | 當前頁面: ${S.tab}`, "background: #2563eb; color: #fff; padding: 2px 5px;");
   appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab || 'unknown'}`);
+
+  if (name === 'home' && isAuthFlowBusy()) {
+    appendAuthDebugLog(`攔截首頁導向`, `帳號流程正在進行中`);
+    console.warn('🚫 已攔截首頁導向：帳號流程仍在進行中');
+    return;
+  }
   
   if (name === 'home' && isAppInitialized) {
      console.warn("偵測到跳回首頁，來源堆疊：", stack);
@@ -11674,6 +11680,10 @@ document.addEventListener('visibilitychange', () => {
      
      // 當手機把 APP 從背景叫回來時，延遲 300 毫秒等畫面恢復
      setTimeout(() => {
+       if (isAuthFlowBusy()) {
+         appendAuthDebugLog(`略過背景喚醒重繪`, `帳號流程正在進行中`);
+         return;
+       }
        // 強迫系統重新計算當前分頁的所有內容高度，避免空白破圖！
        if (S.tab) {
          goPage(S.tab);
