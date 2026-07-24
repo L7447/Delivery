@@ -22,15 +22,13 @@ function isLocalDevelopment() {
          location.hostname.includes('192.168.') || 
          location.protocol === 'file:';
 }
-
 // 支出子類別定義
 const EXP_SUB_CATS = {
   '保險': ['強制險', '第三責任險', '職災險', '其它保險'],
-  '裝備': ['平台開通裝備', '手機架', '行車記錄器', '記憶卡', '行動電源', '充電線', '良民證', '安全帽', '防曬裝備', '禦寒裝備', '其它'],
+  '裝備': ['平台開通裝備', '手機架', '藍牙耳機', '行車記錄器', '記憶卡', '行動電源', '充電線', '良民證', '安全帽', '防曬裝備', '禦寒裝備', '其它'],
   '規費': ['罰單', '停車費'],
   '貸款、分期': ['車貸', '分期付款']
 };
-
 // 更新支出子類別標籤，並清空備註
 window.updateExpSubTags = function() {
   const cat = document.getElementById('f-exp-cat').value;
@@ -862,6 +860,7 @@ function closeOverlay(id) {
       closeBtn.style.display = 'flex'; // 恢復顯示
     }
     el.style.zIndex = '';
+    window.__authFlowLocked = false;
   }
 }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
@@ -8218,6 +8217,8 @@ window.switchAuthTab = function(mode) {
   renderAuthContent();
 };
 function openAuthModal() {
+  window.__authFlowLocked = true;
+
   // 👇 強制覆蓋外層標題字體大小
   const subTitleEl = document.getElementById('sub-title');
   subTitleEl.textContent = '帳號管理';
@@ -11368,9 +11369,18 @@ window.checkAndPromptPlatformSetup = function() {
  * 修正方式：不要「時間到了就硬跳出」，而是持續確認「現在方便打斷使用者嗎（人在首頁、沒有開著其他彈窗）」，
  * 安全的時候才顯示；如果使用者正在忙（例如正在登入），就先不要顯示，稍後再檢查一次，
  * 絕不會蓋掉使用者正在操作的畫面。 */
+function isAuthFlowBusy() {
+  const subPage = document.getElementById('sub-page');
+  const subTitle = document.getElementById('sub-title');
+  const authArea = document.getElementById('auth-content-area');
+  const isSubPageOpen = !!(subPage && subPage.classList.contains('show'));
+  const isAccountManagement = !!(subTitle && ['帳號管理', '帳號資訊'].includes(subTitle.textContent.trim()));
+  return !!(window.__authFlowLocked || (isSubPageOpen && isAccountManagement) || (isSubPageOpen && authArea));
+}
+
 function waitForSafeMomentThenShowSetup(attempt = 0) {
   const isAnyOverlayOpen = document.querySelector('.overlay-page.show');
-  const isSafeMoment = S.tab === 'home' && !isAnyOverlayOpen;
+  const isSafeMoment = S.tab === 'home' && !isAnyOverlayOpen && !isAuthFlowBusy();
 
   if (isSafeMoment || attempt >= 50) { // 最多等 15 秒（50 x 300ms），避免萬一條件一直不成立而永遠不出現
     window.__initSetupPending = false;
@@ -11402,6 +11412,11 @@ window.toggleInitPlat = function(row, platId, color) {
 }
 
 function showInitialSetupModal() {
+  if (isAuthFlowBusy()) {
+    window.__initSetupPending = false;
+    return;
+  }
+
   // 🛡️ 二次防呆：若畫面上已經有一份引導視窗，就不要再疊加第二份
   //    （避免出現「兩個視窗疊在一起、按鈕點不到」的狀況）
   const existing = document.getElementById('init-setup-overlay');
@@ -11470,12 +11485,14 @@ function showInitialSetupModal() {
     document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
     setTimeout(() => {
       ov.remove();
-      // 👈 因為這個視窗現在只會在「使用者停留在首頁、且沒有開著其他彈窗」時才出現，
-      // 這裡的 goPage('home') 不會有蓋掉登入頁等其他畫面的風險，純粹是刷新首頁內容用的。
-      S.homeSubTab = 'schedule';
-      goPage('home');
-      renderSettings();
-      setTimeout(() => updateNavIndicator('home'), 100);
+      if (!isAuthFlowBusy() && S.tab === 'home') {
+        // 👈 因為這個視窗現在只會在「使用者停留在首頁、且沒有開著其他彈窗」時才出現，
+        // 這裡的 goPage('home') 不會有蓋掉登入頁等其他畫面的風險，純粹是刷新首頁內容用的。
+        S.homeSubTab = 'schedule';
+        goPage('home');
+        renderSettings();
+        setTimeout(() => updateNavIndicator('home'), 100);
+      }
       toast('✅ 啟用平台，設定完成！');
     }, 400);
   });
