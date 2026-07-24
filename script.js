@@ -11458,20 +11458,17 @@ function updateLocalBackupTime() {
    （例如：資料載入完成後 / 啟動動畫結束後），
    加入 __initSetupPending 旗標，確保「引導視窗」全程只會被排程開啟一次。 ══ */
 window.checkAndPromptPlatformSetup = function() {
-  // 0. 若已經排程要開啟、或視窗目前正顯示中，直接跳過，避免重複開兩個視窗
   if (window.__initSetupPending || document.getElementById('init-setup-overlay')) return;
 
-  // 1. 檢查標記
   const isSetupCompleted = localStorage.getItem('delivery_setup_completed') === 'true';
-  
-  // 2. 檢查目前記憶體中的平台狀態
   const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
 
-  // ✨ 只有「從未完成設定」且「目前沒有任何平台被開啟」時，才跳出視窗
+  // 只有沒設定過且沒啟用平台時才顯示
   if (!isSetupCompleted && !hasActivePlatform) {
-    console.log("偵測到初次使用，準備開啟引導視窗...");
     window.__initSetupPending = true;
-    setTimeout(() => waitForSafeMomentThenShowSetup(), 600); // 稍微延遲確保 UI 穩定
+    
+    // 這裡不要用 waitForSafeMoment，因為我們已經在 onSplashFinished 確定現在很安全
+    showInitialSetupModal(); 
   }
 };
 
@@ -11638,7 +11635,7 @@ async function init() {
 
   // 1. ✨ 優先執行資料載入
   await loadAll(); 
-  isAppInitialized = true; // 資料到這裡已經載入完畢了
+  isAppInitialized = true; 
 
   // 2. 啟動其餘背景功能
   applyBackground();
@@ -11646,12 +11643,10 @@ async function init() {
   if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
   initReminderCheck();
 
-  // 3. ✨ 判斷：如果使用者已經點了「跳過」，就立刻結束；
-  //    否則，等待剩下的時間（保底 1.2 秒）再結束。
+  // 3. ✨ 質感等待或立即跳過
   if (window.__userWantsToSkip) {
     window.onSplashFinished();
   } else {
-    // 如果沒點跳過，就等滿 1.2 秒讓動畫跑完，維持質感
     setTimeout(() => {
       window.onSplashFinished();
     }, 3000);
@@ -11661,14 +11656,11 @@ async function init() {
 /* --- 修正：iOS PWA 重啟時原地恢復，絕不跳轉 --- */
 window.onSplashFinished = function() {
   const splash = document.getElementById('splash');
-  
-  // 🛡️ 門檻：如果資料還沒讀完 (loadAll 沒跑完)，點擊也先不反應，以免進去看到空白
   if (!isAppInitialized) return; 
-
   if (!splash || splash.dataset.closing === 'true') return; 
   splash.dataset.closing = 'true';
 
-  // --- 1. 決定目的地 (跟上次一樣的邏輯) ---
+  // --- 1. 偵測啟動狀態 ---
   const isResume = sessionStorage.getItem('app_session_active') === 'true';
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
   const lastActiveTime = parseInt(localStorage.getItem('auth_last_active') || '0');
@@ -11681,17 +11673,20 @@ window.onSplashFinished = function() {
   let targetTab = lastTab;
   let shouldReopenAuth = false;
 
+  // --- 2. 核心邏輯判定 ---
   if (!isResume) {
+    // 🏠 情境：冷啟動 (手動關掉再開)
     targetTab = 'home';
-    localStorage.removeItem('auth_flow_active');
-    sessionStorage.setItem('app_session_active', 'true'); 
+    localStorage.removeItem('auth_flow_active'); // 清除舊鎖
+    sessionStorage.setItem('app_session_active', 'true'); // 標記工作階段開始
   } 
   else if (isAuthActive && !isAuthExpired) {
+    // 🔄 情境：PWA 恢復流程
     targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
     shouldReopenAuth = true;
   }
 
-  // --- 2. 先換好頁面，再開始淡出 ---
+  // --- 3. 執行靜默渲染 ---
   goPage(targetTab, true);
 
   if (shouldReopenAuth) {
@@ -11704,15 +11699,21 @@ window.onSplashFinished = function() {
     renderAuthContent();
   }
 
-  // --- 3. 執行淡出 ---
+  // --- 4. 淡出動畫並觸發「引導視窗」與「公告」 ---
   splash.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
   splash.style.opacity = '0';
-  splash.style.transform = 'scale(1.1)'; // 增加一點往外擴散的質感
+  splash.style.transform = 'scale(1.05)';
   splash.style.pointerEvents = 'none';
 
   setTimeout(() => {
     if (splash.parentNode) splash.remove();
-    checkAndShowAnnouncement(); 
+    
+    // 👈 [關鍵]：動畫收起後，如果是冷啟動，才檢查是否要跳出初次引導視窗
+    if (!isResume) {
+      checkAndPromptPlatformSetup(); 
+    }
+    
+    checkAndShowAnnouncement(); // 檢查系統公告
   }, 450);
 };
 
