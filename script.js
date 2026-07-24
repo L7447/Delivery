@@ -56,6 +56,30 @@ function appendAuthDebugLog(message, detail = '') {
   return logs;
 }
 
+function copyAuthDebugLogs() {
+  const logs = getAuthDebugLogs();
+  const text = logs.map(item => `${item.ts} • ${item.message}${item.detail ? `\n${item.detail}` : ''}`).join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => toast('✅ 已複製偵錯日誌')).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('✅ 已複製偵錯日誌');
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('✅ 已複製偵錯日誌');
+  }
+}
+
 function renderAuthDebugPanel() {
   const panel = document.getElementById('auth-debug-panel');
   if (!panel) return;
@@ -63,7 +87,10 @@ function renderAuthDebugPanel() {
   const logs = getAuthDebugLogs().slice(-10).reverse();
   panel.innerHTML = `
     <div style="margin-top:14px; padding:10px 12px 24px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; margin-bottom:24px; max-height:280px; overflow-y:auto; padding-right:6px;">
-      <div style="font-size:12px; font-weight:800; color:#334155; margin-bottom:8px;">🧪 帳號流程偵錯日誌</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
+        <div style="font-size:12px; font-weight:800; color:#334155;">🧪 帳號流程偵錯日誌</div>
+        <button onclick="copyAuthDebugLogs()" style="font-size:11px; padding:4px 8px; border:none; border-radius:999px; background:#2563eb; color:white; font-weight:700; cursor:pointer;">複製全部</button>
+      </div>
       ${logs.length ? logs.map(item => `
         <div style="font-size:11px; color:#475569; line-height:1.45; margin-bottom:6px;">
           <div style="font-weight:700; color:#2563eb;">${escapeDebugText(item.ts)} • ${escapeDebugText(item.message)}</div>
@@ -1345,9 +1372,9 @@ function goPage(name) {
   console.log(`%c[路由追蹤] 目標: ${name} | 當前頁面: ${S.tab}`, "background: #2563eb; color: #fff; padding: 2px 5px;");
   appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab || 'unknown'}`);
 
-  if (name === 'home' && isAuthFlowBusy()) {
-    appendAuthDebugLog(`攔截首頁導向`, `帳號流程正在進行中`);
-    console.warn('🚫 已攔截首頁導向：帳號流程仍在進行中');
+  if (isAuthFlowBusy() && (name === 'home' || name === 'settings')) {
+    appendAuthDebugLog(`攔截首頁/設定導向`, `帳號流程正在進行中`);
+    console.warn('🚫 已攔截首頁/設定導向：帳號流程仍在進行中');
     return;
   }
   
@@ -10062,9 +10089,11 @@ function logoutAccount() {
   
   toast('✅ 已成功「登出帳號」');
   
-  // 👈 [核心修復] 登出後直接呼叫這兩個函式
-  renderSettings(); 
-  renderHome(); 
+  // 👈 [核心修復] 登出後直接呼叫這兩個函式，但若帳號子頁仍開著，先不要切換主畫面
+  if (!isAuthFlowBusy()) {
+    renderSettings(); 
+    renderHome(); 
+  }
   
   // 4. 如果目前在設定頁面以外的地方，可以考慮關閉子頁面
   closeOverlay('sub-page'); 
