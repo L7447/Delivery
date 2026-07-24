@@ -22,6 +22,58 @@ function isLocalDevelopment() {
          location.hostname.includes('192.168.') || 
          location.protocol === 'file:';
 }
+
+function escapeDebugText(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function getAuthDebugLogs() {
+  try {
+    const raw = localStorage.getItem('delivery_auth_debug_log');
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function appendAuthDebugLog(message, detail = '') {
+  const entry = {
+    ts: new Date().toLocaleTimeString('zh-TW', { hour12: false }),
+    message: String(message),
+    detail: detail ? String(detail) : ''
+  };
+  const logs = getAuthDebugLogs();
+  logs.push(entry);
+  while (logs.length > 40) logs.shift();
+  localStorage.setItem('delivery_auth_debug_log', JSON.stringify(logs));
+  window.__authDebugLogs = logs;
+  console.log(`[AUTH-TRACE] ${entry.ts} ${entry.message}`, entry.detail || '');
+  return logs;
+}
+
+function renderAuthDebugPanel() {
+  const panel = document.getElementById('auth-debug-panel');
+  if (!panel) return;
+
+  const logs = getAuthDebugLogs().slice(-10).reverse();
+  panel.innerHTML = `
+    <div style="margin-top:14px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
+      <div style="font-size:12px; font-weight:800; color:#334155; margin-bottom:8px;">🧪 帳號流程偵錯日誌</div>
+      ${logs.length ? logs.map(item => `
+        <div style="font-size:11px; color:#475569; line-height:1.45; margin-bottom:6px;">
+          <div style="font-weight:700; color:#2563eb;">${escapeDebugText(item.ts)} • ${escapeDebugText(item.message)}</div>
+          ${item.detail ? `<div style="color:#64748b; word-break:break-word;">${escapeDebugText(item.detail)}</div>` : ''}
+        </div>
+      `).join('') : '<div style="font-size:11px; color:#94a3b8;">尚未產生任何事件</div>'}
+    </div>
+  `;
+}
+
 // 支出子類別定義
 const EXP_SUB_CATS = {
   '保險': ['強制險', '第三責任險', '職災險', '其它保險'],
@@ -851,6 +903,7 @@ function openOverlay(id) {
 function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
+  appendAuthDebugLog(`關閉彈窗`, `overlay=${id}`);
   el.classList.remove('show');
   
   // 💡 [修正] 針對 sub-page 關閉時，強制恢復左上角 X 按鈕的顯示
@@ -1290,9 +1343,11 @@ function goPage(name) {
   // 🔍 偵錯追蹤器
   const stack = new Error().stack;
   console.log(`%c[路由追蹤] 目標: ${name} | 當前頁面: ${S.tab}`, "background: #2563eb; color: #fff; padding: 2px 5px;");
+  appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab || 'unknown'}`);
   
   if (name === 'home' && isAppInitialized) {
      console.warn("偵測到跳回首頁，來源堆疊：", stack);
+     appendAuthDebugLog(`偵測到跳回首頁`, stack.split('\n').slice(1, 4).join(' | '));
   }
   // 🌟 [核心安全修正]：同時攔截「收入分析」與「新增紀錄」
   /*
@@ -8218,6 +8273,7 @@ window.switchAuthTab = function(mode) {
 };
 function openAuthModal() {
   window.__authFlowLocked = true;
+  appendAuthDebugLog(`開啟帳號管理頁`, `mode=${authMode}`);
 
   // 👇 強制覆蓋外層標題字體大小
   const subTitleEl = document.getElementById('sub-title');
@@ -8230,11 +8286,13 @@ function openAuthModal() {
   // 移除舊版的 slide-tabs，直接載入內容區域
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;" id="auth-content-area"></div>
+    <div id="auth-debug-panel"></div>
   `;
   renderAuthContent();
   openOverlay('sub-page');
 }
 function renderAuthContent() {
+  appendAuthDebugLog(`渲染帳號表單`, `mode=${authMode}`);
   let contentHtml = '';
   
   if (authMode === 'login') {
@@ -8367,6 +8425,7 @@ function renderAuthContent() {
 
   // 1. 注入 HTML
   document.getElementById('auth-content-area').innerHTML = contentHtml;
+  renderAuthDebugPanel();
 
   // 2. 🌟 執行手動渲染 (核心修正)
   // 使用 requestAnimationFrame 確保 DOM 已經真正畫在螢幕上
@@ -8424,6 +8483,7 @@ const API_BASE_URL = 'https://delivery-api.fab2ci.workers.dev';
 /* ══ 寄送真實 Email 驗證碼 ══ */
 async function requestLogin() {
   const email = document.getElementById('auth-email').value.trim();
+  appendAuthDebugLog(`送出 ${authMode === 'login' ? '登入' : '註冊'} 請求`, `email=${email}`);
   const pwd = document.getElementById('auth-pwd').value.trim();
 
   let turnstileToken = '';
@@ -8466,6 +8526,7 @@ async function requestLogin() {
       body: JSON.stringify({ email, password: pwd, turnstileToken }) 
     });
     const data = await res.json();
+    appendAuthDebugLog(`收到 ${authMode === 'login' ? '登入' : '註冊'} 回應`, `success=${data.success} message=${data.message || '無訊息'}`);
     
     finishProgress(() => {
       if (data.success) {
@@ -8489,10 +8550,12 @@ async function requestLogin() {
             return;
           }
 
+          appendAuthDebugLog(`登入成功`, `role=${data.user?.role || 'unknown'}`);
           toast('✅ 登入成功');
           closeOverlay('sub-page');
           renderSettings();
         } else {
+          appendAuthDebugLog(`進入驗證碼階段`, `email=${email}`);
           // 📧 新用戶或未驗證帳號，顯示驗證碼輸入畫面
           document.getElementById('sub-body').innerHTML = `
             <div style="padding:16px;">
@@ -8506,7 +8569,9 @@ async function requestLogin() {
               </div>
               <button onclick="verifyAuthCode('${email}')" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">驗證並啟用帳號</button>
             </div>
+            <div id="auth-debug-panel"></div>
           `;
+          renderAuthDebugPanel();
         }
       } else {
         // 💡 直接 Toast 顯示後端傳來的錯誤訊息 (不會出現驗證畫面)
@@ -8521,6 +8586,7 @@ async function requestLogin() {
 /* ══ 驗證 Email 驗證碼 (儲存權限 role) ══ */
 async function verifyAuthCode(email) {
   const code = document.getElementById('auth-code').value.trim();
+  appendAuthDebugLog(`送出驗證碼`, `email=${email} codeLen=${code.length}`);
   if(code.length < 4) { toast('請輸入「正確的驗證碼」'); return; }
   
   showProgress('帳號驗證中...');
@@ -8531,12 +8597,14 @@ async function verifyAuthCode(email) {
       body: JSON.stringify({ email, code })
     });
     const data = await res.json();
+    appendAuthDebugLog(`收到驗證碼回應`, `success=${data.success} message=${data.message || '無訊息'}`);
     
     finishProgress(() => {
       if (data.success) {
         // 👈 將 data.user.role (權限) 一併存入
         USER = { email: email, uid: data.user.uid, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar, uid: data.user.uid };
         saveUser();
+        appendAuthDebugLog(`驗證成功`, `role=${data.user?.role || 'unknown'}`);
         toast('✅ 登入成功');
         closeOverlay('sub-page');
         renderSettings();
@@ -8551,13 +8619,14 @@ async function verifyAuthCode(email) {
 
 /* ══ 替換：帳號資訊 (開放統計 & 頭像支援 & 在線人數) ══ */
 async function openAccountStats() {
+  appendAuthDebugLog(`開啟帳號資訊頁`, `user=${USER?.email || 'unknown'}`);
   document.getElementById('sub-title').textContent = '帳號資訊';
   document.getElementById('sub-top-right').innerHTML = '';
 
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = '';
 
-  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div>`;
+  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div><div id="auth-debug-panel"></div>`;
   openOverlay('sub-page');
 
   let statsHtml = '';
@@ -8570,6 +8639,7 @@ async function openAccountStats() {
 
     const statRes = await fetch(`${API_BASE_URL}/stats`, { headers });
     const statData = await statRes.json();
+    appendAuthDebugLog(`帳號資訊載入完成`, `success=${statData.success} online=${statData.onlineCount || 0}`);
     if (statData.success) {
       statsHtml = `
         <h4 style="font-size:13px; color:var(--hint-color); margin-bottom:8px;">📊 系統註冊統計</h4>
@@ -8627,7 +8697,8 @@ async function openAccountStats() {
 
   if (USER.role !== 'admin') {
     baseHtml += `<button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`;
-    document.getElementById('sub-body').innerHTML = baseHtml;
+    document.getElementById('sub-body').innerHTML = baseHtml + `<div id="auth-debug-panel"></div>`;
+    renderAuthDebugPanel();
     return;
   }
 
@@ -11413,6 +11484,7 @@ window.toggleInitPlat = function(row, platId, color) {
 
 function showInitialSetupModal() {
   if (isAuthFlowBusy()) {
+    appendAuthDebugLog(`略過首次設定視窗`, `帳號流程忙碌中`);
     window.__initSetupPending = false;
     return;
   }
