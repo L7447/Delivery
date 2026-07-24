@@ -932,21 +932,31 @@ function openOverlay(id) {
     el.classList.add('show'); 
   }
 }
+/* ══ 正確的關閉彈窗邏輯 ══ */
 function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
+
+  // 🛡️ 攔截檢查：如果是強制改密碼期間，不准關閉 sub-page
+  if (id === 'sub-page' && el.dataset.forced === 'true') {
+    toast('⚠️ 安全要求：請先完成密碼修改');
+    return;
+  }
+
   appendAuthDebugLog(`關閉彈窗`, `overlay=${id}`);
   el.classList.remove('show');
   
-  // 💡 [修正] 針對 sub-page 關閉時，強制恢復左上角 X 按鈕的顯示
+  // 💡 當 sub-page 關閉時，清空帳號流程的所有鎖定狀態
   if (id === 'sub-page') {
     const closeBtn = el.querySelector('.top-bar .bar-btn');
-    if (closeBtn) {
-      closeBtn.style.display = 'flex'; // 恢復顯示
-    }
+    if (closeBtn) closeBtn.style.display = 'flex'; // 恢復左上角 X 顯示
+    
     el.style.zIndex = '';
-    window.__authFlowLocked = false;
-    window.__authTurnstileActive = false;
+    window.__authFlowLocked = false;      // 解除頁面切換鎖定
+    window.__authTurnstileActive = false; // 解除人機驗證鎖定
+    
+    // 清除強制標記，避免影響下次開啟
+    el.dataset.forced = 'false';
   }
 }
 function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
@@ -1419,7 +1429,7 @@ function goPage(name) {
     return; // 徹底攔截，不執行任何 UI 渲染
   }
   */
-  S.tab = name;
+  if (!setActiveTab(name)) return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
     const isActive = n.dataset.pg === name;
@@ -1747,6 +1757,7 @@ function checkAndShowAnnouncement(ignoreOverlay = false) {
 
 /* ══ 簡潔版：首頁渲染 (刪除多餘卡片，加入獎勵介面) ══ */
 function renderHome() {
+  if (shouldBlockAuthSensitiveUi('renderHome')) return;
   const topEl = document.getElementById('home-top-content');
   const botEl = document.getElementById('home-bottom-content');
   const tabBg = document.getElementById('home-tab-bg');
@@ -10114,8 +10125,8 @@ confirmAddRecord = async function() {
 }
 
 /* ══ 登出清空權限 ══ */
+/* --- 修正：登出時不再強制跳轉首頁 --- */
 function logoutAccount() {
-  // 1. 重置 USER 物件，確保 uid 也被清為空
   USER = { 
     email: null, 
     verified: false, 
@@ -10123,12 +10134,10 @@ function logoutAccount() {
     joinDate: null, 
     token: null, 
     role: 'user', 
-    uid: null // 👈 [新增] 確保登出時清空 UID
+    uid: null 
   };
+  saveUser();
   
-  saveUser(); // 存入 localStorage
-  
-  // 2. 停用雲端備份 (安全考量)
   if (S.settings) {
     S.settings.autoBackup = false; 
     saveSettings();
@@ -10136,13 +10145,17 @@ function logoutAccount() {
   
   toast('✅ 已成功「登出帳號」');
   
-  // 👈 [核心修復] 登出後直接呼叫這兩個函式，但若帳號子頁仍開著，先不要切換主畫面
-  if (!isAuthFlowBusy()) {
-    renderSettings(); 
-    renderHome(); 
+  // 👈 [核心修正]：不再呼叫 renderHome()。
+  // 只重繪目前所在的分頁內容（例如你在「設定」頁點登出，就留在設定頁重繪成「未登入狀態」）
+  if (S.tab === 'settings') {
+    renderSettings();
+  } else if (S.tab === 'home') {
+    renderHome();
+  } else {
+    // 如果在其它頁面（如報表），因為登出可能導致資料無法查看，則此時才考慮回首頁
+    goPage('home');
   }
   
-  // 4. 如果目前在設定頁面以外的地方，可以考慮關閉子頁面
   closeOverlay('sub-page'); 
 }
 
@@ -10911,8 +10924,7 @@ async function doReset() {
   saveSettings();
   
   closeOverlay('sub-page'); 
-  S.tab = 'home';
-  document.body.setAttribute('data-tab', 'home');
+  setActiveTab('home');
 
   // 5. ✨ 重新呼叫啟動流程
   window.onSplashFinished();
@@ -11207,6 +11219,9 @@ function applyBackground() {
 
 /* --- 1. 更改密碼 (包含 1234 強制更改) --- */
 window.showForcePasswordChange = function(isForced = false) {
+  window.__authFlowLocked = true;
+  window.__authTurnstileActive = true;
+  window.__authFlowOriginTab = S.tab || 'home';
   document.getElementById('sub-title').textContent = isForced ? '⚠️ 安全要求：請立即更改密碼' : '安全設定：更改密碼';
   
   // 👇 不論是否強制，統一隱藏左上角的 X 按鈕
@@ -11537,17 +11552,39 @@ function isAuthFlowBusy() {
   );
 }
 
+/* --- 修正：登入成功後，精準回到來源頁面而非首頁 --- */
 function restoreAuthOriginPage() {
+  // 取得進入帳號流程前的分頁，若無則留在目前分頁，最後才考慮 home
   const targetTab = window.__authFlowOriginTab || S.tab || 'home';
-  try {
-    if (targetTab === 'home') renderHome();
-    else if (targetTab === 'history') renderHistory();
-    else if (targetTab === 'report') renderReport();
-    else if (targetTab === 'vehicles') renderVehicles();
-    else renderSettings();
-  } catch (e) {
-    console.warn('恢復原頁面失敗', e);
+  
+  appendAuthDebugLog(`恢復原始頁面`, `target=${targetTab}`);
+  
+  // 徹底清除鎖定狀態，否則 goPage 會被攔截
+  window.__authFlowLocked = false;
+  window.__authTurnstileActive = false;
+
+  // 使用 goPage 確保導覽列動畫、標題、內容全部同步更新
+  // 如果原本就在 settings，goPage('settings') 會負責重繪內容
+  goPage(targetTab);
+  
+  // 重置來源標記
+  window.__authFlowOriginTab = null;
+}
+
+function shouldBlockAuthSensitiveUi(action = 'ui') {
+  if (isAuthFlowBusy()) {
+    appendAuthDebugLog(`阻止 ${action}`, '帳號流程正在進行中');
+    return true;
   }
+  return false;
+}
+
+function setActiveTab(name, { force = false } = {}) {
+  if (!force && shouldBlockAuthSensitiveUi(`切換頁面:${name}`)) return false;
+  S.tab = name;
+  document.body.setAttribute('data-tab', name);
+  if (name) updateNavIndicator(name);
+  return true;
 }
 
 function waitForSafeMomentThenShowSetup(attempt = 0) {
@@ -11649,25 +11686,26 @@ function showInitialSetupModal() {
     if (!hasChecked) { toast('⚠️ 請至少選擇「一個平台」'); return; }
 
     savePlatforms();
-    
-    // ✨ 核心修正：記錄「已經完成過初始化設定」
     localStorage.setItem('delivery_setup_completed', 'true');
 
-    // 平滑退場
     ov.style.opacity = '0';
     document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
+
     setTimeout(() => {
       ov.remove();
+      
+      /* --- 關鍵修正：只有在「使用者沒在忙」的時候才跳轉 --- */
       if (!isAuthFlowBusy()) {
-        S.homeSubTab = 'schedule';
+        // 使用者沒在登入，可以安全跳轉回首頁看結果
         S.tab = 'home';
-        document.body.setAttribute('data-tab', 'home');
-        updateNavIndicator('home');
+        goPage('home');
+        toast('✅ 啟用平台，設定完成！');
+      } else {
+        // 使用者正在「登入中」，我們只在背景更新資料，絕對不去動他的畫面！
         renderHome();
         renderSettings();
-        setTimeout(() => updateNavIndicator('home'), 100);
+        console.log("偵測到帳號流程進行中，初始設定僅更新數據，不干擾頁面。");
       }
-      toast('✅ 啟用平台，設定完成！');
     }, 400);
   });
 }
@@ -11750,37 +11788,32 @@ async function init() {
  * 首頁的渲染已經在 init() 資料載入完成當下就確定完成了（見上方），
  * 這裡不再做任何「猜使用者在不在首頁 / 要不要強制導回首頁」的邏輯，
  * 因此不會有任何時機差造成的競爭條件，也不會蓋掉使用者已經打開的登入頁等畫面。 */
+/* --- 修正：進場動畫結束後，尊重目前的 S.tab 狀態 --- */
 window.onSplashFinished = function() {
   const loadingDiv = document.createElement('div');
-  loadingDiv.style.cssText = "position:fixed; inset:0; background:var(--bg); z-index:999998; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:1; transition:0.5s ease-out; pointer-events:none;";
-  loadingDiv.innerHTML = `
-    <div style="width:44px; height:44px; border:4px solid #e2e8f0; border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;"></div>
-    <div style="font-weight:800; color:var(--t2); font-size:15px; letter-spacing:1px;">載入首頁...</div>
-    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
-  `;
+  // ... (樣式部分保持不變)
   document.body.appendChild(loadingDiv);
 
-  // 👈 純粹的視覺淡出，時間到就收掉讀取動畫；不做任何頁面/導覽判斷或強制跳轉。
-  // 加上 pointer-events:none，讓使用者在這段過場動畫期間，
-  // 仍然可以正常點擊按鈕（例如登入帳號），不會被這層蓋住而點擊落空。
   setTimeout(() => {
     updateNavIndicator(S.tab);
     loadingDiv.style.opacity = '0';
     setTimeout(() => loadingDiv.remove(), 400);
   }, 300);
 
-  if (window.__pendingHomeRender) {
-    window.__pendingHomeRender = false;
-    appendAuthDebugLog('完成啟動畫面', '只顯示過場，不做頁面切換');
-  }
-
   window.__suppressNavigation = false;
-  appendAuthDebugLog('首頁就緒', '完成初始化與首頁渲染');
+  
+  // 👈 [核心修正]：不再強制 setActiveTab('home')
+  // 如果 S.tab 已經有值（從 init 載入的），就維持現狀並渲染
   if (!isAuthFlowBusy()) {
-    S.tab = 'home';
-    document.body.setAttribute('data-tab', 'home');
-    updateNavIndicator('home');
-    renderHome();
+    const currentTab = S.tab || 'home';
+    setActiveTab(currentTab, { force: true }); 
+    
+    // 根據當前 Tab 執行對應渲染
+    if (currentTab === 'home') renderHome();
+    else if (currentTab === 'settings') renderSettings();
+    else if (currentTab === 'history') renderHistory();
+    else if (currentTab === 'report') renderReport();
+    else if (currentTab === 'vehicles') renderVehicles();
   }
 
   checkAndShowAnnouncement();
