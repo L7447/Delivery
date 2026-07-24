@@ -877,55 +877,26 @@
 
 </div> <!-- 結尾 #app -->
 
-<!-- 動畫控制腳本 (5種風格共用) -->
+<!-- splash 動畫控制腳本 -->
 <script>
   function runSplashAnimation() {
     const splash = document.getElementById('splash');
     const skipHint = document.getElementById('skip-hint');
-    if (!splash) {
-      if (window.onSplashFinished) window.onSplashFinished();
-      return;
-    }
+    if (!splash) return;
 
-    let isFinished = false;
-    let canSkip = false;
+    // 1. 顯示「點擊跳過」提示 (稍微延遲)
+    setTimeout(() => { if (skipHint) skipHint.style.opacity = '1'; }, 1000);
 
-    // 結束動畫並交接給主程式
-    const finishSplash = () => {
-      if (isFinished) return;
-      isFinished = true;
-      splash.style.opacity = '0';
-      splash.style.pointerEvents = 'none';
-      setTimeout(() => {
-        splash.remove();
-        // 👇 是否要顯示「初次使用引導視窗」，統一交給 script.js 的 init()
-        //    在資料載入完成後判斷（單一進場入口，避免兩處各自觸發造成重複視窗）。
-        if (window.onSplashFinished) window.onSplashFinished();
-      }, 400); // 0.4秒平滑淡出
-    };
-
-    // 1. 設定 2 秒後允許點擊跳過，並浮現提示
-    setTimeout(() => {
-      canSkip = true;
-      if (skipHint) skipHint.style.opacity = '1';
-    }, 700);
-
-    // 2. 設定 4.6 秒後自動開始淡出 (確保 5 秒內完全結束)
-    setTimeout(() => {
-      finishSplash();
-    }, 4600);
-
-    // 3. 點擊螢幕任意處跳過
+    // 2. 點擊螢幕任意處強制結束動畫
     splash.addEventListener('click', () => {
-      if (canSkip) finishSplash();
+      if (window.onSplashFinished) window.onSplashFinished();
     });
+    
+    // 💡 移除原本的 120ms 自动结束，現在由 script.js 載入完畢後呼叫 window.onSplashFinished()
   }
 
-  if (document.readyState === 'complete' || document.readyState === 'interactive') { 
-    requestAnimationFrame(runSplashAnimation); 
-  } else { 
-    window.addEventListener('DOMContentLoaded', runSplashAnimation); 
-  }
+  if (document.readyState === 'complete') runSplashAnimation();
+  else window.addEventListener('load', runSplashAnimation);
 </script>
 
 <!-- ⚡ 專屬數字計算鍵盤 ⚡ -->
