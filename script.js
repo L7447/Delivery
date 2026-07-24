@@ -41,18 +41,23 @@ function getAuthDebugLogs() {
   }
 }
 
-function appendAuthDebugLog(message, detail = '') {
+function appendAuthDebugLog(message, detail = '', level = 'info') {
+  if (!window.__debugSeq) window.__debugSeq = 0;
+  window.__debugSeq += 1;
   const entry = {
+    seq: window.__debugSeq,
     ts: new Date().toLocaleTimeString('zh-TW', { hour12: false }),
     message: String(message),
-    detail: detail ? String(detail) : ''
+    detail: detail ? String(detail) : '',
+    level
   };
   const logs = getAuthDebugLogs();
   logs.push(entry);
-  while (logs.length > 40) logs.shift();
+  while (logs.length > 80) logs.shift();
   localStorage.setItem('delivery_auth_debug_log', JSON.stringify(logs));
   window.__authDebugLogs = logs;
-  console.log(`[AUTH-TRACE] ${entry.ts} ${entry.message}`, entry.detail || '');
+  const prefix = level === 'error' ? '⚠️ ' : '';
+  console.log(`[TRACE#${entry.seq}] ${prefix}${entry.message}`, entry.detail || '');
   return logs;
 }
 
@@ -84,16 +89,16 @@ function renderAuthDebugPanel() {
   const panel = document.getElementById('auth-debug-panel');
   if (!panel) return;
 
-  const logs = getAuthDebugLogs().slice(-10).reverse();
+  const logs = getAuthDebugLogs().slice(-12).reverse();
   panel.innerHTML = `
-    <div style="margin-top:14px; padding:10px 12px 24px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; margin-bottom:24px; max-height:280px; overflow-y:auto; padding-right:6px;">
+    <div style="margin-top:14px; padding:10px 12px 24px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; margin-bottom:24px; max-height:320px; overflow-y:auto; padding-right:6px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
-        <div style="font-size:12px; font-weight:800; color:#334155;">🧪 帳號流程偵錯日誌</div>
+        <div style="font-size:12px; font-weight:800; color:#334155;">🧪 流程偵錯日誌</div>
         <button onclick="copyAuthDebugLogs()" style="font-size:11px; padding:4px 8px; border:none; border-radius:999px; background:#2563eb; color:white; font-weight:700; cursor:pointer;">複製全部</button>
       </div>
       ${logs.length ? logs.map(item => `
         <div style="font-size:11px; color:#475569; line-height:1.45; margin-bottom:6px;">
-          <div style="font-weight:700; color:#2563eb;">${escapeDebugText(item.ts)} • ${escapeDebugText(item.message)}</div>
+          <div style="font-weight:700; color:${item.level === 'error' ? '#dc2626' : '#2563eb'};">#${item.seq} ${escapeDebugText(item.ts)} • ${escapeDebugText(item.message)}</div>
           ${item.detail ? `<div style="color:#64748b; word-break:break-word;">${escapeDebugText(item.detail)}</div>` : ''}
         </div>
       `).join('') : '<div style="font-size:11px; color:#94a3b8;">尚未產生任何事件</div>'}
@@ -1367,10 +1372,14 @@ function savePunch() {
 }
 
 function goPage(name) {
-  // 🔍 偵錯追蹤器
   const stack = new Error().stack;
   console.log(`%c[路由追蹤] 目標: ${name} | 當前頁面: ${S.tab}`, "background: #2563eb; color: #fff; padding: 2px 5px;");
   appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab || 'unknown'}`);
+
+  if (window.__suppressNavigation) {
+    appendAuthDebugLog(`攔截自動切頁`, `to=${name}`);
+    return;
+  }
 
   if (isAuthFlowBusy() && (name === 'home' || name === 'settings')) {
     appendAuthDebugLog(`攔截首頁/設定導向`, `帳號流程正在進行中`);
@@ -1381,6 +1390,19 @@ function goPage(name) {
   if (name === 'home' && isAppInitialized) {
      console.warn("偵測到跳回首頁，來源堆疊：", stack);
      appendAuthDebugLog(`偵測到跳回首頁`, stack.split('\n').slice(1, 4).join(' | '));
+  }
+
+  if (name === S.tab) {
+    if (name === 'home') {
+      appendAuthDebugLog(`重複切到當前頁`, `home`);
+      renderHome();
+      return;
+    }
+    if (name === 'settings') {
+      appendAuthDebugLog(`重複切到當前頁`, `settings`);
+      renderSettings();
+      return;
+    }
   }
   // 🌟 [核心安全修正]：同時攔截「收入分析」與「新增紀錄」
   /*
@@ -1723,17 +1745,21 @@ function renderHome() {
   
   if (!topEl || !botEl) return;
 
-  if (!S.homeSubTab) S.homeSubTab = 'schedule';
+  try {
+    if (!S.homeSubTab) S.homeSubTab = 'schedule';
+    const records = Array.isArray(S.records) ? S.records : [];
+    const platforms = Array.isArray(S.platforms) ? S.platforms : DEFAULT_PLATFORMS.map(p => ({ ...p }));
+    let topHtml = '';
   
-  // 更新背景滑塊位置 (支援 3 個按鈕)
-  if (tabBg) {
-    if (S.homeSubTab === 'schedule') tabBg.style.transform = 'translateX(0%)';
-    else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(100%)';
-    else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
-  }
+    // 更新背景滑塊位置 (支援 3 個按鈕)
+    if (tabBg) {
+      if (S.homeSubTab === 'schedule') tabBg.style.transform = 'translateX(0%)';
+      else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(100%)';
+      else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
+    }
 
-  // 👇 修復：確保 requestAnimationFrame 有正確的閉合
-  requestAnimationFrame(() => {
+    // 👇 修復：確保 requestAnimationFrame 有正確的閉合
+    requestAnimationFrame(() => {
     try {
       const today = todayStr();
       const dateObj = new Date(today + 'T00:00:00');
@@ -1757,7 +1783,7 @@ function renderHome() {
       `;
 
       // 打卡狀態卡片
-      const activePunch = S.records.find(r => r.isPunchOnly && !r.punchOut);
+      const activePunch = records.find(r => r.isPunchOnly && !r.punchOut);
       const isPunched = !!activePunch;
       let punchStatus = isPunched ? '上線中' : '離線';
       
@@ -1778,7 +1804,7 @@ function renderHome() {
 
       // 底部內容 (平台排程 / 目標進度 / 獎勵進度)
       let bottomHtml = '<div style="padding:0 16px 80px;">';
-      const activePlatforms = (S.platforms || []).filter(p => p.active);
+      const activePlatforms = platforms.filter(p => p.active);
       
       if (S.homeSubTab === 'schedule') {
         if (activePlatforms.length === 0) {
@@ -2003,6 +2029,11 @@ function renderHome() {
       botEl.innerHTML = `<div class="empty-tip">載入失敗，請重新整理</div>`;
     }
   });
+  } catch (err) {
+    appendAuthDebugLog('⚠️ 首頁渲染失敗', err?.message || String(err), 'error');
+    topEl.innerHTML = `<div style="padding:24px 16px; text-align:center; color:var(--t2);">⚠️ 首頁暫時無法載入，請稍後再試</div>`;
+    botEl.innerHTML = '';
+  }
 }
 
 /* ══ 打卡里程捕獲介面 ══ */
@@ -2177,8 +2208,9 @@ async function punchIn() {
     }
     toast('▶ 已上線，起始里程：' + km + ' km');
 
-    // 👈 [核心 3] 執行跳轉
-    goPage('history'); 
+    // 👈 [核心 3] 不再跳轉，直接保持在目前頁面並更新首頁
+    renderHome();
+    appendAuthDebugLog('打卡完成', 'punchIn 不進行頁面切換', 'info');
   };
 }
 /* ══ 修正：下線打卡後跳轉到當日記錄列表 ══ */
@@ -2246,8 +2278,9 @@ async function punchOut() {
     
     toast('✅ 已完成結算');
 
-    // 👈 [核心 3] 執行跳轉
-    goPage('history');
+    // 👈 [核心 3] 不再跳轉，直接保持在目前頁面並更新首頁
+    renderHome();
+    appendAuthDebugLog('打卡完成', 'punchOut 不進行頁面切換', 'info');
     renderHistory();
   };
 }
@@ -11592,11 +11625,12 @@ function showInitialSetupModal() {
     document.getElementById('init-setup-box').style.transform = 'translateY(20px)';
     setTimeout(() => {
       ov.remove();
-      if (!isAuthFlowBusy() && S.tab === 'home') {
-        // 👈 因為這個視窗現在只會在「使用者停留在首頁、且沒有開著其他彈窗」時才出現，
-        // 這裡的 goPage('home') 不會有蓋掉登入頁等其他畫面的風險，純粹是刷新首頁內容用的。
+      if (!isAuthFlowBusy()) {
         S.homeSubTab = 'schedule';
-        goPage('home');
+        S.tab = 'home';
+        document.body.setAttribute('data-tab', 'home');
+        updateNavIndicator('home');
+        renderHome();
         renderSettings();
         setTimeout(() => updateNavIndicator('home'), 100);
       }
@@ -11623,13 +11657,18 @@ async function init() {
     console.error("❌ 載入失敗:", e); 
   }
   
+  window.__suppressNavigation = true;
+  appendAuthDebugLog('APP 啟動', '開始初始化');
   S.homeSubTab = 'schedule';
   const splashEl = document.getElementById('splash');
   if (splashEl && splashEl.isConnected) {
     window.__pendingHomeRender = true;
   } else {
     window.__pendingHomeRender = false;
-    goPage('home');
+    S.tab = 'home';
+    document.body.setAttribute('data-tab', 'home');
+    updateNavIndicator('home');
+    renderHome();
   }
 
   // 3. ✨ 第三步：資料載入完畢後，才判斷是否要跳出「初次使用引導」
@@ -11700,6 +11739,15 @@ window.onSplashFinished = function() {
   if (window.__pendingHomeRender) {
     window.__pendingHomeRender = false;
     appendAuthDebugLog('完成啟動畫面', '只顯示過場，不做頁面切換');
+  }
+
+  window.__suppressNavigation = false;
+  appendAuthDebugLog('首頁就緒', '完成初始化與首頁渲染');
+  if (!isAuthFlowBusy()) {
+    S.tab = 'home';
+    document.body.setAttribute('data-tab', 'home');
+    updateNavIndicator('home');
+    renderHome();
   }
 
   checkAndShowAnnouncement();
