@@ -4006,8 +4006,8 @@ function renderReportWatermark() {
 
   if (S.tab !== 'report') return;
 
-  // 🌟 [修正重點]：若 USER.removeWatermark 為 true，則不顯示浮水印
-  if (!USER.loggedIn || !USER.uid || S.tab !== 'report' || USER.removeWatermark === true) return;
+  // 🌟 [修正判定]：只要 removeWatermark 是 true (Boolean) 或 1 (Number) 就移除
+  if (!USER.loggedIn || !USER.uid || S.tab !== 'report' || USER.removeWatermark == true) return;
 
   const wmContent = `UID: #${USER.uid}`;
 
@@ -10043,11 +10043,18 @@ async function checkAccountStatus() {
     });
     const data = await res.json();
     
-    // 🌟 [新增處]：如果帳號狀態正常，順便更新本地的浮水印權限
     if (data.active) {
-      USER.removeWatermark = data.removeWatermark; // 把伺服器最新的設定存入本地變數
-      saveUser(); // 儲存到手機 LocalStorage，這樣重開 App 才會記得
-      // 不需要 return true，讓它繼續跑後面的邏輯也沒關係，或者直接在最後 return
+      // 👈 [關鍵修正]：檢查權限是否有變動
+      const hasChanged = USER.removeWatermark !== data.removeWatermark;
+      
+      USER.removeWatermark = data.removeWatermark; 
+      saveUser(); 
+
+      // 如果權限在本次檢查中改變了，且使用者正停留在分析頁，立刻移除或加上浮水印
+      if (hasChanged && S.tab === 'report') {
+        appendAuthDebugLog('浮水印權限更新', `新狀態: ${USER.removeWatermark}`);
+        renderReport(); 
+      }
     }
 
     if (!data.active) {
