@@ -3991,14 +3991,6 @@ function cancelAddRecord() {
 /* ══ 4. 新增記錄 結束 ════════════════════════════════════ */
 
 /* ══ 5. 收入分析 開始 ════════════════════════════════════ */
-
-/* ══ 浮水印：改用「DOM 元素排版」而非 SVG data URI ══
- * 比起 SVG data URI（要處理跳脫字元、編碼，一個字元沒處理好整個 background-image 就失效），
- * 改用一般 <span> 排版更直覺，也更容易「自由控制數量與位置」：
- * - 想要密一點/疏一點 → 改 gapX / gapY
- * - 想要換角度、換顏色 → 改 angle / color
- * - 想要「手動指定每個浮水印的座標」而非自動排列 → 把下面的雙層迴圈換成一份固定座標陣列即可，見函式最後的註解範例
- */
 /* ══ 浮水印：範圍與密度自訂版 ══ */
 function renderReportWatermark() {
   const oldWM = document.getElementById('rpt-watermark-container');
@@ -4006,8 +3998,14 @@ function renderReportWatermark() {
 
   if (S.tab !== 'report') return;
 
-  // 🌟 [修正判定]：只要 removeWatermark 是 true (Boolean) 或 1 (Number) 就移除
-  if (!USER.loggedIn || !USER.uid || S.tab !== 'report' || USER.removeWatermark == true) return;
+  // 🌟 修改判定：只要是 true 或 1 或 字串 "true"，都視為「要移除」
+  const isRemoved = (
+    USER.removeWatermark === true || 
+    USER.removeWatermark === 1 || 
+    USER.removeWatermark === "true"
+  );
+
+  if (!USER.loggedIn || !USER.uid || isRemoved) return;
 
   const wmContent = `UID: #${USER.uid}`;
 
@@ -8591,7 +8589,8 @@ async function requestLogin() {
             email: email, uid: data.user.uid, verified: true, loggedIn: true, 
             joinDate: new Date(data.user.createdAt).toLocaleDateString(), 
             token: data.token, role: data.user.role, avatar: selectedAvatar,
-            isPasswordWeak: isWeak // 👈 新增：記錄他的密碼是不是太弱
+            isPasswordWeak: isWeak, // 👈 新增：記錄他的密碼是不是太弱
+            removeWatermark: data.user.removeWatermark
           };
           saveUser();
           
@@ -8654,7 +8653,7 @@ async function verifyAuthCode(email) {
     finishProgress(() => {
       if (data.success) {
         // 👈 將 data.user.role (權限) 一併存入
-        USER = { email: email, uid: data.user.uid, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar, uid: data.user.uid };
+        USER = { email: email, uid: data.user.uid, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar, uid: data.user.uid, removeWatermark: data.user.removeWatermark };
         saveUser();
         appendAuthDebugLog(`驗證成功`, `role=${data.user?.role || 'unknown'}`);
         toast('✅ 登入成功');
