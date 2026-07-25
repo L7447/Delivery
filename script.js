@@ -8587,13 +8587,14 @@ function renderAuthContent() {
           turnstileWidgetId = null;
         }
         widget.innerHTML = '';
-
+/* 
         // 🌟 重新渲染並記錄全新的 Widget ID
         turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
           sitekey: '0x4AAAAAADC958xr-t5UGd36',
           theme: 'light',
           appearance: 'always'
         });
+ */
       } catch (e) {
         console.warn("Turnstile render warning:", e);
       }
