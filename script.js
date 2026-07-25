@@ -9,6 +9,7 @@ document.addEventListener('click', () => {
   }
 });
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
+let turnstileWidgetId = null;
 let isAppInitialized = false; // 紀錄是否已經初始化過
 let currentMaintCategory = 'maintenance'; // 'maintenance' 或 'repair'
 let editingVehRecId = null; 
@@ -26,6 +27,29 @@ function isLocalDevelopment() {
          location.hostname === 'localhost' || 
          location.hostname.includes('192.168.') || 
          location.protocol === 'file:';
+}
+
+let homePunchTimer = null;
+// 格式化秒數為 00:00:00
+function formatDuration(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+// 每秒更新一次畫面上的計時器數字
+function startPunchClock(startTimeMs) {
+  if (homePunchTimer) clearInterval(homePunchTimer);
+  homePunchTimer = setInterval(() => {
+    const el = document.getElementById('live-punch-timer');
+    if (el) {
+      const diff = Date.now() - startTimeMs;
+      el.textContent = formatDuration(diff);
+    } else {
+      clearInterval(homePunchTimer); // 如果元素消失了(切換頁面)，就停止計時
+    }
+  }, 1000);
 }
 
 function escapeDebugText(value) {
@@ -88,27 +112,6 @@ function copyAuthDebugLogs() {
     document.body.removeChild(ta);
     toast('✅ 已複製偵錯日誌');
   }
-}
-
-function renderAuthDebugPanel() {
-  const panel = document.getElementById('auth-debug-panel');
-  if (!panel) return;
-
-  const logs = getAuthDebugLogs().slice(-12).reverse();
-  panel.innerHTML = `
-    <div style="margin-top:14px; padding:10px 12px 24px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; margin-bottom:24px; max-height:320px; overflow-y:auto; padding-right:6px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
-        <div style="font-size:12px; font-weight:800; color:#334155;">🧪 流程偵錯日誌</div>
-        <button onclick="copyAuthDebugLogs()" style="font-size:11px; padding:4px 8px; border:none; border-radius:999px; background:#2563eb; color:white; font-weight:700; cursor:pointer;">複製全部</button>
-      </div>
-      ${logs.length ? logs.map(item => `
-        <div style="font-size:11px; color:#475569; line-height:1.45; margin-bottom:6px;">
-          <div style="font-weight:700; color:${item.level === 'error' ? '#dc2626' : '#2563eb'};">#${item.seq} ${escapeDebugText(item.ts)} • ${escapeDebugText(item.message)}</div>
-          ${item.detail ? `<div style="color:#64748b; word-break:break-word;">${escapeDebugText(item.detail)}</div>` : ''}
-        </div>
-      `).join('') : '<div style="font-size:11px; color:#94a3b8;">尚未產生任何事件</div>'}
-    </div>
-  `;
 }
 
 // 支出子類別定義
@@ -1780,16 +1783,35 @@ function renderHome() {
       // 打卡狀態卡片
       const activePunch = records.find(r => r.isPunchOnly && !r.punchOut);
       const isPunched = !!activePunch;
-      let punchStatus = isPunched ? '上線中' : '離線';
-      
-      topHtml += `
-        <div class="punch-card-new" style="margin:4px 0 6px 0;">
-          <div class="punch-status-left">
-            <div class="punch-dot-new ${isPunched ? 'online' : ''}"></div>
-            <span style="color:${isPunched ? 'var(--green)' : 'var(--t3)'}">${punchStatus}</span>
+
+      let punchStatusHtml = '';
+      if (isPunched) {
+        // 取得上線時間戳記
+        const startTime = activePunch.timestamp || new Date(`${activePunch.date}T${activePunch.punchIn}:00`).getTime();
+        
+        // 🌟 [修改]：放大字體並加上藍色計時器容器
+        punchStatusHtml = `
+          <div style="display:flex; flex-direction:row; align-items:center; gap:2px;">
+            <span style="color:var(--green);font-size:20px;font-weight:800;letter-spacing:1px;margin-right:3px;">上線中</span>
+            <span id="live-punch-timer" style="color:#2563eb;font-family:var(--mono);font-size:18px;font-weight:800;margin-top:1px;border:1px solid #fff200;border-radius:12px;padding:6px 10px;background: #fffeaf;">00:00:00</span>
           </div>
-          <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" onclick="${isPunched ? 'punchOut()' : 'punchIn()'}">
-            ${isPunched ? '⏹ 下線' : '▶ 上線打卡'}
+        `;
+        // 啟動計時
+        requestAnimationFrame(() => startPunchClock(startTime));
+      } else {
+        punchStatusHtml = `<span style="color:var(--t3); font-size:20px; font-weight:800;">離線</span>`;
+      }
+
+      topHtml += `
+        <div class="punch-card-new" style="margin:4px 0 6px 0; padding:5px 12px; height:auto;">
+          <div class="punch-status-left">
+            <div class="punch-dot-new ${isPunched ? 'online' : ''}" style="width:20px; height:20px;"></div>
+            ${punchStatusHtml}
+          </div>
+          <button class="punch-btn-right ${isPunched ? 'btn-go-offline' : 'btn-go-online'}" 
+                  onclick="${isPunched ? 'punchOut()' : 'punchIn()'}" 
+                  style="height:35px; font-size:20px; padding:7px 14px;">
+            ${isPunched ? '⏹ 下線' : '▶ 上線'}
           </button>
         </div>
       `;
@@ -1798,32 +1820,32 @@ function renderHome() {
       topEl.innerHTML = topHtml;
 
       // 底部內容 (平台排程 / 目標進度 / 獎勵進度)
-      let bottomHtml = '<div style="padding:0 16px 80px;">';
+      let bottomHtml = '<div style="padding:0 8px 100px;">';
       const activePlatforms = platforms.filter(p => p.active);
       
       if (S.homeSubTab === 'schedule') {
         if (activePlatforms.length === 0) {
           bottomHtml += `<div class="empty-tip">請先至「設定」頁，啟用平台</div>`;
         } else {
-          bottomHtml += `<div style="display:flex; flex-direction:column; gap:14px;">`;
+          bottomHtml += `<div style="display:flex; flex-direction:column; gap:11px;">`;
           bottomHtml += `
-            <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 7px 10px; margin-bottom: -10px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+            <div style="background: linear-gradient(to bottom, #ffffff, #f8fafc); border-radius: 16px; padding: 4px 10px; margin-bottom: -6px; border: 2px solid #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
               <!-- 頂部四色漸層飾條 -->
               <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #16a34a, #ea580c, #0284c7, #475569);"></div>
               
-              <div style="font-size: 13px; font-weight: 750; color: #334155; margin-bottom: 7px; letter-spacing: 1px;">💡 狀態標籤圖例</div>
+              <div style="font-size: 13px; font-weight: 750; color: #334155; margin-bottom: 2px; letter-spacing: 1px;">💡 狀態標籤圖例</div>
               
               <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
-                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; box-shadow: 0 2px 6px rgba(22,163,74,0.15);">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac;">
                   <span style="font-size: 13px;">🔥</span> 今天
                 </span>
-                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #ffedd5; color: #c2410c; border: 1.5px solid #fdba74; box-shadow: 0 2px 6px rgba(234,88,12,0.15);">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #ffedd5; color: #c2410c; border: 1.5px solid #fdba74;">
                   <span style="font-size: 13px;">⚡</span> 明天
                 </span>
-                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc; box-shadow: 0 2px 6px rgba(2,132,199,0.15);">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc;">
                   <span style="font-size: 13px;">🔜</span> 近 3 天
                 </span>
-                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 6px rgba(71,85,105,0.15);">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1;">
                   <span style="font-size: 13px;">⏳</span> 4 天以上
                 </span>
               </div>
@@ -2050,7 +2072,7 @@ function getMileageCaptureHtml(type) {
           請先拍照或從相簿選擇照片
         </div>
       </div>
-
+      <p style="font-size:12px;color:var(--text-blue);font-weight:800;margin-bottom:10px;">💡 提示：範圍必須包含「數字」與「km」單位</p>
       <div style="display:flex; gap:8px; margin-bottom:15px;">
         <button onclick="document.getElementById('ocr-file-input').click()" style="flex:1; padding:12px; border-radius:12px; background:#fff; border:2px solid var(--blue); font-weight:800; color:var(--blue);">📸 拍照/選圖</button>
         <button id="start-ocr-btn" onclick="performCropAndOCR()" disabled style="flex:1; padding:12px; border-radius:12px; background:var(--green); color:#fff; border:none; font-weight:800; opacity:0.5;">🔍 裁剪並辨識</button>
@@ -2089,7 +2111,8 @@ window.initMileageCropper = function(input) {
   // 初始化 Cropper.js
   mileageCropper = new Cropper(targetImg, {
     viewMode: 1,
-    dragMode: 'move',
+    dragMode: 'none',
+    zoomable: false,
     autoCropArea: 0.8,
     restore: false,
     guides: true,
@@ -2098,6 +2121,10 @@ window.initMileageCropper = function(input) {
     cropBoxMovable: true,
     cropBoxResizable: true,
     toggleDragModeOnDblclick: false,
+    // 🌟 [新增/修改] 設定初始長寬比 (5:1 代表寬5, 高1，非常適合一行數字)
+    aspectRatio: 6 / 5, 
+    // 🌟 [新增] 設定初始裁剪框佔圖片的比例 (0.7 代表佔圖片寬度的 70%)
+    autoCropArea: 0.7, 
   });
 
   ocrBtn.disabled = false;
@@ -2107,10 +2134,41 @@ window.initMileageCropper = function(input) {
 window.performCropAndOCR = async function() {
   if (!mileageCropper) return;
 
+  // 🌟 [新增]：檢查 API Key 是否存在
+  if (!S.settings.ocrKey) {
+    customConfirm(`
+      <div style="font-size:40px; margin-bottom:12px;">📸</div>
+      <div style="font-size:18px; font-weight:900; color:var(--red); margin-bottom:10px;">尚未設定辨識金鑰</div>
+      <div style="font-size:14px; color:var(--t2); line-height:1.6;">
+        使用「自動里程辨識」需要先申請，並設定免費的 OCR API Key。<br>是否立即前往設定頁面？
+      </div>
+    `).then(ok => {
+      if (ok) {
+        // 先關閉目前的里程捕獲彈窗
+        closeOverlay('sub-page'); 
+        // 跳轉到設定頁並開啟 OCR 設定
+        goPage('settings');
+        setTimeout(() => openOCRSettings(), 300);
+      }
+    });
+    return;
+  }
+
   // 1. 取得裁剪範圍的畫布
-  const canvas = mileageCropper.getCroppedCanvas({
-    maxWidth: 1000, // 限制寬度防止過載
-  });
+  const canvas = mileageCropper.getCroppedCanvas({ maxWidth: 1000 });
+  const ctx = canvas.getContext('2d');
+
+  // 🌟 [新增] 影像增強技術：讓文字更黑、背景更白
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    // 轉灰階公式
+    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+    // 簡單的對比增強（低於 128 變黑，高於 128 變白）
+    const threshold = avg < 128 ? avg * 0.8 : Math.min(255, avg * 1.2);
+    data[i] = data[i + 1] = data[i + 2] = threshold;
+  }
+  ctx.putImageData(imageData, 0, 0);
 
   const loading = document.createElement('div');
   loading.style.cssText = "position:absolute; inset:0; background:rgba(255,255,255,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100;";
@@ -2138,16 +2196,48 @@ window.performCropAndOCR = async function() {
     const result = await response.json();
 
     if (result.ParsedResults && result.ParsedResults.length > 0) {
-      const detectedText = result.ParsedResults[0].ParsedText;
-      const numbers = detectedText.match(/\d+/g);
-      if (numbers) {
-        // 抓取範圍內最長的數字字串（通常就是里程數）
-        const mileage = numbers.sort((a,b) => b.length - a.length)[0];
-        document.getElementById('manual-km').value = mileage;
-        toast('✅ 範圍辨識完成');
-      } else {
-        toast('⚠️ 範圍內找不到數字，請調整裁剪框');
-      }
+        let detectedText = result.ParsedResults[0].ParsedText;
+        
+        // 1. 先將整段文字按「換行符號」拆解成陣列 (處理不同行的問題)
+        let lines = detectedText.split(/\r?\n/);
+        let foundMileage = null;
+
+        // 2. 逐行掃描
+        for (let line of lines) {
+            let normalizedLine = line.toLowerCase().trim();
+            if (!normalizedLine) continue;
+
+            // 3. 在「這一行」內，只縮緊「數字與數字」或「數字與 km」之間的空格
+            // 這樣可以解決 7073 1 km 的問題，但不會抓到上一行的時間
+            let tightenedLine = normalizedLine.replace(/(\d)\s+(?=\d|km|k\s*m)/g, '$1');
+
+            // 4. 正則表達式：尋找這行裡面接著 km 的數字
+            // k[mnr\.]? : 容錯處理，有時 km 會被辨識成 kn, kr, km. 或 km
+            const kmRegex = /(\d+)\s*k[mnr\.]?/;
+            const match = tightenedLine.match(kmRegex);
+
+            if (match && match[1]) {
+                foundMileage = match[1];
+                break; // 只要找到帶有 km 的那一行，就停止掃描其他行
+            }
+        }
+
+        // 5. 輸出結果
+        if (foundMileage) {
+            document.getElementById('manual-km').value = foundMileage;
+            toast('✅ 已排除時間，精確抓取里程');
+        } else {
+            // 備份方案：如果所有行都沒看到 km，才抓取全圖最長數字
+            const allTightened = detectedText.replace(/(\d)\s+(?=\d)/g, '$1');
+            const backupNumbers = allTightened.match(/\d+/g);
+            if (backupNumbers) {
+                const longest = backupNumbers.sort((a,b) => b.length - a.length)[0];
+                document.getElementById('manual-km').value = longest;
+                toast('⚠️ 未偵測到單位，擷取最長數字');
+            } else {
+                toast('⚠️ 辨識失敗，請調整範圍');
+            }
+        }
     }
   } catch (err) {
     toast('❌ 辨識失敗');
@@ -2482,17 +2572,17 @@ function buildRecItem(r) {
           <span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; animation: pulse-green 1.5s infinite;"></span> 
           <span>計時中</span>
          </div>`
-      : `<div style="margin-left:6px; background:#eff6ff; color:#2563eb; padding:2px 5px; border-radius:8px; border:1.5px solid #bfdbfe; font-size:14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+      : `<div style="margin-left:6px; background:#eff6ff; color:#2563eb; padding:2px 3px; border-radius:8px; border:1.5px solid #bfdbfe; font-size:14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
           <span style="font-size:13px;">⏱️</span> ${fmtHours(r.hours)}
          </div>`;
 
     return `
-      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 7px 4px; margin-bottom: 5px;">
+      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 2px 4px; margin-bottom: 5px;">
         <span style="background:${tagBg}; color:#fff; font-size:13px; padding:4px 5px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:70px; height:32px; display:flex; align-items:center; justify-content:center;margin-right:5px;">🕒 打卡</span>
         
-        <div style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--t1); flex:1; display:flex; align-items:center; justify-content:flex-start;">
+        <div style="font-family:var(--mono);font-size:15px;font-weight:800;color:var(--t1); flex:1; display:flex; align-items:center; justify-content:flex-start;">
           <!-- 移除日期，只保留時間軸 -->
-          <span style="color:var(--green);">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color: #006aff;font-size:16px;font-weight:800;margin:0 3px;">→</span><span style="color:var(--red);">${outTimeStr}</span>
+          <span style="color: #019e29;margin-bottom:25px;">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color: #006aff;font-size:16px;font-weight:800;margin:0 3px;">→</span><span style="color:var(--red);margin-top:25px;">${outTimeStr}</span>
           
           <!-- 組合標籤區 -->
           <div style="display:flex; align-items:center;">
@@ -8086,7 +8176,7 @@ function renderSettings() {
     <div class="set-row" onclick="openOCRSettings()" style="background:#fff7ed;border:2.5px solid #ffedd5;padding:17px 15px;border-radius:0 0 14px 14px;">
         <span class="sn" style="color:#9a3412;">📸 辨識功能 (OCR) 設定</span>
         <div style="display:flex; align-items:center; gap:5px;">
-          <span style="font-size:10px; color:${S.settings.ocrKey ? 'var(--green)' : 'var(--red)'}; font-weight:800;">${S.settings.ocrKey ? '● 已啟用' : '● 未設定'}</span>
+          <span style="font-size:13px; color:${S.settings.ocrKey ? 'var(--green)' : 'var(--red)'}; font-weight:750;margin-right:10px;">${S.settings.ocrKey ? '● 已啟用' : '● 未設定'}</span>
           <span class="arr" style="color:#9a3412;">›</span>
         </div>
     </div>
@@ -8344,7 +8434,6 @@ function openAuthModal() {
   document.getElementById('sub-title').textContent = '帳號管理';
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;" id="auth-content-area"></div>
-    <div id="auth-debug-panel"></div>
   `;
   renderAuthContent();
   openOverlay('sub-page');
@@ -8483,7 +8572,6 @@ function renderAuthContent() {
 
   // 1. 注入 HTML
   document.getElementById('auth-content-area').innerHTML = contentHtml;
-  renderAuthDebugPanel();
 
   // 2. 🌟 執行手動渲染 (核心修正)
   // 使用 requestAnimationFrame 確保 DOM 已經真正畫在螢幕上
@@ -8492,8 +8580,16 @@ function renderAuthContent() {
     if (window.turnstile && widget) {
       try {
         window.__authTurnstileActive = true;
-        // 先嘗試重設，防止切換登入/註冊模式時發生重複渲染錯誤
-        window.turnstile.render('#turnstile-widget', {
+        
+        // 🌟 先清空容器並卸載舊的 Widget
+        if (turnstileWidgetId !== null) {
+          try { window.turnstile.remove(turnstileWidgetId); } catch(e){}
+          turnstileWidgetId = null;
+        }
+        widget.innerHTML = '';
+
+        // 🌟 重新渲染並記錄全新的 Widget ID
+        turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
           sitekey: '0x4AAAAAADC958xr-t5UGd36',
           theme: 'light',
           appearance: 'always'
@@ -8631,9 +8727,7 @@ async function requestLogin() {
               </div>
               <button onclick="verifyAuthCode('${email}')" class="btn-acc" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">驗證並啟用帳號</button>
             </div>
-            <div id="auth-debug-panel"></div>
           `;
-          renderAuthDebugPanel();
         }
       } else {
         // 💡 直接 Toast 顯示後端傳來的錯誤訊息 (不會出現驗證畫面)
@@ -8689,7 +8783,7 @@ async function openAccountStats() {
   if (closeBtn) closeBtn.style.display = '';
 
   window.__authTurnstileActive = false;
-  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div><div id="auth-debug-panel"></div>`;
+  document.getElementById('sub-body').innerHTML = `<div style="padding:32px; text-align:center; color:var(--t3);">載入資料中...</div>`;
   openOverlay('sub-page');
 
   let statsHtml = '';
@@ -8760,8 +8854,7 @@ async function openAccountStats() {
 
   if (USER.role !== 'admin') {
     baseHtml += `<button onclick="logoutAccount()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button></div>`;
-    document.getElementById('sub-body').innerHTML = baseHtml + `<div id="auth-debug-panel"></div>`;
-    renderAuthDebugPanel();
+    document.getElementById('sub-body').innerHTML = baseHtml;
     return;
   }
 
@@ -11671,6 +11764,17 @@ window.onSplashFinished = function() {
   let targetTab = lastTab;
   let shouldReopenAuth = false;
 
+  // 🌟 如果上次開帳號頁距離現在不到 3 秒，代表剛剛發生了非正常重整/崩潰，強制中斷自動開啟
+  const isCrashLoop = (now - lastActiveTime) < 11000;
+  if (isResume && isAuthActive && !isAuthExpired && !isCrashLoop) {
+    targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
+    shouldReopenAuth = true;
+  } else if (isCrashLoop) {
+    // 清除鎖定，避免持續重啟
+    localStorage.removeItem('auth_flow_active');
+    appendAuthDebugLog('偵測到異常頁面重整', '已中斷自動恢復流程以防迴圈', 'error');
+  }
+
   // --- 2. 核心邏輯判定 ---
   if (!isResume) {
     // 🏠 情境：冷啟動 (手動關掉再開)
@@ -11692,7 +11796,6 @@ window.onSplashFinished = function() {
     document.getElementById('sub-title').textContent = '帳號管理';
     document.getElementById('sub-body').innerHTML = `
       <div style="padding:16px;" id="auth-content-area"></div>
-      <div id="auth-debug-panel"></div>
     `;
     renderAuthContent();
   }
