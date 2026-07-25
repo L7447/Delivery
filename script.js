@@ -1395,6 +1395,17 @@ function goPage(name, force = false) {
   S.tab = name;
   localStorage.setItem('delivery_current_tab', name);
 
+  // --- 💡 [新增處] 即時同步權限邏輯 ---
+  if (name === 'report' && USER.loggedIn) {
+    // 進入分析頁面時，背景悄悄去同步權限
+    checkAccountStatus().then((isActive) => {
+      // 同步完後，如果使用者還停留在分析頁，就重新畫一次浮水印（消失或出現）
+      if (isActive && S.tab === 'report') {
+        renderReportWatermark(); 
+      }
+    });
+  }
+
   // 切換 Page 顯示狀態
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const targetPage = document.getElementById(`page-${name}`);
@@ -10032,52 +10043,33 @@ window.deleteVersion = async function(ver) {
 
 /* ══ 踢下線檢查 (處理強制登出與 31 天未活動) ══ */
 /* ══ 檢查帳號狀態 (新增同步浮水印設定) ══ */
+// 搜尋 async function checkAccountStatus()
 async function checkAccountStatus() {
   if (!USER.loggedIn) return false;
   try {
     const res = await fetch(`${API_BASE_URL}/auth/check`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json','Authorization': `Bearer ${USER.token}` },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${USER.token}` 
+      },
       body: JSON.stringify({ email: USER.email }) 
     });
     const data = await res.json();
     
     if (data.active) {
-      // 👈 [關鍵修正]：檢查權限是否有變動
-      const hasChanged = USER.removeWatermark !== data.removeWatermark;
-      
+      // 🌟 關鍵：將最新權限更新到記憶體
       USER.removeWatermark = data.removeWatermark; 
-      saveUser(); 
+      saveUser(); // 存入 localStorage，下次重開才會生效
 
-      // 如果權限在本次檢查中改變了，且使用者正停留在分析頁，立刻移除或加上浮水印
-      if (hasChanged && S.tab === 'report') {
-        appendAuthDebugLog('浮水印權限更新', `新狀態: ${USER.removeWatermark}`);
-        renderReport(); 
-      }
-    }
-
-    if (!data.active) {
-      if (data.reason === 'kicked') {
-        const kickTime = new Date(data.kickedAt).toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-        toast(`⚠️ 此帳號已於 [${kickTime}] 在其他裝置登入，您已被「強制登出」`, 5000);
-      } else if (data.reason === 'inactive_31_days') {
-        // 👇 處理 31 天未登入的專屬警告
-        customConfirm(`
-          <div style="font-size:48px; margin-bottom:12px; text-align:center;">💤</div>
-          <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">登入逾期</div>
-          <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
-            您已超過 31 天未使用 APP，<br>為保護帳號安全，系統已自動將您登出。
-          </div>
-        `);
-      } else {
-        toast('⚠️ 您的登入憑證已失效，請重新登入');
-      }
+      return true;
+    } else {
+      // 處理登出邏輯 (原本的踢下線、過期等)
       logoutAccount(); 
       return false;
     }
-    return true;
   } catch(e) {
-    return true; 
+    return true; // 網路斷線時維持現狀
   }
 }
 
