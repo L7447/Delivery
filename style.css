@@ -64,7 +64,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .ni.active .lb { color: #2563eb; font-weight: 800; }
 
 /* ══ 3. 彈出視窗與毛玻璃頂部 ══ */
-.overlay-page { position: fixed; inset: 0; background: var(--overlay-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 200; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow: hidden; pointer-events: none; }
+.overlay-page { position: fixed; inset: 0; background: var(--overlay-bg); backdrop-filter: blur(15px); z-index: 200; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow: hidden; pointer-events: none; }
 .overlay-page.show { transform: translateY(0); pointer-events: auto; }
 .top-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 7px;/* 統一內外距，與下方內容距離 7px */
  border-bottom:1px solid var(--border);flex-shrink:0;background:#ffffff;/* 統一白色背景 */
@@ -78,7 +78,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
  z-index:20;border-bottom:1px solid rgba(0,0,0,0.05);}
 
 /* ══ 4. 共用 UI 元件 ══ */
-.pg-title{font-family:var(--title);font-size:24px;font-weight:700;text-align:center;margin:0 0 5px 0;/* 標題與下方切換按鈕距離 5px */
+.pg-title{font-family:var(--title);font-size:24px;font-weight:700;text-align:center;margin:-15px 0 2px 0;/* 標題與下方切換按鈕距離 5px */
  color:var(--t1);}
 .sec-title { font-size: 11px; font-weight: 600; color: var(--t3); letter-spacing: .8px; margin-bottom: 6px; }
 .mbtn { width: 36px; height: 36px; border-radius: 12px; background: var(--sf); border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--acc); font-weight: 900; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
@@ -130,6 +130,7 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
 /* ══ 7. 首頁專區 (打卡按鈕) ══ */
 .punch-card-new { background: var(--sf); border: 1px solid var(--border); border-radius: 20px; padding: 3px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .punch-status-left { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--t2); }
+#live-punch-timer{letter-spacing:0.5px;}
 
 /* 👇 選項 B 特效：科技能量旋轉環 */
 @keyframes spinRing {
@@ -785,9 +786,9 @@ input:checked + .slider:before { transform: translateX(20px); }
   100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); border-color: #bfdbfe; }
 }
 /* 套用到明日標籤 */
-.pulse-tomorrow{animation:pulse-orange-glow 2s infinite !important;border-width:2px !important;}
+.pulse-tomorrow{animation:pulse-orange-glow 2s infinite !important;border-width:3px !important;}
 /* 套用到近3天標籤 */
-.pulse-near{animation:pulse-blue-glow 2s infinite !important;border-width:2px !important;}
+.pulse-near{animation:pulse-blue-glow 2s infinite !important;border-width:3px !important;}
 
 /* ════ 子頁籤與保養提醒卡片樣式 ════ */
 /* 🚗 車輛子分頁：智慧彩色滑動頁籤 */
@@ -845,3 +846,6 @@ input.myInput1:focus::placeholder{color:transparent;opacity:0;}
 .reward-sub-tabs .slide-btn{flex:1;position:relative;z-index:1;border:none;background:transparent;padding:10px 0;color:#64748b;/* 未選中文字顏色 */
  font-size:13px;font-weight:800;cursor:pointer;transition:color 0.3s;outline:none;}
 .reward-sub-tabs .slide-btn.active{color:#ffffff;}
+
+/* 避免 Turnstile iframe 與 Safari 的 backdrop-filter 衝突造成 WebKit 崩潰 */
+#turnstile-widget{transform:translateZ(0);-webkit-transform:translateZ(0);isolation:isolate;background:#ffffff;border-radius:8px;overflow:hidden;}
