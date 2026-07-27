@@ -8964,12 +8964,18 @@ window.openRegisterModal = function() {
   goPage('auth', true);
 };
 
-/* ══ 1. 獨立的安全驗證 (Turnstile) 緩衝與手動載入函式 ══ */
+/* ══ 1. 強化版人機驗證 (Turnstile) 渲染與保護機制 ══ */
 function renderTurnstileWidget() {
   const widget = document.getElementById('turnstile-widget');
   if (!widget) return;
 
-  // 1. 先顯示溫馨的載入緩衝提示
+  // 🛡️ 防護：如果 Turnstile 已經在畫面上運作中，絕對不要在中途銷毀重繪（防止驗證到一半被重置）
+  if (window.turnstileWidgetId !== null && window.turnstile) {
+    appendAuthDebugLog('Turnstile 已存在，跳過重複渲染', '');
+    return;
+  }
+
+  // 1. 顯示載入緩衝提示
   widget.innerHTML = `
     <div style="font-size:12px; color:var(--t3); text-align:center; padding:10px; font-weight:700; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
       🛡️ 安全驗證載入中...
@@ -8979,39 +8985,53 @@ function renderTurnstileWidget() {
 
   const checkAndRender = () => {
     const currentWidget = document.getElementById('turnstile-widget');
-    if (!currentWidget) return; // 若已離開頁面則中止
+    if (!currentWidget) return; 
 
     if (window.turnstile) {
       try {
-        // 清除舊實例
-        if (window.turnstileWidgetId !== null) {
-          window.turnstile.remove(window.turnstileWidgetId);
-          window.turnstileWidgetId = null;
-        }
         currentWidget.innerHTML = ''; 
 
-        // 渲染全新驗證框
+        // 渲染驗證元件並綁定完整 Callback
         window.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
           sitekey: '0x4AAAAAADC958xr-t5UGd36',
           theme: 'light',
-          appearance: 'always'
+          appearance: 'always',
+          'callback': function(token) {
+            appendAuthDebugLog('Turnstile 驗證成功', `tokenLen=${token.length}`);
+            window.__authTurnstileActive = true;
+          },
+          'error-callback': function(err) {
+            appendAuthDebugLog('Turnstile 驗證錯誤', err, 'error');
+            // 💡 發生錯誤時只進行局部重試，絕不讓網頁跳轉或重整！
+            currentWidget.innerHTML = `
+              <div style="text-align:center; padding:6px; background:#fef2f2; border:1.5px solid #fecdd3; border-radius:12px;">
+                <div style="font-size:11px; color:#dc2626; font-weight:700; margin-bottom:4px;">⚠️ 驗證發生異常</div>
+                <button type="button" onclick="resetTurnstileWidget()" style="background:#dc2626; color:#ffffff; border:none; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">
+                  🔄 點此刷新驗證
+                </button>
+              </div>`;
+          },
+          'expired-callback': function() {
+            appendAuthDebugLog('Turnstile 驗證過期', '', 'warn');
+            toast('⚠️ 驗證已過期，請重新驗證');
+            resetTurnstileWidget();
+          }
         });
         window.__authTurnstileActive = true;
-        return; // 渲染成功，結束輪詢
+        return; // 渲染成功
       } catch (e) {
         console.warn("Turnstile 渲染重試中:", e);
       }
     }
 
     attempts++;
-    if (attempts < 20) { // 每 100ms 重試一次，最多等 2 秒
-      setTimeout(checkAndRender, 300);
+    if (attempts < 20) { // 每 100ms 重試一次，最多 2 秒
+      setTimeout(checkAndRender, 100);
     } else {
-      // 2. 超時後提供手動觸發按鈕
       currentWidget.innerHTML = `
         <div style="text-align:center; padding:6px; background:#fff7ed; border:1.5px solid #fed7aa; border-radius:12px;">
           <div style="font-size:11px; color:#c2410c; font-weight:700; margin-bottom:6px;">⚠️ 驗證碼載入較慢？</div>
-          <button type="button" onclick="renderTurnstileWidget()" style="background:#2563eb; color:#ffffff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.2);">
+          <button type="button" onclick="resetTurnstileWidget()" style="background:#2563eb; color:#ffffff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">
             🔄 點此手動載入驗證碼
           </button>
         </div>
@@ -9019,9 +9039,16 @@ function renderTurnstileWidget() {
     }
   };
 
-  // 延遲 150ms 給予瀏覽器 DOM 渲染的緩衝時間
-  setTimeout(checkAndRender, 5000);
+  setTimeout(checkAndRender, 3000);
 }
+// 專用：重置/刷新 Turnstile 元件
+window.resetTurnstileWidget = function() {
+  if (window.turnstile && window.turnstileWidgetId !== null) {
+    try { window.turnstile.remove(window.turnstileWidgetId); } catch(e){}
+    window.turnstileWidgetId = null;
+  }
+  renderTurnstileWidget();
+};
 
 
 /* ══ 2. 修正 renderAuthContent ══ */
@@ -12358,18 +12385,25 @@ async function init() {
   }
 }
 
-/* 8. 修正：Splash 動畫完成後的恢復機制 */
+/* ══ 2. 修正 Splash 開場動畫邏輯 (熱啟動瞬間抹除，絕不中途跳出) ══ */
 window.onSplashFinished = function() {
   const splash = document.getElementById('splash');
   if (!isAppInitialized) isAppInitialized = true;
   if (!splash || splash.dataset.closing === 'true') return; 
-  splash.dataset.closing = 'true';
 
   const isResume = sessionStorage.getItem('app_session_active') === 'true';
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
   const lastActiveTime = parseInt(localStorage.getItem('auth_last_active') || '0');
   const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
   const now = Date.now();
+
+  // 🚀 【核心修正】：如果是已有 Session 的熱啟動（例如 Turnstile 引發的頁面重載）
+  // 直接秒刪 Splash DOM，絕對不播放 2.5 秒動畫，讓使用者感受不到任何跳轉！
+  if (isResume) {
+    splash.remove();
+  }
+
+  splash.dataset.closing = 'true';
 
   const isAuthExpired = !lastActiveTime || (now - lastActiveTime) > 5 * 60 * 1000;
   const isCrashLoop = lastActiveTime > 0 && (now - lastActiveTime) < 3000;
@@ -12405,7 +12439,7 @@ window.onSplashFinished = function() {
     console.error('goPage error in onSplashFinished:', e);
   }
 
-  // 👈 修正：使用 openAuthModal() 跳轉至固定登入頁
+  // 重新恢復登入頁面
   if (shouldReopenAuth) {
     try {
       openAuthModal();
@@ -12414,24 +12448,25 @@ window.onSplashFinished = function() {
     }
   }
 
-  splash.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
-  splash.style.opacity = '0';
-  splash.style.transform = 'scale(1.05)';
-  splash.style.pointerEvents = 'none';
+  // 若不是 isResume，才執行原本的淡出動畫
+  if (!isResume && splash.parentNode) {
+    splash.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
+    splash.style.opacity = '0';
+    splash.style.transform = 'scale(1.05)';
+    splash.style.pointerEvents = 'none';
 
-  setTimeout(() => {
-    if (splash.parentNode) splash.remove();
+    setTimeout(() => {
+      if (splash.parentNode) splash.remove();
+      try {
+        if (typeof checkAndPromptPlatformSetup === 'function') checkAndPromptPlatformSetup(); 
+        if (typeof checkAndShowAnnouncement === 'function') checkAndShowAnnouncement();
+      } catch (e) {}
+    }, 450);
+  } else {
     try {
-      if (!isResume && typeof checkAndPromptPlatformSetup === 'function') {
-        checkAndPromptPlatformSetup(); 
-      }
-      if (typeof checkAndShowAnnouncement === 'function') {
-        checkAndShowAnnouncement();
-      }
-    } catch (e) {
-      console.error('post-splash error:', e);
-    }
-  }, 450);
+      if (typeof checkAndShowAnnouncement === 'function') checkAndShowAnnouncement();
+    } catch (e) {}
+  }
 };
 
 /* ══ APP 被滑回背景再點開時的「強制重新排版」與「狀態檢查」 ══ */
