@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <!-- 🚀【0毫秒 全頁面防閃與預定位機制】在畫面繪製前同步執行 -->
+  <!-- 🚀【0毫秒 畫面與導覽列預對齊機制】在畫面繪製前同步執行 -->
   <script>
     (function() {
-      // 1. 若為熱啟動，立刻標記隱藏 Splash
+      // 1. 熱啟動標記
       var isResume = sessionStorage.getItem('app_session_active') === 'true';
       if (isResume) {
         document.documentElement.setAttribute('data-resume', 'true');
       }
 
-      // 2. 0毫秒預判目標分頁：若上次停留在 auth 頁，預先設定 data-active-tab="auth"
+      // 2. 0毫秒預判目標分頁 (畫面內容)
       var lastTab = localStorage.getItem('delivery_current_tab') || 'home';
       var isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
       if (lastTab === 'auth' || isAuthActive) {
         lastTab = 'auth';
       }
       document.documentElement.setAttribute('data-active-tab', lastTab);
+
+      // 3. 0毫秒預判導覽列高亮項目 (登入頁時定位至來源頁如 settings)
+      var navPg = lastTab;
+      if (navPg === 'auth') {
+        navPg = localStorage.getItem('auth_origin_tab') || 'settings';
+        if (navPg === 'auth') navPg = 'settings';
+      }
+      document.documentElement.setAttribute('data-nav-pg', navPg);
     })();
   </script>
   <style>
@@ -28,7 +36,7 @@
       pointer-events: none !important;
     }
 
-    /* 🚀 在 JS 正式接管前，依據 head 預判標記瞬間顯示正確頁面，徹底杜絕閃過首頁！ */
+    /* 🚀 0毫秒 畫面預顯示：隱藏非目標頁面 */
     html:not(.js-ready) .page { display: none !important; }
     html:not(.js-ready)[data-active-tab="home"] #page-home,
     html:not(.js-ready)[data-active-tab="history"] #page-history,
@@ -38,6 +46,18 @@
     html:not(.js-ready)[data-active-tab="settings"] #page-settings,
     html:not(.js-ready)[data-active-tab="auth"] #page-auth {
       display: flex !important;
+    }
+
+    /* 🚀 0毫秒 導覽列預對齊：隱藏尚未定位的滑動膠囊，預先亮起正確圖示 */
+    html:not(.js-ready) #nav-indicator { display: none !important; }
+    html:not(.js-ready) .ni { opacity: 0.6; }
+    html:not(.js-ready)[data-nav-pg="home"] .ni[data-pg="home"],
+    html:not(.js-ready)[data-nav-pg="history"] .ni[data-pg="history"],
+    html:not(.js-ready)[data-nav-pg="add"] .ni[data-pg="add"],
+    html:not(.js-ready)[data-nav-pg="report"] .ni[data-pg="report"],
+    html:not(.js-ready)[data-nav-pg="vehicles"] .ni[data-pg="vehicles"],
+    html:not(.js-ready)[data-nav-pg="settings"] .ni[data-pg="settings"] {
+      opacity: 1 !important;
     }
   </style>
 
@@ -550,7 +570,7 @@
 
   <nav id="nav">
     <div id="nav-indicator"></div>
-    <div class="ni active" data-pg="home" data-img1="images/home1.png" data-img2="images/home2.png"><img class="ni-img" src="images/home1.png"><span class="lb">首頁</span></div>
+    <div class="ni" data-pg="home" data-img1="images/home1.png" data-img2="images/home2.png"><img class="ni-img" src="images/home1.png"><span class="lb">首頁</span></div>
     <div class="ni" data-pg="history" data-img1="images/history1.png" data-img2="images/history2.png"><img class="ni-img" src="images/history1.png"><span class="lb">查看記錄</span></div>
     <div class="ni" data-pg="add" data-img1="images/add-record1.png" data-img2="images/add-record2.png"><img class="ni-img" src="images/add-record1.png"><span class="lb">新增</span></div>
     <div class="ni" data-pg="report" data-img1="images/report1.png" data-img2="images/report2.png"><img class="ni-img" src="images/report1.png"><span class="lb">收入分析</span></div>
