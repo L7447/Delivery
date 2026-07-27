@@ -8883,29 +8883,74 @@ window.selectAvatar = function(src, el) {
     el.style.transform = 'scale(1.05)';
 }
 
-/* ══ 全新極簡風：登入與註冊彈窗 ══ */
+
+// 切換頁面分頁邏輯
 window.switchAuthTab = function(mode) {
-  authMode = mode;
-  renderAuthContent();
+  if (mode === 'register') {
+    openRegisterModal();
+  } else {
+    openAuthModal();
+  }
 };
+/* 1. 帳號登入頁面 */
 function openAuthModal() {
+  authMode = 'login';
   window.__authFlowLocked = true;
   window.__authTurnstileActive = true;
   
-  // 👈 存入標記與當下時間戳記
   localStorage.setItem('auth_flow_active', 'true'); 
   localStorage.setItem('auth_last_active', Date.now().toString()); 
   
   window.__authFlowOriginTab = S.tab || 'home';
   localStorage.setItem('auth_origin_tab', window.__authFlowOriginTab);
   
-  document.getElementById('sub-title').textContent = '帳號管理';
+  // 👈 標題修改為「帳號登入」
+  document.getElementById('sub-title').textContent = '帳號登入';
+  document.getElementById('sub-top-right').innerHTML = ''; // 清空右上角
+
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = '';
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;" id="auth-content-area"></div>
   `;
   renderAuthContent();
   openOverlay('sub-page');
 }
+/* 2. ✨ 新增：註冊新帳號獨立頁面 */
+window.openRegisterModal = function() {
+  if (!GLOBAL_ALLOW_REGISTRATION) {
+    toast('⚠️ 系統目前暫停開放註冊');
+    return;
+  }
+  
+  authMode = 'register';
+  window.__authFlowLocked = true;
+  window.__authTurnstileActive = true;
+  
+  localStorage.setItem('auth_flow_active', 'true'); 
+  localStorage.setItem('auth_last_active', Date.now().toString()); 
+
+  // 👈 設定標題為「註冊新帳號」
+  document.getElementById('sub-title').textContent = '註冊新帳號';
+
+  // 右上角加入「返回登入」按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => openAuthModal())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3); transition:0.2s;">
+      🔙 返回登入
+    </button>
+  `;
+
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = '';
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;" id="auth-content-area"></div>
+  `;
+  renderAuthContent();
+  openOverlay('sub-page');
+};
+/* 3. 渲染表單內容 */
 function renderAuthContent() {
   appendAuthDebugLog(`渲染帳號表單`, `mode=${authMode}`);
   let contentHtml = '';
@@ -8913,7 +8958,7 @@ function renderAuthContent() {
   if (authMode === 'login') {
     contentHtml = `
       <div class="auth-wrapper">
-        <h2 class="auth-title">登入帳號</h2>
+        <h2 class="auth-title">歡迎回來</h2>
         <p class="auth-subtitle">請輸入您註冊時的電子郵件與密碼</p>
         
         <div class="auth-input-group">
@@ -8934,11 +8979,10 @@ function renderAuthContent() {
 
         <button onclick="requestLogin()" class="auth-btn-blue">登入 ➔</button>
         
-        <!-- 👇 動態判斷是否顯示註冊按鈕 -->
         ${GLOBAL_ALLOW_REGISTRATION ? `
         <div class="auth-switch-text">
           還沒有帳號嗎？ 
-          <button class="auth-switch-btn" onclick="window.switchAuthTab('register')">註冊新帳號</button>
+          <button class="auth-switch-btn" onclick="window.openRegisterModal()">註冊新帳號</button>
         </div>` : `
         <div class="auth-switch-text" style="color:var(--red);">
           ⚠️ 系統目前暫停開放註冊
@@ -8946,7 +8990,7 @@ function renderAuthContent() {
       </div>
     `;
   } else {
-    // 👇 雙排 11 行左右滑動頭像 (22 張)
+    // 註冊模式內容
     let avatarsHtml = '';
     for(let i=1; i<=22; i++) {
       const isSel = selectedAvatar === `figure/fig${i}.webp`;
@@ -8959,7 +9003,6 @@ function renderAuthContent() {
         
         <div class="auth-input-group" style="padding:8px; margin-top:8px;">
           <label class="auth-input-label" style="margin-left:4px;">選擇專屬頭像 (可左右滑動)</label>
-          <!-- 👇 改變 Grid 排版為雙橫排滑動 -->
           <div style="display:grid; grid-template-columns: repeat(11, 1fr); grid-auto-flow: row; gap:8px; margin-top:6px; overflow-x:auto; padding:4px 0; padding-left:4px; width: 100%; height: 100%; object-fit: contain;">
             ${avatarsHtml}
           </div>
@@ -8975,10 +9018,7 @@ function renderAuthContent() {
           <input type="password" class="auth-input" id="auth-pwd" placeholder="密碼規則如下">
         </div>
 
-        <!-- 👇 重新設計：密碼規則與溫馨提示區塊 -->
         <div style="margin: 8px 0 16px 0; display:flex; flex-direction:column; gap:8px;">
-          
-          <!-- 1. 密碼規則框 (濃縮為1行) -->
           <div style="background:#fef2f2; border:1.5px solid #fecdd3; border-radius:12px; padding:10px 8px;">
             <div style="display:flex; align-items:center; gap:6px; color:#e11d48; font-weight:800; font-size:14px; margin-bottom:10px;">
               <span style="font-size:16px;">🛡️</span> 必須符合以下密碼規則
@@ -8991,10 +9031,8 @@ function renderAuthContent() {
             </div>
           </div>
 
-          <!-- 2. 密碼設定建議 (藍黃高對比科技風) -->
           <div style="background:linear-gradient(180deg, #263c6a 0%, #3f7fbf 50%, #7bb2e6 100%); border-radius:12px; padding:12px; position:relative; overflow:hidden; box-shadow:0 6px 16px rgba(30,58,138,0.2);">
             <div style="position:absolute; inset:0; opacity:0.12; background-image: linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px); background-size: 16px 16px;"></div>
-            <!-- 裝飾背景圈 -->
             <div style="position:absolute; right:-20px; top:-20px; width:80px; height:80px; border-radius:50%; background:rgba(57, 182, 255, 0.3);"></div>
             
             <div style="display:flex; align-items:center; gap:6px; color:#60a5fa; font-weight:750; font-size:18px; margin-bottom:8px; position:relative; z-index:1;">
@@ -9012,7 +9050,6 @@ function renderAuthContent() {
               </div>
             </div>
           </div>
-
         </div>
 
         <div onclick="openPrivacyPolicy(true)" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; cursor:pointer;">
@@ -9032,33 +9069,27 @@ function renderAuthContent() {
         
         <div class="auth-switch-text">
           已經有帳號了？ 
-          <button class="auth-switch-btn" onclick="window.switchAuthTab('login')">登入</button>
+          <button class="auth-switch-btn" onclick="window.openAuthModal()">登入</button>
         </div>
       </div>
     `;
   }
 
-  // 1. 注入 HTML
   document.getElementById('auth-content-area').innerHTML = contentHtml;
 
-  // 2. 🌟 執行手動渲染 (核心修正)
-  // 使用 requestAnimationFrame 確保 DOM 已經真正畫在螢幕上
+  // 初始化 Turnstile 人機驗證
   requestAnimationFrame(() => {
     const widget = document.getElementById('turnstile-widget');
-    
-    // 檢查 Turnstile 是否可用且元素存在
     if (window.turnstile && widget) {
       try {
-        // 🌟 核心穩定邏輯：先清空，確保不重複渲染
         if (window.turnstileWidgetId !== null) {
           window.turnstile.remove(window.turnstileWidgetId);
           window.turnstileWidgetId = null;
         }
         widget.innerHTML = ''; 
 
-        // 🌟 即使沒有動畫，給予 100ms 讓瀏覽器完成不透明背景的繪製，再載入外部 iframe
         setTimeout(() => {
-          if (!document.getElementById('turnstile-widget')) return; // 防呆
+          if (!document.getElementById('turnstile-widget')) return;
           
           window.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
             sitekey: '0x4AAAAAADC958xr-t5UGd36',
@@ -9067,7 +9098,6 @@ function renderAuthContent() {
           });
           window.__authTurnstileActive = true;
         }, 100); 
-
       } catch (e) {
         console.warn("Turnstile Render Skip:", e);
       }
@@ -11897,6 +11927,17 @@ window.submitChangePassword = async function() {
 /* --- 2. 忘記密碼 --- */
 window.openForgotPassword = function() {
   document.getElementById('sub-title').textContent = '忘記密碼';
+  
+  // 👈 右上角加入「🔙 返回登入」按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => openAuthModal())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3); transition:0.2s;">
+      🔙 返回登入
+    </button>
+  `;
+
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = '';
+
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
       <p style="font-size:13px; color:var(--t2); margin-bottom:20px; font-weight:600; line-height:1.6;">
@@ -11910,6 +11951,40 @@ window.openForgotPassword = function() {
       </div>
 
       <button onclick="requestForgotPassword()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">寄送驗證碼</button>
+    </div>
+  `;
+  openOverlay('sub-page');
+};
+
+function showResetPasswordUI(email) {
+  // 👈 進入輸入驗證碼階段時，同樣維持右上角「🔙 返回登入」按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => openAuthModal())" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3); transition:0.2s;">
+      🔙 返回登入
+    </button>
+  `;
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <p style="font-size:13px; color:var(--green); font-weight:700; background:var(--green-d); padding:12px; border-radius:12px; margin-bottom:16px;">
+        驗證碼已發送至 ${email}<br><span style="font-size:11px; color:var(--t2);">請於 10 分鐘內輸入</span>
+      </p>
+
+      <div class="fg" style="margin-bottom:16px;">
+        <label style="font-weight:700; color:var(--t1);">6 位數驗證碼</label>
+        <input type="number" class="finp" id="rp-code" style="font-size:20px; letter-spacing:4px; text-align:center; font-family:var(--mono);">
+      </div>
+
+      <div class="fg" style="margin-bottom:16px;">
+        <label style="font-weight:700; color:var(--t1);">設定新密碼</label>
+        <input type="password" class="finp" id="rp-new" placeholder="12位含大小寫、數字與特殊符號">
+      </div>
+
+      <div style="font-size:11px; color:var(--t3); margin-bottom:24px; line-height:1.5;">
+        需要密碼靈感？ <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:var(--text-blue);">1Password 密碼生成器</a>
+      </div>
+
+      <button onclick="submitResetPassword('${email}')" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">✅ 驗證並重設密碼</button>
     </div>
   `;
 }
@@ -11935,32 +12010,6 @@ window.requestForgotPassword = async function() {
       }
     });
   } catch(e) { finishProgress(() => toast('連線失敗')); }
-}
-
-function showResetPasswordUI(email) {
-  document.getElementById('sub-body').innerHTML = `
-    <div style="padding:16px;">
-      <p style="font-size:13px; color:var(--green); font-weight:700; background:var(--green-d); padding:12px; border-radius:12px; margin-bottom:16px;">
-        驗證碼已發送至 ${email}<br><span style="font-size:11px; color:var(--t2);">請於 10 分鐘內輸入</span>
-      </p>
-
-      <div class="fg" style="margin-bottom:16px;">
-        <label style="font-weight:700; color:var(--t1);">6 位數驗證碼</label>
-        <input type="number" class="finp" id="rp-code" style="font-size:20px; letter-spacing:4px; text-align:center; font-family:var(--mono);">
-      </div>
-
-      <div class="fg" style="margin-bottom:16px;">
-        <label style="font-weight:700; color:var(--t1);">設定新密碼</label>
-        <input type="password" class="finp" id="rp-new" placeholder="12位含大小寫、數字與特殊符號">
-      </div>
-
-      <div style="font-size:11px; color:var(--t3); margin-bottom:24px; line-height:1.5;">
-        需要密碼靈感？ <a href="https://1password.com/zh-tw/password-generator" target="_blank" style="color:var(--text-blue);">1Password 密碼生成器</a>
-      </div>
-
-      <button onclick="submitResetPassword('${email}')" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">✅ 驗證並重設密碼</button>
-    </div>
-  `;
 }
 
 window.submitResetPassword = async function(email) {
