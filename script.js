@@ -12390,25 +12390,23 @@ async function init() {
   }
 }
 
-/* ══ 2. 修正 Splash 開場動畫邏輯 (熱啟動瞬間抹除，絕不中途跳出) ══ */
+/* ══ 修正 Splash 開場動畫邏輯 (支援 0ms 物理防堵) ══ */
 window.onSplashFinished = function() {
   const splash = document.getElementById('splash');
   if (!isAppInitialized) isAppInitialized = true;
-  if (!splash || splash.dataset.closing === 'true') return; 
 
-  const isResume = sessionStorage.getItem('app_session_active') === 'true';
+  const isResume = sessionStorage.getItem('app_session_active') === 'true' || document.documentElement.getAttribute('data-resume') === 'true';
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
   const lastActiveTime = parseInt(localStorage.getItem('auth_last_active') || '0');
   const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
   const now = Date.now();
 
-  // 🚀 【核心修正】：如果是已有 Session 的熱啟動（例如 Turnstile 引發的頁面重載）
-  // 直接秒刪 Splash DOM，絕對不播放 2.5 秒動畫，讓使用者感受不到任何跳轉！
-  if (isResume) {
+  // 若 DOM 尚存且為熱啟動，強制秒刪
+  if (isResume && splash) {
     splash.remove();
   }
 
-  splash.dataset.closing = 'true';
+  if (splash) splash.dataset.closing = 'true';
 
   const isAuthExpired = !lastActiveTime || (now - lastActiveTime) > 5 * 60 * 1000;
   const isCrashLoop = lastActiveTime > 0 && (now - lastActiveTime) < 3000;
@@ -12453,8 +12451,8 @@ window.onSplashFinished = function() {
     }
   }
 
-  // 若不是 isResume，才執行原本的淡出動畫
-  if (!isResume && splash.parentNode) {
+  // 冷啟動才播放淡出動畫
+  if (!isResume && splash && splash.parentNode) {
     splash.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
     splash.style.opacity = '0';
     splash.style.transform = 'scale(1.05)';
