@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+  <!-- 🚀【0毫秒 Splash 物理防堵機制】必須放在 <head> 最頂部，在畫面繪製前同步執行 -->
+  <script>
+    (function() {
+      // 只要是已有 Session 的重整/熱啟動，在 DOM 畫出來前立刻加上 data-resume 標記
+      if (sessionStorage.getItem('app_session_active') === 'true') {
+        document.documentElement.setAttribute('data-resume', 'true');
+      }
+    })();
+  </script>
+  <style>
+    /* 🚀 當標記為熱啟動時，CSS 物理封鎖 Splash，連 0 毫秒都不準顯示！ */
+    html[data-resume="true"] #splash {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+  </style>
+
   <!-- 引入圖片裁剪函式庫 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -83,6 +102,14 @@
     @keyframes aur-spin { 100% { transform: rotate(405deg); } }
   </style>
 </div>
+<!-- 🚀【雙重保險行內腳本】：一解析到 #splash 標籤，若為重載直接從 DOM 移除 -->
+<script>
+  if (sessionStorage.getItem('app_session_active') === 'true') {
+    var _sp = document.getElementById('splash');
+    if (_sp) _sp.parentNode.removeChild(_sp);
+  }
+</script>
+
 
 <!-- 📱 APP 內容區塊 (保留您原本的 #app 程式碼) -->
 <div id="app">
