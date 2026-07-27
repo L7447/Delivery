@@ -1396,7 +1396,7 @@ function goPage(name, force = false) {
 
   if (window.__suppressNavigation && !force) return;
 
-  // 🛡️ 忙碌攔截：除非是 force (強制恢復)，否則忙碌時不准切換
+  // 🛡️ 忙碌攔截：除非是 force，否則忙碌時不准切換
   if (!force && isAuthFlowBusy() && name !== S.tab) {
     appendAuthDebugLog(`攔截頁面切換`, `target=${name} reason=auth-flow-active`);
     return;
@@ -1405,11 +1405,9 @@ function goPage(name, force = false) {
   S.tab = name;
   localStorage.setItem('delivery_current_tab', name);
 
-  // --- 💡 [新增處] 即時同步權限邏輯 ---
+  // --- 即時同步權限邏輯 ---
   if (name === 'report' && USER.loggedIn) {
-    // 進入分析頁面時，背景悄悄去同步權限
     checkAccountStatus().then((isActive) => {
-      // 同步完後，如果使用者還停留在分析頁，就重新畫一次浮水印（消失或出現）
       if (isActive && S.tab === 'report') {
         renderReportWatermark(); 
       }
@@ -1421,16 +1419,23 @@ function goPage(name, force = false) {
   const targetPage = document.getElementById(`page-${name}`);
   if (targetPage) targetPage.classList.add('active');
 
-  // 更新導覽列 UI
+  // 💡【關鍵優化】：若進入登入頁 (auth)，導覽列維持顯示「來源頁」(如設定)，圖示絕不變灰失聯！
+  let navPg = name;
+  if (navPg === 'auth') {
+    navPg = localStorage.getItem('auth_origin_tab') || 'settings';
+    if (navPg === 'auth') navPg = 'settings';
+  }
+
+  // 瞬間更新導覽列圖片 (img2 為亮色圖，img1 為暗色圖)
   document.querySelectorAll('.ni[data-pg]').forEach(n => {
-    const isActive = n.dataset.pg === name;
+    const isActive = n.dataset.pg === navPg;
     n.classList.toggle('active', isActive);
     const img = n.querySelector('.ni-img'); 
     if (img) img.src = isActive ? n.dataset.img2 : n.dataset.img1;
   });
   
   document.body.setAttribute('data-tab', name);
-  updateNavIndicator(name);
+  updateNavIndicator(navPg); // 對齊指示膠囊
 
   // 執行對應頁面渲染
   if (name === 'home')     renderHome();
@@ -1469,21 +1474,21 @@ function updateNavIndicator(activePg) {
     }
   });
 }
-/* 替換導覽列切換邏輯，未登入禁止進入新增頁面 */
+/* ══ 導覽列點擊事件（點擊瞬間解鎖並同步亮色圖片） ══ */
 function _bindNavEvents() {
   document.querySelectorAll('.ni[data-pg]').forEach(el => el.addEventListener('click', () => { 
     const pg = el.dataset.pg;
+    
+    // 💡 點擊導覽列瞬間，立刻強制解除登入狀態鎖定！
+    window.__authFlowLocked = false;
+    window.__authTurnstileActive = false;
+    localStorage.removeItem('auth_flow_active');
+    localStorage.removeItem('auth_last_active');
+
     if (pg === 'add') {
-      // 🌟 直接檢查登入狀態
-      /*
-      if (!USER.loggedIn) { 
-        showLoginRequiredWarning(); 
-        return; 
-      }
-      */
       if (S.tab !== 'add') openAddPage(); 
     } else {
-      goPage(pg); 
+      goPage(pg, true); // 👈 帶入 true，圖片與指示條 0 延遲瞬間切換！
     }
   }));
 }
@@ -8964,22 +8969,22 @@ window.openRegisterModal = function() {
   goPage('auth', true);
 };
 
-/* ══ 1. 強化版人機驗證 (Turnstile) 渲染與保護機制 ══ */
+/* ══ 2. 強化版人機驗證 (Turnstile) 渲染（修復 3 秒延遲與沒出現的問題） ══ */
 function renderTurnstileWidget() {
   const widget = document.getElementById('turnstile-widget');
   if (!widget) return;
-
-  // 🛡️ 防護：如果 Turnstile 已經在畫面上運作中，絕對不要在中途銷毀重繪（防止驗證到一半被重置）
-  if (window.turnstileWidgetId !== null && window.turnstile) {
-    appendAuthDebugLog('Turnstile 已存在，跳過重複渲染', '');
-    return;
-  }
 
   // 1. 顯示載入緩衝提示
   widget.innerHTML = `
     <div style="font-size:12px; color:var(--t3); text-align:center; padding:10px; font-weight:700; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
       🛡️ 安全驗證載入中...
     </div>`;
+
+  // 💡 關鍵修復：每次重新渲染前，先強制清除舊的 Widget，避免被誤判跳過
+  if (window.turnstile && window.turnstileWidgetId !== null) {
+    try { window.turnstile.remove(window.turnstileWidgetId); } catch(e){}
+    window.turnstileWidgetId = null;
+  }
 
   let attempts = 0;
 
@@ -8991,7 +8996,7 @@ function renderTurnstileWidget() {
       try {
         currentWidget.innerHTML = ''; 
 
-        // 渲染驗證元件並綁定完整 Callback
+        // 渲染驗證元件並綁定 Callback
         window.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
           sitekey: '0x4AAAAAADC958xr-t5UGd36',
           theme: 'light',
@@ -9002,7 +9007,6 @@ function renderTurnstileWidget() {
           },
           'error-callback': function(err) {
             appendAuthDebugLog('Turnstile 驗證錯誤', err, 'error');
-            // 💡 發生錯誤時只進行局部重試，絕不讓網頁跳轉或重整！
             currentWidget.innerHTML = `
               <div style="text-align:center; padding:6px; background:#fef2f2; border:1.5px solid #fecdd3; border-radius:12px;">
                 <div style="font-size:11px; color:#dc2626; font-weight:700; margin-bottom:4px;">⚠️ 驗證發生異常</div>
@@ -9025,7 +9029,7 @@ function renderTurnstileWidget() {
     }
 
     attempts++;
-    if (attempts < 20) { // 每 100ms 重試一次，最多 2 秒
+    if (attempts < 20) { // 每 100ms 重試一次，最多等 2 秒
       setTimeout(checkAndRender, 100);
     } else {
       currentWidget.innerHTML = `
@@ -9039,7 +9043,8 @@ function renderTurnstileWidget() {
     }
   };
 
-  setTimeout(checkAndRender, 3000);
+  // 💡 關鍵修復：從原本的 3000ms 改回 100ms 秒級反應，不再讓使用者乾等！
+  setTimeout(checkAndRender, 100);
 }
 // 專用：重置/刷新 Turnstile 元件
 window.resetTurnstileWidget = function() {
