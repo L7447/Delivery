@@ -1,22 +1,43 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <!-- 🚀【0毫秒 Splash 物理防堵機制】必須放在 <head> 最頂部，在畫面繪製前同步執行 -->
+  <!-- 🚀【0毫秒 全頁面防閃與預定位機制】在畫面繪製前同步執行 -->
   <script>
     (function() {
-      // 只要是已有 Session 的重整/熱啟動，在 DOM 畫出來前立刻加上 data-resume 標記
-      if (sessionStorage.getItem('app_session_active') === 'true') {
+      // 1. 若為熱啟動，立刻標記隱藏 Splash
+      var isResume = sessionStorage.getItem('app_session_active') === 'true';
+      if (isResume) {
         document.documentElement.setAttribute('data-resume', 'true');
       }
+
+      // 2. 0毫秒預判目標分頁：若上次停留在 auth 頁，預先設定 data-active-tab="auth"
+      var lastTab = localStorage.getItem('delivery_current_tab') || 'home';
+      var isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
+      if (lastTab === 'auth' || isAuthActive) {
+        lastTab = 'auth';
+      }
+      document.documentElement.setAttribute('data-active-tab', lastTab);
     })();
   </script>
   <style>
-    /* 🚀 當標記為熱啟動時，CSS 物理封鎖 Splash，連 0 毫秒都不準顯示！ */
+    /* 🚀 當標記為熱啟動時，物理封鎖 Splash */
     html[data-resume="true"] #splash {
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
+    }
+
+    /* 🚀 在 JS 正式接管前，依據 head 預判標記瞬間顯示正確頁面，徹底杜絕閃過首頁！ */
+    html:not(.js-ready) .page { display: none !important; }
+    html:not(.js-ready)[data-active-tab="home"] #page-home,
+    html:not(.js-ready)[data-active-tab="history"] #page-history,
+    html:not(.js-ready)[data-active-tab="add"] #page-add,
+    html:not(.js-ready)[data-active-tab="report"] #page-report,
+    html:not(.js-ready)[data-active-tab="vehicles"] #page-vehicles,
+    html:not(.js-ready)[data-active-tab="settings"] #page-settings,
+    html:not(.js-ready)[data-active-tab="auth"] #page-auth {
+      display: flex !important;
     }
   </style>
 
@@ -113,7 +134,7 @@
 
 <!-- 📱 APP 內容區塊 (保留您原本的 #app 程式碼) -->
 <div id="app">
-  <section class="page active" id="page-home" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+  <section class="page" id="page-home" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
     <div id="home-top-content" style="flex-shrink:0;"></div> 
     <div style="padding: 0 16px; flex-shrink:0;">
       <!-- 👇 改為 tabs-3 並加入獎勵進度按鈕 -->
