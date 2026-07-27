@@ -8598,11 +8598,29 @@ window.saveEditVehicle = function(id) {
 /* ══ 6. 車輛管理 結束 ══════════════════════════════════════════ */
 
 /* ══ 7. 設定管理與啟動 ═══════════════════════════════════ */
+/* ══ 3. 修改 renderSettings (新增註冊新帳號選單) ══ */
 function renderSettings() {
   const isLogged = USER.loggedIn;
-  const accStr = isLogged ? `👤 帳號：${USER.email}` : `✉️ 登入 / 註冊帳號`;
+  const accStr = isLogged ? `👤 帳號：${USER.email}` : `✉️ 帳號登入`;
   
-  // 👇 將狀態判斷改寫為「雙色膠囊 (Dual-color Pill)」UI 設計
+  // 建立帳號選單列表 HTML
+  let accListHtml = `
+    <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}">
+      <span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span>
+      <span class="arr">›</span>
+    </div>
+  `;
+
+  // 👈 未登入且允許註冊時，新增「註冊新帳號」獨立選項
+  if (!isLogged && GLOBAL_ALLOW_REGISTRATION) {
+    accListHtml += `
+      <div class="set-row" onclick="openRegisterModal()" style="border-top:1px dashed var(--border);">
+        <span class="sn" style="font-weight:700; color:#2563eb;">📝 註冊新帳號</span>
+        <span class="arr" style="color:#2563eb;">›</span>
+      </div>
+    `;
+  }
+
   const lastBackupStr = S.settings.lastLocalBackup 
     ? `<div style="display:inline-flex; align-items:center; border-radius:8px; border:2px solid #bfdbfe; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
          <span style="padding:3px 6px; background:#eff6ff; font-size:12px; font-weight:800; color: #2563eb; border-right:1.5px solid #bfdbfe;">上次存檔</span>
@@ -8613,34 +8631,30 @@ function renderSettings() {
          <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:800; color: #f63a69;">🆘 建議在「雲端硬碟」備份</span>
        </div>`;
 
-  const html  = `
-  <!-- 縮小了區塊的 margin-bottom -->
-  <div class="set-sec" style="margin-bottom:5px;"><h3>帳號登入狀態</h3><div class="set-list">
-    <div class="set-row" onclick="${isLogged ? 'openAccountStats()' : 'openAuthModal()'}"><span class="sn" style="font-weight:700; color:var(--acc);">${accStr}</span><span class="arr">›</span></div>
-  </div></div>
+  const html = `
+  <div class="set-sec" style="margin-bottom:5px;">
+    <h3>帳號登入狀態</h3>
+    <div class="set-list">
+      ${accListHtml}
+    </div>
+  </div>
 
   <div class="set-sec" style="margin-bottom:12px;"><h3>功能設定</h3><div class="set-list">
-    <!-- 1. 平台設定: 藍色調 -->
     <div class="set-row" onclick="openPlatformList()" style="background:#eff6ff;border:2.5px solid #dbeafe;padding:17px 15px;border-radius:14px 14px 0 0;margin-bottom:0.5px;">
         <span class="sn" style="color:#1e40af;">🏪 平台列表與設定</span><span class="arr" style="color:#1e40af;">›</span>
     </div>
-    <!-- 2. 收入目標: 綠色調 -->
     <div class="set-row" onclick="openGoalSettings()" style="background:#ecfdf5;border:2.5px solid #d1fae5;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#065f46;">🎯 收入目標設定</span><span class="arr" style="color:#065f46;">›</span>
     </div>
-    <!-- 3. 獎勵項目: 紫色調 -->
     <div class="set-row" onclick="openRewardSettings()" style="background:#f5f3ff;border:2.5px solid #ede9fe;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#5b21b6;">🎁 獎勵項目設定</span><span class="arr" style="color:#5b21b6;">›</span>
     </div>
-    <!-- 4. 記錄提醒: 粉色調 -->
     <div class="set-row" onclick="openReminderSettings()" style="background:#fff1f2;border:2.5px solid #ffe4e6;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#9f1239;">⏰ 每日記錄通知提醒</span><span class="arr" style="color:#9f1239;">›</span>
     </div>
-    <!-- 5. 工時分析: 青色調 -->
     <div class="set-row" onclick="openWageSettings()" style="background:#f0fdfa;border:2.5px solid #ccfbf1;padding:17px 15px;margin-bottom:0.5px;">
         <span class="sn" style="color:#0f766e;">⚖️ 基本工資分析設定</span><span class="arr" style="color:#0f766e;">›</span>
     </div>
-    <!-- 6. 辨識功能: 橘色調 -->
     <div class="set-row" onclick="openOCRSettings()" style="background:#fff7ed;border:2.5px solid #ffedd5;padding:17px 15px;border-radius:0 0 14px 14px;">
         <span class="sn" style="color:#9a3412;">📸 辨識功能 (OCR) 設定</span>
         <div style="display:flex; align-items:center; gap:5px;">
@@ -8658,7 +8672,6 @@ function renderSettings() {
       <div class="set-row" onclick="doReset()"><span class="sn" style="color:var(--red); font-weight:700;">⚠️ 重置設定和資料</span><span class="arr" style="color:var(--red)">!</span></div>
   </div></div>
   
-  <!-- 將關於我們往上提，縮小字體讓比例更精緻 -->
   <div style="margin:20px 0 150px 0; padding-bottom:8px; text-align:center;">
       <span onclick="openOverlay('about-page')" style="font-size:15px; color:var(--text-blue); font-weight:800; cursor:pointer; padding:6px 16px; display:inline-block;">關於我們</span>
   </div>`;
@@ -8951,7 +8964,67 @@ window.openRegisterModal = function() {
   goPage('auth', true);
 };
 
-/* 3. 渲染表單內容至固定頁面 */
+/* ══ 1. 獨立的安全驗證 (Turnstile) 緩衝與手動載入函式 ══ */
+function renderTurnstileWidget() {
+  const widget = document.getElementById('turnstile-widget');
+  if (!widget) return;
+
+  // 1. 先顯示溫馨的載入緩衝提示
+  widget.innerHTML = `
+    <div style="font-size:12px; color:var(--t3); text-align:center; padding:10px; font-weight:700; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+      🛡️ 安全驗證載入中...
+    </div>`;
+
+  let attempts = 0;
+
+  const checkAndRender = () => {
+    const currentWidget = document.getElementById('turnstile-widget');
+    if (!currentWidget) return; // 若已離開頁面則中止
+
+    if (window.turnstile) {
+      try {
+        // 清除舊實例
+        if (window.turnstileWidgetId !== null) {
+          window.turnstile.remove(window.turnstileWidgetId);
+          window.turnstileWidgetId = null;
+        }
+        currentWidget.innerHTML = ''; 
+
+        // 渲染全新驗證框
+        window.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
+          sitekey: '0x4AAAAAADC958xr-t5UGd36',
+          theme: 'light',
+          appearance: 'always'
+        });
+        window.__authTurnstileActive = true;
+        return; // 渲染成功，結束輪詢
+      } catch (e) {
+        console.warn("Turnstile 渲染重試中:", e);
+      }
+    }
+
+    attempts++;
+    if (attempts < 20) { // 每 100ms 重試一次，最多等 2 秒
+      setTimeout(checkAndRender, 300);
+    } else {
+      // 2. 超時後提供手動觸發按鈕
+      currentWidget.innerHTML = `
+        <div style="text-align:center; padding:6px; background:#fff7ed; border:1.5px solid #fed7aa; border-radius:12px;">
+          <div style="font-size:11px; color:#c2410c; font-weight:700; margin-bottom:6px;">⚠️ 驗證碼載入較慢？</div>
+          <button type="button" onclick="renderTurnstileWidget()" style="background:#2563eb; color:#ffffff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.2);">
+            🔄 點此手動載入驗證碼
+          </button>
+        </div>
+      `;
+    }
+  };
+
+  // 延遲 150ms 給予瀏覽器 DOM 渲染的緩衝時間
+  setTimeout(checkAndRender, 5000);
+}
+
+
+/* ══ 2. 修正 renderAuthContent ══ */
 function renderAuthContent() {
   const container = document.getElementById('auth-page-content');
   if (!container) return;
@@ -9065,30 +9138,14 @@ function renderAuthContent() {
           <button class="auth-switch-btn" onclick="window.openAuthModal()">登入</button>
         </div>
       </div>
+      <div style="height:100px;"></div>
     `;
   }
 
   container.innerHTML = contentHtml;
 
-  // 初始化 Turnstile 驗證
-  requestAnimationFrame(() => {
-    const widget = document.getElementById('turnstile-widget');
-    if (window.turnstile && widget) {
-      try {
-        if (window.turnstileWidgetId !== null) {
-          window.turnstile.remove(window.turnstileWidgetId);
-          window.turnstileWidgetId = null;
-        }
-        widget.innerHTML = ''; 
-        window.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
-          sitekey: '0x4AAAAAADC958xr-t5UGd36',
-          theme: 'light',
-          appearance: 'always'
-        });
-        window.__authTurnstileActive = true;
-      } catch (e) {}
-    }
-  });
+  // 觸發安全驗證緩衝渲染
+  renderTurnstileWidget();
 }
 
 /* ══ 新增：更改頭像獨立設定頁 ══ */
