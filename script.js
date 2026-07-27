@@ -17,9 +17,9 @@ const MAINT_ITEMS_GAS = ['機油', '齒輪油', '空濾', '前輪', '後輪', '�
 const MAINT_ITEMS_EV = ['齒輪油', '傳動皮帶', '傳動鍊條', '煞車油', '前煞車皮', '後煞車皮', '後輪', '前輪', '其它'];
 const KEYS = { records: 'delivery_records', platforms: 'delivery_platforms', settings: 'delivery_settings', punch: 'delivery_punch_live', vehicles: 'delivery_vehicles', vehicleRecs: 'delivery_vehicle_recs' };
 const DEFAULT_PLATFORMS =[
-  { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一及週四趟獎結算。｜每週四發薪。' },
-  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日報酬結算，｜結算後週三寄明細，｜再隔週三發薪。' },
-  { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15日及月底報酬結算。｜每月5日及20日發薪。' },
+  { id:'uber', name:'Uber Eats', color:'#008000', active:false, ruleDesc:'每週一及週四趟獎結算。｜每週一薪資結算。｜每週四發薪。' },
+  { id:'foodpanda', name:'foodpanda', color:'#D70F64', active:false, ruleDesc:'雙週日薪資結算，｜結算後週三寄明細，｜再隔週三發薪。' },
+  { id:'foodomo', name:'foodomo', color:'#ff0000', active:false, ruleDesc:'每月15日及月底薪資結算。｜每月5日及20日發薪。' },
 ];
 /* ══ 環境判斷工具（自動區分本地開發與正式環境） ══ */
 function isLocalDevelopment() {
@@ -90,30 +90,6 @@ function appendAuthDebugLog(message, detail = '', level = 'info') {
   return logs;
 }
 
-function copyAuthDebugLogs() {
-  const logs = getAuthDebugLogs();
-  const text = logs.map(item => `${item.ts} • ${item.message}${item.detail ? `\n${item.detail}` : ''}`).join('\n');
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => toast('✅ 已複製偵錯日誌')).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      toast('✅ 已複製偵錯日誌');
-    });
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    toast('✅ 已複製偵錯日誌');
-  }
-}
-
 // 支出子類別定義
 const EXP_SUB_CATS = {
   '保險': ['強制險', '第三責任險', '職災險', '其它保險'],
@@ -161,7 +137,7 @@ window.setExpNote = function(val, el) {
 // 👈 [需求 2] 刪除一般支出記錄
 /* --- script.js: 修正刪除功能 --- */
 window.deleteGeneralExpense = async function(id) {
-  const ok = await customConfirm('確定要刪除這筆支出記錄嗎？');
+  const ok = await customConfirm('確定要「刪除這筆支出記錄」嗎？');
   if (!ok) return;
 
   // 1. 濾除資料
@@ -171,7 +147,7 @@ window.deleteGeneralExpense = async function(id) {
   await idbSet('generalExpenses', S.generalExpenses);
   localStorage.setItem('delivery_general_expenses', JSON.stringify(S.generalExpenses));
   
-  toast('✅ 支出記錄，已刪除');
+  toast('支出記錄，已刪除 ✅');
   
   // 3. [關鍵] 觸發全局刷新，確保總額與列表同步更新
   renderReport(); 
@@ -421,7 +397,7 @@ function saveWageSettings() {
 
   saveSettings();
   closeOverlay('sub-page');
-  toast('✅ 基本工資設定，已儲存');
+  toast('基本工資設定，已儲存 ✅');
   
   if (S.tab === 'history') renderHistory();
   if (S.tab === 'home') renderHome();
@@ -433,7 +409,7 @@ function resetWageSettings() {
     if (ok) {
       S.settings.wageRules = null; // 清空設定即可自動套用 DEFAULT_WAGE_RULES
       saveSettings();
-      toast('✅ 已重設為：『預設值』');
+      toast('已重設為：『預設值』✅');
       openWageSettings(); // 重新渲染設定彈窗
       
       if (S.tab === 'history') renderHistory();
@@ -686,7 +662,11 @@ const S = {
   rptNetMode: 'month', // 淨賺頁面的子頁籤：month, year, expense_overview
   rptExpFilter: 'all', // 支出總覽的類別過濾
   rewardSubTab: 'current',
-  vehSearchTab: 'search' 
+  vehSearchTab: 'search',
+  orderTrips: [],
+  orderTripPage: 1,
+  orderTimerFullscreen: false,
+  lawHourlyWage: 245
 };
 
 async function saveGeneralExpenses() {
@@ -844,8 +824,18 @@ function fmtHours(hVal) {
 
 function toast(msg, ms=1500) {
   const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'), ms);
+  let text = String(msg == null ? '' : msg);
+  // 超過 11 個字才執行自動換行
+  // 用 Array.from 正確計算含 Emoji 的字元數
+  if (Array.from(text).length > 13) {
+    // 1. 中文逗號「，」後面換行
+    text = text.replace(/，/g, '，\n');
+    // 2. 半形/全形括號 (（ 前面換行（開頭除外）
+    text = text.replace(/([^\n])([\(（])/g, '$1\n$2');
+  }
+  el.textContent = text;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
 }
 
 /* ══ 智慧型進度條動畫 (支援儲存與載入) ══ */
@@ -993,27 +983,34 @@ window.animateClose = function(btn, action) {
 }
 /* 返回按鈕專用：由上而下關閉動畫 (向下滑出) */
 window.animateReturnClose = function(btn, action) {
-  btn.style.pointerEvents = 'none'; // 鎖定按鈕防止連點
-  // 自動往上尋找最外層的頁面容器
-  const targetWrap = btn.closest('.overlay-page, #sub-page, #detail-overlay, #full-calendar-overlay');
+  const img = btn.querySelector('img');
+  if (img) img.src = 'images/close2.png'; // 1. 立即換圖
+  btn.style.pointerEvents = 'none'; 
 
-  if (targetWrap) {
-    // 檢查是否為旋轉狀態 (全螢幕日曆)
-    if (targetWrap.id === 'full-calendar-overlay' && window.innerWidth < window.innerHeight) {
-        targetWrap.classList.add('slide-down-out-rotated');
-    } else {
-        targetWrap.classList.add('slide-down-out');
-    }
-  }
-
+  // 2. 停留 200ms 提供點擊回饋感
   setTimeout(() => {
-    action(); 
+    const targetWrap = btn.closest('.overlay-page, #sub-page, #detail-overlay, #full-calendar-overlay');
+
     if (targetWrap) {
-        targetWrap.classList.remove('slide-down-out');
-        targetWrap.classList.remove('slide-down-out-rotated');
+      // 3. 判斷並加上 1.4秒 的下滑動畫
+      if (targetWrap.id === 'full-calendar-overlay' && window.innerWidth < window.innerHeight) {
+          targetWrap.classList.add('slide-down-out-rotated');
+      } else {
+          targetWrap.classList.add('slide-down-out');
+      }
     }
-    btn.style.pointerEvents = 'auto';
-  }, 1400); 
+
+    // 4. 等待下滑動畫結束 (1.4秒) 後執行關閉動作
+    setTimeout(() => {
+      action(); 
+      if (targetWrap) {
+          targetWrap.classList.remove('slide-down-out');
+          targetWrap.classList.remove('slide-down-out-rotated');
+      }
+      if (img) img.src = 'images/close1.png'; // 恢復原圖
+      btn.style.pointerEvents = 'auto';
+    }, 1400); 
+  }, 200); 
 }
 /* 子頁面內部切換專用：內容向下滑出並淡入新內容 (解決背景閃爍破綻) */
 window.animateSubPageReturn = function(btn, action) {
@@ -1257,7 +1254,7 @@ function calcNextDates(id) {
       if (dw === 4) { addEv('假日獎結算', d); addEv('發薪', d); }
     }
   } else if (id === 'foodpanda') {
-    // 1. 取單率結算：更改為每週三、六、日
+    // 1. 取單率結算：每週三、六、日
     for(let i=0; i<=35; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let dw = d.getDay(); // 0是週日, 3是週三, 6是週六
@@ -1265,12 +1262,20 @@ function calcNextDates(id) {
         addEv('取單率結算', d);
       }
     }
-    // 2. 保留原有的雙週發薪與明細寄發邏輯 (若需維持)
+    // 2. 雙週薪資結算 / 明細寄發 / 發薪
+    //    錨點：2023/12/24（週日）= 某報酬區間末日（薪資結算日）
+    //    週期 14 天：
+    //      diffDays % 14 === 0  → 薪資結算（報酬區間最後一天，雙週日）
+    //      (diffDays - 3) % 14 === 0  → 明細寄發（結算後第一個週三）
+    //      (diffDays - 10) % 14 === 0 → 發薪（再隔一個週三）
+    //    對照官方表：例 11/23 結算 → 11/26 明細 → 12/03 發薪
     const anchor = new Date(2023, 11, 24); 
     for(let i=0; i<=35; i++) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let diffDays = Math.round((d - anchor) / 86400000);
       
+      // 薪資結算日 = 報酬區間最後一天（雙週日）
+      if (diffDays % 14 === 0) addEv('薪資結算', d);
       // 每雙週三寄發明細
       if ((diffDays - 3) % 14 === 0) addEv('明細寄發', d);
       // 每雙週三發薪
@@ -1282,7 +1287,7 @@ function calcNextDates(id) {
       let d = new Date(today); d.setDate(d.getDate() + i);
       let dt = d.getDate();
       let isLastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() === dt;
-      if (dt === 15 || isLastDay) addEv('報酬結算', d);
+      if (dt === 15 || isLastDay) addEv('薪資結算', d);
       if (dt === 5 || dt === 20) addEv('發薪', d);
     }
   }
@@ -1330,6 +1335,8 @@ async function loadAll() {
     S.vehicles = JSON.parse(localStorage.getItem(KEYS.vehicles) || '[]');
     S.punch = JSON.parse(localStorage.getItem(KEYS.punch) || 'null');
   } catch (e) { console.warn("設定檔載入異常", e); }
+
+  loadOrderTrips();
 
   console.log(`✅ 載入完成: 支出 ${S.generalExpenses.length} 筆 / 行程 ${S.records.length} 筆`);
 }
@@ -1485,32 +1492,25 @@ function switchHomeTab(tab, index) {
   S.homeSubTab = tab; 
   const tabBg = document.getElementById('home-tab-bg');
   tabBg.style.transform = `translateX(${index * 100}%)`; 
-  
-  // 🌟 控制獎勵子頁籤的顯示/隱藏
   const rewardSubWrap = document.getElementById('reward-sub-tabs-wrap');
-  if (rewardSubWrap) {
-    // 只有在主分頁點選「獎勵進度」時才顯示這組子按鈕
-    rewardSubWrap.style.display = (tab === 'reward') ? 'block' : 'none';
-  }
-
-  // 判斷套用不同的四色漸層與陰影
+  if (rewardSubWrap) rewardSubWrap.style.display = (tab === 'reward') ? 'block' : 'none';
   if (tab === 'schedule') {
-    // 平台日程表：日出橘紅金
     tabBg.style.background = 'linear-gradient(135deg, #f43f5e 0%, #f97316 40%, #fbbf24 75%, #fcd34d 100%)';
     tabBg.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.4)';
   } else if (tab === 'goal') {
-    // 目標進度：極光藍綠靛
     tabBg.style.background = 'linear-gradient(135deg, #6366f1 0%, #3b82f6 40%, #06b6d4 75%, #10b981 100%)';
     tabBg.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
   } else if (tab === 'reward') {
-    // 獎勵進度：電競紫粉紅 (配合獎勵的興奮感)
     tabBg.style.background = 'linear-gradient(135deg, #a855f7 0%, #d946ef 40%, #ec4899 75%, #f43f5e 100%)';
     tabBg.style.boxShadow = '0 4px 12px rgba(217, 70, 239, 0.4)';
+  } else if (tab === 'ordertime') {
+    tabBg.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 40%, #14b8a6 75%, #10b981 100%)';
+    tabBg.style.boxShadow = '0 4px 12px rgba(14, 165, 233, 0.4)';
   }
-
   document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); 
   document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); 
   document.getElementById('btn-home-reward')?.classList.toggle('active', tab==='reward'); 
+  document.getElementById('btn-home-ordertime')?.classList.toggle('active', tab==='ordertime'); 
   renderHome(); 
 }
 
@@ -1715,7 +1715,7 @@ document.addEventListener('click', function(e) {
           setTimeout(() => checkAndShowAnnouncement(), 300);
 
           // 💡 [補回] 顯示已閱讀提示
-          toast('✅ 已閱讀');
+          toast('已閱讀 ✅');
       }, 1300); // 配合您的動畫時間 1.3 秒
   }
 });
@@ -1754,6 +1754,7 @@ function renderHome() {
       if (S.homeSubTab === 'schedule') tabBg.style.transform = 'translateX(0%)';
       else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(100%)';
       else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
+      else if (S.homeSubTab === 'ordertime') tabBg.style.transform = 'translateX(300%)';
     }
 
     // 👇 修復：確保 requestAnimationFrame 有正確的閉合
@@ -1767,7 +1768,7 @@ function renderHome() {
       topHtml = `
         <div style="padding:10px 16px 0;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <div style="font-family:var(--title);font-size:24px;font-weight:800;color:var(--t1);letter-spacing:1.5px;">今日概況</div>
+            <div style="font-family:var(--title);font-size:26px;font-weight:700;color:var(--t1);letter-spacing:1.5px;">今日概況</div>
 
             <div style=" display:flex;align-items:center;font-size:14px;color:var(--t2);font-weight:600;background:var(--sf);padding:3px 12px;border-radius:20px;border:2px solid var(--border);font-family:var(--mono);gap:4px;" >
               <span style="font-size:18px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 1px 3px 0px;">${dateObj.getFullYear()}</span>年
@@ -2026,8 +2027,9 @@ function renderHome() {
           `;
         }
       } else if (S.homeSubTab === 'reward') {
-        // 👇 呼叫取得獎勵的 HTML
         bottomHtml = getRewardsHtml();
+      } else if (S.homeSubTab === 'ordertime') {
+        bottomHtml = getOrderTimerHtml();
       }
 
       // 👇 在 renderHome 結尾正確關閉 requestAnimationFrame
@@ -2050,6 +2052,10 @@ function renderHome() {
     appendAuthDebugLog('⚠️ 首頁渲染失敗', err?.message || String(err), 'error');
     topEl.innerHTML = `<div style="padding:24px 16px; text-align:center; color:var(--t2);">⚠️ 首頁暫時無法載入，請稍後再試</div>`;
     botEl.innerHTML = '';
+  }
+
+  if (S.homeSubTab === 'ordertime') {
+    startOrderTimerTicker(); // 確保一切換到這個分頁計時器就開始跳
   }
 }
 
@@ -2225,7 +2231,7 @@ window.performCropAndOCR = async function() {
         // 5. 輸出結果
         if (foundMileage) {
             document.getElementById('manual-km').value = foundMileage;
-            toast('✅ 已排除時間，精確抓取里程');
+            toast('已排除時間，精確抓取里程 ✅');
         } else {
             // 備份方案：如果所有行都沒看到 km，才抓取全圖最長數字
             const allTightened = detectedText.replace(/(\d)\s+(?=\d)/g, '$1');
@@ -2361,7 +2367,7 @@ async function punchOut() {
     // 🌟 4. 視窗關閉後，恢復取消按鈕的顯示 (還原狀態給其他功能使用)
     if (cancelBtn) cancelBtn.style.display = '';
     
-    toast('✅ 已完成結算');
+    toast('已完成結算 ✅');
 
     // 👈 [核心 3] 不再跳轉，直接保持在目前頁面並更新首頁
     renderHome();
@@ -2557,7 +2563,8 @@ function buildRecItem(r) {
     // 背景與邊框判斷
     const cardBorder = isOnline ? 'border: 2px solid #10b981;' : 'border: 1.5px solid #cbd5e1;';
     const tagBg = isOnline ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155';
-    const outTimeStr = isOnline ? '<span style="color:#10b981; font-weight:900; background:#ecfdf5; padding:2px 6px; border-radius:6px; border:1px solid #a7f3d0;">上線中</span>' : safeText(r.punchOut);
+    // 計時中：下線時間留白；下線後：顯示下線時間
+    const outTimeStr = isOnline ? '' : safeText(r.punchOut);
 
     // 1. 里程標籤 (僅在下線後且有里程時顯示)
     const mileageHtml = (pf(r.mileage) > 0) 
@@ -2568,9 +2575,9 @@ function buildRecItem(r) {
 
     // 2. 累計工時精美標籤
     const hoursHtml = isOnline
-      ? `<div style="margin-left:6px; background:#f0fdf4; color:#10b981; border:1.5px solid #86efac; padding:2px 10px; border-radius:8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:5px;">
+      ? `<div style="margin-left:6px; background: #e5ffed; color: #009765; border:1.5px solid #78efa4; padding:5px 10px; border-radius:8px; font-size:15px; font-weight:750; display:inline-flex; align-items:center; gap:5px;">
           <span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; animation: pulse-green 1.5s infinite;"></span> 
-          <span>計時中</span>
+          <span> 上線中</span>
          </div>`
       : `<div style="margin-left:6px; background:#eff6ff; color:#2563eb; padding:2px 3px; border-radius:8px; border:1.5px solid #bfdbfe; font-size:14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
           <span style="font-size:13px;">⏱️</span> ${fmtHours(r.hours)}
@@ -2578,11 +2585,11 @@ function buildRecItem(r) {
 
     return `
       <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 2px 4px; margin-bottom: 5px;">
-        <span style="background:${tagBg}; color:#fff; font-size:13px; padding:4px 5px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:70px; height:32px; display:flex; align-items:center; justify-content:center;margin-right:5px;">🕒 打卡</span>
+        <span style="background:${tagBg}; color:#fff; font-size:13px; padding:4px 3px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:60px; height:32px; display:flex; align-items:center; justify-content:center;margin-right:5px;">🕒 打卡</span>
         
         <div style="font-family:var(--mono);font-size:15px;font-weight:800;color:var(--t1); flex:1; display:flex; align-items:center; justify-content:flex-start;">
           <!-- 移除日期，只保留時間軸 -->
-          <span style="color: #019e29;margin-bottom:25px;">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color: #006aff;font-size:16px;font-weight:800;margin:0 3px;">→</span><span style="color:var(--red);margin-top:25px;">${outTimeStr}</span>
+          <span style="color: #1174ff;margin-bottom:25px;">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color:#000;font-size:16px;font-weight:1000;margin:0 3px;">→</span><span style="color:var(--red);margin-top:25px;">${outTimeStr}</span>
           
           <!-- 組合標籤區 -->
           <div style="display:flex; align-items:center;">
@@ -3135,10 +3142,10 @@ function renderHistGroupView(mode) {
         <div class="summary-forehead-top"><span class="summary-forehead-title">📊 區間總結數據</span></div>
         <div style="padding:4px 2px 2px 2px;">${summaryCardHtml}</div>
       </div>
+      <div class="pg-info" style="margin-bottom:5px;">
+        <span style="font-size:14px;font-weight:750;color: #0099ff;">共有 <span style="font-size:15px;font-weight:900;color: #ff7300;">${displayRecs.length}</span> 筆記錄</span> <span style="font-size:15px;font-weight:900;color:#000;">│</span> (第 <span style="font-size:15px;font-weight:900;color: #ff0000;">${S.histPage}</span> 頁 / 總共 <span style="font-size:15px;font-weight:900;color:#000;">${totalPages}</span> 頁)</span>
+      </div>
       <div id="hist-list-wrapper" class="${S.histShowList ? '' : 'hidden'}">
-        <div class="pg-info" style="margin-bottom:5px;">
-          <span style="font-size:14px;font-weight:750;color: #0099ff;">共有 <span style="font-size:15px;font-weight:900;color: #ff7300;">${displayRecs.length}</span> 筆記錄</span> <span style="font-size:15px;font-weight:900;color:#000;">│</span> (第 <span style="font-size:15px;font-weight:900;color: #ff0000;">${S.histPage}</span> 頁 / 總共 <span style="font-size:15px;font-weight:900;color:#000;">${totalPages}</span> 頁)</span>
-        </div>
         ${renderCardList(pageItems)}
         ${renderPagination(totalPages)}
       </div>
@@ -3967,19 +3974,34 @@ async function confirmAddRecord() {
   const checkBtn = document.getElementById('add-save-btn');
   if (checkBtn.disabled) return; 
 
-  // 💡 修正：只有行程記錄才強制檢查平台，打卡和支出不用
+  // 🌟 [新增點擊回饋]
+  if (checkImg) checkImg.src = 'images/Check2.png';
+  await new Promise(resolve => setTimeout(resolve, 200)); 
+
+  // ... 檢查平台邏輯 ...
   if (!S.selPlatformId && S.addTab !== 'punch' && S.addTab !== 'expense') { 
+    if (checkImg) checkImg.src = 'images/Check1.png'; // 失敗換回來
     toast('請先選擇平台'); return; 
   }
   
   // ── 處理 A：支出花費 ── (獨立邏輯，存入 generalExpenses)
   if (S.addTab === 'expense') {
     const amt = pf(document.getElementById('f-exp-amount').value);
-    if (amt <= 0) { toast('⚠️ 請輸入金額'); return; }
+    if (amt <= 0) {
+      if (checkImg) checkImg.src = 'images/Check1.png';
+      toast('⚠️ 請輸入金額');
+      return;
+    }
+    if (!document.getElementById('f-exp-cat').value) {
+      if (checkImg) checkImg.src = 'images/Check1.png';
+      toast('⚠️ 請選擇支出類別');
+      return;
+    }
     
+    const expDate = document.getElementById('f-exp-date').value || todayStr();
     const expRec = {
       id: S.editingId || newId(),
-      date: document.getElementById('f-exp-date').value,
+      date: expDate,
       category: document.getElementById('f-exp-cat').value,
       amount: amt,
       note: document.getElementById('f-exp-note').value.trim()
@@ -3987,33 +4009,54 @@ async function confirmAddRecord() {
 
     checkBtn.disabled = true; 
     runSaveProgress(async () => {
-      if (S.editingId) {
-        const idx = S.generalExpenses.findIndex(e => e.id === S.editingId);
-        if (idx >= 0) S.generalExpenses[idx] = expRec;
-      } else {
-        S.generalExpenses.push(expRec);
+      try {
+        if (S.editingId) {
+          const idx = S.generalExpenses.findIndex(e => e.id === S.editingId);
+          if (idx >= 0) S.generalExpenses[idx] = expRec;
+        } else {
+          S.generalExpenses.push(expRec);
+        }
+
+        await idbSet('generalExpenses', S.generalExpenses);
+        localStorage.setItem('delivery_general_expenses', JSON.stringify(S.generalExpenses));
+
+        // 同步年份與月份
+        const dateParts = (expRec.date || todayStr()).split('-');
+        S.rptY = parseInt(dateParts[0], 10) || new Date().getFullYear();
+        S.rptM = parseInt(dateParts[1], 10) || (new Date().getMonth() + 1);
+        S.rptExpFilter = '全部';
+
+        // 跳轉到「收入分析 → 淨賺 → 支出總覽」並同步 UI
+        S.rptView = 'netProfit';
+        S.rptNetMode = 'expense_overview';
+        S.rptExpTimeMode = 'month';
+
+        // 同步報表頂部頁籤 UI（淨賺是第 6 個，index=5）
+        const rptBg = document.getElementById('rpt-tab-bg');
+        if (rptBg) rptBg.style.transform = 'translateX(500%)';
+        document.querySelectorAll('#rpt-tabs .slide-btn').forEach((btn, i) => {
+          btn.classList.toggle('active', i === 5);
+        });
+        // 顯示對應內容區塊
+        ['overview', 'yearOverview', 'trend', 'compare', 'top3', 'netProfit'].forEach(v => {
+          const el = document.getElementById(`rv-${v}`);
+          if (el) el.style.display = (v === 'netProfit' ? '' : 'none');
+        });
+        const subTabsFixed = document.getElementById('net-profit-sub-tabs-fixed');
+        if (subTabsFixed) subTabsFixed.style.display = 'block';
+
+        resetAddForm();
+        if (checkImg) checkImg.src = 'images/Check1.png';
+        checkBtn.disabled = false;
+
+        goPage('report');
+        toast('支出已記錄，並跳轉 ✅');
+      } catch (err) {
+        console.error('支出儲存失敗:', err);
+        if (checkImg) checkImg.src = 'images/Check1.png';
+        checkBtn.disabled = false;
+        toast('⚠️ 儲存失敗，請重試');
       }
-
-      await idbSet('generalExpenses', S.generalExpenses);
-      localStorage.setItem('delivery_general_expenses', JSON.stringify(S.generalExpenses));
-
-      // 👈 [關鍵修正]：同步年份與月份，防止跳轉後看到空白
-      const dateParts = expRec.date.split('-'); // "2025-05-17"
-      S.rptY = parseInt(dateParts[0]);
-      S.rptM = parseInt(dateParts[1]);
-      S.rptExpFilter = '全部'; // 確保跳轉後看到的是包含剛新增的那筆
-
-      resetAddForm(); 
-      checkBtn.disabled = false;
-
-      // 跳轉設定
-      S.tab = 'report';             
-      S.rptView = 'netProfit';      
-      S.rptNetMode = 'expense_overview'; 
-      S.rptExpTimeMode = 'month'; // 強制跳轉到「月」視角，比較容易看到剛加的資料
-      
-      goPage('report');
-      toast('✅ 支出已記錄，並跳轉');
     });
     return;
   }
@@ -4022,13 +4065,35 @@ async function confirmAddRecord() {
   let rec = { id: S.editingId || newId(), platformId: S.selPlatformId };
 
   if (S.addTab === 'punch') {
+    const puDate = (document.getElementById('f-pu-date').value || '').trim();
+    const puIn = (document.getElementById('f-pu-in').value || '').trim();
+    const puOut = (document.getElementById('f-pu-out').value || '').trim();
     const ph = pf(document.getElementById('f-pu-hrs').value);
     const pm = pf(document.getElementById('f-pu-min').value);
     const totalHours = ph + (pm / 60);
 
     const mileageVal = pf(document.getElementById('f-pu-mileage').value);
 
-    if (totalHours <= 0 && document.getElementById('f-pu-out').value !== ''){toast('總工時，必須大於 0');return;}
+    if (!puDate) {
+      if (checkImg) checkImg.src = 'images/Check1.png';
+      toast('⚠️ 請選擇「打卡日期」');
+      return;
+    }
+    if (!puIn) {
+      if (checkImg) checkImg.src = 'images/Check1.png';
+      toast('⚠️ 請填寫「上線時間」');
+      return;
+    }
+    if (!puOut) {
+      if (checkImg) checkImg.src = 'images/Check1.png';
+      toast('⚠️ 請填寫「下線時間」');
+      return;
+    }
+    if (totalHours <= 0) {
+      if (checkImg) checkImg.src = 'images/Check1.png';
+      toast('⚠️ 總工時，必須大於 0');
+      return;
+    }
 
     // 👈 [關鍵 2] 如果是編輯，先取得舊資料，避免 startKm / endKm 遺失
     let existingData = {};
@@ -4059,13 +4124,13 @@ async function confirmAddRecord() {
     const bonus = pf(document.getElementById('f-bonus').value); 
     const temp = safeEvalMath(document.getElementById('f-temp-bonus').value); 
     const tips = pf(document.getElementById('f-tips').value);
-    if (income + bonus + temp + tips <= 0) { toast('請輸入至少一項「收入金額」'); return; }
+    if (income + bonus + temp + tips <= 0) { toast('請輸入「收入金額」'); return; }
     const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
     rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: document.getElementById('f-time').value || nowTime(), hours: totalHours, orders: pf(document.getElementById('f-orders').value), mileage: pf(document.getElementById('f-mileage').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim(), updatedAt: Date.now() };
   }
   
   if (S.editingId) {
-    const ok = await customConfirm('是否確認要儲存修改後的記錄？'); if (!ok) return;
+    const ok = await customConfirm('是否確認要儲存，修改後的記錄？'); if (!ok) return;
   }
 
   checkBtn.disabled = true; 
@@ -4073,16 +4138,32 @@ async function confirmAddRecord() {
     if (S.editingId) { 
       const idx = S.records.findIndex(r => r.id === S.editingId); 
       if (idx >= 0) S.records[idx] = rec; 
-      toast('✅ 記錄，已更新'); 
+      toast('記錄「已更新」✅'); 
     } else { 
       S.records.push(rec); 
-      toast('✅ 記錄成功！'); 
+      toast('已記錄 ✅'); 
     }
     saveRecords(); 
     resetAddForm(); 
     checkImg.src = 'images/Check1.png';
     checkBtn.disabled = false; 
-    goPage('home');
+
+    // 儲存後跳到「查看記錄」頁，並定位到該筆記錄的日期
+    if (rec && rec.date) {
+      S.selDate = rec.date;
+      const parts = rec.date.split('-');
+      if (parts.length >= 2) {
+        S.calY = parseInt(parts[0], 10);
+        S.calM = parseInt(parts[1], 10);
+      }
+      S.histTab = 'day';
+      S.histShowList = true; // 展開當日清單
+      // 同步日頁籤 UI
+      const histBg = document.getElementById('hist-tab-bg');
+      if (histBg) histBg.style.transform = 'translateX(0%)';
+      document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
+    }
+    goPage('history');
   });
 }
 
@@ -4215,6 +4296,363 @@ window.navRptYear = function(dir) {
   S.rptY += dir;
   renderReport();
 }
+
+
+
+
+/* ══════════════════════════════   訂單計時模組（修正穩定版） ══════════════════════════════ */
+const OT_KEYS = { trips: 'delivery_order_trips', wage: 'delivery_law_hourly_wage' };
+const OT_DEFAULT_WAGE = 245;
+
+// 1. 初始化環境
+if (!S.otViewDate) S.otViewDate = todayStr();
+if (!S.lawHourlyWage) S.lawHourlyWage = pf(localStorage.getItem(OT_KEYS.wage)) || OT_DEFAULT_WAGE;
+
+// 2. 核心計算工具
+function ensureOrderTripsLoaded() { 
+    if (!Array.isArray(S.orderTrips)) {
+        try { S.orderTrips = JSON.parse(localStorage.getItem(OT_KEYS.trips)) || []; } catch(e) { S.orderTrips = []; }
+    }
+}
+function saveOrderTrips() { localStorage.setItem(OT_KEYS.trips, JSON.stringify(S.orderTrips)); }
+
+// 依日期重新編排行程序號（新增/刪除後呼叫）
+function reindexOrderTrips() {
+    ensureOrderTripsLoaded();
+    const groups = {};
+    S.orderTrips.forEach(t => { (groups[t.date] = groups[t.date] || []).push(t); });
+    Object.values(groups).forEach(list => {
+        list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        list.forEach((t, i) => { t.tripNo = i + 1; });
+    });
+    saveOrderTrips();
+}
+
+function calcOrderDurationMs(order) {
+    if (!order || !order.startTs) return 0;
+    return order.status === 'running' ? Date.now() - order.startTs : (pf(order.endTs) - pf(order.startTs) || 0);
+}
+
+function calcLawPay(durationMs) {
+    return Math.round((Math.max(0, durationMs) / 3600000) * S.lawHourlyWage);
+}
+
+// 將毫秒格式化為計時器顯示文字 (HH:MM:SS 或 MM:SS)
+function fmtOrderTimer(ms) {
+    const totalSec = Math.max(0, Math.floor((ms || 0) / 1000));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+// 3. 計時器心跳
+let orderTimerTicker = null;
+function startOrderTimerTicker() {
+    if (orderTimerTicker) return;
+    orderTimerTicker = setInterval(() => {
+        const isOtTab = S.tab === 'home' && S.homeSubTab === 'ordertime';
+        const isFsOpen = document.getElementById('order-timer-full-page')?.classList.contains('show');
+        if (!isOtTab && !isFsOpen) { clearInterval(orderTimerTicker); orderTimerTicker = null; return; }
+
+        document.querySelectorAll('[data-order-timer]').forEach(el => {
+            const trip = S.orderTrips.find(t => t.id === el.dataset.trip);
+            if (!trip) return;
+            const order = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].find(o => o.id === el.dataset.order);
+            if (order && order.status === 'running') el.textContent = fmtOrderTimer(calcOrderDurationMs(order));
+        });
+    }, 1000);
+}
+
+// 4. 行程控制
+window.startMainBatch = function(tripId) {
+    const trip = S.orderTrips.find(t => t.id === tripId);
+    if (!trip) return;
+    const now = Date.now();
+    [trip.main, ...(trip.bundled || [])].forEach(o => { o.status = 'running'; o.startTs = now; });
+    saveOrderTrips(); updateOtUI(); startOrderTimerTicker();
+    toast('🚀 整組派單已同步啟動');
+};
+
+window.startOrderTimer = function(tripId, orderId) {
+    const trip = S.orderTrips.find(t => t.id === tripId);
+    if (!trip) return;
+    const order = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].find(o => o?.id === orderId);
+    if (!order) return;
+    const now = Date.now();
+    if (trip.main && orderId === trip.main.id) {
+        // 主單啟動時，連動啟動所有尚未開始的初始夾單（完成時則各自獨立，不連動）
+        [trip.main, ...(trip.bundled || [])].forEach(o => { if (o.status === 'idle') { o.status = 'running'; o.startTs = now; } });
+        toast('🚀 主單與初始夾單已同步啟動');
+    } else {
+        order.status = 'running'; order.startTs = now;
+    }
+    saveOrderTrips(); updateOtUI(); startOrderTimerTicker();
+};
+
+window.finishOrderTimer = async function(tripId, orderId) {
+    const trip = S.orderTrips.find(t => t.id === tripId);
+    const order = [trip?.main, ...(trip?.bundled || []), ...(trip?.midway || [])].find(o => o?.id === orderId);
+    if (order && order.status === 'running') {
+        if (!(await customConfirm('確定完成此訂單？'))) return;
+        order.status = 'done'; order.endTs = Date.now();
+        order.lawPay = calcLawPay(order.endTs - order.startTs);
+        saveOrderTrips(); updateOtUI();
+    }
+};
+
+window.addOrderMidway = function(tripId) {
+    const trip = S.orderTrips.find(t => t.id === tripId);
+    if (trip) { 
+        if (!trip.midway) trip.midway = [];
+        trip.midway.push({id:newId(),orderNo:'',amount:0,startTs:null,endTs:null,status:'idle',lawPay:0,isMain:false}); 
+        trip.extrasOpen = true; saveOrderTrips(); updateOtUI(); 
+    }
+};
+
+// 5. 渲染邏輯
+function getOrderTimerHtml() {
+    ensureOrderTripsLoaded();
+    const isFs = document.getElementById('order-timer-full-page')?.classList.contains('show');
+    const viewDate = S.otViewDate || todayStr();
+    const allTrips = S.orderTrips.filter(t => t.date === viewDate).sort((a, b) => (a.tripNo || 0) - (b.tripNo || 0));
+
+    const perPage = 10;
+    const totalPages = Math.max(1, Math.ceil(allTrips.length / perPage));
+    if (!S.otPage || S.otPage < 1) S.otPage = 1;
+    if (S.otPage > totalPages) S.otPage = totalPages;
+    const startIdx = (S.otPage - 1) * perPage;
+    const trips = allTrips.slice(startIdx, startIdx + perPage);
+
+    let tMs = 0, tInc = 0, tLaw = 0;
+    S.orderTrips.forEach(t => {
+        [t.main, ...(t.bundled || []), ...(t.midway || [])].forEach(o => {
+            tMs += calcOrderDurationMs(o); tInc += pf(o.amount);
+            tLaw += (o.status === 'done' ? pf(o.lawPay) : calcLawPay(calcOrderDurationMs(o)));
+        });
+    });
+
+    let html = `
+    <div style="background:linear-gradient(135deg,#1e293b,#0f172a); border-radius:20px; padding:15px; color:#fff; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span style="font-weight:950; font-size:15px; letter-spacing:1px;">📊 訂單計時總覽</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <div style="display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);">
+                    <span style="font-size:10px; color:#94a3b8; font-weight:700;">專法時薪</span>
+                    <input type="number" value="${S.lawHourlyWage}" onchange="S.lawHourlyWage=pf(this.value); localStorage.setItem(OT_KEYS.wage, this.value); updateOtUI();" style="width:38px; background:transparent; border:none; color:#fbbf24; font-weight:900; font-family:var(--mono); text-align:center; outline:none;">
+                </div>
+                ${!isFs ? `<button onclick="openOrderTimerFullscreen()" style="background:#2563eb; color:#fff; border:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">⤢ 全螢幕</button>` : ''}
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="ot-stat-box"><div class="lbl">全部工時</div><div class="val" style="color:#38bdf8;">${fmtOrderTimer(tMs)}</div></div>
+            <div class="ot-stat-box"><div class="lbl">平台總報酬</div><div class="val" style="color:#fbbf24;">$${fmt(tInc)}</div></div>
+            <div class="ot-stat-box"><div class="lbl">專法薪資總額</div><div class="val" style="color:#4ade80;">$${fmt(tLaw)}</div></div>
+            <div class="ot-stat-box"><div class="lbl">報酬差額</div><div class="val" style="color:${tInc-tLaw>=0?'#4ade80':'#f87171'}">${tInc-tLaw>=0?'+':''}${fmt(tInc-tLaw)}</div></div>
+        </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; overflow:hidden; flex-shrink:0;">
+            <button onclick="navOtDate(-1)" style="width:38px; height:40px; border:none; background:transparent; color:var(--acc); font-size:15px; font-weight:900; cursor:pointer;">◀</button>
+            <div style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); padding:0 6px; white-space:nowrap;">${viewDate.replace(/-/g,'/')}</div>
+            <button onclick="navOtDate(1)" style="width:38px; height:40px; border:none; background:transparent; color:var(--acc); font-size:15px; font-weight:900; cursor:pointer;">▶</button>
+        </div>
+        ${!isFs ? `<button onclick="openAddOrderTripPanel()" style="flex:1; background:var(--acc); color:#fff; border:none; height:40px; border-radius:12px; font-weight:950; font-size:14px; cursor:pointer;">＋ 新增行程</button>` : ''}
+    </div>
+
+    <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:15px;">
+        <button onclick="navOtPage(-1)" ${S.otPage<=1?'disabled':''} style="background:none; border:none; color:${S.otPage<=1?'#cbd5e1':'var(--acc)'}; font-size:13px; font-weight:800; cursor:${S.otPage<=1?'default':'pointer'}; padding:6px 4px;">◀ 上一頁</button>
+        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--t2);">${S.otPage} / ${totalPages}</span>
+        <button onclick="navOtPage(1)" ${S.otPage>=totalPages?'disabled':''} style="background:none; border:none; color:${S.otPage>=totalPages?'#cbd5e1':'var(--acc)'}; font-size:13px; font-weight:800; cursor:${S.otPage>=totalPages?'default':'pointer'}; padding:6px 4px;">下一頁 ▶</button>
+    </div>`;
+
+    trips.forEach(trip => {
+        const plat = getPlatform(trip.platformId);
+        const batchCount = (trip.bundled?.length || 0) + 1;
+        const bundledHtml = (trip.bundled || []).map((o, i) => renderCompactOrderRow(trip.id, o, `初始夾單 ${i+1}`, false, true)).join('');
+        const midwayHtml = isFs ? '' : (trip.midway || []).map(o => renderCompactOrderRow(trip.id, o, '中途夾單', true)).join('');
+        const extrasCount = (trip.bundled?.length || 0) + (isFs ? 0 : (trip.midway?.length || 0));
+        const hasExtras = !!(bundledHtml || midwayHtml);
+        html += `
+        <div style="background:#fff; border:2.5px solid ${plat.color}; border-radius:18px; padding:10px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="background:${plat.color}; color:#fff; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:900;">#${trip.tripNo}</span>
+                    <span style="font-weight:950; font-size:15px; color:var(--t1);">${plat.name}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="background:#fff7ed; color:#ea580c; border:1.5px solid #fdba74; padding:2px 8px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">${batchCount} 單總額: $${trip.main.amount}</span>
+                    ${hasExtras ? `<button onclick="toggleOrderExtras('${trip.id}')" style="background:none; border:none; color:var(--t2); font-size:12px; font-weight:800; cursor:pointer; padding:2px 4px;">${trip.extrasOpen ? '▲' : '▼'} (${extrasCount})</button>` : ''}
+                    <button onclick="deleteOrderTrip('${trip.id}')" style="background:#f1f5f9; color:#94a3b8; border:none; width:28px; height:28px; border-radius:50%; cursor:pointer;">✕</button>
+                </div>
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:2px 8px;">
+                ${renderCompactOrderRow(trip.id, trip.main, '主要訂單')}
+                ${hasExtras ? `<div id="ot-midway-${trip.id}" style="max-height:${trip.extrasOpen ? '2000px' : '0'}; overflow:hidden; transition:max-height 0.4s ease;">
+                    ${bundledHtml}${midwayHtml}
+                </div>` : ''}
+            </div>
+            ${!isFs ? `<div style="display:flex; justify-content:flex-start; align-items:center; margin-top:8px; padding:0 4px;">
+                <button onclick="addOrderMidway('${trip.id}')" style="background:#f3e8ff; color:#7c3aed; border:1.5px solid #d8b4fe; padding:6px 14px; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer;">＋ 中途夾單</button>
+            </div>` : ''}
+        </div>`;
+    });
+    return html || '<div class="empty-tip" style="padding:40px 0;">無計時記錄</div>';
+}
+
+// 渲染單筆訂單（主單／夾單）的精簡列，含單號、金額、開始/結束時間、計時與操作按鈕
+function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
+    if (!order) return '';
+    const dur = calcOrderDurationMs(order);
+    const timeStr = fmtOrderTimer(dur);
+    const statusColor = order.status === 'running' ? '#f97316' : (order.status === 'done' ? '#10b981' : '#94a3b8');
+    const startStr = order.startTs ? new Date(order.startTs).toTimeString().slice(0,5) : '--:--';
+    const endStr = order.endTs ? new Date(order.endTs).toTimeString().slice(0,5) : '--:--';
+
+    let actionHtml = '';
+    if (order.status === 'idle') {
+        actionHtml = `<button onclick="startOrderTimer('${tripId}','${order.id}')" style="background:#f97316;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">▶ 開始</button>`;
+    } else if (order.status === 'running') {
+        actionHtml = `<button onclick="finishOrderTimer('${tripId}','${order.id}')" style="background:#10b981;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">✔ 完成</button>`;
+    } else {
+        actionHtml = `<span style="color:#10b981;font-size:12px;font-weight:800;white-space:nowrap;">薪$${fmt(order.lawPay || 0)}</span>`;
+    }
+
+    const delHtml = isMidway ? `<button onclick="deleteExtraOrder('${tripId}','${order.id}')" style="background:none;border:none;color:#cbd5e1;font-size:15px;cursor:pointer;padding:0 2px;flex-shrink:0;">✕</button>` : '';
+    const amountHtml = hideAmount ? '' : `<input type="number" value="${order.amount || 0}" placeholder="金額" onchange="updateOrderField('${tripId}','${order.id}','amount',this.value)" style="width:0;flex:0.8;min-width:0;border:none;background:#f1f5f9;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#ea580c;font-weight:600;">`;
+
+    return `
+    <div style="padding:7px 2px;border-bottom:1px solid #f1f5f9;">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <div style="flex-shrink:0;font-size:11px;color:var(--t3);font-weight:700;width:52px;">${label}</div>
+            <input type="text" value="${safeText(order.orderNo || '')}" placeholder="單號" onchange="updateOrderField('${tripId}','${order.id}','orderNo',this.value)" style="width:0;flex:1.1;min-width:0;border:none;background:#f1f5f9;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#2563eb;font-weight:600;">
+            ${amountHtml}
+            <div data-order-timer data-trip="${tripId}" data-order="${order.id}" style="flex-shrink:0;text-align:center;font-family:var(--mono);font-size:13px;font-weight:900;color:${statusColor};width:52px;">${timeStr}</div>
+            ${actionHtml}
+            ${delHtml}
+        </div>
+        <div style="display:flex;gap:12px;padding-left:58px;margin-top:3px;font-size:10px;font-family:var(--mono);">
+            <span style="color:#16a34a;">開始 ${startStr}</span>
+            <span style="color:#dc2626;">結束 ${endStr}</span>
+        </div>
+    </div>`;
+}
+
+function updateOtUI() { 
+    if (document.getElementById('order-timer-full-page')?.classList.contains('show')) renderFullscreenOrderTimer(); 
+    else renderHome(); 
+}
+window.navOtDate = function(dir) { const d = new Date(S.otViewDate); d.setDate(d.getDate() + dir); S.otViewDate = todayStr(d); S.otPage = 1; updateOtUI(); };
+window.navOtPage = function(dir) { S.otPage = (S.otPage || 1) + dir; updateOtUI(); };
+window.openOrderTimerFullscreen = function() { document.getElementById('order-timer-full-page').classList.add('show'); renderFullscreenOrderTimer(); };
+window.renderFullscreenOrderTimer = function() { document.getElementById('ot-full-body').innerHTML = getOrderTimerHtml(); startOrderTimerTicker(); };
+window.toggleOrderExtras = function(tId) { const t = S.orderTrips.find(x => x.id === tId); if (t) { t.extrasOpen = !t.extrasOpen; updateOtUI(); } };
+window.deleteOrderTrip = function(id) { customConfirm('確定刪除？編號將重排。').then(ok => { if (ok) { S.orderTrips = S.orderTrips.filter(t => t.id !== id); reindexOrderTrips(); updateOtUI(); } }); };
+window.deleteExtraOrder = async function(tId, oId) { if (await customConfirm('確定刪除夾單？')) { const t = S.orderTrips.find(x => x.id === tId); if (t) { t.midway = t.midway.filter(o => o.id !== oId); saveOrderTrips(); updateOtUI(); } } };
+window.updateOrderField = function(tId, oId, f, v) { 
+    const t = S.orderTrips.find(x => x.id === tId); 
+    const o = [t?.main, ...(t?.bundled || []), ...(t?.midway || [])].find(x => x?.id === oId);
+    if (o) { if (f === 'orderNo') o.orderNo = v; if (f === 'amount') o.amount = pf(v); if (o.status === 'done') o.lawPay = calcLawPay(calcOrderDurationMs(o)); saveOrderTrips(); updateOtUI(); }
+};
+// 6. 新增行程面板（1.選擇平台 2.一次派幾單 3.主要訂單總金額）
+window.openAddOrderTripPanel = function() {
+    ensureOrderTripsLoaded();
+    const activePlatforms = (S.platforms || []).filter(p => p.active);
+    if (!activePlatforms.length) { toast('請先到設定啟用至少一個平台'); return; }
+    if (!S.otAddPlatformId || !activePlatforms.find(p => p.id === S.otAddPlatformId)) {
+        S.otAddPlatformId = activePlatforms[0].id;
+    }
+    if (![1,2,3].includes(S.otAddBatchCount)) S.otAddBatchCount = 1;
+
+    document.getElementById('ot-add-trip-overlay')?.remove();
+
+    const chipsHtml = activePlatforms.map(p => {
+        const on = S.otAddPlatformId === p.id;
+        return `<div class="platform-chip${on ? ' on' : ''}" style="${on ? `background:${p.color};border-color:${p.color}` : ''}" onclick="selectOtAddPlatform(this,'${p.id}')"><span>${safeText(p.name)}</span></div>`;
+    }).join('');
+
+    const batchHtml = [1,2,3].map(n => {
+        const on = S.otAddBatchCount === n;
+        return `<div class="platform-chip${on ? ' on' : ''}" style="${on ? 'background:var(--acc);border-color:var(--acc);' : ''}flex:1;justify-content:center;" onclick="selectOtAddBatch(this,${n})">${n}單</div>`;
+    }).join('');
+
+    const panelHtml = `
+    <div id="ot-add-trip-overlay" style="position:fixed;inset:0;z-index:999995;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;" onclick="if(event.target===this) closeAddOrderTripPanel()">
+      <div style="background:#fff;width:100%;border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));">
+        <div style="text-align:center;font-size:17px;font-weight:900;color:var(--t1);margin-bottom:16px;">＋ 新增訂單行程</div>
+
+        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:6px;">1. 選擇平台</div>
+        <div id="ot-add-platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${chipsHtml}</div>
+
+        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:6px;">2. 一次派幾單？</div>
+        <div id="ot-add-batch-chips" style="display:flex;gap:8px;margin-bottom:18px;">${batchHtml}</div>
+
+        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:6px;">3. 主要訂單總金額 ($)</div>
+        <input id="ot-add-amount" type="number" placeholder="0" style="width:100%;box-sizing:border-box;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 12px;font-size:14px;margin-bottom:20px;">
+
+        <div style="display:flex;gap:10px;">
+          <button onclick="closeAddOrderTripPanel()" style="flex:1;background:#f1f5f9;color:var(--t2);border:none;padding:13px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;">取消</button>
+          <button onclick="confirmAddOrderTrip()" style="flex:1;background:var(--acc);color:#fff;border:none;padding:13px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;">開始新增</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', panelHtml);
+};
+
+window.selectOtAddPlatform = function(el, id) {
+    S.otAddPlatformId = id;
+    const p = getPlatform(id);
+    document.querySelectorAll('#ot-add-platform-chips .platform-chip').forEach(c => {
+        c.classList.remove('on'); c.style.background = ''; c.style.borderColor = '';
+    });
+    el.classList.add('on'); el.style.background = p.color; el.style.borderColor = p.color;
+};
+
+window.selectOtAddBatch = function(el, n) {
+    S.otAddBatchCount = n;
+    document.querySelectorAll('#ot-add-batch-chips .platform-chip').forEach(c => {
+        c.classList.remove('on'); c.style.background = ''; c.style.borderColor = '';
+    });
+    el.classList.add('on'); el.style.background = 'var(--acc)'; el.style.borderColor = 'var(--acc)';
+};
+
+window.closeAddOrderTripPanel = function() {
+    document.getElementById('ot-add-trip-overlay')?.remove();
+};
+
+window.confirmAddOrderTrip = function() {
+    const platformId = S.otAddPlatformId;
+    if (!platformId) { toast('請選擇平台'); return; }
+    const batchCount = [1,2,3].includes(S.otAddBatchCount) ? S.otAddBatchCount : 1;
+    const amount = pf(document.getElementById('ot-add-amount')?.value);
+
+    ensureOrderTripsLoaded();
+    const bundled = [];
+    for (let i = 0; i < batchCount - 1; i++) {
+        bundled.push({ id: newId(), orderNo: '', amount: 0, startTs: null, endTs: null, status: 'idle', lawPay: 0, isMain: false });
+    }
+    const trip = {
+        id: newId(),
+        date: S.otViewDate || todayStr(),
+        platformId,
+        createdAt: Date.now(),
+        tripNo: 0,
+        main: { id: newId(), orderNo: '', amount, startTs: null, endTs: null, status: 'idle', lawPay: 0, isMain: true },
+        bundled,
+        midway: [],
+        extrasOpen: false
+    };
+    S.orderTrips.push(trip);
+    reindexOrderTrips();
+    S.otPage = 1;
+    closeAddOrderTripPanel();
+    updateOtUI();
+    toast('✅ 已新增行程');
+};
+/* ══════════════════════════════════════   訂單計時模組（結束） ══════════════════════════════════════ */
+
+
 
 /* ══ 替換：獎勵進度 (改移至首頁，並回傳 HTML 字串) ══ */
 function getRewardsHtml() {
@@ -7135,7 +7573,7 @@ window.saveMaintCycles = function() {
   });
 
   saveSettings();
-  toast('✅ 週期與預警設定已更新');
+  toast('週期與預警設定，已更新 ✅');
   closeOverlay('sub-page');
   renderMaintReminderList(); 
 };
@@ -7370,7 +7808,7 @@ window.deleteVehRecFromEdit = async function() {
   
   // 4. 重新渲染畫面並提示
   renderVehicles();
-  toast('✅ 記錄，已刪除');
+  toast('記錄「已刪除」✅');
 };
 
 
@@ -7497,8 +7935,26 @@ function calcVehFuel() {
 }
 
 /* ══ 替換：儲存車輛記錄 (處理明細資料寫入，完美支援搜尋) ══ */
-function confirmAddVehRec() {
-  const checkImg = document.getElementById('veh-save-img'); const checkBtn = document.getElementById('veh-save-btn'); if (checkBtn.disabled) return; if (!S.selVehicleId) { toast('請先選擇車輛'); return; }
+async function confirmAddVehRec() {
+  const checkImg = document.getElementById('veh-save-img'); 
+  const checkBtn = document.getElementById('veh-save-btn'); 
+  if (checkBtn.disabled) return; 
+
+  // 🌟 [新增點擊回饋]
+  if (checkImg) checkImg.src = 'images/Check2.png';
+  await new Promise(resolve => setTimeout(resolve, 200));
+
+  // 統一還原函式
+  const restoreCheck = () => {
+    if (checkImg) checkImg.src = 'images/Check1.png';
+    if (checkBtn) checkBtn.disabled = false;
+  };
+
+  if (!S.selVehicleId) { 
+    restoreCheck();
+    toast('請先選擇車輛');
+    return; 
+  }
   
   const isEV = S.vehicles.find(x => x.id === S.selVehicleId)?.defaultFuel === 'electric';
   let finalAmount = 0; 
@@ -7514,16 +7970,16 @@ function confirmAddVehRec() {
       const finalTotalEl = document.getElementById('vr-final-total');
       if (finalTotalEl) {
         finalAmount = pf(finalTotalEl.textContent.replace(/,/g,'')); 
-        if (finalAmount <= 0) { toast('金額不能為 0'); return; }
+        if (finalAmount <= 0) { restoreCheck(); toast('金額不能為 0'); return; }
       }
     }
   } else if (S.addVehRecType === 'wash') {
     finalAmount = pf(document.getElementById('vw-amount').value);
-    if (finalAmount <= 0) { toast('金額不能為 0'); return; }
+    if (finalAmount <= 0) { restoreCheck(); toast('洗車美容，金額不能為 0'); return; }
   } else {
     // 整理明細陣列並防呆
     finalItemDetails = tempMaintItems.filter(t => t.name.trim() !== '' && pf(t.amount) > 0);
-    if (finalItemDetails.length === 0) { toast('請至少輸入一項保養名稱與對應金額'); return; }
+    if (finalItemDetails.length === 0) { restoreCheck(); toast('請至少輸入一項(保養項目及金額)'); return; }
     
     // 計算總額
     finalAmount = finalItemDetails.reduce((sum, t) => sum + pf(t.amount), 0);
@@ -7568,14 +8024,26 @@ function confirmAddVehRec() {
     }
     
     const finalRec = { ...commonData, ...specificData }; 
-    if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('✅ 記錄已更新'); } 
-    else { S.vehicleRecs.push(finalRec); toast('✅ 記錄已新增'); }
+    if (editingVehRecId) { const idx = S.vehicleRecs.findIndex(r => r.id === editingVehRecId); if (idx >= 0) S.vehicleRecs[idx] = finalRec; toast('記錄「已更新」✅'); } 
+    else { S.vehicleRecs.push(finalRec); toast('記錄「已新增」✅'); }
     
     editingVehRecId = null; 
     saveVehicleRecs(); 
-    checkImg.src = 'images/Check1.png';
-    checkBtn.disabled = false; 
+    restoreCheck();
     closeOverlay('veh-rec-add-page'); 
+
+    // 儲存後跳到對應的車輛分頁（燃料 / 保養維修 / 洗車美容）
+    const savedType = finalRec.type || S.addVehRecType || 'fuel';
+    S.vehicleTab = savedType;
+    // 同步日曆年月到這筆記錄的日期
+    if (finalRec.date) {
+      const parts = finalRec.date.split('-');
+      if (parts.length >= 2) {
+        S.vehY = parseInt(parts[0], 10);
+        S.vehM = parseInt(parts[1], 10);
+      }
+    }
+    goPage('vehicles');
     renderVehicles();
   });
 }
@@ -7687,7 +8155,7 @@ function saveNewVehicle() {
   
   saveVehicles(); 
   closeOverlay('vehicle-add-page'); 
-  toast('✅ 成功新增「車輛」！'); 
+  toast('「車輛」已新增 ✅'); 
   renderVehicles(); 
 }
 
@@ -8121,7 +8589,7 @@ window.saveEditVehicle = function(id) {
 
   saveVehicles(); 
   closeOverlay('vehicle-add-page'); 
-  toast('✅ 車輛資訊，已更新！'); 
+  toast('車輛資訊，已更新 ✅'); 
   
   // 重新渲染底層介面並刷新詳細資訊彈窗
   renderVehicles(); 
@@ -8243,7 +8711,7 @@ window.saveOCRSettings = function() {
   const key = document.getElementById('ocr-key-input').value.trim();
   S.settings.ocrKey = key;
   saveSettings();
-  toast(key ? '✅ 辨識功能，已啟用' : '⚠️ 已停用「辨識功能」');
+  toast(key ? '辨識功能，已啟用 ✅' : '⚠️ 已停用「辨識功能」');
   closeOverlay('sub-page');
   renderSettings();
 };
@@ -8340,7 +8808,7 @@ function saveReminderSettings() {
   S.settings.reminder.enabled = document.getElementById('rem-enabled').checked;
   S.settings.reminder.time = document.getElementById('rem-time').value || '22:00';
   saveSettings();
-  toast('✅ 提醒設定，已儲存');
+  toast('提醒設定，已儲存 ✅');
   closeOverlay('sub-page');
 }
 
@@ -8577,26 +9045,31 @@ function renderAuthContent() {
   // 使用 requestAnimationFrame 確保 DOM 已經真正畫在螢幕上
   requestAnimationFrame(() => {
     const widget = document.getElementById('turnstile-widget');
+    
+    // 檢查 Turnstile 是否可用且元素存在
     if (window.turnstile && widget) {
       try {
-        window.__authTurnstileActive = true;
-        
-        // 🌟 先清空容器並卸載舊的 Widget
-        if (turnstileWidgetId !== null) {
-          try { window.turnstile.remove(turnstileWidgetId); } catch(e){}
-          turnstileWidgetId = null;
+        // 🌟 核心穩定邏輯：先清空，確保不重複渲染
+        if (window.turnstileWidgetId !== null) {
+          window.turnstile.remove(window.turnstileWidgetId);
+          window.turnstileWidgetId = null;
         }
-        widget.innerHTML = '';
-/* 
-        // 🌟 重新渲染並記錄全新的 Widget ID
-        turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
-          sitekey: '0x4AAAAAADC958xr-t5UGd36',
-          theme: 'light',
-          appearance: 'always'
-        });
- */
+        widget.innerHTML = ''; 
+
+        // 🌟 即使沒有動畫，給予 100ms 讓瀏覽器完成不透明背景的繪製，再載入外部 iframe
+        setTimeout(() => {
+          if (!document.getElementById('turnstile-widget')) return; // 防呆
+          
+          window.turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
+            sitekey: '0x4AAAAAADC958xr-t5UGd36',
+            theme: 'light',
+            appearance: 'always'
+          });
+          window.__authTurnstileActive = true;
+        }, 100); 
+
       } catch (e) {
-        console.warn("Turnstile render warning:", e);
+        console.warn("Turnstile Render Skip:", e);
       }
     }
   });
@@ -8710,7 +9183,7 @@ async function requestLogin() {
           }
 
           appendAuthDebugLog(`登入成功`, `role=${data.user?.role || 'unknown'}`);
-          toast('✅ 登入成功');
+          toast('登入成功 ✅');
           closeOverlay('sub-page');
           restoreAuthOriginPage();
         } else {
@@ -8762,7 +9235,7 @@ async function verifyAuthCode(email) {
         USER = { email: email, uid: data.user.uid, verified: true, loggedIn: true, joinDate: new Date(data.user.createdAt).toLocaleDateString(), token: data.token, role: data.user.role, avatar: selectedAvatar, uid: data.user.uid, removeWatermark: data.user.removeWatermark };
         saveUser();
         appendAuthDebugLog(`驗證成功`, `role=${data.user?.role || 'unknown'}`);
-        toast('✅ 登入成功');
+        toast('登入成功 ✅');
         closeOverlay('sub-page');
         restoreAuthOriginPage();
       } else {
@@ -8890,15 +9363,21 @@ async function openAccountStats() {
   </div>`;
 }
 // 新增：登出確認框
+// 搜尋 window.logoutWithConfirm
 window.logoutWithConfirm = function() {
   customConfirm('確定要<span style="color:var(--text-blue);font-size:15px;font-weight:750;"> 登出帳號 </span>嗎？').then(ok => {
     if (ok) {
-      // 執行登出
-      USER = {email:null, verified:false, loggedIn:false, joinDate:null, token:null, role:"user"};
+      // 1. 清空狀態
+      USER = {email:null, verified:false, loggedIn:false, joinDate:null, token:null, role:"user", uid: null};
       saveUser();
-      toast('✅ 已登出');
+      
+      // 🌟 [新增] 強制重新渲染設定頁面，更新「帳號登入狀態」區塊
+      renderSettings();
+
+      toast('已登出 ✅');
       closeOverlay('sub-page');
-      // 可視需求重新渲染首頁
+
+      // 如果人在首頁，也順便更新首頁 UI
       if (S.tab === 'home') renderHome();
     }
   });
@@ -9231,7 +9710,7 @@ window.adminToggleWatermark = async function(targetEmail, isChecked) {
     });
     const data = await res.json();
     if (data.success) {
-      toast('✅ 已更新浮水印權限');
+      toast('浮水印權限，已更新 ✅');
     }
   } catch(e) {
     toast('❌ 更新失敗');
@@ -9277,7 +9756,7 @@ window.adminDeleteUser = async function(targetEmail) {
     
     finishProgress(() => {
       if(data.success) {
-        toast('✅ 帳號，已徹底刪除');
+        toast('帳號，已徹底刪除 ✅');
         if (targetEmail === USER.email) {
           logoutAccount(); 
         } else {
@@ -9353,7 +9832,7 @@ window.adminCreateUserSubmit = async function() {
 
     finishProgress(() => {
       if (data.success) {
-        toast('✅ 帳號已成功建立，並開通！');
+        toast('帳號已建立，並開通 ✅');
         // 自動導回會員名單，並重拉最新資料
         openAdminUserList(); 
       } else {
@@ -9451,7 +9930,7 @@ window.adminUnbanUser = async function(targetEmail) {
     
     finishProgress(() => {
       if(data.success) {
-        toast('✅ 已解除封鎖');
+        toast('已解除封鎖 ✅');
         openAdminBannedList(); // 重新拉取並渲染名單
       } else {
         toast('⚠️ 處理失敗：' + data.message);
@@ -9532,7 +10011,7 @@ async function saveAdminSystemSettings() {
       if (data.success) {
         GLOBAL_REQUIRE_LOGIN = reqLogin;
         GLOBAL_ALLOW_REGISTRATION = allowReg; 
-        toast('✅ 系統存取權限，已更新');
+        toast('系統存取權限，已更新 ✅');
         document.getElementById('sub-page').style.zIndex = '200';
         openAccountStats();
       } else {
@@ -9613,7 +10092,7 @@ async function saveAdminGasPrice() {
       if (data.success) {
         // 同步成功後，也更新自己手機的本地暫存
         localStorage.setItem('delivery_global_gas_prices', JSON.stringify(gp));
-        toast('✅ 全域油價「已更新」，並同步至雲端');
+        toast('全域油價「已更新」，並同步至雲端 ✅');
         document.getElementById('sub-page').style.zIndex = '200';
         openAccountStats();
       } else {
@@ -9804,7 +10283,7 @@ window.saveAnnouncement = function() {
 
     saveSettings();
     closeOverlay('sub-page');
-    toast(`✅ 公告 v${ver} ，已成功發布`);
+    toast(`公告 v${ver} ，已發布 ✅`);
     
     // 💡 [修正] 這裡使用 true，強行穿透視窗檢查邏輯
     setTimeout(() => checkAndShowAnnouncement(true), 800);
@@ -9833,7 +10312,7 @@ function performSaveAnnouncement(ver, title, content, style, date) {
 
     saveSettings();
     closeOverlay('sub-page');
-    toast(`✅ 公告 v${ver} ，已成功發布`);
+    toast(`公告 v${ver} ，已發布 ✅`);
     
     // 發布後立刻嘗試在首頁顯示
     if (S.tab === 'home') setTimeout(() => checkAndShowAnnouncement(), 500);
@@ -9940,7 +10419,7 @@ window.archiveSpecificToHistory = function(idx) {
     S.settings.annHistory.unshift(target);
     S.settings.announcements.splice(idx, 1);
     saveSettings();
-    toast('✅ 公告，已即時收回');
+    toast('公告，已收回 ✅');
     openAnnouncementManagement();
 };
 
@@ -9989,7 +10468,7 @@ window.deleteActiveAnnouncement = async function() {
   // 清空當前公告
   S.settings.announcement = null;
   saveSettings();
-  toast("✅ 已撤回「公告」");
+  toast("「公告」已撤回 ✅");
   openAnnouncementManagement();
 };
 
@@ -10084,7 +10563,7 @@ window.saveNewVersion = function() {
   });
   
   saveSettings();
-  toast('✅ 版本紀錄，已新增');
+  toast('版本紀錄，已新增 ✅');
   openVersionHistory(); // 直接呼叫函式重新渲染即可，無需 setTimeout
 };
 // 編輯版本
@@ -10120,7 +10599,7 @@ window.saveEditVersion = function() {
     v.note = note;
     v.date = date;
     saveSettings();
-    toast('✅ 版本，已更新');
+    toast('版本，已更新 ✅');
     openVersionHistory();
   }
 };
@@ -10179,20 +10658,28 @@ confirmAddRecord = async function() {
 }
 
 /* ══ 登出清空權限 ══ */
+// 搜尋 function logoutAccount()
 function logoutAccount() {
   USER = { email: null, verified: false, loggedIn: false, role: 'user', uid: null };
   saveUser();
   
-  // 👈 [核心修正]：確保登出後解除所有頁面鎖定
   window.__authFlowLocked = false;
   localStorage.removeItem('auth_flow_active');
+  localStorage.removeItem('auth_last_active');
   localStorage.removeItem('auth_origin_tab');
 
-  toast('✅ 已成功「登出帳號」');
+  // 🌟 [新增] 強制重新渲染設定頁面
+  renderSettings();
+
+  toast('已「登出帳號」✅');
   
-  if (S.tab === 'settings') renderSettings();
-  else if (S.tab === 'home') renderHome();
-  else goPage('home');
+  if (S.tab === 'settings') {
+    renderSettings(); // 雙重確保
+  } else if (S.tab === 'home') {
+    renderHome();
+  } else {
+    goPage('home');
+  }
   
   closeOverlay('sub-page'); 
 }
@@ -10385,7 +10872,7 @@ function saveGoals() {
   closeOverlay('sub-page'); 
   renderSettings(); 
   if(S.tab === 'home') renderHome();
-  toast('✅ 目標設定，已儲存'); 
+  toast('目標設定，已儲存 ✅'); 
 }
 
 /* ══ 進階獎勵項目清單與設定 (支援折疊、停用、刪除) ══ */
@@ -10518,7 +11005,7 @@ window.toggleRewardActive = function(id, isChecked) {
     saveSettings();
     openRewardSettings(); // 重新渲染刷新透明度
     if(S.tab === 'home') renderHome();
-    toast(isChecked ? '✅ 獎勵已「啟用」' : '⏸️ 獎勵已「停用」');
+    toast(isChecked ? '獎勵已「啟用」✅' : '⏸️ 獎勵已「停用」');
   }
 }
 
@@ -10533,7 +11020,7 @@ window.deleteReward = async function(id) {
   saveSettings(); 
   openRewardSettings(); 
   if(S.tab === 'home') renderHome();
-  toast('✅ 獎勵，已刪除'); 
+  toast('獎勵，已刪除 ✅'); 
 }
 
 /* ══ 新增與編輯表單共用邏輯 ══ */
@@ -10734,10 +11221,10 @@ window.submitRewardSave = function() {
   saveSettings(); 
   openRewardSettings(); // 直接切回清單頁
   if(S.tab === 'home') renderHome();
-  toast('✅ 獎勵，已儲存'); 
+  toast('獎勵設定，已儲存 ✅'); 
 }
 
-function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄_${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('✅ 備份完成'); }
+function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('備份完成 ✅'); }
 
 function doRestore() { 
   const fi = document.getElementById('restore-file'); 
@@ -10757,7 +11244,7 @@ function doRestore() {
       if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } 
       if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } 
       
-      toast('✅ 還原「成功」'); 
+      toast('還原「成功」✅'); 
       renderSettings(); 
       renderHome(); 
     } catch { 
@@ -10883,21 +11370,21 @@ function doExportExcel(targetYear) {
     const fileNameYear = targetYear === 'all' ? '全部' : targetYear;
     try {
       XLSX.writeFile(wb, `外送記錄（${fileNameYear}年）${todayStr()}.xlsx`);
-      finishProgress(() => toast(`✅ ${fileNameYear}年 Excel 匯出完成`));
+      finishProgress(() => toast(`${fileNameYear}年 Excel 匯出完成 ✅`));
     } catch (err) {
       finishProgress(() => toast('❌ 匯出失敗，請重試'));
     }
   }, 700); 
 }
 
-/* ══ 清除所有記錄與車輛資料 ══ */
+/* ══ 清除所有記錄與車輛資料 (加強版) ══ */
 async function doClearData() { 
   const msg = `
     <div style="font-size:48px; margin-bottom:12px; text-align:center;">🗑️</div>
-    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">確定清除<span style="color: #0033ff;font-size:18px;font-weight:750;"> 所有記錄 </span>嗎？</div>
+    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">確定清除<span style="color: #0033ff;"> 所有記錄 </span>嗎？</div>
     <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
-      將清空您的「行程記錄」與「車輛保養/加油資料」<br>
-      <span style="color:var(--blue); font-size:12px; font-weight:700;">（但會安全保留您的平台設定與收入目標）</span>
+      將清空您的「行程記錄」、「車輛保養/加油資料」<br>
+      以及<span style="color:var(--red); font-weight:800;">「訂單計時紀錄」</span>。
     </div>
     <div style="font-size:14px; color:var(--red); font-weight:700; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
       ⚠️ 此動作《 無法復原 》，【 確定 】繼續？
@@ -10906,28 +11393,43 @@ async function doClearData() {
   const ok = await customConfirm(msg); 
   if (!ok) return; 
 
-  // 1. 只清除紀錄資料
+  showProgress('正在清除資料...');
+
+  // 1. 清除記憶體中的所有紀錄
   S.records = []; 
   S.vehicles = []; 
   S.vehicleRecs = []; 
+  S.orderTrips = []; // 👈 新增：清除計時資料
   
-  // 2. 儲存
-  saveRecords(); 
-  saveVehicles(); 
-  saveVehicleRecs();
+  // 2. 移除 LocalStorage 相關 Key
+  localStorage.removeItem(KEYS.records);
+  localStorage.removeItem(KEYS.vehicles);
+  localStorage.removeItem(KEYS.vehicleRecs);
+  localStorage.removeItem('delivery_order_trips'); // 👈 新增：清除計時存檔
+  localStorage.removeItem('delivery_general_expenses');
+
+  // 3. 清除 IndexedDB
+  await idbDelete('records');
+  await idbDelete('vehicleRecs');
+  await idbDelete('generalExpenses');
   
-  renderSettings();
-  toast('✅ 已清除「所有記錄」');
+  setTimeout(() => {
+    finishProgress(() => {
+      renderSettings();
+      if (S.tab === 'home') renderHome();
+      toast('已清除「所有記錄」✅');
+    });
+  }, 500); // 給予 500ms 緩衝確保 DB 操作完成
 }
 
-/* ══ 重置所有設定和資料 ══ */
+/* ══ 重置所有設定和資料 (安全重啟版) ══ */
 async function doReset() { 
   const msg = `
     <div style="font-size:48px; margin-bottom:12px; text-align:center; animation: waveHand 2s infinite;">🚨</div>
     <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">重置所有設定和資料</div>
     <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
       App 將完全恢復到剛安裝的<span style="color:var(--text-blue); font-weight:800;"> 初始狀態 </span>！<br>
-      所有記錄、車輛、目標與平台設定將全數消滅。
+      包含計時、紀錄、車輛、目標與平台設定。
     </div>
     <div style="font-size:14px; color:var(--red); font-weight:700; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
       ⚠️ 此動作極度危險且《 無法復原 》，<br>【 確定 】要重置？
@@ -10936,41 +11438,52 @@ async function doReset() {
   const ok = await customConfirm(msg); 
   if (!ok) return; 
 
-  // 1. ✨ 清除 LocalStorage 標記與資料
-  localStorage.removeItem('delivery_setup_completed'); // 清除初次使用標記
-  localStorage.removeItem(KEYS.platforms);
-  localStorage.removeItem(KEYS.settings);
-  localStorage.removeItem(KEYS.punch);
-  localStorage.removeItem(KEYS.vehicles);
-  localStorage.removeItem('delivery_general_expenses');
+  showProgress('系統重置中，請稍候...');
 
-  // 2. ✨ 清除 IndexedDB 資料
+  // 1. 立即清除所有暫存標記與資料
+  const keysToClear = [
+    'delivery_setup_completed', 
+    KEYS.platforms, 
+    KEYS.settings, 
+    KEYS.punch, 
+    KEYS.vehicles, 
+    'delivery_general_expenses',
+    'delivery_order_trips', // 👈 新增
+    'delivery_current_tab'
+  ];
+  keysToClear.forEach(k => localStorage.removeItem(k));
+
+  // 2. 清除 IndexedDB
   await idbDelete('records');
   await idbDelete('vehicleRecs');
   await idbDelete('generalExpenses');
 
-  // 3. ✨ 重置記憶體中的狀態
+  // 3. 重置記憶體變數
   S.records = []; 
-  S.settings = { ...DEFAULT_SETTINGS, shopHistory:[] }; 
-  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p, active: false})); // 全部重置為關閉
+  S.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); 
+  S.platforms = DEFAULT_PLATFORMS.map(p => ({...p, active: false}));
   S.vehicles = []; 
   S.vehicleRecs = []; 
+  S.orderTrips = []; 
   S.punch = null;
+  S.tab = 'home';
 
-  // 4. ✨ 儲存初始狀態並關閉彈窗
-  savePlatforms();
-  saveSettings();
+  // 4. 【核心關鍵】強迫關閉所有開啟中的彈窗
+  document.querySelectorAll('.overlay-page').forEach(el => el.classList.remove('show'));
   
-  closeOverlay('sub-page'); 
-  setActiveTab('home');
-
-  // 5. ✨ 重新呼叫啟動流程
-  window.onSplashFinished();
-
   setTimeout(() => {
-    toast('✅ 已成功重置至：「初始狀態」'); 
-    checkAndPromptPlatformSetup();
-  }, 600);
+    finishProgress(() => {
+      // 5. 強制切換到首頁
+      goPage('home', true);
+
+      // 6. 【緩衝機制】延遲 800ms 後再觸發引導，確保首頁已渲染完畢
+      setTimeout(() => {
+        window.__initSetupPending = false; // 強制解鎖標記
+        checkAndPromptPlatformSetup();
+        toast('已成功重置至：「初始狀態」✅');
+      }, 800);
+    });
+  }, 1000); // 延長進度條停留時間，確保後台緩存清理乾淨
 }
 
 /* ══ 聯絡我們：信箱與一鍵複製 ══ */
@@ -10999,7 +11512,7 @@ function openContactUs() {
 function copyEmailToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(() => {
-      toast('✅ 「信箱已複製」成功！');
+      toast('信箱「已複製」✅');
     }).catch(() => {
       fallbackCopyTextToClipboard(text);
     });
@@ -11020,7 +11533,7 @@ function fallbackCopyTextToClipboard(text) {
   textArea.select();
   try {
     document.execCommand('copy');
-    toast('✅ 「信箱已複製」成功！');
+    toast('信箱「已複製」✅');
   } catch (err) {
     toast('⚠️ 複製失敗，請「長按信箱」手動複製');
   }
@@ -11357,7 +11870,7 @@ window.submitChangePassword = async function() {
     const data = await res.json();
     finishProgress(() => {
       if (data.success) {
-        toast('✅ 密碼已「成功更改」！');
+        toast('密碼「已更改」✅');
         
         // 👇 解除密碼過弱的標記，並重新儲存 USER
         USER.isPasswordWeak = false;
@@ -11415,7 +11928,7 @@ window.requestForgotPassword = async function() {
     const data = await res.json();
     finishProgress(() => {
       if (data.success) {
-        toast('✅ 驗證碼，已寄出！');
+        toast('驗證碼，已寄出 ✅');
         showResetPasswordUI(email);
       } else {
         toast('⚠️ ' + data.message);
@@ -11467,7 +11980,7 @@ window.submitResetPassword = async function(email) {
     const data = await res.json();
     finishProgress(() => {
       if (data.success) {
-        toast('✅ ' + data.message);
+        toast(data.message + '✅');
         openAuthModal(); // 回到登入畫面
       } else {
         toast('⚠️ ' + data.message);
@@ -11495,7 +12008,7 @@ async function doBackupToFile() {
   };
   
   const jsonStr = JSON.stringify(data, null, 2);
-  const fileName = `外送記錄_${todayStr()}.json`;
+  const fileName = `外送記錄${todayStr()}.json`;
 
   try {
     // 優先嘗試使用 File System Access API (支援 Chrome/Edge/Android)
@@ -11510,7 +12023,7 @@ async function doBackupToFile() {
       
       // ✅ 只有在這裡 (真正寫入檔案完畢後) 才會更新備份時間
       updateLocalBackupTime();
-      toast('✅ 「成功儲存」至本機！');
+      toast('「已儲存」至本機 ✅');
       
     } else {
       // 蘋果 iOS / Safari 降級使用傳統下載模式
@@ -11524,7 +12037,7 @@ async function doBackupToFile() {
       
       // ⚠️ 備註：傳統下載模式無法偵測使用者是否點擊取消，所以只要點了就會更新時間
       updateLocalBackupTime();
-      toast('✅「備份檔」已下載');
+      toast('「備份檔」已下載 ✅');
     }
   } catch (err) {
     // 如果使用者按了「取消」，瀏覽器會拋出 AbortError，此時什麼都不做 (也不會更新時間)
@@ -11545,22 +12058,24 @@ function updateLocalBackupTime() {
   renderSettings(); // 重新渲染設定頁面，更新顯示的時間
 }
 
-/* ══ 初次使用平台懸浮設定 (全新專屬色彩美化版) ══
-   🛡️ 防重複保護：本函式可能會被多個進場流程各自呼叫一次
-   （例如：資料載入完成後 / 啟動動畫結束後），
-   加入 __initSetupPending 旗標，確保「引導視窗」全程只會被排程開啟一次。 ══ */
+/* ══ 初次使用平台懸浮設定 (全新專屬色彩美化版) ══ */
 window.checkAndPromptPlatformSetup = function() {
-  if (window.__initSetupPending || document.getElementById('init-setup-overlay')) return;
+  // 如果已經在排隊顯示了，就不重複執行
+  if (window.__initSetupPending) return;
 
   const isSetupCompleted = localStorage.getItem('delivery_setup_completed') === 'true';
-  const hasActivePlatform = S.platforms && S.platforms.some(p => p.active);
+  // 如果已經設定完成，就不用彈窗
+  if (isSetupCompleted) return;
 
-  // 只有沒設定過且沒啟用平台時才顯示
-  if (!isSetupCompleted && !hasActivePlatform) {
+  // 確保現在人在首頁，且沒有其他重要彈窗開著，才顯示引導
+  const isAnyOverlayOpen = document.querySelector('.overlay-page.show:not(#init-setup-overlay)');
+  
+  if (S.tab === 'home' && !isAnyOverlayOpen) {
     window.__initSetupPending = true;
-    
-    // 這裡不要用 waitForSafeMoment，因為我們已經在 onSplashFinished 確定現在很安全
-    showInitialSetupModal(); 
+    showInitialSetupModal();
+  } else {
+    // 如果環境不安全（例如還在切換頁面），每秒檢查一次，直到可以顯示為止
+    setTimeout(checkAndPromptPlatformSetup, 1000);
   }
 };
 
@@ -11709,7 +12224,7 @@ function showInitialSetupModal() {
     if (!isAuthFlowBusy()) {
         // 只有真的沒事才跳回首頁
         goPage('home'); 
-        toast('✅ 設定完成！');
+        toast('設定完成 ✅');
     } else {
         // iOS PWA 恢復中，安靜消失
         renderHome();
@@ -11722,86 +12237,107 @@ function showInitialSetupModal() {
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
 /* ══ 系統啟動主流程 ══ */
+// script.js 搜尋 async function init()
 async function init() {
   if (isAppInitialized) return;
 
-  // 1. ✨ 優先執行資料載入
-  await loadAll(); 
-  isAppInitialized = true; 
+  try {
+    // 1. 優先執行資料載入
+    await loadAll(); 
+  } catch (err) {
+    console.error("【啟動錯誤】資料載入失敗:", err);
+    // 即使失敗也給予預設值，防止後續渲染崩潰
+    if (!S.records) S.records = [];
+    if (!S.platforms) S.platforms = DEFAULT_PLATFORMS;
+  } finally {
+    // 🌟 核心修復：無論成功失敗，都要標記初始化完成，否則動畫會永遠卡住
+    isAppInitialized = true; 
+  }
 
   // 2. 啟動其餘背景功能
   applyBackground();
   fetchSystemSettings(); 
-  if(typeof fetchGlobalGasPrice !== 'undefined') fetchGlobalGasPrice();
   initReminderCheck();
 
-  // 3. ✨ 質感等待或立即跳過
+  // 3. 執行關閉動畫的邏輯
   if (window.__userWantsToSkip) {
     window.onSplashFinished();
   } else {
+    // 縮短自動關閉時間，避免等待過久 (改為 2.5 秒)
     setTimeout(() => {
       window.onSplashFinished();
-    }, 3000);
+    }, 2500);
   }
 }
 
 /* --- 修正：iOS PWA 重啟時原地恢復，絕不跳轉 --- */
 window.onSplashFinished = function() {
   const splash = document.getElementById('splash');
-  if (!isAppInitialized) return; 
+  
+  if (!isAppInitialized) {
+    console.warn("還沒初始化完成，嘗試強制關閉動畫...");
+    isAppInitialized = true;
+  }
+
   if (!splash || splash.dataset.closing === 'true') return; 
   splash.dataset.closing = 'true';
 
-  // --- 1. 偵測啟動狀態 ---
   const isResume = sessionStorage.getItem('app_session_active') === 'true';
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
   const lastActiveTime = parseInt(localStorage.getItem('auth_last_active') || '0');
   const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
   const now = Date.now();
-  const isAuthExpired = (now - lastActiveTime) > 10 * 60 * 1000;
 
-  window.__suppressNavigation = false; 
+  // 逾時判定：超過 5 分鐘視為過期
+  const isAuthExpired = !lastActiveTime || (now - lastActiveTime) > 5 * 60 * 1000;
+  const isCrashLoop = lastActiveTime > 0 && (now - lastActiveTime) < 3000;
 
-  let targetTab = lastTab;
+  // 一定要先宣告，否則會 ReferenceError 卡住
+  let targetTab = lastTab || 'home';
   let shouldReopenAuth = false;
 
-  // 🌟 如果上次開帳號頁距離現在不到 3 秒，代表剛剛發生了非正常重整/崩潰，強制中斷自動開啟
-  const isCrashLoop = (now - lastActiveTime) < 11000;
   if (isResume && isAuthActive && !isAuthExpired && !isCrashLoop) {
     targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
     shouldReopenAuth = true;
   } else if (isCrashLoop) {
-    // 清除鎖定，避免持續重啟
     localStorage.removeItem('auth_flow_active');
-    appendAuthDebugLog('偵測到異常頁面重整', '已中斷自動恢復流程以防迴圈', 'error');
+    localStorage.removeItem('auth_last_active');
+    if (typeof appendAuthDebugLog === 'function') {
+      appendAuthDebugLog('偵測到異常頁面重整', '已中斷自動恢復流程以防迴圈', 'error');
+    }
   }
 
-  // --- 2. 核心邏輯判定 ---
   if (!isResume) {
-    // 🏠 情境：冷啟動 (手動關掉再開)
     targetTab = 'home';
-    localStorage.removeItem('auth_flow_active'); // 清除舊鎖
-    sessionStorage.setItem('app_session_active', 'true'); // 標記工作階段開始
-  } 
-  else if (isAuthActive && !isAuthExpired) {
-    // 🔄 情境：PWA 恢復流程
+    localStorage.removeItem('auth_flow_active');
+    localStorage.removeItem('auth_last_active');
+    sessionStorage.setItem('app_session_active', 'true');
+  } else if (isAuthActive && !isAuthExpired) {
     targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
     shouldReopenAuth = true;
+  } else if (isAuthActive && isAuthExpired) {
+    localStorage.removeItem('auth_flow_active');
+    localStorage.removeItem('auth_last_active');
+    localStorage.removeItem('auth_origin_tab');
   }
 
-  // --- 3. 執行靜默渲染 ---
-  goPage(targetTab, true);
+  try {
+    if (typeof goPage === 'function') goPage(targetTab, true);
+  } catch (e) {
+    console.error('goPage error in onSplashFinished:', e);
+  }
 
   if (shouldReopenAuth) {
-    openOverlay('sub-page');
-    document.getElementById('sub-title').textContent = '帳號管理';
-    document.getElementById('sub-body').innerHTML = `
-      <div style="padding:16px;" id="auth-content-area"></div>
-    `;
-    renderAuthContent();
+    try {
+      openOverlay('sub-page');
+      document.getElementById('sub-title').textContent = '帳號管理';
+      document.getElementById('sub-body').innerHTML = `<div style="padding:16px;" id="auth-content-area"></div>`;
+      if (typeof renderAuthContent === 'function') renderAuthContent();
+    } catch (e) {
+      console.error('reopen auth error:', e);
+    }
   }
 
-  // --- 4. 淡出動畫並觸發「引導視窗」與「公告」 ---
   splash.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
   splash.style.opacity = '0';
   splash.style.transform = 'scale(1.05)';
@@ -11809,13 +12345,16 @@ window.onSplashFinished = function() {
 
   setTimeout(() => {
     if (splash.parentNode) splash.remove();
-    
-    // 👈 [關鍵]：動畫收起後，如果是冷啟動，才檢查是否要跳出初次引導視窗
-    if (!isResume) {
-      checkAndPromptPlatformSetup(); 
+    try {
+      if (!isResume && typeof checkAndPromptPlatformSetup === 'function') {
+        checkAndPromptPlatformSetup(); 
+      }
+      if (typeof checkAndShowAnnouncement === 'function') {
+        checkAndShowAnnouncement();
+      }
+    } catch (e) {
+      console.error('post-splash error:', e);
     }
-    
-    checkAndShowAnnouncement(); // 檢查系統公告
   }, 450);
 };
 
@@ -11866,21 +12405,24 @@ window.openOfficialWebsite = function() {
   const websiteUrl = 'https://reurl.cc/yOpv8y';
   
   document.getElementById('website-body').innerHTML = `
-    <div style="padding:24px 16px; text-align:center;">
-      <div style="font-size:54px; margin-bottom:16px;">🌐</div>
-      <div style="font-size:16px; font-weight:850; color:var(--red); margin-bottom:8px;">⚠️ IOS系統限制提醒</div>
-      <div style="font-size:14px; font-weight:700; color:var(--t1); margin-bottom:24px; line-height:2.1;">
-        請 <span style="color:var(--text-blue); font-size:16px; font-weight:900;">長按</span> 下方 <span style="color:var(--acc);font-size:16px;font-weight:750;">橘色網址</span>，<br>
-        並選擇<span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">分享…</span>⮕
-        <span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">檢視較多</span>⮕<span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">在 Chrome 中開啟</span>
+    <div style="padding:10px 20px; text-align:center;">
+      <div style="font-size:54px; margin-bottom:10px;">🌐</div>
+
+      <div style="padding:10px 8px; border-radius:16px; margin:4px 4px 30px 4px; border:2px solid #ea0f22;">
+        <div style="font-size:20px; font-weight:850; color:var(--red); margin-bottom:8px;letter-spacing:1px;">⚠️ IOS <span style="color:#000;font-size:16px;">系統限制</span> 提醒</div>
+        <div style="font-size:14px; font-weight:700; color:var(--t1); margin-bottom:5px; line-height:2.1;">
+          請 <span style="color:var(--text-blue); font-size:18px; font-weight:900;">長按</span> 下方 <span style="color:var(--acc);font-size:18px;font-weight:750;">橘色網址</span>，<br>
+          並選擇<span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">分享…</span>⮕
+          <span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">檢視較多</span>⮕<span style="background:var(--sf2); padding:2px 5px; border-radius:6px; margin:0 4px; border:1.5px solid #24b3df;">在 Chrome 中開啟</span>
+        </div>
       </div>
-      
+
       <!-- 👇 長按區塊 (加上 -webkit-touch-callout 確保蘋果系統能跳出長按選單) -->
-      <a href="${websiteUrl}" style="display:block; font-family:var(--mono); font-size:18px; font-weight:800; color:var(--acc); margin-bottom:32px; background:#fff5f0; padding:20px 16px; border-radius:12px; border:2px dashed var(--acc); text-decoration:none; word-break: break-all; -webkit-touch-callout: default;">
+      <a href="${websiteUrl}" style="display:block; font-family:var(--mono); font-size:18px; font-weight:800; color:var(--acc); margin-bottom:50px; background:#fff5f0; padding:20px 16px; border-radius:12px; border:2px dashed var(--acc); text-decoration:none; word-break: break-all; -webkit-touch-callout: default;">
         ${websiteUrl}
       </a>
       
-      <button onclick="copyWebsiteUrl('${websiteUrl}')" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">
+      <button onclick="copyWebsiteUrl('${websiteUrl}')" class="btn-acc" style="width:100%; padding:14px; font-size:18px; font-weight:750; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">
         📋 一鍵複製網址
       </button>
     </div>
@@ -11892,7 +12434,7 @@ window.openOfficialWebsite = function() {
 window.copyWebsiteUrl = function(text) {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(() => {
-      toast('✅ 網址已「複製成功！」');
+      toast('網址「已複製」✅');
     }).catch(() => fallbackCopy(text));
   } else {
     fallbackCopy(text);
@@ -11902,7 +12444,7 @@ window.copyWebsiteUrl = function(text) {
     const ta = document.createElement("textarea");
     ta.value = t; ta.style.position = "fixed"; ta.style.top = "0"; ta.style.left = "0"; 
     document.body.appendChild(ta); ta.focus(); ta.select();
-    try { document.execCommand('copy'); toast('✅ 網址已「複製成功！」'); } 
+    try { document.execCommand('copy'); toast('網址「已複製」✅'); } 
     catch (err) { toast('⚠️ 複製失敗，請「長按」手動複製'); }
     document.body.removeChild(ta);
   }
