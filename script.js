@@ -1392,6 +1392,9 @@ function savePunch() {
 }
 
 function goPage(name, force = false) {
+  // 💡 標記 JavaScript 已接管畫面，平滑過渡
+  document.documentElement.classList.add('js-ready');
+
   appendAuthDebugLog(`切換頁面`, `to=${name} from=${S.tab}`);
 
   if (window.__suppressNavigation && !force) return;
