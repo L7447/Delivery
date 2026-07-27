@@ -12390,68 +12390,52 @@ async function init() {
   }
 }
 
-/* ══ 修正 Splash 開場動畫邏輯 (支援 0ms 物理防堵) ══ */
+/* ══ 修正 Splash 與頁面恢復邏輯 (直載當前分頁，絕不亂跳首頁) ══ */
 window.onSplashFinished = function() {
   const splash = document.getElementById('splash');
   if (!isAppInitialized) isAppInitialized = true;
 
   const isResume = sessionStorage.getItem('app_session_active') === 'true' || document.documentElement.getAttribute('data-resume') === 'true';
   const isAuthActive = localStorage.getItem('auth_flow_active') === 'true';
-  const lastActiveTime = parseInt(localStorage.getItem('auth_last_active') || '0');
   const lastTab = localStorage.getItem('delivery_current_tab') || 'home';
-  const now = Date.now();
 
-  // 若 DOM 尚存且為熱啟動，強制秒刪
+  // 若為熱啟動/Reload，瞬間刪除 Splash
   if (isResume && splash) {
     splash.remove();
+  } else if (splash) {
+    splash.dataset.closing = 'true';
   }
 
-  if (splash) splash.dataset.closing = 'true';
+  // 預設恢復上次最後留下的分頁
+  let targetTab = lastTab;
 
-  const isAuthExpired = !lastActiveTime || (now - lastActiveTime) > 5 * 60 * 1000;
-  const isCrashLoop = lastActiveTime > 0 && (now - lastActiveTime) < 3000;
-
-  let targetTab = lastTab || 'home';
-  let shouldReopenAuth = false;
-
-  if (isResume && isAuthActive && !isAuthExpired && !isCrashLoop) {
-    targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
-    shouldReopenAuth = true;
-  } else if (isCrashLoop) {
-    localStorage.removeItem('auth_flow_active');
-    localStorage.removeItem('auth_last_active');
+  // 🚀【核心修正】：如果上次停留在登入頁 (auth) 或登入流程中，直接停在 auth 頁，絕不先切回首頁！
+  if (targetTab === 'auth' || isAuthActive) {
+    targetTab = 'auth';
   }
 
+  // 冷啟動 (第一次開啟 APP) 才預設進入首頁
   if (!isResume) {
     targetTab = 'home';
     localStorage.removeItem('auth_flow_active');
     localStorage.removeItem('auth_last_active');
     sessionStorage.setItem('app_session_active', 'true');
-  } else if (isAuthActive && !isAuthExpired) {
-    targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
-    shouldReopenAuth = true;
-  } else if (isAuthActive && isAuthExpired) {
-    localStorage.removeItem('auth_flow_active');
-    localStorage.removeItem('auth_last_active');
-    localStorage.removeItem('auth_origin_tab');
   }
 
   try {
-    if (typeof goPage === 'function') goPage(targetTab, true);
+    if (targetTab === 'auth') {
+      // 原地渲染登入頁，0 畫面跳轉
+      renderAuthContent();
+      goPage('auth', true);
+    } else {
+      goPage(targetTab, true);
+    }
   } catch (e) {
     console.error('goPage error in onSplashFinished:', e);
+    goPage('home', true);
   }
 
-  // 重新恢復登入頁面
-  if (shouldReopenAuth) {
-    try {
-      openAuthModal();
-    } catch (e) {
-      console.error('reopen auth error:', e);
-    }
-  }
-
-  // 冷啟動才播放淡出動畫
+  // 冷啟動 (第一次開 APP) 的 Splash 淡出動畫
   if (!isResume && splash && splash.parentNode) {
     splash.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
     splash.style.opacity = '0';
