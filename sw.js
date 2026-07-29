@@ -2,9 +2,8 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v464';
+const CACHE_NAME = 'delivery-app-v465';
 
-// 需要快取的靜態資源清單
 const ASSETS = [
   '/',
   '/index.html',
@@ -40,35 +39,10 @@ const ASSETS = [
   '/scooter/s7.png',
   '/scooter/s8.png',  
   '/scooter/s9.png',  
-  '/figure/1.webp',
-  '/figure/2.webp',
-  '/figure/3.webp',
-  '/figure/4.webp',
-  '/figure/5.webp',
-  '/figure/6.webp',
-  '/figure/7.webp',
-  '/figure/12.webp',
-  '/figure/13.webp',
-  '/figure/14.webp',
-  '/figure/15.webp',
-  '/figure/16.webp',
-  '/figure/17.webp',
-  '/figure/18.webp',
-  '/figure/19.webp',
-  '/figure/20.webp',
-  '/figure/21.webp',
-  '/figure/22.webp',
-  '/background/bg1.webp',
-  '/background/bg2.webp',
-  '/background/bg3.webp',
-  '/background/bg4.webp',
-  '/background/bg5.webp',
   '/Vehicle/ve1.png',
   '/Vehicle/ve2.png',
   '/Vehicle/ve3.png',
-  '/Vehicle/ve4.png',
-  'https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+  '/Vehicle/ve4.png'
 ];
 
 /* 安裝 SW：預先快取所有靜態資源 */
@@ -87,9 +61,30 @@ self.addEventListener('activate', event => {
   );
 });
 
-/* 攔截網路請求：優先從快取讀取，失敗再網路取得 */
+/* 攔截網路請求：智慧型快取策略 */
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // 1. 忽略非 GET 請求（如 POST 登入/註冊/資料庫寫入）
+  if (event.request.method !== 'GET') return;
+
+  // 2. 忽略後端 API 請求與第三方 API（避免快取動態資料）
+  if (url.pathname.startsWith('/auth/') || 
+      url.pathname.startsWith('/admin/') || 
+      url.pathname.startsWith('/stats') || 
+      url.pathname.startsWith('/settings/') ||
+      url.hostname.includes('workers.dev') ||
+      url.hostname.includes('api.ocr.space')) {
+    return;
+  }
+
+  // 3. 靜態資源：帶有 ignoreSearch: true 允許帶有 ?v=1.6.0 的請求正確匹配快取，並在找不到時 fallback 到網路
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
+    caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request);
+    })
   );
 });
