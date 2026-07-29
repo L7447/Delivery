@@ -8,6 +8,7 @@ document.addEventListener('click', () => {
     localStorage.setItem('auth_last_active', Date.now().toString());
   }
 });
+
 /* ══ 1. 共用工具函式與狀態 開始 ══════════════════════════════ */
 let turnstileWidgetId = null;
 let isAppInitialized = false; // 紀錄是否已經初始化過
@@ -135,7 +136,6 @@ window.setExpNote = function(val, el) {
 };
 
 // 👈 [需求 2] 刪除一般支出記錄
-/* --- script.js: 修正刪除功能 --- */
 window.deleteGeneralExpense = async function(id) {
   const ok = await customConfirm('確定要「刪除這筆支出記錄」嗎？');
   if (!ok) return;
@@ -152,15 +152,7 @@ window.deleteGeneralExpense = async function(id) {
   // 3. [關鍵] 觸發全局刷新，確保總額與列表同步更新
   renderReport(); 
 };
-// 在 openAddPage 裡面補上初始化觸發
-// 修改原本 script.js 裡的 openAddPage 函式結尾
-const originalOpenAddPage = openAddPage;
-openAddPage = function(record=null, prefill={}) {
-  originalOpenAddPage(record, prefill);
-  if (S.addTab === 'expense' || !record) {
-    updateExpSubTags(); 
-  }
-};
+
 
 /* ════ 基本工資設定區 (預設值)(範圍設定) 開始════ 
  * 未來調薪時，只需更改這裡的 max (最大) 與 min (最小) 數值即可！
@@ -1610,11 +1602,9 @@ function switchVehicleTab(tab, index) {
 }
 /* ══ 1. 共用工具函式與狀態 結束 ══════════════════════════════ */
 
-/* ══ 2. 首頁 開始 ══════════════════════════════════════════ */
+
+/* ════════════════════ 2. 首頁 開始 ═══════════════════ */
 /* ══ 修正：公告顯示引擎 (相容新舊格式) ══ */
-// 👇 修復用：僅記錄「本次停留首頁期間」已關閉、但未勾選「不再顯示」的公告版本。
-//    這個集合只存在於記憶體中，一旦離開首頁再回來就會被清空，
-//    才能同時滿足「排隊時不重複跳出」與「切換頁面後應再次出現」兩項需求。
 let annShownThisVisit = new Set();
 function getFloatingAnnouncementHtml() {
   // 1. 彙整所有可能的來源 (相容舊的單數格式與新的陣列格式)
@@ -1670,7 +1660,6 @@ function getFloatingAnnouncementHtml() {
   `;
 }
 
-/* ══ 公告：click 委派（勾選 + 確認）══ */
 /* ══ 公告點擊事件（加強版按鈕特效 + 延遲關閉）══ */
 document.addEventListener('click', function(e) {
   const checkboxContainer = e.target.closest('#ann-checkbox');
@@ -2489,6 +2478,7 @@ function compressImage(file, maxWidth) {
   });
 }
 /* ══ 2. 首頁 結束 ══════════════════════════════════════════ */
+
 
 /* ══ 3. 查看記錄 開始 ════════════════════════════════════ */
 function foldCard(id, e) {
@@ -3566,15 +3556,15 @@ function resetSearch() {
 }
 /* ══ 3. 查看記錄 結束 ════════════════════════════════════ */
 
+
 /* ══ 4. 新增記錄 開始 ════════════════════════════════════ */
 function openAddPage(record=null, prefill={}) {
   // 🌟 [防禦性程式碼]：防止從 Console 呼叫函式繞過權限
-  /*
   if (!USER.loggedIn) {
     showLoginRequiredWarning();
     return;
   }
-  */
+
   S.editingId = record ? record.id : null; 
   S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
@@ -3623,7 +3613,12 @@ function openAddPage(record=null, prefill={}) {
   }
   
   renderPlatformChips(); calcAddTotal(); 
-  syncTagsUI(); 
+  syncTagsUI();
+
+  if (S.addTab === 'expense' || !record) {
+    updateExpSubTags(); 
+  }
+
   goPage('add');
 }
 
@@ -4174,11 +4169,8 @@ async function confirmAddRecord() {
     goPage('history');
   });
 }
-
-function cancelAddRecord() {
-  if (S.editingId) { S.editingId = null; goPage('history'); } else { goPage('home'); }
-}
 /* ══ 4. 新增記錄 結束 ════════════════════════════════════ */
+
 
 /* ══ 5. 收入分析 開始 ════════════════════════════════════ */
 /* ══ 浮水印：範圍與密度自訂版 ══ */
@@ -4391,9 +4383,10 @@ window.startOrderTimer = function(tripId, orderId) {
     if (trip.main && orderId === trip.main.id) {
         // 主單啟動時，連動啟動所有尚未開始的初始夾單（完成時則各自獨立，不連動）
         [trip.main, ...(trip.bundled || [])].forEach(o => { if (o.status === 'idle') { o.status = 'running'; o.startTs = now; } });
-        toast('🚀 主單與初始夾單已同步啟動');
+        toast('🚀 「主要訂單(組)」，開始計時 ✅');
     } else {
         order.status = 'running'; order.startTs = now;
+        toast('🚀 「中途夾單」，開始計時 ✅');
     }
     saveOrderTrips(); updateOtUI(); startOrderTimerTicker();
 };
@@ -4441,7 +4434,7 @@ function getOrderTimerHtml() {
     });
 
     let html = `
-    <div style="background:linear-gradient(135deg,#1e293b,#0f172a); border-radius:20px; padding:15px; color:#fff; margin-bottom:15px;">
+    <div style="background:linear-gradient(135deg,#1e293b,#0f172a); border-radius:20px; padding:10px 15px; color:#fff; margin-bottom:2px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <span style="font-weight:950; font-size:15px; letter-spacing:1px;">📊 訂單計時總覽</span>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -4449,30 +4442,57 @@ function getOrderTimerHtml() {
                     <span style="font-size:10px; color:#94a3b8; font-weight:700;">專法時薪</span>
                     <input type="number" value="${S.lawHourlyWage}" onchange="S.lawHourlyWage=pf(this.value); localStorage.setItem(OT_KEYS.wage, this.value); updateOtUI();" style="width:38px; background:transparent; border:none; color:#fbbf24; font-weight:900; font-family:var(--mono); text-align:center; outline:none;">
                 </div>
-                ${!isFs ? `<button onclick="openOrderTimerFullscreen()" style="background:#2563eb; color:#fff; border:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">⤢ 全螢幕</button>` : ''}
+                ${!isFs ? `<button onclick="openOrderTimerFullscreen()" style="background:#2563eb; color:#fff; border:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;margin-left:30px;">⤢ 全螢幕</button>` : ''}
             </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div class="ot-stat-box"><div class="lbl">全部工時</div><div class="val" style="color:#38bdf8;">${fmtOrderTimer(tMs)}</div></div>
             <div class="ot-stat-box"><div class="lbl">平台總報酬</div><div class="val" style="color:#fbbf24;">$${fmt(tInc)}</div></div>
+            <div class="ot-stat-box"><div class="lbl">全部工時</div><div class="val" style="color:#38bdf8;">${fmtOrderTimer(tMs)}</div></div>
             <div class="ot-stat-box"><div class="lbl">專法薪資總額</div><div class="val" style="color:#4ade80;">$${fmt(tLaw)}</div></div>
             <div class="ot-stat-box"><div class="lbl">報酬差額</div><div class="val" style="color:${tInc-tLaw>=0?'#4ade80':'#f87171'}">${tInc-tLaw>=0?'+':''}${fmt(tInc-tLaw)}</div></div>
         </div>
     </div>
 
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-        <div style="display:flex; align-items:center; background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; overflow:hidden; flex-shrink:0;">
-            <button onclick="navOtDate(-1)" style="width:38px; height:40px; border:none; background:transparent; color:var(--acc); font-size:15px; font-weight:900; cursor:pointer;">◀</button>
-            <div style="font-family:var(--mono); font-size:14px; font-weight:900; color:var(--t1); padding:0 6px; white-space:nowrap;">${viewDate.replace(/-/g,'/')}</div>
-            <button onclick="navOtDate(1)" style="width:38px; height:40px; border:none; background:transparent; color:var(--acc); font-size:15px; font-weight:900; cursor:pointer;">▶</button>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns: 1fr 2.5fr 1fr;align-items:center;justify-items:center;background:#fff;border:1.5px solid #e2e8f0;border-radius:18px;overflow:hidden;padding:2px 1px;">
+            <button class="btn btn3" onclick="navOtDate(-1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">◀</button>
+            <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:var(--t1);padding:0 6px;white-space:nowrap;letter-spacing:1.2px;justify-content:center;">${viewDate.replace(/-/g,'/')}</div>
+            <button class="btn btn3" onclick="navOtDate(1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">▶</button>
         </div>
-        ${!isFs ? `<button onclick="openAddOrderTripPanel()" style="flex:1; background:var(--acc); color:#fff; border:none; height:40px; border-radius:12px; font-weight:950; font-size:14px; cursor:pointer;">＋ 新增行程</button>` : ''}
+        ${!isFs ? `<button onclick="openAddOrderTripPanel()" style="background: rgba(37, 100, 235, 0.2);color:var(--text-blue);border:none;height:40px;border-radius:14px;font-size:22px;font-weight:750;letter-spacing:1px;cursor:pointer;">＋ 新增行程</button>` : ''}
     </div>
 
-    <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:15px;">
-        <button onclick="navOtPage(-1)" ${S.otPage<=1?'disabled':''} style="background:none; border:none; color:${S.otPage<=1?'#cbd5e1':'var(--acc)'}; font-size:13px; font-weight:800; cursor:${S.otPage<=1?'default':'pointer'}; padding:6px 4px;">◀ 上一頁</button>
-        <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--t2);">${S.otPage} / ${totalPages}</span>
-        <button onclick="navOtPage(1)" ${S.otPage>=totalPages?'disabled':''} style="background:none; border:none; color:${S.otPage>=totalPages?'#cbd5e1':'var(--acc)'}; font-size:13px; font-weight:800; cursor:${S.otPage>=totalPages?'default':'pointer'}; padding:6px 4px;">下一頁 ▶</button>
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:15px;">
+        <!-- 上一頁按鈕 -->
+        <button onclick="navOtPage(-1)" ${S.otPage<=1?'disabled':''} style="
+            background:${S.otPage<=1?'#f8fafc':'#ffffff'}; 
+            border:1.5px solid ${S.otPage<=1?'#e2e8f0':'#3b82f6'}; 
+            color:${S.otPage<=1?'#cbd5e1':'#2563eb'}; 
+            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
+            cursor:${S.otPage<=1?'default':'pointer'}; 
+            box-shadow:${S.otPage<=1?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
+            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
+            ◀ 上一頁
+        </button>
+
+        <!-- 頁數顯示膠囊 (目前頁數專屬深藍大字) -->
+        <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; padding:4px 14px; display:inline-flex; align-items:baseline; font-family:var(--mono);">
+            <span style="font-size:17px; font-weight:900; color:#1d4ed8;">${S.otPage}</span>
+            <span style="font-size:11px; font-weight:700; color:#93c5fd; margin:0 5px;">/</span>
+            <span style="font-size:13px; font-weight:700; color:#64748b;">${totalPages}</span>
+        </div>
+
+        <!-- 下一頁按鈕 -->
+        <button onclick="navOtPage(1)" ${S.otPage>=totalPages?'disabled':''} style="
+            background:${S.otPage>=totalPages?'#f8fafc':'#ffffff'}; 
+            border:1.5px solid ${S.otPage>=totalPages?'#e2e8f0':'#3b82f6'}; 
+            color:${S.otPage>=totalPages?'#cbd5e1':'#2563eb'}; 
+            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
+            cursor:${S.otPage>=totalPages?'default':'pointer'}; 
+            box-shadow:${S.otPage>=totalPages?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
+            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
+            下一頁 ▶
+        </button>
     </div>`;
 
     trips.forEach(trip => {
@@ -4483,16 +4503,18 @@ function getOrderTimerHtml() {
         const extrasCount = (trip.bundled?.length || 0) + (isFs ? 0 : (trip.midway?.length || 0));
         const hasExtras = !!(bundledHtml || midwayHtml);
         html += `
-        <div style="background:#fff; border:2.5px solid ${plat.color}; border-radius:18px; padding:10px; margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="background:#fff; border:2.5px solid ${plat.color}; border-radius:18px; padding:3px 6px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns:35% 65%; justify-content:space-between; align-items:center; margin-bottom:5px;">
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <span style="background:${plat.color}; color:#fff; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:900;">#${trip.tripNo}</span>
+                    <span style="background:${plat.color}; color:#fff; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:900;"># ${trip.tripNo}</span>
                     <span style="font-weight:950; font-size:15px; color:var(--t1);">${plat.name}</span>
                 </div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <span style="background:#fff7ed; color:#ea580c; border:1.5px solid #fdba74; padding:2px 8px; border-radius:8px; font-size:12px; font-weight:800; font-family:var(--mono);">${batchCount} 單總額: $${trip.main.amount}</span>
-                    ${hasExtras ? `<button onclick="toggleOrderExtras('${trip.id}')" style="background:none; border:none; color:var(--t2); font-size:12px; font-weight:800; cursor:pointer; padding:2px 4px;">${trip.extrasOpen ? '▲' : '▼'} (${extrasCount})</button>` : ''}
-                    <button onclick="deleteOrderTrip('${trip.id}')" style="background:#f1f5f9; color:#94a3b8; border:none; width:28px; height:28px; border-radius:50%; cursor:pointer;">✕</button>
+                <div style="display:grid;grid-template-columns:145px 55px 20px;align-items:center;justify-content:center;gap:6px">
+                    <span style="background:#fff7ed;color: #111110;border:1.5px solid #fdba74;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;font-family:var(--mono);">
+                    (<span style="color: #ff5900;font-size:16px;font-weight:850;">${batchCount}</span>) 派單金額：<span style="font-size:9px;font-weight:650;margin:0 1px;color: #ff5900;">$</span>
+                    <span style="color: #ff5900;font-size:15px;font-weight:850;">${trip.main.amount}</span></span>
+                    ${hasExtras ? `<button onclick="toggleOrderExtras('${trip.id}')" style="background:#e2e8f0;border:1.5px solid #cfd4da;border-radius:8px;color:var(--t2);font-size:12px;font-weight:800;cursor:pointer;padding:3px 6px;">${trip.extrasOpen ? '▲' : '▼'} ( ${extrasCount} )</button>` : ''}
+                    <button onclick="deleteOrderTrip('${trip.id}')" style="background:#f1f5f9; color: #757d88; border:none; width:28px; height:28px; border-radius:50%; cursor:pointer;font-size:20px;font-weight:950;">✕</button>
                 </div>
             </div>
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:2px 8px;">
@@ -4501,8 +4523,8 @@ function getOrderTimerHtml() {
                     ${bundledHtml}${midwayHtml}
                 </div>` : ''}
             </div>
-            ${!isFs ? `<div style="display:flex; justify-content:flex-start; align-items:center; margin-top:8px; padding:0 4px;">
-                <button onclick="addOrderMidway('${trip.id}')" style="background:#f3e8ff; color:#7c3aed; border:1.5px solid #d8b4fe; padding:6px 14px; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer;">＋ 中途夾單</button>
+            ${!isFs ? `<div style="display:flex; justify-content:flex-start; align-items:center; margin-top:4px; padding:0 10px;">
+                <button onclick="addOrderMidway('${trip.id}')" style="background:#f3e8ff; color:#7c3aed; border:1.5px solid #d8b4fe; padding:4px 14px; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer;">＋ 中途夾單</button>
             </div>` : ''}
         </div>`;
     });
@@ -4524,23 +4546,23 @@ function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
     } else if (order.status === 'running') {
         actionHtml = `<button onclick="finishOrderTimer('${tripId}','${order.id}')" style="background:#10b981;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">✔ 完成</button>`;
     } else {
-        actionHtml = `<span style="color:#10b981;font-size:12px;font-weight:800;white-space:nowrap;">薪$${fmt(order.lawPay || 0)}</span>`;
+        actionHtml = `<span style="color:#10b981;font-size:12px;font-weight:800;white-space:nowrap;">薪<span style="font-size:9px;font-weight:600;margin:0 1px;">$</span>${fmt(order.lawPay || 0)}</span>`;
     }
 
-    const delHtml = isMidway ? `<button onclick="deleteExtraOrder('${tripId}','${order.id}')" style="background:none;border:none;color:#cbd5e1;font-size:15px;cursor:pointer;padding:0 2px;flex-shrink:0;">✕</button>` : '';
-    const amountHtml = hideAmount ? '' : `<input type="number" value="${order.amount || 0}" placeholder="金額" onchange="updateOrderField('${tripId}','${order.id}','amount',this.value)" style="width:0;flex:0.8;min-width:0;border:none;background:#f1f5f9;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#ea580c;font-weight:600;">`;
+    const delHtml = isMidway ? `<button onclick="deleteExtraOrder('${tripId}','${order.id}')" style="background:#f1f5f9;color:#94a3b8;width:24px;height:24px;border-radius:50%;font-size:15px;font-weight:950;cursor:pointer;padding:0 2px;flex-shrink:0;">✕</button>` : '';
+    const amountHtml = hideAmount ? '' : `<input type="number" value="${(order.amount || '')}" placeholder="金額" onchange="updateOrderField('${tripId}','${order.id}','amount',this.value)" style="width:0;flex:0.6;min-width:0;border:none;background:#f1f5f9;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#ea580c;font-weight:800;">`;
 
     return `
-    <div style="padding:7px 2px;border-bottom:1px solid #f1f5f9;">
+    <div style="padding:3px 1px;border-bottom:1px solid #6ab5ff;">
         <div style="display:flex;align-items:center;gap:6px;">
-            <div style="flex-shrink:0;font-size:11px;color:var(--t3);font-weight:700;width:52px;">${label}</div>
-            <input type="text" value="${safeText(order.orderNo || '')}" placeholder="單號" onchange="updateOrderField('${tripId}','${order.id}','orderNo',this.value)" style="width:0;flex:1.1;min-width:0;border:none;background:#f1f5f9;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#2563eb;font-weight:600;">
+            <div style="flex-shrink:0;font-size:11px;color:${isMidway ? '#7c3aed' : 'var(--t3)'};font-weight:700;width:52px;">${label}</div>
+            <input type="text" value="${safeText(order.orderNo || '')}" placeholder="單號" onchange="updateOrderField('${tripId}','${order.id}','orderNo',this.value)" style="width:25px;flex:0.6;min-width:20px;border:none;background: #ebf5ff;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#2563eb;font-weight:600;">
             ${amountHtml}
             <div data-order-timer data-trip="${tripId}" data-order="${order.id}" style="flex-shrink:0;text-align:center;font-family:var(--mono);font-size:13px;font-weight:900;color:${statusColor};width:52px;">${timeStr}</div>
             ${actionHtml}
             ${delHtml}
         </div>
-        <div style="display:flex;gap:12px;padding-left:58px;margin-top:3px;font-size:10px;font-family:var(--mono);">
+        <div style="display:flex;gap:12px;padding-left:58px;margin-top:2px;font-size:10px;font-weight:600;font-family:var(--mono);">
             <span style="color:#16a34a;">開始 ${startStr}</span>
             <span style="color:#dc2626;">結束 ${endStr}</span>
         </div>
@@ -4567,7 +4589,7 @@ window.updateOrderField = function(tId, oId, f, v) {
 window.openAddOrderTripPanel = function() {
     ensureOrderTripsLoaded();
     const activePlatforms = (S.platforms || []).filter(p => p.active);
-    if (!activePlatforms.length) { toast('請先到設定啟用至少一個平台'); return; }
+    if (!activePlatforms.length) { toast('請先到「設定」，啟用平台'); return; }
     if (!S.otAddPlatformId || !activePlatforms.find(p => p.id === S.otAddPlatformId)) {
         S.otAddPlatformId = activePlatforms[0].id;
     }
@@ -4586,22 +4608,52 @@ window.openAddOrderTripPanel = function() {
     }).join('');
 
     const panelHtml = `
-    <div id="ot-add-trip-overlay" style="position:fixed;inset:0;z-index:999995;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;" onclick="if(event.target===this) closeAddOrderTripPanel()">
-      <div style="background:#fff;width:100%;border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));">
-        <div style="text-align:center;font-size:17px;font-weight:900;color:var(--t1);margin-bottom:16px;">＋ 新增訂單行程</div>
-
-        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:6px;">1. 選擇平台</div>
-        <div id="ot-add-platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${chipsHtml}</div>
-
-        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:6px;">2. 一次派幾單？</div>
-        <div id="ot-add-batch-chips" style="display:flex;gap:8px;margin-bottom:18px;">${batchHtml}</div>
-
-        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:6px;">3. 主要訂單總金額 ($)</div>
-        <input id="ot-add-amount" type="number" placeholder="0" style="width:100%;box-sizing:border-box;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 12px;font-size:14px;margin-bottom:20px;">
-
-        <div style="display:flex;gap:10px;">
-          <button onclick="closeAddOrderTripPanel()" style="flex:1;background:#f1f5f9;color:var(--t2);border:none;padding:13px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;">取消</button>
-          <button onclick="confirmAddOrderTrip()" style="flex:1;background:var(--acc);color:#fff;border:none;padding:13px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;">開始新增</button>
+    <div id="ot-add-trip-overlay" style="position:fixed;inset:0;z-index:999995;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;" onclick="if(event.target===this) closeAddOrderTripPanel()">
+      <div style="background:#ffffff;width:100%;border-radius:32px 32px 0 0;padding:12px 20px calc(24px + env(safe-area-inset-bottom)) 20px;box-sizing:border-box;max-height:90vh;overflow-y:auto;">
+        <!-- 頂部把手指示條 -->
+        <div style="width:56px;height:5px;background:#cbd5e1;border-radius:2px;margin:0 auto 16px auto;"></div>
+        <!-- 標頭區塊 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:38px;height:38px;background:#e0f2fe;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#0284c7;">🛵</div>
+            <div>
+              <div style="font-size:22px;font-weight:900;color:var(--t1);letter-spacing:0.5px;">建立派單行程</div>
+              <div style="font-size:13px;color:var(--t3);font-weight:700;">設定平台、單數與派單金額</div>
+            </div>
+          </div>
+          <button onclick="closeAddOrderTripPanel()" style="background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;color:#64748b;font-size:18px;font-weight:1000;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.2s;">✕</button>
+        </div>
+        <!-- 步驟 1: 選擇平台 -->
+        <div style="margin-bottom:25px;">
+          <div style="font-size:20px;font-weight:800;color:var(--text-blue);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;">1</span>
+            <span class="rtus" style="letter-spacing:4px;">選擇外送平台</span>
+          </div>
+          <div id="ot-add-platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;">${chipsHtml}</div>
+        </div>
+        <!-- 步驟 2: 一次派幾單 -->
+        <div style="margin-bottom:25px;">
+          <div style="font-size:20px;font-weight:800;color:var(--text-blue);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;">2</span>
+            <span class="rtus" style="letter-spacing:4px;">一次派幾單？</span>
+          </div>
+          <div id="ot-add-batch-chips" style="display:flex;gap:8px;">${batchHtml}</div>
+        </div>
+        <!-- 步驟 3: 金額輸入 -->
+        <div style="margin-bottom:40px;">
+          <div style="font-size:20px;font-weight:800;color:var(--text-blue);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;">3</span>
+            <span class="rtus" style="letter-spacing:4px;">派單總金額</span>
+          </div>
+          <div style="position:relative;display:flex;align-items:center;">
+            <span style="position:absolute;left:14px;font-size:18px;font-weight:900;color:#0284c7;font-family:var(--mono, monospace);">$</span>
+            <input id="ot-add-amount" type="number" placeholder="0" inputmode="decimal" style="width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:16px;padding:12px 14px 12px 34px;font-size:22px;font-weight:800;font-family:var(--mono, monospace);color:var(--t1);outline:none;background:#f8fafc;transition:all 0.2s;" onfocus="this.style.borderColor='#0284c7';this.style.background='#ffffff'" onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+          </div>
+        </div>
+        <!-- 底部操作按鈕 -->
+        <div style="display:flex;gap:12px;margin-bottom:30px;">
+          <button onclick="closeAddOrderTripPanel()" style="flex:1;background:#f1f5f9;color:#64748b;border:none;padding:14px;border-radius:16px;font-weight:800;font-size:15px;cursor:pointer;transition:0.2s;">取消</button>
+          <button onclick="confirmAddOrderTrip()" style="flex:2;background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#ffffff;border:none;padding:14px;border-radius:16px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:0.2s;">🚀 開始新增</button>
         </div>
       </div>
     </div>`;
@@ -4653,10 +4705,9 @@ window.confirmAddOrderTrip = function() {
     };
     S.orderTrips.push(trip);
     reindexOrderTrips();
-    S.otPage = 1;
     closeAddOrderTripPanel();
     updateOtUI();
-    toast('✅ 已新增行程');
+    toast('已新增行程 ✅');
 };
 /* ══════════════════════════════════════   訂單計時模組（結束） ══════════════════════════════════════ */
 
@@ -6569,6 +6620,7 @@ function renderExpenseOverview() {
   return html;
 }
 /* ══ 5. 收入分析 結束 ══════════════════════════════════════════ */
+
 
 /* ══ 6. 車輛管理 開始 ══════════════════════════════════════════ */
 function changeVehMonth(offset) { 
@@ -8605,6 +8657,7 @@ window.saveEditVehicle = function(id) {
 }
 /* ══ 6. 車輛管理 結束 ══════════════════════════════════════════ */
 
+
 /* ══ 7. 設定管理與啟動 ═══════════════════════════════════ */
 /* ══ 3. 修改 renderSettings (新增註冊新帳號選單) ══ */
 function renderSettings() {
@@ -8929,7 +8982,44 @@ window.switchAuthTab = function(mode) {
   }
 };
 
-/* 1. 帳號登入頁面 */
+/* ══ 1. 導覽列與右上角按鈕控制 ══ */
+function updateAuthTopRight(show = true) {
+  const topRight = document.getElementById('auth-top-right') || document.getElementById('sub-top-right');
+  if (topRight) {
+    if (show) {
+      // 註冊、忘記密碼、重設密碼時：顯示「🔙 返回登入」
+      topRight.innerHTML = `
+        <button onclick="openAuthModal()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3); transition:0.2s;">
+          🔙 返回登入
+        </button>
+      `;
+    } else {
+      // 👈 登入頁面：隱藏/清空右上角按鈕
+      topRight.innerHTML = '';
+    }
+  }
+}
+
+/* ══ 離開登入/註冊頁面專用：解鎖狀態並返回設定頁 ══ */
+window.closeAuthPage = function() {
+  // 1. 解除帳號流程鎖定
+  window.__authFlowLocked = false;
+  window.__authTurnstileActive = false;
+
+  // 2. 清除登入中暫存標記
+  localStorage.removeItem('auth_flow_active');
+  localStorage.removeItem('auth_last_active');
+
+  // 3. 取得來源頁面（若無則預設回到設定頁 'settings'）
+  let targetTab = localStorage.getItem('auth_origin_tab') || 'settings';
+  if (targetTab === 'auth') targetTab = 'settings'; // 防呆：避免循環跳回登入頁
+  localStorage.removeItem('auth_origin_tab');
+
+  // 4. 強制切換回目標頁面（帶入 true 穿透攔截）
+  goPage(targetTab, true);
+};
+
+/* 2. 帳號登入頁面 (隱藏右上角按鈕) */
 function openAuthModal() {
   authMode = 'login';
   window.__authFlowLocked = true;
@@ -8938,7 +9028,6 @@ function openAuthModal() {
   localStorage.setItem('auth_flow_active', 'true'); 
   localStorage.setItem('auth_last_active', Date.now().toString()); 
   
-  // 記錄來源頁面 (防呆：不可記錄為 auth)
   let origin = S.tab || 'settings';
   if (origin === 'auth') origin = 'settings';
   window.__authFlowOriginTab = origin;
@@ -8947,6 +9036,7 @@ function openAuthModal() {
   const titleEl = document.getElementById('auth-page-title');
   if (titleEl) titleEl.textContent = '帳號登入';
 
+  updateAuthTopRight(false); // 👈 傳入 false，登入頁隱藏「🔙 返回登入」按鈕！
   renderAuthContent();
   goPage('auth', true);
 }
@@ -8966,8 +9056,9 @@ window.openRegisterModal = function() {
   localStorage.setItem('auth_last_active', Date.now().toString()); 
 
   const titleEl = document.getElementById('auth-page-title');
-  if (titleEl) titleEl.textContent = '註冊新帳號';
+  if (titleEl) titleEl.textContent = '註冊帳號';
 
+  updateAuthTopRight(); // 👈 注入右上角按鈕
   renderAuthContent();
   goPage('auth', true);
 };
@@ -9059,7 +9150,7 @@ window.resetTurnstileWidget = function() {
 };
 
 
-/* ══ 2. 修正 renderAuthContent ══ */
+/* 3. 渲染表單內容 (帶有白色大框背景) */
 function renderAuthContent() {
   const container = document.getElementById('auth-page-content');
   if (!container) return;
@@ -9068,13 +9159,14 @@ function renderAuthContent() {
   
   if (authMode === 'login') {
     contentHtml = `
-      <div class="auth-wrapper" style="box-shadow:none; border:none; background:transparent; padding:0;">
-        <h2 class="auth-title" style="margin-top:10px;">歡迎回來</h2>
-        <p class="auth-subtitle">請輸入您註冊時的電子郵件與密碼</p>
+      <!-- 🚀 白底大框背景包覆 -->
+      <div style="background:#ffffff; border-radius:20px; border:2px solid #e2e8f0; padding:20px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.03); margin-top:10px;letter-spacing:0.9px;">
+        <h2 class="auth-title" style="margin-top:0;">歡迎回來</h2>
+        <p class="auth-subtitle">請輸入您註冊的「電子郵件」與「密碼」</p>
         
         <div class="auth-input-group">
           <label class="auth-input-label">電子郵件</label>
-          <input type="email" class="auth-input" id="auth-email" placeholder="你的帳號@gmail.com">
+          <input type="email" class="auth-input" id="auth-email" placeholder="您的帳號@gmail.com">
         </div>
         
         <div class="auth-input-group">
@@ -9109,8 +9201,9 @@ function renderAuthContent() {
     }
     
     contentHtml = `
-      <div class="auth-wrapper" style="box-shadow:none; border:none; background:transparent; padding:0;">
-        <h2 class="auth-title" style="margin-top:10px;">建立新帳號</h2>
+      <!-- 🚀 白底大框背景包覆 -->
+      <div style="background:#ffffff; border-radius:20px; border:2px solid #e2e8f0; padding:20px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.03); margin-top:4px;">
+        <h2 class="auth-title" style="margin-top:0;">建立新帳號</h2>
         
         <div class="auth-input-group" style="padding:8px; margin-top:8px;">
           <label class="auth-input-label" style="margin-left:4px;">選擇專屬頭像 (可左右滑動)</label>
@@ -9173,13 +9266,11 @@ function renderAuthContent() {
           <button class="auth-switch-btn" onclick="window.openAuthModal()">登入</button>
         </div>
       </div>
-      <div style="height:100px;"></div>
+      <div style="height:150px;"></div>
     `;
   }
 
   container.innerHTML = contentHtml;
-
-  // 觸發安全驗證緩衝渲染
   renderTurnstileWidget();
 }
 
@@ -9220,9 +9311,15 @@ const API_BASE_URL = 'https://delivery-api.fab2ci.workers.dev';
 
 /* 5. 修正：寄送註冊/登入驗證碼邏輯 */
 async function requestLogin() {
-  const email = document.getElementById('auth-email').value.trim();
-  appendAuthDebugLog(`送出 ${authMode === 'login' ? '登入' : '註冊'} 請求`, `email=${email}`);
+  const email = document.getElementById('auth-email').value.trim().toLowerCase();
   const pwd = document.getElementById('auth-pwd').value.trim();
+
+  // 🌟 前端即時檢查：僅允許 @gmail.com 與 @googlemail.com
+  const isGmail = email.endsWith('@gmail.com') || email.endsWith('@googlemail.com');
+  if (!isGmail || email.length <= 10) {
+    toast('⚠️ 系統僅限使用 @gmail.com 格式之信箱');
+    return;
+  }
 
   let turnstileToken = '';
   if (typeof turnstile !== 'undefined') {
@@ -9676,7 +9773,6 @@ window.openRecordStats = function() {
 /* =========================================================
    管理員專區：會員名單、搜尋、刪除與手動建立
    ========================================================= */
-
 // 暫存會員名單，供即時搜尋使用
 let adminCachedUsers = [];
 
@@ -9915,12 +10011,17 @@ window.openAdminCreateUser = function() {
   `;
 }
 
-/* 5. 送出建立請求 */
+/* 5. 管理員手動建立帳號 */
 window.adminCreateUserSubmit = async function() {
-  const email = document.getElementById('adm-new-email').value.trim();
+  const email = document.getElementById('adm-new-email').value.trim().toLowerCase();
   const pwd = document.getElementById('adm-new-pwd').value.trim();
 
-  if (!email || !pwd) { toast('⚠️ 信箱與密碼，不可為空'); return; }
+  // 🌟 前端即時檢查
+  const isGmail = email.endsWith('@gmail.com') || email.endsWith('@googlemail.com');
+  if (!isGmail) {
+    toast('⚠️ 系統僅限使用 @gmail.com 格式之信箱');
+    return;
+  }
 
   showProgress('建立帳號中...');
 
@@ -10546,8 +10647,9 @@ window.restoreAnnouncement = function(idx) {
     toast(`🚀 v${ver} ，已重新發布`);
     openAnnouncementManagement();
 };
+// 刪除公告
 window.deleteHistoryAnnouncement = function(idx) {
-    customConfirm('確定要永久刪除這筆歷史紀錄嗎？').then(ok => {
+    customConfirm('確定要永久刪除，這筆歷史紀錄嗎？').then(ok => {
         if (ok) {
             S.settings.annHistory.splice(idx, 1);
             saveSettings();
@@ -10578,6 +10680,64 @@ window.deleteActiveAnnouncement = async function() {
 };
 
 
+
+// 版本紀錄
+/* ══ 智慧版本內文渲染 (修正對齊與縮小行距) ══ */
+function renderVersionNote(note) {
+  if (!note) return '';
+  let safe = escapeHtml(note);
+  
+  let lines = safe.split('\n');
+  let formattedLines = lines.map(line => {
+    let hasTag = /^(?:\[(\d+)\]|(\d+)\.)\s*(.*)/.test(line);
+    if (hasTag) {
+      return line.replace(/^(?:\[(\d+)\]|(\d+)\.)\s*(.*)/g, (match, p1, p2, rest) => {
+        const num = p1 || p2;
+        return `<div style="display:flex; align-items:center; gap:4px;margin-bottom:5px;"><span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; background:#2563eb; color:#ffffff; border-radius:50%; font-weight:900; font-size:12px; font-family:var(--mono); line-height:1;">${num}</span><span style="font-weight:750; color:#1e293b; flex:1; line-height:1.3;">${rest}</span></div>`;
+      });
+    }
+    return line ? line + '<br>' : '';
+  });
+  
+  return formattedLines.join('');
+}
+
+/* ══ 快速插入數字標籤至光標位置 ══ */
+window.insertVersionTag = function(num, textareaId) {
+  const el = document.getElementById(textareaId);
+  if (!el) return;
+  const tag = `[${num}] `;
+  const start = el.selectionStart || 0;
+  const end = el.selectionEnd || 0;
+  const val = el.value;
+  
+  // 如果前方有字且不是換行，自動補換行
+  let prefix = (start > 0 && val[start - 1] !== '\n') ? '\n' : '';
+  
+  el.value = val.substring(0, start) + prefix + tag + val.substring(end);
+  el.focus();
+  el.selectionStart = el.selectionEnd = start + prefix.length + tag.length;
+};
+
+/* ══ 內容摺疊切換 ══ */
+window.toggleVersionCollapse = function(idx) {
+  const body = document.getElementById(`ver-body-${idx}`);
+  const btn = document.getElementById(`ver-toggle-btn-${idx}`);
+  const icon = document.getElementById(`ver-toggle-icon-${idx}`);
+  if (!body) return;
+
+  const isCollapsed = body.style.maxHeight === '0px' || body.style.maxHeight === '';
+  if (isCollapsed) {
+    body.style.maxHeight = body.scrollHeight + 60 + 'px';
+    if (icon) icon.style.transform = 'rotate(180deg)';
+    if (btn) btn.innerHTML = '▲ 收起內容';
+  } else {
+    body.style.maxHeight = '0px';
+    if (icon) icon.style.transform = 'rotate(0deg)';
+    if (btn) btn.innerHTML = '▼ 展開內容';
+  }
+};
+
 // 版本紀錄
 // 1. 統一的開啟版本紀錄 (進入點)
 window.openVersionHistory = function() {
@@ -10597,26 +10757,38 @@ window.openVersionHistory = function() {
   if (versions.length > 0) {
     versions.forEach((v, idx) => {
       const isLatest = (idx === 0);
-      const isAdmin = USER.role === 'admin';
-      
+
       html += `
         <div class="version-item ${isLatest ? 'latest' : ''}">
           <div class="version-dot"></div>
           <div class="version-card">
-            <div class="version-header">
+            <!-- 點擊 Header 可展開/收起 -->
+            <div class="version-header" onclick="toggleVersionCollapse(${idx})">
               <span class="version-ver">
-                  v${safeText(v.ver)} 
+                  <span style="margin-right:4px;">v</span>${safeText(v.ver)} 
                   ${isLatest ? '<span class="version-ver-badge">最新</span>' : ''}
               </span>
-              <span class="version-date">${safeText(v.date)}</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="version-date">${safeText(v.date)}</span>
+                <span id="ver-toggle-icon-${idx}" style="font-size:12px; transition:transform 0.3s ease; color:#2563eb; font-weight:900; transform:rotate(0deg);">▼</span>
+              </div>
             </div>
-            <div class="version-body">${safeTextWithBr(v.note)}</div>
-            
-            ${isAdmin ? `
-            <div style="padding:0 16px 12px; display:flex; gap:8px;">
-              <button onclick="openEditVersion('${v.ver}')" class="btn-acc" style="padding:4px 12px; font-size:11px;">編輯</button>
-              <button onclick="deleteVersion('${v.ver}')" style="padding:4px 12px; font-size:11px; background:#fef2f2; color:#dc2626; border:1px solid #fecdd3; border-radius:12px; cursor:pointer;">刪除</button>
-            </div>` : ''}
+
+            <!-- 🌟 摺疊內容區：預設全部關閉 (max-height: 0px) -->
+            <div id="ver-body-${idx}" style="max-height:0px; overflow:hidden; transition:max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);">
+              <div class="version-body">${renderVersionNote(v.note)}</div>
+              
+              <!-- 操作按鈕區 (跳過權限限制) -->
+              <div style="padding:8px 16px 12px; display:flex; justify-content:space-between; align-items:center; border-top:1.5px dashed #e2e8f0; margin-top:4px;">
+                <button id="ver-toggle-btn-${idx}" onclick="event.stopPropagation(); toggleVersionCollapse(${idx})" style="background:transparent; border:none; color:#2563eb; font-size:12px; font-weight:800; cursor:pointer; padding:0;">
+                  ▼ 展開內容
+                </button>
+                <div style="display:flex; gap:8px;">
+                  <button onclick="openEditVersion('${v.ver}')" class="btn-acc" style="padding:4px 12px; font-size:11px; font-weight:800;">編輯</button>
+                  <button onclick="deleteVersion('${v.ver}')" style="padding:4px 12px; font-size:11px; font-weight:800; background:#fef2f2; color:#dc2626; border:1px solid #fecdd3; border-radius:12px; cursor:pointer;">刪除</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -10628,33 +10800,85 @@ window.openVersionHistory = function() {
   html += `</div>`;
   document.getElementById('sub-body').innerHTML = html;
 
-  // 左上角 X 改為 flipCloseOverlay（與聯絡我們一樣向右翻頁關閉）
+  // 左上角 X 改為 flipCloseOverlay
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  closeBtn.style.display = '';
-  closeBtn.onclick = function() { flipCloseOverlay(this, 'sub-page'); };
+  if (closeBtn) {
+    closeBtn.style.display = '';
+    closeBtn.onclick = function() { flipCloseOverlay(this, 'sub-page'); };
+  }
 
-  // 提升 z-index 確保蓋在 about-page 之上
   document.getElementById('sub-page').style.zIndex = '1100';
-
   openOverlay('sub-page');
 };
-// 2. 新增版本頁面
+
+// 2. 新增版本頁面 (含圓形藍底白字數字快捷標籤)
 window.openAddVersion = function() {
   document.getElementById('sub-title').textContent = '新增版本';
-  // 👇 強制隱藏左上角的 X 按鈕
   const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
   if (closeBtn) closeBtn.style.display = 'none';
-  // 右上角放「返回」
+
   document.getElementById('sub-top-right').innerHTML = `
     <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
   `;
+
+  // 生成 1~10 的數字按鈕
+  let numTagsHtml = '';
+  for (let i = 1; i <= 10; i++) {
+    numTagsHtml += `<button type="button" onclick="insertVersionTag(${i}, 'new-note')" style="width:26px; height:26px; border-radius:50%; background:#2563eb; color:#ffffff; border:none; font-size:12px; font-weight:900; font-family:var(--mono); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(37,99,235,0.25); flex-shrink:0; transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">${i}</button>`;
+  }
 
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:20px;">
       <div class="fg"><label>版本號</label><input type="text" class="finp" id="new-ver" value="1.15.117"></div>
       <div class="fg"><label>日期</label><input type="date" class="finp" id="new-date" value="${todayStr()}"></div>
-      <div class="fg"><label>內容</label><textarea class="finp" id="new-note" rows="6"></textarea></div>
-      <button onclick="saveNewVersion()" class="btn-acc" style="width:100%; padding:14px;">儲存</button>
+      <div class="fg">
+        <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span>內容</span>
+          <span style="font-size:11px; color:#2563eb; font-weight:800;">點擊快速插入標籤 ➔</span>
+        </label>
+        <div style="display:flex; gap:8px; overflow-x:auto; padding:4px 2px 8px 2px; margin-bottom:6px;" class="hide-scroll">
+          ${numTagsHtml}
+        </div>
+        <textarea class="finp" id="new-note" rows="6" placeholder="點擊上方數字標籤可快速新增項次..."></textarea>
+      </div>
+      <button onclick="saveNewVersion()" class="btn-acc" style="width:100%; padding:14px; margin-top:12px;">儲存</button>
+    </div>
+  `;
+};
+
+// 3. 編輯版本頁面
+window.openEditVersion = function(ver) {
+  const v = S.settings.versions.find(x => x.ver === ver);
+  if (!v) return;
+
+  document.getElementById('sub-title').textContent = '編輯版本紀錄';
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
+  `;
+
+  let numTagsHtml = '';
+  for (let i = 1; i <= 10; i++) {
+    numTagsHtml += `<button type="button" onclick="insertVersionTag(${i}, 'edit-note')" style="width:26px; height:26px; border-radius:50%; background:#2563eb; color:#ffffff; border:none; font-size:12px; font-weight:900; font-family:var(--mono); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(37,99,235,0.25); flex-shrink:0; transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">${i}</button>`;
+  }
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:20px;">
+      <div class="fg"><label>版本號</label><input type="text" class="finp" id="edit-ver" value="${safeText(v.ver)}" readonly style="background:#f1f5f9;"></div>
+      <div class="fg"><label>日期</label><input type="date" class="finp" id="edit-date" value="${v.date}"></div>
+      <div class="fg">
+        <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span>內容</span>
+          <span style="font-size:11px; color:#2563eb; font-weight:800;">點擊快速插入標籤 ➔</span>
+        </label>
+        <div style="display:flex; gap:8px; overflow-x:auto; padding:4px 2px 8px 2px; margin-bottom:6px;" class="hide-scroll">
+          ${numTagsHtml}
+        </div>
+        <textarea class="finp" id="edit-note" rows="6">${safeText(v.note)}</textarea>
+      </div>
+      <button onclick="saveEditVersion()" class="btn-acc" style="width:100%; padding:14px; margin-top:12px;">更新儲存</button>
     </div>
   `;
 };
@@ -10670,29 +10894,6 @@ window.saveNewVersion = function() {
   saveSettings();
   toast('版本紀錄，已新增 ✅');
   openVersionHistory(); // 直接呼叫函式重新渲染即可，無需 setTimeout
-};
-// 編輯版本
-window.openEditVersion = function(ver) {
-  const v = S.settings.versions.find(x => x.ver === ver);
-  if (!v) return;
-
-  document.getElementById('sub-title').textContent = '編輯版本紀錄';
-  // 👇 強制隱藏左上角的 X 按鈕
-  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
-  if (closeBtn) closeBtn.style.display = 'none';
-  // 右上角放「返回」
-  document.getElementById('sub-top-right').innerHTML = `
-    <button onclick="animateSubPageReturn(this, () => openVersionHistory())" class="btn-acc" style="padding:6px 14px; border-radius:20px; font-size:13px;">🔙 返回</button>
-  `;
-
-  document.getElementById('sub-body').innerHTML = `
-    <div style="padding:20px;">
-      <div class="fg"><label>版本號</label><input type="text" class="finp" id="edit-ver" value="${safeText(v.ver)}" readonly style="background:#f1f5f9;"></div>
-      <div class="fg"><label>日期</label><input type="date" class="finp" id="edit-date" value="${v.date}"></div>
-      <div class="fg"><label>內容</label><textarea class="finp" id="edit-note" rows="6">${safeText(v.note)}</textarea></div>
-      <button onclick="saveEditVersion()" class="btn-acc" style="width:100%; padding:14px;">更新儲存</button>
-    </div>
-  `;
 };
 window.saveEditVersion = function() {
   const ver = document.getElementById('edit-ver').value;
@@ -11359,51 +11560,146 @@ function doRestore() {
   }; 
   fi.click(); 
 }
-/* ══ 匯出 Excel：彈出年份選擇 ══ */
+
+
+/* ════════════════════════ 匯出 Excel、試算表 (開始) ══════════════════ */
+/* ══ 輔助：將小數工時轉為「X 小時 Y 分鐘」格式 ══ */
+function fmtHoursToChinese(hVal) {
+  const h = parseFloat(hVal) || 0;
+  if (h <= 0) return '0 小時 0 分鐘';
+  const totalMins = Math.round(h * 60);
+  const hrs = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  return `${hrs} 小時 ${mins} 分鐘`;
+}
+
+/* ══ 1. 匯出 Excel 選擇彈窗 (包含一般試算表 & 差額補償表) ══ */
 function openExportModal() {
-  document.getElementById('sub-title').textContent = '匯出 Excel';
+  document.getElementById('sub-title').textContent = '匯出 Excel 試算表';
   document.getElementById('sub-top-right').innerHTML = '';
 
-  // 自動抓取資料中包含的所有年份
+  // 抓取記錄中包含的所有年份
   let years = new Set();
   S.records.forEach(r => { if(r.date) years.add(r.date.substring(0,4)); });
   S.vehicleRecs.forEach(r => { if(r.date) years.add(r.date.substring(0,4)); });
   
-  // 轉為陣列並由大到小排序 (最新年份在最上)
   let yearArr = Array.from(years).sort((a,b) => b.localeCompare(a)); 
   if(yearArr.length === 0) yearArr = [new Date().getFullYear().toString()];
 
   let optionsHtml = `<option value="all">全部年份</option>`;
   yearArr.forEach(y => {
-    // 預設選中當前年份
     const isCurrent = y === new Date().getFullYear().toString();
     optionsHtml += `<option value="${y}" ${isCurrent ? 'selected' : ''}>${y} 年</option>`;
   });
 
   document.getElementById('sub-body').innerHTML = `
     <div style="padding:16px;">
-      <div class="card" style="display:flex; flex-direction:column; gap:16px;">
-        <div style="font-size:13px; color:var(--t2); font-weight:700; line-height:1.5;">
-          💡 請選擇要匯出的資料年份，系統將會為您產生多活頁簿的 Excel 檔案。
+      
+      <!-- 區塊一：一般全項試算表匯出 -->
+      <div class="card" style="padding:16px; margin-bottom:20px; border:1.5px solid #bfdbfe; background:#eff6ff;">
+        <div style="font-size:15px; font-weight:900; color:#1e3a8a; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          <span>📊</span> 一般全項試算表匯出
         </div>
-        <select id="export-year-select" class="fsel" style="font-size:16px; font-weight:800; text-align:center; color:var(--acc);">
-          ${optionsHtml}
-        </select>
-        <button onclick="executeExcelExport()" class="btn-acc" style="width:100%; padding:14px; font-size:15px; font-weight:800; border-radius:var(--rs); box-shadow:0 4px 12px rgba(255,107,53,0.3);">📊 確定匯出</button>
+        <div style="font-size:12px; color:#3b82f6; font-weight:600; margin-bottom:12px; line-height:1.5;">
+          匯出包含行程、打卡、小費、油資、保養等多活頁簿 Excel 檔案。
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="export-year-select" class="fsel" style="flex:1; font-size:15px; font-weight:800; text-align:center; color:var(--acc);">
+            ${optionsHtml}
+          </select>
+          <button onclick="executeExcelExport()" class="btn-acc" style="padding:10px 16px; font-size:14px; font-weight:800; border-radius:12px;">確定匯出</button>
+        </div>
       </div>
+
+      <!-- 區塊二：訂單計時差額補償表 -->
+      <div class="card" style="padding:16px; border:1.5px solid #fed7aa; background:#fff7ed;">
+        <div style="font-size:15px; font-weight:900; color:#9a3412; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          <span>📄</span> 匯出「訂單計時差額補償表」
+        </div>
+        <div style="font-size:12px; color:#c2410c; font-weight:600; margin-bottom:12px; line-height:1.5;">
+          自動比對專法薪資與接單金額，篩選出應補償差額之訂單。
+        </div>
+
+        <!-- 模式切換：單日 / 多日 -->
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <button type="button" id="btn-comp-mode-single" onclick="setCompDateMode('single')" style="flex:1; padding:8px; border-radius:10px; font-size:12px; font-weight:800; border:1.5px solid #f97316; background:#f97316; color:#fff; cursor:pointer;">單日模式</button>
+          <button type="button" id="btn-comp-mode-range" onclick="setCompDateMode('range')" style="flex:1; padding:8px; border-radius:10px; font-size:12px; font-weight:800; border:1.5px solid #cbd5e1; background:#ffffff; color:#64748b; cursor:pointer;">多日範圍</button>
+        </div>
+
+        <!-- 單日日期選擇 -->
+        <div id="comp-single-wrap" class="fg" style="margin-bottom:12px;">
+          <label style="font-weight:700; color:#9a3412;">📅 選擇日期</label>
+          <input type="date" id="comp-date-single" class="finp" value="${todayStr()}">
+        </div>
+
+        <!-- 多日範圍選擇 -->
+        <div id="comp-range-wrap" style="display:none; gap:8px; margin-bottom:12px;">
+          <div class="fg" style="flex:1; margin-bottom:0;">
+            <label style="font-weight:700; color:#9a3412;">開始日期</label>
+            <input type="date" id="comp-date-from" class="finp" value="${todayStr()}">
+          </div>
+          <div class="fg" style="flex:1; margin-bottom:0;">
+            <label style="font-weight:700; color:#9a3412;">結束日期</label>
+            <input type="date" id="comp-date-to" class="finp" value="${todayStr()}">
+          </div>
+        </div>
+
+        <!-- 差額金額門檻設定 -->
+        <div class="fg" style="margin-bottom:16px;">
+          <label style="font-weight:700; color:#9a3412;">超過差額門檻 ($) <span style="font-size:11px; color:#ea580c;">(預設0元，即差額 > 門檻才匯出)</span></label>
+          <input type="number" id="comp-min-diff" class="finp" value="0" min="0" placeholder="0" style="font-family:var(--mono); font-weight:900; color:#ea580c;">
+        </div>
+
+        <button onclick="executeCompensationExport()" class="btn-acc" style="width:100%; padding:12px; font-size:15px; font-weight:900; border-radius:12px; background:#ea580c; box-shadow:0 4px 12px rgba(234,88,12,0.3);">📄 匯出差額補償表 (.xlsx)</button>
+      </div>
+
     </div>
   `;
   openOverlay('sub-page');
 }
 
-/* 執行匯出前置作業 */
+/* 切換單日 / 多日模式 UI */
+window.setCompDateMode = function(mode) {
+  const btnSingle = document.getElementById('btn-comp-mode-single');
+  const btnRange = document.getElementById('btn-comp-mode-range');
+  const singleWrap = document.getElementById('comp-single-wrap');
+  const rangeWrap = document.getElementById('comp-range-wrap');
+
+  if (!btnSingle || !btnRange) return;
+
+  if (mode === 'single') {
+    btnSingle.style.background = '#f97316';
+    btnSingle.style.borderColor = '#f97316';
+    btnSingle.style.color = '#ffffff';
+
+    btnRange.style.background = '#ffffff';
+    btnRange.style.borderColor = '#cbd5e1';
+    btnRange.style.color = '#64748b';
+
+    singleWrap.style.display = 'block';
+    rangeWrap.style.display = 'none';
+  } else {
+    btnRange.style.background = '#f97316';
+    btnRange.style.borderColor = '#f97316';
+    btnRange.style.color = '#ffffff';
+
+    btnSingle.style.background = '#ffffff';
+    btnSingle.style.borderColor = '#cbd5e1';
+    btnSingle.style.color = '#64748b';
+
+    singleWrap.style.display = 'none';
+    rangeWrap.style.display = 'flex';
+  }
+};
+
+/* 執行一般 Excel 匯出觸發 */
 window.executeExcelExport = function() {
   const targetYear = document.getElementById('export-year-select').value;
   closeOverlay('sub-page');
   doExportExcel(targetYear);
 }
 
-/* ══ 匯出多活頁簿 Excel 檔案 (.xlsx) - 支援年份過濾 (已修復欄位遺漏) ══ */
+/* 2. 一般多活頁簿 Excel 匯出（工時改為：X 小時 Y 分鐘） */
 function doExportExcel(targetYear) {
   if (typeof XLSX === 'undefined') {
     toast('⚠️ Excel 匯出套件載入中，請稍後再試');
@@ -11413,18 +11709,34 @@ function doExportExcel(targetYear) {
   showProgress('匯出 Excel 檔案中...');
 
   setTimeout(() => {
-    // 建立時間過濾器
     const isMatch = (r) => targetYear === 'all' || (r.date && r.date.startsWith(targetYear));
 
-    // 1. 行程記錄 (補回「時間」欄位)
+    // 1. 行程記錄 (工時改為 X 小時 Y 分鐘)
     const regularRecs = S.records.filter(r => isMatch(r) && !r.isCashTip && !r.isPunchOnly).map(r => {
       const p = getPlatform(r.platformId);
-      return { '日期': r.date, '時間': r.time||'', '平台': p.name, '接單數': r.orders||0, '行程收入': r.income||0, '固定獎勵': r.bonus||0, '臨時獎勵': r.tempBonus||0, 'APP小費': r.tips||0, '總收入': recTotal(r), '工時(小時)': r.hours||0, '備註': r.note||'' };
+      return { 
+        '日期': r.date, 
+        '時間': r.time||'', 
+        '平台': p.name, 
+        '接單數': r.orders||0, 
+        '行程收入': r.income||0, 
+        '固定獎勵': r.bonus||0, 
+        '臨時獎勵': r.tempBonus||0, 
+        'APP小費': r.tips||0, 
+        '總收入': recTotal(r), 
+        '工時': fmtHoursToChinese(r.hours), // 👈 格式修改
+        '備註': r.note||'' 
+      };
     });
 
-    // 2. 純打卡工時記錄 (💡新增：把純打卡記錄獨立成一個活頁簿，不讓工時白白流失)
+    // 2. 純打卡工時記錄 (工時改為 X 小時 Y 分鐘)
     const punchRecs = S.records.filter(r => isMatch(r) && r.isPunchOnly).map(r => {
-      return { '日期': r.date, '上線時間': r.punchIn||'', '下線時間': r.punchOut||'', '總工時(小時)': r.hours||0 };
+      return { 
+        '日期': r.date, 
+        '上線時間': r.punchIn||'', 
+        '下線時間': r.punchOut||'', 
+        '總工時': fmtHoursToChinese(r.hours) // 👈 格式修改
+      };
     });
 
     // 3. 現金小費
@@ -11433,40 +11745,36 @@ function doExportExcel(targetYear) {
       return { '日期': r.date, '時間': r.time||'', '平台': p.name, '客給金額': r.givenAmt||0, '應收金額': r.costAmt||0, '實收小費': r.cashTipAmt||0, '備註': r.note||'' };
     });
 
-    // 4. 加油記錄 (排除電動車)
+    // 4. 加油記錄
     const gasRecs = S.vehicleRecs.filter(r => isMatch(r) && r.type === 'fuel' && r.fuelType !== 'electric').map(r => {
       const v = S.vehicles.find(x => x.id === r.vehicleId);
       const diff = pf(r.km) - pf(r.prevKm);
       return { '日期': r.date, '時間': r.time||'', '車輛名稱': v ? v.name : '未知', '油品': r.fuelType||'', '上次里程': r.prevKm||0, '加油里程': r.km||0, '行駛里程': diff > 0 ? diff : 0, '加油量(L)': r.liters||0, '單價': r.price||0, '折扣': r.discount||0, '花費金額': r.amount||0 };
     });
 
-    // 5. 電動車換電與里程 (補回「月租費」欄位)
+    // 5. 電動車換電
     const evRecs = S.vehicleRecs.filter(r => isMatch(r) && r.type === 'fuel' && r.fuelType === 'electric').map(r => {
       const v = S.vehicles.find(x => x.id === r.vehicleId);
       const diff = pf(r.km) - pf(r.prevKm);
       return { '日期': r.date, '時間': r.time||'', '車輛名稱': v ? v.name : '未知', '上次里程': r.prevKm||0, '換電里程': r.km||0, '行駛里程': diff > 0 ? diff : 0, '繳交月租費': r.amount||0 };
     });
 
-    // 6. 保養維修記錄 (補回「類別」與「單項金額明細」)
+    // 6. 保養維修記錄
     const maintRecs = S.vehicleRecs.filter(r => isMatch(r) && r.type === 'maintenance').map(r => {
       const v = S.vehicles.find(x => x.id === r.vehicleId);
       const catStr = r.maintCategory === 'repair' ? '維修' : '保養';
-      
-      // 如果有填寫單項金額明細，就組合成 "機油($300), 齒輪油($50)" 的格式
       let detailStr = (r.items||[]).join(', ');
       if (r.itemDetails && r.itemDetails.length > 0) {
           detailStr = r.itemDetails.map(d => `${d.name}($${d.amount})`).join(', ');
       }
-
       return { '日期': r.date, '時間': r.time||'', '車輛名稱': v ? v.name : '未知', '類別': catStr, '保養里程': r.km||0, '項目與明細': detailStr, '總花費金額': r.amount||0, '店家': r.shop||'', '付款方式': r.payMethod||'', '備註': r.note||'' };
     });
 
-    // 防止空資料表報錯的保護機制
     const safeData = (arr) => arr.length > 0 ? arr : [{'系統提示': '該年份尚無此項目記錄'}];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(regularRecs)), "行程記錄");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(punchRecs)), "純打卡工時"); // 👈 新增打卡活頁簿
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(punchRecs)), "純打卡工時");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(cashTipRecs)), "現金小費");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(gasRecs)), "加油記錄");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData(evRecs)), "電動車里程");
@@ -11481,6 +11789,139 @@ function doExportExcel(targetYear) {
     }
   }, 700); 
 }
+
+/* 3. 執行「訂單計時差額補償表」匯出觸發 */
+window.executeCompensationExport = function() {
+  const isRange = document.getElementById('comp-range-wrap').style.display !== 'none';
+  let startDate = '', endDate = '';
+
+  if (isRange) {
+    startDate = document.getElementById('comp-date-from').value;
+    endDate = document.getElementById('comp-date-to').value;
+  } else {
+    startDate = document.getElementById('comp-date-single').value;
+    endDate = startDate;
+  }
+
+  if (!startDate || !endDate) {
+    toast('⚠️ 請選擇完整的「日期」');
+    return;
+  }
+
+  if (startDate > endDate) {
+    toast('⚠️ 「開始日期」不能大於「結束日期」');
+    return;
+  }
+
+  const minDiff = parseFloat(document.getElementById('comp-min-diff').value) || 0;
+
+  closeOverlay('sub-page');
+  doExportCompensationSheet(startDate, endDate, minDiff);
+};
+
+/* 4. 真正產生「訂單計時差額補償表」 Excel 檔案 */
+function doExportCompensationSheet(startDate, endDate, minDiffThreshold) {
+  if (typeof XLSX === 'undefined') {
+    toast('⚠️ Excel 匯出套件載入中，請稍後再試');
+    return;
+  }
+
+  showProgress('產生差額補償表中...');
+
+  setTimeout(() => {
+    ensureOrderTripsLoaded();
+    const minDiff = parseFloat(minDiffThreshold) || 0;
+
+    // 抓取在日期區間內的所有計時行程
+    const targetTrips = S.orderTrips.filter(t => t.date >= startDate && t.date <= endDate);
+
+    const rows = [];
+    let totalAmount = 0;
+    let totalLawPay = 0;
+    let totalDiff = 0;
+
+    targetTrips.forEach(trip => {
+      const plat = getPlatform(trip.platformId);
+      const orders = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].filter(Boolean);
+
+      orders.forEach(o => {
+        const amt = pf(o.amount);
+        const durMs = calcOrderDurationMs(o);
+        const law = o.status === 'done' ? pf(o.lawPay) : calcLawPay(durMs);
+        const diff = law - amt;
+
+        // 👈 核心篩選：專法薪資 > 接單金額 且 差額金額 > 門檻
+        if (law > amt && diff > minDiff) {
+          const startStr = o.startTs ? new Date(o.startTs).toTimeString().slice(0, 8) : '--:--:--';
+          const endStr = o.endTs ? new Date(o.endTs).toTimeString().slice(0, 8) : '--:--:--';
+
+          totalAmount += amt;
+          totalLawPay += law;
+          totalDiff += diff;
+
+          rows.push([
+            trip.date.replace(/-/g, '/'),
+            plat.name,
+            o.orderNo || '無單號',
+            startStr,
+            endStr,
+            amt,
+            law,
+            diff,
+            o.isMain ? '主要訂單' : '夾單'
+          ]);
+        }
+      });
+    });
+
+    if (rows.length === 0) {
+      finishProgress(() => toast(`⚠️ 該區間內，無差額大於 ${minDiff} 元的訂單`));
+      return;
+    }
+
+    const dateRangeStr = (startDate === endDate) 
+      ? `日期：${startDate.replace(/-/g, '/')}` 
+      : `日期範圍：${startDate.replace(/-/g, '/')} ~ ${endDate.replace(/-/g, '/')}`;
+
+    // 建立 AOA 表格 (大標題, 日期範圍, 門檻, 表頭, 數據, 總計)
+    const aoa = [
+      ['外送訂單計時差額補償表'],
+      [dateRangeStr, '', '', '', '', '', '', '', `門檻：差額 > ${minDiff} 元`],
+      [], // 空行分隔
+      ['日期', '平台', '單號', '開始時間', '結束時間', '接單金額 ($)', '專法薪資 ($)', '應補償差額 ($)', '備註'],
+      ...rows,
+      [], // 空行分隔
+      ['總計', '', '', '', '', totalAmount, totalLawPay, totalDiff, `共 ${rows.length} 筆門檻差額訂單`]
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // 設定 Excel 欄寬，排版更整齊
+    ws['!cols'] = [
+      { wch: 12 }, // 日期
+      { wch: 12 }, // 平台
+      { wch: 16 }, // 單號
+      { wch: 12 }, // 開始時間
+      { wch: 12 }, // 結束時間
+      { wch: 14 }, // 接單金額
+      { wch: 14 }, // 專法薪資
+      { wch: 14 }, // 應補償差額
+      { wch: 18 }  // 備註
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "差額補償表");
+
+    const fileNameDate = (startDate === endDate) ? startDate : `${startDate}_至_${endDate}`;
+    try {
+      XLSX.writeFile(wb, `訂單計時差額補償表_${fileNameDate}.xlsx`);
+      finishProgress(() => toast('📄 差額補償表，匯出完成 ✅'));
+    } catch (err) {
+      finishProgress(() => toast('❌ 匯出失敗，請重試'));
+    }
+  }, 700);
+}
+/* ════════════════════════ 匯出 Excel、試算表 (結束) ══════════════════ */
 
 /* ══ 清除所有記錄與車輛資料 (加強版) ══ */
 async function doClearData() { 
@@ -12000,16 +12441,19 @@ window.submitChangePassword = async function() {
   }
 }
 
-/* 3. 忘記密碼頁面 */
+/* 4. 忘記密碼頁面 (白框包覆) */
 window.openForgotPassword = function() {
   const titleEl = document.getElementById('auth-page-title');
   if (titleEl) titleEl.textContent = '忘記密碼';
+
+  updateAuthTopRight(); // 👈 注入右上角按鈕
 
   const container = getAuthContainer();
   if (!container) return;
 
   container.innerHTML = `
-    <div style="padding:8px 0;">
+    <!-- 🚀 白底大框背景包覆 -->
+    <div style="background:#ffffff; border-radius:20px; border:2px solid #e2e8f0; padding:20px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.03); margin-top:4px;">
       <p style="font-size:13px; color:var(--t2); margin-bottom:20px; font-weight:600; line-height:1.6;">
         請輸入您註冊時的電子郵件，我們將發送一組 6 位數驗證碼給您以重設密碼。<br><br>
         <span style="color:var(--red);">⚠️ 安全限制：1小時僅限1次，單日2次，7天內最多3次。</span>
@@ -12029,14 +12473,17 @@ window.openForgotPassword = function() {
   goPage('auth', true);
 };
 
-/* 4. 重設密碼畫面 (修正寫入正確容器) */
+/* 5. 重設密碼驗證碼頁面 (白框包覆) */
 function showResetPasswordUI(email) {
   const titleEl = document.getElementById('auth-page-title');
   if (titleEl) titleEl.textContent = '重設密碼';
 
+  updateAuthTopRight(); // 👈 注入右上角按鈕
+
   const container = getAuthContainer();
   container.innerHTML = `
-    <div style="padding:8px 0;">
+    <!-- 🚀 白底大框背景包覆 -->
+    <div style="background:#ffffff; border-radius:20px; border:2px solid #e2e8f0; padding:20px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.03); margin-top:4px;">
       <p style="font-size:13px; color:var(--green); font-weight:700; background:var(--green-d); padding:12px; border-radius:12px; margin-bottom:16px;">
         驗證碼已發送至 ${email}<br><span style="font-size:11px; color:var(--t2);">請於 10 分鐘內輸入</span>
       </p>
@@ -12064,8 +12511,14 @@ function showResetPasswordUI(email) {
 }
 
 window.requestForgotPassword = async function() {
-  const email = document.getElementById('fp-email').value.trim();
-  if(!email.includes('@')) { toast('請輸入「有效的 E-mail」'); return; }
+  const email = document.getElementById('fp-email').value.trim().toLowerCase();
+  
+  // 🌟 前端即時檢查
+  const isGmail = email.endsWith('@gmail.com') || email.endsWith('@googlemail.com');
+  if (!isGmail) {
+    toast('⚠️ 系統僅限使用 @gmail.com 格式之信箱');
+    return;
+  }
 
   showProgress('發送請求中...');
   try {
@@ -12360,36 +12813,33 @@ function showInitialSetupModal() {
 window.addEventListener('resize', () => { if (S.tab) updateNavIndicator(S.tab); });
 
 /* ══ 系統啟動主流程 ══ */
-// script.js 搜尋 async function init()
 async function init() {
   if (isAppInitialized) return;
 
+  // 🌟 清除上一次因閃退或關閉瀏覽器殘留的登入鎖定標記，防止畫面卡死
+  localStorage.removeItem('auth_flow_active');
+  window.__authFlowLocked = false;
+
   try {
-    // 1. 優先執行資料載入
     await loadAll(); 
   } catch (err) {
     console.error("【啟動錯誤】資料載入失敗:", err);
-    // 即使失敗也給予預設值，防止後續渲染崩潰
     if (!S.records) S.records = [];
     if (!S.platforms) S.platforms = DEFAULT_PLATFORMS;
   } finally {
-    // 🌟 核心修復：無論成功失敗，都要標記初始化完成，否則動畫會永遠卡住
     isAppInitialized = true; 
   }
 
-  // 2. 啟動其餘背景功能
   applyBackground();
   fetchSystemSettings(); 
   initReminderCheck();
 
-  // 3. 執行關閉動畫的邏輯
   if (window.__userWantsToSkip) {
     window.onSplashFinished();
   } else {
-    // 縮短自動關閉時間，避免等待過久 (改為 2.5 秒)
     setTimeout(() => {
       window.onSplashFinished();
-    }, 2500);
+    }, 1000);
   }
 }
 
@@ -12501,6 +12951,8 @@ if (document.readyState === 'loading') {
   init();
 }
 /* ══ 7. 設定管理與啟動 結束 ═══════════════════════════════════ */
+
+
 /* ══ 官方網站：長按引導彈窗與一鍵複製功能 ══ */
 window.openOfficialWebsite = function() {
   const websiteUrl = 'https://reurl.cc/yOpv8y';
