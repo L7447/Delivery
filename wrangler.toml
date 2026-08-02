@@ -1,20 +1,26 @@
 name = "delivery-api"
-main = "worker.js"
+main = "index.js" # 👈 若您的主要程式碼檔名是 index.js，請改為 index.js
 compatibility_date = "2024-04-18"
 
 [vars]
 ADMIN_EMAIL = "cws38721@gmail.com"
 
-# D1 資料庫
-[[kv_namespaces]]
+# 1. D1 資料庫 (用來存會員與帳號資料)
+[[d1_databases]]
 binding = "DB"
-id = "2431dd31af0a48bbaa18defd160f11f7"
+database_name = "delivery-db" # 👈 請修改為您 Cloudflare 上的 D1 名稱
+database_id = "d1491bc4-ef5e-4c6a-a0a3-18aac206af76" 
 
-# Rate Limiting 專用 KV
+# 2. Rate Limiting 專用 KV (防刷驗證碼)
 [[kv_namespaces]]
 binding = "RATE_KV"
 id = "26ff34f7ad6c4c348d7489a2eec382b3"
 
-# 每天凌晨 3 點執行清理未驗證帳號
+# 3. 系統設定/油價 專用 KV (index.js 中使用的 env.KV_DB)
+[[kv_namespaces]]
+binding = "KV_DB"
+id = "2aa5e95ab41b433c974bab3265ea61c4" # 👈 請在 Cloudflare 建立一個新的 KV Namespace 並填入 ID
+
+# 每天凌晨 3 點執行清理未驗證帳號 (UTC 時間，等於台灣時間 11:00)
 [triggers]
 crons = ["0 3 * * *"]
