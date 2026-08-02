@@ -31,13 +31,21 @@ function isLocalDevelopment() {
 }
 
 let homePunchTimer = null;
-// 格式化秒數為 00:00:00
+// 打卡計時，動態彈性格式
+// 格式化秒數（未滿 1 小時顯示 00:00，滿 1 小時自動顯示 01:00:00）
 function formatDuration(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  const pad = n => String(n).padStart(2, '0');
+
+  // 超過 1 小時顯示 時:分:秒，未滿 1 小時顯示 分:秒 (從 00:00 開始)
+  if (hours > 0) {
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
+  return `${pad(minutes)}:${pad(seconds)}`;
 }
 // 每秒更新一次畫面上的計時器數字
 function startPunchClock(startTimeMs) {
@@ -152,7 +160,6 @@ window.deleteGeneralExpense = async function(id) {
   // 3. [關鍵] 觸發全局刷新，確保總額與列表同步更新
   renderReport(); 
 };
-
 
 /* ════ 基本工資設定區 (預設值)(範圍設定) 開始════ 
  * 未來調薪時，只需更改這裡的 max (最大) 與 min (最小) 數值即可！
@@ -621,12 +628,12 @@ async function fetchSystemSettings() {
 function showLoginRequiredWarning() {
   customConfirm(`
     <div style="font-size:48px; margin-bottom:12px; text-align:center;">🔒</div>
-    <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">權限不足</div>
-    <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
+    <div style="font-size:28px; font-weight:800; color:var(--red); margin-bottom:12px; text-align:center;">權限不足</div>
+    <div style="font-size:16px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
       管理員已設定系統限制：<br>
-      <b>必須登入帳號</b> 才能新增或修改記錄。<br>
+      <span style="font-size:18px;font-family:var(--mono);font-weight:800;color:#ff0000;">必須登入帳號</span> 才能進入頁面。<br>
     </div>
-    <div style="font-size:13px; color:var(--blue); font-weight:700; text-align:center;">
+    <div style="font-size:16px; color:var(--blue); font-weight:700; text-align:center;">
       是否立即前往登入畫面？
     </div>
   `).then(ok => {
@@ -1057,16 +1064,22 @@ window.flipCloseOverlay = function(btn, overlayId) {
   }, 2000);
 }
 
+// 2. 總結卡片摺疊
 function toggleSummaryCard(id) {
-  const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
-  const t = btn.style.transform || 'rotate(0deg)';
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { 
-    el.style.maxHeight = el.scrollHeight + 'px'; 
-    btn.style.transform = t.includes('rotate') ? t.replace('rotate(0deg)', 'rotate(180deg)') : t + ' rotate(180deg)';
-  } else { 
-    el.style.maxHeight = '0px'; 
-    btn.style.transform = t.replace('rotate(180deg)', 'rotate(0deg)'); 
-  }
+  const el = document.getElementById(id); 
+  const btn = document.getElementById(id + '-btn'); 
+  if (!el || !btn) return;
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
+
+  requestAnimationFrame(() => {
+    if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { 
+      el.style.maxHeight = el.scrollHeight + 'px'; 
+      btn.style.transform = 'rotate(180deg)'; 
+    } else { 
+      el.style.maxHeight = '0px'; 
+      btn.style.transform = 'rotate(0deg)';
+    }
+  });
 }
 
 /* ══ 替換：產生總結卡片 (統一版面、加入淨行程佔比、以及基本工資判斷、支援日期標籤) ══ */
@@ -1384,6 +1397,12 @@ function savePunch() {
 }
 
 function goPage(name, force = false) {
+  // 🌟 新增：未登入時禁止進入「收入分析」
+  if (name === 'report' && !USER.loggedIn) {
+    showLoginRequiredWarning();
+    return;
+  }
+
   // 💡 標記 JavaScript 已接管畫面，平滑過渡
   document.documentElement.classList.add('js-ready');
 
@@ -1495,17 +1514,17 @@ function switchHomeTab(tab, index) {
   const rewardSubWrap = document.getElementById('reward-sub-tabs-wrap');
   if (rewardSubWrap) rewardSubWrap.style.display = (tab === 'reward') ? 'block' : 'none';
   if (tab === 'schedule') {
-    tabBg.style.background = 'linear-gradient(135deg, #f43f5e 0%, #f97316 40%, #fbbf24 75%, #fcd34d 100%)';
-    tabBg.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.4)';
+    tabBg.style.background = 'linear-gradient(135deg, #34d399 0%, #14b8a6 45%, #22c55e 70%, #10b981 100%)';
+    tabBg.style.boxShadow = '0 3px 3px rgba(20, 184, 166, 0.7)';
   } else if (tab === 'goal') {
     tabBg.style.background = 'linear-gradient(135deg, #6366f1 0%, #3b82f6 40%, #06b6d4 75%, #10b981 100%)';
-    tabBg.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+    tabBg.style.boxShadow = '0 3px 3px rgba(59, 130, 246, 0.6)';
   } else if (tab === 'reward') {
     tabBg.style.background = 'linear-gradient(135deg, #a855f7 0%, #d946ef 40%, #ec4899 75%, #f43f5e 100%)';
-    tabBg.style.boxShadow = '0 4px 12px rgba(217, 70, 239, 0.4)';
+    tabBg.style.boxShadow = '0 3px 3px rgba(217, 70, 239, 0.6)';
   } else if (tab === 'ordertime') {
-    tabBg.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 40%, #14b8a6 75%, #10b981 100%)';
-    tabBg.style.boxShadow = '0 4px 12px rgba(14, 165, 233, 0.4)';
+    tabBg.style.background = 'linear-gradient(135deg, #db2777 32%, #2563eb 77%, #0ea5e9 100%)';
+    tabBg.style.boxShadow = '0 3px 3px rgba(14, 165, 233, 0.6)';
   }
   document.getElementById('btn-home-schedule').classList.toggle('active', tab==='schedule'); 
   document.getElementById('btn-home-goal').classList.toggle('active', tab==='goal'); 
@@ -1675,7 +1694,7 @@ document.addEventListener('click', function(e) {
     if (nowChecked) {
       cbBox.style.background = '#3b82f6';
       cbBox.style.borderColor = '#3b82f6';
-      cbBox.innerHTML = '<span style="color:#fff;font-size:24px;font-weight:1000;display:flex;align-items:center;justify-content:center;line-height:24px;text-align:center;">✓</span>';
+      cbBox.innerHTML = '<span style="color:#fff;font-size:24px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:24px;text-align:center;">✓</span>';
     } else {
       cbBox.style.background = 'transparent';
       cbBox.style.borderColor = '#fff';
@@ -1749,9 +1768,9 @@ function renderHome() {
     // 更新背景滑塊位置 (支援 3 個按鈕)
     if (tabBg) {
       if (S.homeSubTab === 'schedule') tabBg.style.transform = 'translateX(0%)';
-      else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(100%)';
-      else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(200%)';
-      else if (S.homeSubTab === 'ordertime') tabBg.style.transform = 'translateX(300%)';
+      else if (S.homeSubTab === 'ordertime') tabBg.style.transform = 'translateX(100%)';
+      else if (S.homeSubTab === 'goal') tabBg.style.transform = 'translateX(200%)';
+      else if (S.homeSubTab === 'reward') tabBg.style.transform = 'translateX(300%)';
     }
 
     // 👇 修復：確保 requestAnimationFrame 有正確的閉合
@@ -1784,17 +1803,18 @@ function renderHome() {
 
       let punchStatusHtml = '';
       if (isPunched) {
-        // 取得上線時間戳記
+        // 取得上線時間戳記並立即計算當前時間差
         const startTime = activePunch.timestamp || new Date(`${activePunch.date}T${activePunch.punchIn}:00`).getTime();
+        const initialDiff = Math.max(0, Date.now() - startTime);
+        const initialTimerStr = formatDuration(initialDiff); // 👈 瞬間算出的時間字串
         
-        // 🌟 [修改]：放大字體並加上藍色計時器容器
         punchStatusHtml = `
           <div style="display:flex; flex-direction:row; align-items:center; gap:2px;">
             <span style="color:var(--green);font-size:20px;font-weight:800;letter-spacing:1px;margin-right:3px;">上線中</span>
-            <span id="live-punch-timer" style="color:#2563eb;font-family:var(--mono);font-size:18px;font-weight:800;margin-top:1px;border:1px solid #fff200;border-radius:12px;padding:6px 10px;background: #fffeaf;">00:00:00</span>
+            <span id="live-punch-timer" style="color:#2563eb;font-family:var(--mono);font-size:18px;font-weight:800;margin-top:1px;border:1px solid #fff200;border-radius:12px;padding:6px 10px;background: #fffeaf;">${initialTimerStr}</span>
           </div>
         `;
-        // 啟動計時
+        // 啟動每秒心跳
         requestAnimationFrame(() => startPunchClock(startTime));
       } else {
         punchStatusHtml = `<span style="color:var(--t3); font-size:20px; font-weight:800;">離線</span>`;
@@ -1944,7 +1964,7 @@ function renderHome() {
                     <div style="width:32px; height:32px; border-radius:10px; background:#dbeafe; display:flex; align-items:center; justify-content:center; font-size:16px;">🏃</div>
                     <div>
                       <div style="font-size:14px;font-weight:900;color:#1e3a8a;">本週目標</div>
-                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#60a5fa;font-size:17px;"> ${7 - wDay} </span>天</div>
+                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:900;color:#60a5fa;font-size:17px;"> ${7 - wDay} </span>天</div>
                     </div> 
                   </div>
                   <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${wColor};">${wPct}<span style="font-size:14px;"> %</span></span>
@@ -1971,7 +1991,7 @@ function renderHome() {
                     <div style="width:32px; height:32px; border-radius:10px; background:#e9d5ff; display:flex; align-items:center; justify-content:center; font-size:16px;">🔥</div>
                     <div>
                       <div style="font-size:14px;font-weight:900;color:#581c87;">本月目標</div>
-                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#c084fc;font-size:17px;"> ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} </span>天</div>
+                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:900;color:#c084fc;font-size:17px;"> ${new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() - dateObj.getDate()} </span>天</div>
                     </div> 
                   </div>
                   <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${mColor};">${mPct}<span style="font-size:14px;"> %</span></span>
@@ -1998,7 +2018,7 @@ function renderHome() {
                     <div style="width:32px; height:32px; border-radius:10px; background:#ccfbf1; display:flex; align-items:center; justify-content:center; font-size:16px;">👑</div>
                     <div>
                       <div style="font-size:14px;font-weight:900;color:#134e4a;">本年目標</div>
-                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:1000;color:#2dd4bf;font-size:17px;"> ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} </span>天</div>
+                      <div style="font-size:12px;color:#000000;font-weight:650;letter-spacing:1px;">剩餘<span style="font-weight:900;color:#2dd4bf;font-size:17px;"> ${Math.ceil((new Date(dateObj.getFullYear(), 11, 31) - dateObj) / 86400000)} </span>天</div>
                     </div>
                   </div>
                   <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:${yColor};">${yPct}<span style="font-size:14px;"> %</span></span>
@@ -2481,31 +2501,41 @@ function compressImage(file, maxWidth) {
 
 
 /* ══ 3. 查看記錄 開始 ════════════════════════════════════ */
+// 1. 查看記錄卡片摺疊
 function foldCard(id, e) {
   e.stopPropagation();
-  const el = document.getElementById(id); const btn = document.getElementById(id + '-btn'); if (!el || !btn) return;
-  // 👇 將原本寫死的 70px 改為 el.scrollHeight，讓它自動適應三大區塊的高度
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { 
-    el.style.maxHeight = el.scrollHeight + 'px'; 
-    btn.style.transform = 'rotate(180deg)'; 
-  } else { 
-    el.style.maxHeight = '0px'; 
-    btn.style.transform = 'rotate(0deg)'; 
-  }
+  const el = document.getElementById(id); 
+  const btn = document.getElementById(id + '-btn'); 
+  if (!el || !btn) return;
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
+
+  requestAnimationFrame(() => {
+    if (el.style.maxHeight === '0px' || el.style.maxHeight === '') { 
+      el.style.maxHeight = el.scrollHeight + 'px'; 
+      btn.style.transform = 'rotate(180deg)'; 
+    } else { 
+      el.style.maxHeight = '0px'; 
+      btn.style.transform = 'rotate(0deg)'; 
+    }
+  });
 }
 
+// 3. 小日曆網格摺疊
 function toggleCalendarGrid() {
   const grid = document.getElementById('hist-calendar');
   const btn = document.getElementById('hist-cal-toggle');
   if (!grid || !btn) return;
-  
-  if (grid.classList.contains('collapsed-cal')) {
-    grid.classList.remove('collapsed-cal');
-    btn.textContent = '▲';
-  } else {
-    grid.classList.add('collapsed-cal');
-    btn.textContent = '▼';
-  }
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
+
+  requestAnimationFrame(() => {
+    if (grid.classList.contains('collapsed-cal')) {
+      grid.classList.remove('collapsed-cal');
+      btn.style.transform = 'rotate(180deg)';
+    } else {
+      grid.classList.add('collapsed-cal');
+      btn.style.transform = 'rotate(0deg)';
+    }
+  });
 }
 
 /* ══ 美化版：單筆記錄卡片 (包含保養維修項目 + 車行 + 備註 + 精美雙色時間標籤) ══ */
@@ -2587,7 +2617,7 @@ function buildRecItem(r) {
         
         <div style="font-family:var(--mono);font-size:15px;font-weight:800;color:var(--t1); flex:1; display:flex; align-items:center; justify-content:flex-start;">
           <!-- 移除日期，只保留時間軸 -->
-          <span style="color: #1174ff;margin-bottom:25px;">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color:#000;font-size:16px;font-weight:1000;margin:0 3px;">→</span><span style="color:var(--red);margin-top:25px;">${outTimeStr}</span>
+          <span style="color: #1174ff;margin-bottom:25px;">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color:#000;font-size:16px;font-weight:900;margin:0 3px;">→</span><span style="color:var(--red);margin-top:25px;">${outTimeStr}</span>
           
           <!-- 組合標籤區 -->
           <div style="display:flex; align-items:center;">
@@ -2848,7 +2878,7 @@ function renderHistDayView() {
         
         <button class="mbtn" id="hist-next">▶</button>
         <!-- 👇 這裡將箭頭改為預設 ▼ -->
-        <button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="background: #bbdaf7; color: #0c72d2; font-size:22px; font-weight:900; width:35px; height:35px; border:1.5px solid #29458b; border-radius:50%;" title="收起/展開日曆">▼</button>
+        <button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="background:#bbdaf7;color:#0c72d2;font-size:22px;font-weight:900;width:35px;height:35px;border:1.5px solid #29458b;border-radius:50%;transition:transform 0.3s;transform:rotate(180deg);title="收起/展開日曆">▼</button>
       </div>
       <div style="display:flex; gap:8px;">
         <button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
@@ -4308,13 +4338,29 @@ const OT_DEFAULT_WAGE = 245;
 if (!S.otViewDate) S.otViewDate = todayStr();
 if (!S.lawHourlyWage) S.lawHourlyWage = pf(localStorage.getItem(OT_KEYS.wage)) || OT_DEFAULT_WAGE;
 
-// 2. 核心計算工具
+// 確保資料載入且不會在記憶體更新時被舊 LocalStorage 資料覆蓋
+window.__orderTripsLoaded = false;
+
+function loadOrderTrips() {
+    try {
+        const raw = localStorage.getItem(OT_KEYS.trips);
+        const parsed = raw ? JSON.parse(raw) : [];
+        S.orderTrips = Array.isArray(parsed) ? parsed : [];
+    } catch(e) {
+        S.orderTrips = [];
+    }
+    window.__orderTripsLoaded = true;
+}
+
 function ensureOrderTripsLoaded() { 
-    if (!Array.isArray(S.orderTrips)) {
-        try { S.orderTrips = JSON.parse(localStorage.getItem(OT_KEYS.trips)) || []; } catch(e) { S.orderTrips = []; }
+    if (!window.__orderTripsLoaded || !Array.isArray(S.orderTrips)) {
+        loadOrderTrips();
     }
 }
-function saveOrderTrips() { localStorage.setItem(OT_KEYS.trips, JSON.stringify(S.orderTrips)); }
+
+function saveOrderTrips() { 
+    localStorage.setItem(OT_KEYS.trips, JSON.stringify(S.orderTrips)); 
+}
 
 // 依日期重新編排行程序號（新增/刪除後呼叫）
 function reindexOrderTrips() {
@@ -4333,8 +4379,29 @@ function calcOrderDurationMs(order) {
     return order.status === 'running' ? Date.now() - order.startTs : (pf(order.endTs) - pf(order.startTs) || 0);
 }
 
+// 計算專法薪資（30秒四捨五入進位制 + 11分鐘內保底 45 元）
 function calcLawPay(durationMs) {
-    return Math.round((Math.max(0, durationMs) / 3600000) * S.lawHourlyWage);
+    if (!durationMs || durationMs <= 0) return 0;
+
+    // 1. 計算總秒數，並依「未滿 30 秒不計，30 秒(含)以上以 1 分鐘計」規則轉換
+    const totalSecs = Math.floor(durationMs / 1000);
+    let roundedMins = Math.floor(totalSecs / 60);
+    if (totalSecs % 60 >= 30) {
+        roundedMins += 1;
+    }
+
+    // 未滿 30 秒不計，分鐘數為 0 則不給薪
+    if (roundedMins <= 0) return 0;
+
+    // 2. 依進位後的分鐘數計算專法薪資
+    const calculatedPay = Math.round((roundedMins / 60) * S.lawHourlyWage);
+
+    // 3. 11 分鐘 (含) 以內，最低保底金額為 45 元
+    if (roundedMins <= 11) {
+        return Math.max(45, calculatedPay);
+    }
+
+    return calculatedPay;
 }
 
 // 將毫秒格式化為計時器顯示文字 (HH:MM:SS 或 MM:SS)
@@ -4346,7 +4413,106 @@ function fmtOrderTimer(ms) {
     return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
-// 3. 計時器心跳
+// 切換「總編輯」模式（預設為 false 關閉，隱藏所有刪除按鈕）
+window.toggleOtEditMode = function() {
+    S.otEditMode = !S.otEditMode;
+    updateOtUI();
+    toast(S.otEditMode ? '已開啟 ✅' : '已關閉 🔴',500);
+};
+
+// 格式化總工時（未滿 1 小時顯示 MM:SS，滿 1 小時顯示 HH:MM:SS）
+function fmtTotalWorkTime(ms) {
+    if (!ms || ms <= 0) return '0';
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+
+    if (h > 0) {
+        return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+    return `${pad(m)}:${pad(s)}`;
+}
+
+// 🌟 即時更新頂部總覽卡片 (工時與專法薪資皆【僅採計已完成訂單】)
+function updateOtSummaryStats() {
+    const incEl = document.getElementById('ot-summary-inc');
+    const msEl = document.getElementById('ot-summary-ms');
+    const lawEl = document.getElementById('ot-summary-law');
+    const diffEl = document.getElementById('ot-summary-diff');
+
+    if (!msEl && !lawEl) return;
+
+    const viewDate = S.otViewDate || todayStr();
+    const dayTrips = (S.orderTrips || []).filter(t => t.date === viewDate);
+
+    let tMs = 0, tInc = 0, tLaw = 0;
+
+    dayTrips.forEach(t => {
+        const orders = [t.main, ...(t.bundled || []), ...(t.midway || [])].filter(Boolean);
+        if (orders.length === 0) return;
+
+        // 1. 平台總報酬 & 專法薪資總額 (專法薪資僅計算 status === 'done' 已完成的訂單)
+        orders.forEach(o => {
+          const amount = Number(o.amount);
+          tInc += Number(pf(amount));
+
+          if (o.status === 'done') {
+            if (!o.startTs) return; // 或設 0
+            const span = (o.endTs ?? Date.now()) - o.startTs;
+            tLaw += Number(pf(o.lawPay ?? calcLawPay(span)));
+          }
+        });
+
+        // 2. 全部工時 (僅採計 status === 'done' 已完成的訂單)
+        const doneOrders = orders.filter(o => o.status === 'done' && o.startTs && o.endTs);
+        if (doneOrders.length > 0) {
+            const minStart = Math.min(...doneOrders.map(o => o.startTs));
+            const maxEnd = Math.max(...doneOrders.map(o => o.endTs));
+            if (maxEnd > minStart) {
+                tMs += (maxEnd - minStart);
+            }
+        }
+    });
+
+    if (incEl) {
+      incEl.textContent = "";
+      const sp = document.createElement("span");
+      sp.style.fontSize = "11px";
+      sp.style.marginRight = "3px";
+      sp.textContent = "$";
+      incEl.appendChild(sp);
+
+      const text = document.createElement("span");
+      text.textContent = fmt(tInc);
+      incEl.appendChild(text);
+    }
+
+    if (msEl) msEl.textContent = tMs > 0 ? fmtTotalWorkTime(tMs) : '0';
+
+    if (lawEl) {
+      lawEl.textContent = "";
+
+      const sp = document.createElement("span");
+      sp.style.fontSize = "11px";
+      sp.style.marginRight = "3px";
+      sp.textContent = "$";
+
+      const text = document.createElement("span");
+      text.textContent = fmt(tLaw);
+
+      lawEl.appendChild(sp);
+      lawEl.appendChild(text);
+    }
+
+    if (diffEl) {
+        const diff = tInc - tLaw;
+        diffEl.style.color = diff >= 0 ? '#4ade80' : '#ff2c2c';
+        diffEl.textContent = `${diff >= 0 ? '+' : ''}${fmt(diff)}`;
+    }
+}
+
+// 🌟 2. 背景計時器心跳 (每秒同步更新單單計時 + 頂部總覽卡片)
 let orderTimerTicker = null;
 function startOrderTimerTicker() {
     if (orderTimerTicker) return;
@@ -4355,40 +4521,286 @@ function startOrderTimerTicker() {
         const isFsOpen = document.getElementById('order-timer-full-page')?.classList.contains('show');
         if (!isOtTab && !isFsOpen) { clearInterval(orderTimerTicker); orderTimerTicker = null; return; }
 
+        // A. 更新單筆訂單的獨立計時數字
         document.querySelectorAll('[data-order-timer]').forEach(el => {
             const trip = S.orderTrips.find(t => t.id === el.dataset.trip);
             if (!trip) return;
             const order = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].find(o => o.id === el.dataset.order);
             if (order && order.status === 'running') el.textContent = fmtOrderTimer(calcOrderDurationMs(order));
         });
+
+        // B. 即時更新頂部總覽數據 (全部工時、專法薪資、差額)
+        updateOtSummaryStats();
     }, 1000);
 }
 
-// 4. 行程控制
-window.startMainBatch = function(tripId) {
-    const trip = S.orderTrips.find(t => t.id === tripId);
-    if (!trip) return;
-    const now = Date.now();
-    [trip.main, ...(trip.bundled || [])].forEach(o => { o.status = 'running'; o.startTs = now; });
-    saveOrderTrips(); updateOtUI(); startOrderTimerTicker();
-    toast('🚀 整組派單已同步啟動');
-};
+// 🌟 訂單計時頁面渲染
+function getOrderTimerHtml() {
+    ensureOrderTripsLoaded();
+    const isFs = document.getElementById('order-timer-full-page')?.classList.contains('show');
+    const viewDate = S.otViewDate || todayStr();
+    const allTrips = S.orderTrips.filter(t => t.date === viewDate).sort((a, b) => (a.tripNo || 0) - (b.tripNo || 0));
 
+    const isEditing = !!S.otEditMode;
+
+    const perPage = 10;
+    const totalPages = Math.max(1, Math.ceil(allTrips.length / perPage));
+    if (!S.otPage || S.otPage < 1) S.otPage = 1;
+    if (S.otPage > totalPages) S.otPage = totalPages;
+    const startIdx = (S.otPage - 1) * perPage;
+    const trips = allTrips.slice(startIdx, startIdx + perPage);
+
+    // 計算當日初始統計
+    let tMs = 0, tInc = 0, tLaw = 0;
+    allTrips.forEach(t => {
+        const orders = [t.main, ...(t.bundled || []), ...(t.midway || [])].filter(Boolean);
+        if (orders.length === 0) return;
+
+        orders.forEach(o => {
+            tInc += pf(o.amount);
+            if (o.status === 'done') {
+                tLaw += pf(o.lawPay || calcLawPay((o.endTs || Date.now()) - o.startTs));
+            }
+        });
+
+        const doneOrders = orders.filter(o => o.status === 'done' && o.startTs && o.endTs);
+        if (doneOrders.length > 0) {
+            const minStart = Math.min(...doneOrders.map(o => o.startTs));
+            const maxEnd = Math.max(...doneOrders.map(o => o.endTs));
+            if (maxEnd > minStart) {
+                tMs += (maxEnd - minStart);
+            }
+        }
+    });
+
+    const editBtnStyle = isEditing
+        ? 'background:#10b981; color:#ffffff; border:none; padding:5px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.3);'
+        : 'background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.25); padding:5px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;';
+
+    let html = `
+    <div style="background:linear-gradient(135deg,#1e293b,#0f172a); border-radius:20px; padding:4px 8px 6px; color:#fff; margin-bottom:2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:900; font-size:18px; letter-spacing:1px;">📊 訂單計時總覽</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <div style="display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);">
+                    <span style="font-size:14px; color:#94a3b8; font-weight:700;">專法時薪</span>
+                    <input type="number" value="${S.lawHourlyWage}" onchange="S.lawHourlyWage=pf(this.value); localStorage.setItem(OT_KEYS.wage, this.value); updateOtUI();" style="width:38px; background:transparent; border:none; color:#fbbf24;font-size:14px;font-weight:900; font-family:var(--mono); text-align:center; outline:none;">
+                </div>
+                ${!isFs ? `<button onclick="openOrderTimerFullscreen()" style="background:#2563eb; color:#fff;padding:4px 12px; border-radius:10px; font-size:17px; font-weight:800; cursor:pointer;margin-left:20px;">⤢ 全螢幕</button>` : ''}
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; grid-gap:5px 20px;">
+            <div class="ot-stat-box"><div class="lbl">平台總報酬</div><div class="val" id="ot-summary-inc" style="color:#fbbf24;"><span style="font-size:11px;margin-right:3px;">$</span>${fmt(tInc)}</div></div>
+            <div class="ot-stat-box"><div class="lbl">全部工時</div><div class="val" id="ot-summary-ms" style="color:#38bdf8;">${tMs > 0 ? fmtTotalWorkTime(tMs) : '0'}</div></div>
+            <div class="ot-stat-box"><div class="lbl">專法薪資總額</div><div class="val" id="ot-summary-law" style="color:#4ade80;"><span style="font-size:11px;margin-right:3px;">$</span>${fmt(tLaw)}</div></div>
+            <div class="ot-stat-box"><div class="lbl">報酬差額</div><div class="val" id="ot-summary-diff" style="color:${tInc-tLaw>=0?'#4ade80':'#ff2c2c'}">${tInc-tLaw>=0?'+':''}${fmt(tInc-tLaw)}</div></div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns: 1fr 2.5fr 1fr;align-items:center;justify-items:center;background:#fff;border:1.5px solid #e2e8f0;border-radius:18px;overflow:hidden;padding:2px 1px;">
+            <button class="btn btn3" onclick="navOtDate(-1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">◀</button>
+            <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:var(--t1);padding:0 6px;white-space:nowrap;letter-spacing:1.2px;justify-content:center;">${viewDate.replace(/-/g,'/')}</div>
+            <button class="btn btn3" onclick="navOtDate(1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">▶</button>
+        </div>
+        ${!isFs ? `<button onclick="openAddOrderTripPanel()" style="background:var(--acc);color:#fff;border:none;height:40px;border-radius:14px;font-size:18px;font-weight:800;cursor:pointer;">＋ 新增行程</button>` : ''}
+    </div>
+
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:15px;">
+        <button onclick="navOtPage(-1)" ${S.otPage<=1?'disabled':''} style="
+            background:${S.otPage<=1?'#f8fafc':'#ffffff'}; 
+            border:1.5px solid ${S.otPage<=1?'#e2e8f0':'#3b82f6'}; 
+            color:${S.otPage<=1?'#cbd5e1':'#2563eb'}; 
+            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
+            cursor:${S.otPage<=1?'default':'pointer'}; 
+            box-shadow:${S.otPage<=1?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
+            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
+            ◀ 上一頁
+        </button>
+
+        <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; padding:4px 14px; display:inline-flex; align-items:baseline; font-family:var(--mono);">
+            <span style="font-size:17px; font-weight:900; color:#1d4ed8;">${S.otPage}</span>
+            <span style="font-size:11px; font-weight:700; color:#93c5fd; margin:0 5px;">/</span>
+            <span style="font-size:13px; font-weight:700; color:#64748b;">${totalPages}</span>
+        </div>
+
+        <button onclick="navOtPage(1)" ${S.otPage>=totalPages?'disabled':''} style="
+            background:${S.otPage>=totalPages?'#f8fafc':'#ffffff'}; 
+            border:1.5px solid ${S.otPage>=totalPages?'#e2e8f0':'#3b82f6'}; 
+            color:${S.otPage>=totalPages?'#cbd5e1':'#2563eb'}; 
+            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
+            cursor:${S.otPage>=totalPages?'disabled':'pointer'}; 
+            box-shadow:${S.otPage>=totalPages?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
+            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
+            下一頁 ▶
+        </button>
+
+        <button onclick="toggleOtEditMode()" style="
+            background:${isEditing ? '#10b981' : '#ffffff'}; 
+            color:${isEditing ? '#ffffff' : '#475569'}; 
+            border:1.5px solid ${isEditing ? '#10b981' : '#cbd5e1'}; 
+            padding:5px 14px; border-radius:12px; font-size:13px; font-weight:800; 
+            cursor:pointer; box-shadow:${isEditing ? '0 4px 5px rgba(16,185,129,0.5)' : '0'}; 
+            transition:all 0.2s ease;">
+            ${isEditing ? '✅ 完成' : '<span style="display:flex;align-items:center;align-content:center;padding:0 1px;"><span style="font-weight:900;font-size:22px;margin-right:5px;">✎</span>編輯</span>'}
+        </button>
+    </div>`;
+
+    trips.forEach(trip => {
+        const plat = getPlatform(trip.platformId);
+        const batchCount = (trip.bundled?.length || 0) + 1;
+
+        const bundledHtml = (trip.bundled || [])
+          .map((o, i) => renderCompactOrderRow(trip.id, o, `初始夾單 ${i + 1}`, false, true))
+          .join('');
+        const midwayHtml = (trip.midway || [])
+          .map(o => renderCompactOrderRow(trip.id, o, '中途夾單', true))
+          .join('');
+
+        const extrasCount = (trip.bundled?.length || 0) + (trip.midway?.length || 0);
+        const hasExtras = !!(bundledHtml || midwayHtml);
+
+        const tripOrders = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].filter(Boolean);
+
+        const doneOrders = tripOrders.filter(o =>
+          o.status === 'done' &&
+          o.startTs != null && o.endTs != null &&
+          Number.isFinite(Number(o.startTs)) &&
+          Number.isFinite(Number(o.endTs))
+        );
+
+        let tripLaw = 0;
+        let tripDurationMs = 0;
+
+        if (doneOrders.length > 0) {
+          doneOrders.forEach(o => {
+            const span = Number(o.endTs) - Number(o.startTs);
+            const rawLaw = (o.lawPay ?? calcLawPay(span));
+            tripLaw += Number(pf(rawLaw));
+          });
+
+          const minStart = Math.min(...doneOrders.map(o => Number(o.startTs)));
+          const maxEnd = Math.max(...doneOrders.map(o => Number(o.endTs)));
+          if (maxEnd > minStart) {
+            tripDurationMs = maxEnd - minStart;
+          }
+        }
+
+        const tripTimeStr = tripDurationMs > 0 ? fmtTotalWorkTime(tripDurationMs) : '0';
+
+        const tripDelBtn = isEditing
+            ? `<button onclick="deleteOrderTrip('${trip.id}')" style="background:#fef2f2; color:#ef4444; border:1px solid #fecdd3; width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:14px; font-weight:900; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>`
+            : '';
+
+        html += `
+        <div data-trip-card="${trip.id}" style="background:#fff; border:2.5px solid ${plat.color}; border-radius:18px; padding:4px 4px; margin-bottom:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1.8fr;align-items:center;margin-bottom:6px;gap:3px;">
+                <div style="display:flex; align-items:center; gap:3px;">
+                    <span style="background:${plat.color}; color:#fff; padding:2px 6px; border-radius:4px; font-size:15px; font-weight:900;"># ${trip.tripNo}</span>
+                    <span style="font-weight:900; font-size:17px; color:var(--t1);">${plat.name}</span>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1.1fr 0.6fr 0.2fr;align-items:center;gap:4px;justify-content:space-between;">
+                    <span style="background:#fff7ed;color: #111110;border:1.5px solid #fdba74;font-size:14px;font-weight:700;padding:2px 1px;border-radius:8px;font-family:var(--mono);display:flex;align-content:center;align-items:center;justify-content:center;">初派<span style="background:#fff7ed;color:var(--text-blue);font-size:18px;font-weight:850;margin:3px;border-radius:50%;width:12px;height:12px;display:flex;align-content:center;align-items:center;justify-content:center;">${batchCount}</span>單：<span style="font-size:11px;font-weight:900;color: #ff5900;margin:3px 5px 0 0;">$</span><span id="ot-main-amt-${trip.id}" style="color:#ff5900;font-size:16px;font-weight:800;">${trip.main.amount}</span>
+                    </span>
+                    ${hasExtras ? `<button onclick="toggleOrderExtras('${trip.id}', event)" style="background:#e2e8f0;border:2px solid #0a6be9;border-radius:14px;color:var(--t2);font-size:14px;font-weight:900;cursor:pointer;padding:3px 3px;display:inline-flex;align-items:center;gap:4px;align-content:center;-webkit-font-smoothing:antialiased;backface-visibility:hidden;transform:translateZ(0);"><span class="ot-extras-icon" style="font-size:18px;font-weight:900;margin-right:1px;display:inline-block;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);transform:${trip.extrasOpen ? 'rotate(180deg)' : 'rotate(0deg)'};">▼</span> 夾( ${extrasCount} )</button>` : ''}
+                    ${tripDelBtn}
+                </div>
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:2px 4px;">
+                ${renderCompactOrderRow(trip.id, trip.main, '主要訂單')}
+                ${hasExtras ? `<div id="ot-midway-${trip.id}" style="max-height:${trip.extrasOpen ? '2000px' : '0'}; overflow:hidden; transition:max-height 0.4s ease;">
+                    ${bundledHtml}${midwayHtml}
+                </div>` : ''}
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:3px; padding:0 4px;">           
+                <div style="display:flex; align-items:center; gap:8px;">
+                    ${!isFs ? `<button onclick="addOrderMidway('${trip.id}')" style="background:#f3e8ff;color:#7c3aed;border:1.5px solid #d8b4fe;border-radius:10px;padding:4px 14px;font-size:13px;font-weight:800;cursor:pointer;">＋ 中途夾單</button></div>` : ''}
+
+                    <div style="background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:8px; border:1px solid #bfdbfe; display:flex; align-items:baseline; gap:3px;">
+                        <span style="font-size:12px; color:#64748b; font-weight:700;">總時間：</span>
+                        <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:#2563eb;letter-spacing:0.5px;">${tripTimeStr}</span>
+                    </div>
+                    <div style="background:#f0fdf4; color:#15803d; padding:2px 8px; border-radius:8px; border:1px solid #86efac; display:flex; align-items:baseline; gap:3px;">
+                        <span style="font-size:12px; color:#64748b; font-weight:700;">總專法：</span>
+                        <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:#16a34a;letter-spacing:0.5px;"><span style="font-size:10px;font-weight:900;margin-right:5px;">$</span>${fmt(tripLaw)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    });
+    return html || '<div class="empty-tip" style="padding:40px 0;">無計時記錄</div>';
+}
+
+// 渲染單筆訂單（主單／夾單）的精簡列，含單號、金額、開始/結束時間、計時與操作按鈕
+function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
+    if (!order) return '';
+    const isEditing = !!S.otEditMode;
+
+    const dur = calcOrderDurationMs(order);
+    const timeStr = fmtOrderTimer(dur);
+    const statusColor = order.status === 'running' ? '#ff6a00' : (order.status === 'done' ? '#0088ff' : '#94a3b8');
+    const startStr = order.startTs ? new Date(order.startTs).toTimeString().slice(0,5) : '--:--';
+    const endStr = order.endTs ? new Date(order.endTs).toTimeString().slice(0,5) : '--:--';
+
+    let actionHtml = '';
+    if (order.status === 'idle') {
+        actionHtml = `<button onclick="startOrderTimer('${tripId}','${order.id}')" style="background: #ff6a00;color:#fff;border:none;padding:5px 10px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;">▶ 開始</button>`;
+    } else if (order.status === 'running') {
+        actionHtml = `<button onclick="finishOrderTimer('${tripId}','${order.id}')" style="background: #10b981;color:#fff;border:none;padding:5px 10px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;">✔ 完成</button>`;
+    } else {
+        actionHtml = `<span style="background: #2c3f68;color: #22e96b;font-size:14px;font-weight:650;white-space:nowrap;border-radius:16px;padding:2px 8px;margin-right:3px;"><span style="margin:0 4px 0 1px;">專$</span><span style="font-weight:750;">${fmt(order.lawPay || 0)}</span></span>`;
+    }
+
+    const delHtml = (isMidway && isEditing)
+        ? `<button onclick="deleteExtraOrder('${tripId}','${order.id}')" style="background:#fef2f2;color:#ef4444;border:1px solid #fecdd3;width:24px;height:24px;border-radius:50%;font-size:14px;font-weight:900;cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>`
+        : '';
+
+    // 🌟 判斷：中途夾單使用紫色外框與淡紫色背景
+    const amtBg = isMidway ? '#fdf0ff' : '#fff7ed';
+    const amtBorder = isMidway ? '#f59eff' : '#fdba74';
+    const amtColor = isMidway ? '#e927ff' : '#ff5900';
+    const amtSymbolColor = isMidway ? '#e927ff' : '#ff5100';
+
+    const amountHtml = hideAmount ? '' : `<div style="position:relative;display:inline-flex;align-items:center;width:38px;flex:0.35;min-width:30px;">
+      <span style="position:absolute;left:4px;bottom:4px;font-size:11px;color:${amtSymbolColor};font-weight:800;font-family:var(--mono);pointer-events:none;z-index:1;${order.amount ? '' : 'display:none;'}">$</span>
+      <input type="number" value="${(order.amount || '')}" placeholder="金額" oninput="this.previousElementSibling.style.display = this.value ? 'inline' : 'none';updateOrderField('${tripId}','${order.id}','amount',this.value)" style="width:55px;flex:0.5;background:${amtBg};border:1.5px solid ${amtBorder};border-radius:99px;padding:2px 2px 2px 11px;font-family:var(--mono);color:${amtColor};font-size:15px;font-weight:750;text-align:center;letter-spacing:0.5px;">
+    </div>`;
+
+    return `
+    <div style="padding:3px 0px;border-bottom:1px solid #6ab5ff;">
+        <div style="display:flex;align-items:center;gap:4px;">
+            <div style="flex-shrink:0;font-size:15px;color:${isMidway ? '#7c3aed' : '#ff50a8'};font-weight:700;width:75px;">${label}</div>
+            <input type="text" value="${safeText(order.orderNo || '')}" placeholder="單號" oninput="this.value = this.value.toUpperCase();updateOrderField('${tripId}','${order.id}','orderNo',this.value)" style="width:33px;flex:0.4;min-width:29px;background: #ecfdff;border:1.5px solid #41c5d4;border-radius:12px;padding:2px;font-size:15px;font-family:var(--mono);color:#2563eb;font-weight:600;text-align:center;text-transform:uppercase;letter-spacing:0.5px;">
+            ${amountHtml}
+            <div data-order-timer data-trip="${tripId}" data-order="${order.id}" style="display:flex;background: #e7f1ff;border:1.5px solid #bfdbfe;border-radius:16px;padding:2px 5px;flex:0.45;justify-content:center;text-align:center;font-family:var(--mono);font-size:15px;font-weight:800;color:${statusColor};">${timeStr}</div>
+            ${actionHtml}
+            ${delHtml}
+        </div>
+        <div style="display:flex;gap:12px;padding-left:12px;margin-top:2px;font-size:12px;font-weight:650;font-family:var(--mono);">
+            <span style="color:#16a34a;">開始 ${startStr}</span>
+            <span style="color: #ff2e2e;">結束 ${endStr}</span>
+        </div>
+    </div>`;
+}
+
+// 4. 行程控制（主要供「中途夾單」點擊 ▶ 開始 時使用）
 window.startOrderTimer = function(tripId, orderId) {
     const trip = S.orderTrips.find(t => t.id === tripId);
     if (!trip) return;
     const order = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].find(o => o?.id === orderId);
     if (!order) return;
-    const now = Date.now();
-    if (trip.main && orderId === trip.main.id) {
-        // 主單啟動時，連動啟動所有尚未開始的初始夾單（完成時則各自獨立，不連動）
-        [trip.main, ...(trip.bundled || [])].forEach(o => { if (o.status === 'idle') { o.status = 'running'; o.startTs = now; } });
-        toast('🚀 「主要訂單(組)」，開始計時 ✅');
-    } else {
-        order.status = 'running'; order.startTs = now;
-        toast('🚀 「中途夾單」，開始計時 ✅');
-    }
-    saveOrderTrips(); updateOtUI(); startOrderTimerTicker();
+    
+    // 啟動該筆單計時
+    order.status = 'running'; 
+    order.startTs = Date.now();
+    
+    saveOrderTrips(); 
+    updateOtUI(); 
+    startOrderTimerTicker();
+    
+    toast('🚀 「中途夾單」，開始計時 ✅');
 };
 
 window.finishOrderTimer = async function(tripId, orderId) {
@@ -4411,164 +4823,6 @@ window.addOrderMidway = function(tripId) {
     }
 };
 
-// 5. 渲染邏輯
-function getOrderTimerHtml() {
-    ensureOrderTripsLoaded();
-    const isFs = document.getElementById('order-timer-full-page')?.classList.contains('show');
-    const viewDate = S.otViewDate || todayStr();
-    const allTrips = S.orderTrips.filter(t => t.date === viewDate).sort((a, b) => (a.tripNo || 0) - (b.tripNo || 0));
-
-    const perPage = 10;
-    const totalPages = Math.max(1, Math.ceil(allTrips.length / perPage));
-    if (!S.otPage || S.otPage < 1) S.otPage = 1;
-    if (S.otPage > totalPages) S.otPage = totalPages;
-    const startIdx = (S.otPage - 1) * perPage;
-    const trips = allTrips.slice(startIdx, startIdx + perPage);
-
-    let tMs = 0, tInc = 0, tLaw = 0;
-    S.orderTrips.forEach(t => {
-        [t.main, ...(t.bundled || []), ...(t.midway || [])].forEach(o => {
-            tMs += calcOrderDurationMs(o); tInc += pf(o.amount);
-            tLaw += (o.status === 'done' ? pf(o.lawPay) : calcLawPay(calcOrderDurationMs(o)));
-        });
-    });
-
-    let html = `
-    <div style="background:linear-gradient(135deg,#1e293b,#0f172a); border-radius:20px; padding:10px 15px; color:#fff; margin-bottom:2px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <span style="font-weight:950; font-size:15px; letter-spacing:1px;">📊 訂單計時總覽</span>
-            <div style="display:flex; align-items:center; gap:6px;">
-                <div style="display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);">
-                    <span style="font-size:10px; color:#94a3b8; font-weight:700;">專法時薪</span>
-                    <input type="number" value="${S.lawHourlyWage}" onchange="S.lawHourlyWage=pf(this.value); localStorage.setItem(OT_KEYS.wage, this.value); updateOtUI();" style="width:38px; background:transparent; border:none; color:#fbbf24; font-weight:900; font-family:var(--mono); text-align:center; outline:none;">
-                </div>
-                ${!isFs ? `<button onclick="openOrderTimerFullscreen()" style="background:#2563eb; color:#fff; border:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;margin-left:30px;">⤢ 全螢幕</button>` : ''}
-            </div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div class="ot-stat-box"><div class="lbl">平台總報酬</div><div class="val" style="color:#fbbf24;">$${fmt(tInc)}</div></div>
-            <div class="ot-stat-box"><div class="lbl">全部工時</div><div class="val" style="color:#38bdf8;">${fmtOrderTimer(tMs)}</div></div>
-            <div class="ot-stat-box"><div class="lbl">專法薪資總額</div><div class="val" style="color:#4ade80;">$${fmt(tLaw)}</div></div>
-            <div class="ot-stat-box"><div class="lbl">報酬差額</div><div class="val" style="color:${tInc-tLaw>=0?'#4ade80':'#f87171'}">${tInc-tLaw>=0?'+':''}${fmt(tInc-tLaw)}</div></div>
-        </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;align-items:center; gap:12px; margin-bottom:12px;">
-        <div style="display:grid;grid-template-columns: 1fr 2.5fr 1fr;align-items:center;justify-items:center;background:#fff;border:1.5px solid #e2e8f0;border-radius:18px;overflow:hidden;padding:2px 1px;">
-            <button class="btn btn3" onclick="navOtDate(-1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">◀</button>
-            <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:var(--t1);padding:0 6px;white-space:nowrap;letter-spacing:1.2px;justify-content:center;">${viewDate.replace(/-/g,'/')}</div>
-            <button class="btn btn3" onclick="navOtDate(1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">▶</button>
-        </div>
-        ${!isFs ? `<button onclick="openAddOrderTripPanel()" style="background: rgba(37, 100, 235, 0.2);color:var(--text-blue);border:none;height:40px;border-radius:14px;font-size:22px;font-weight:750;letter-spacing:1px;cursor:pointer;">＋ 新增行程</button>` : ''}
-    </div>
-
-    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:15px;">
-        <!-- 上一頁按鈕 -->
-        <button onclick="navOtPage(-1)" ${S.otPage<=1?'disabled':''} style="
-            background:${S.otPage<=1?'#f8fafc':'#ffffff'}; 
-            border:1.5px solid ${S.otPage<=1?'#e2e8f0':'#3b82f6'}; 
-            color:${S.otPage<=1?'#cbd5e1':'#2563eb'}; 
-            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
-            cursor:${S.otPage<=1?'default':'pointer'}; 
-            box-shadow:${S.otPage<=1?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
-            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
-            ◀ 上一頁
-        </button>
-
-        <!-- 頁數顯示膠囊 (目前頁數專屬深藍大字) -->
-        <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; padding:4px 14px; display:inline-flex; align-items:baseline; font-family:var(--mono);">
-            <span style="font-size:17px; font-weight:900; color:#1d4ed8;">${S.otPage}</span>
-            <span style="font-size:11px; font-weight:700; color:#93c5fd; margin:0 5px;">/</span>
-            <span style="font-size:13px; font-weight:700; color:#64748b;">${totalPages}</span>
-        </div>
-
-        <!-- 下一頁按鈕 -->
-        <button onclick="navOtPage(1)" ${S.otPage>=totalPages?'disabled':''} style="
-            background:${S.otPage>=totalPages?'#f8fafc':'#ffffff'}; 
-            border:1.5px solid ${S.otPage>=totalPages?'#e2e8f0':'#3b82f6'}; 
-            color:${S.otPage>=totalPages?'#cbd5e1':'#2563eb'}; 
-            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
-            cursor:${S.otPage>=totalPages?'default':'pointer'}; 
-            box-shadow:${S.otPage>=totalPages?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
-            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
-            下一頁 ▶
-        </button>
-    </div>`;
-
-    trips.forEach(trip => {
-        const plat = getPlatform(trip.platformId);
-        const batchCount = (trip.bundled?.length || 0) + 1;
-        const bundledHtml = (trip.bundled || []).map((o, i) => renderCompactOrderRow(trip.id, o, `初始夾單 ${i+1}`, false, true)).join('');
-        const midwayHtml = isFs ? '' : (trip.midway || []).map(o => renderCompactOrderRow(trip.id, o, '中途夾單', true)).join('');
-        const extrasCount = (trip.bundled?.length || 0) + (isFs ? 0 : (trip.midway?.length || 0));
-        const hasExtras = !!(bundledHtml || midwayHtml);
-        html += `
-        <div style="background:#fff; border:2.5px solid ${plat.color}; border-radius:18px; padding:3px 6px; margin-bottom:12px;">
-            <div style="display:grid; grid-template-columns:35% 65%; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <span style="background:${plat.color}; color:#fff; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:900;"># ${trip.tripNo}</span>
-                    <span style="font-weight:950; font-size:15px; color:var(--t1);">${plat.name}</span>
-                </div>
-                <div style="display:grid;grid-template-columns:145px 55px 20px;align-items:center;justify-content:center;gap:6px">
-                    <span style="background:#fff7ed;color: #111110;border:1.5px solid #fdba74;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;font-family:var(--mono);">
-                    (<span style="color: #ff5900;font-size:16px;font-weight:850;">${batchCount}</span>) 派單金額：<span style="font-size:9px;font-weight:650;margin:0 1px;color: #ff5900;">$</span>
-                    <span style="color: #ff5900;font-size:15px;font-weight:850;">${trip.main.amount}</span></span>
-                    ${hasExtras ? `<button onclick="toggleOrderExtras('${trip.id}')" style="background:#e2e8f0;border:1.5px solid #cfd4da;border-radius:8px;color:var(--t2);font-size:12px;font-weight:800;cursor:pointer;padding:3px 6px;">${trip.extrasOpen ? '▲' : '▼'} ( ${extrasCount} )</button>` : ''}
-                    <button onclick="deleteOrderTrip('${trip.id}')" style="background:#f1f5f9; color: #757d88; border:none; width:28px; height:28px; border-radius:50%; cursor:pointer;font-size:20px;font-weight:950;">✕</button>
-                </div>
-            </div>
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:2px 8px;">
-                ${renderCompactOrderRow(trip.id, trip.main, '主要訂單')}
-                ${hasExtras ? `<div id="ot-midway-${trip.id}" style="max-height:${trip.extrasOpen ? '2000px' : '0'}; overflow:hidden; transition:max-height 0.4s ease;">
-                    ${bundledHtml}${midwayHtml}
-                </div>` : ''}
-            </div>
-            ${!isFs ? `<div style="display:flex; justify-content:flex-start; align-items:center; margin-top:4px; padding:0 10px;">
-                <button onclick="addOrderMidway('${trip.id}')" style="background:#f3e8ff; color:#7c3aed; border:1.5px solid #d8b4fe; padding:4px 14px; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer;">＋ 中途夾單</button>
-            </div>` : ''}
-        </div>`;
-    });
-    return html || '<div class="empty-tip" style="padding:40px 0;">無計時記錄</div>';
-}
-
-// 渲染單筆訂單（主單／夾單）的精簡列，含單號、金額、開始/結束時間、計時與操作按鈕
-function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
-    if (!order) return '';
-    const dur = calcOrderDurationMs(order);
-    const timeStr = fmtOrderTimer(dur);
-    const statusColor = order.status === 'running' ? '#f97316' : (order.status === 'done' ? '#10b981' : '#94a3b8');
-    const startStr = order.startTs ? new Date(order.startTs).toTimeString().slice(0,5) : '--:--';
-    const endStr = order.endTs ? new Date(order.endTs).toTimeString().slice(0,5) : '--:--';
-
-    let actionHtml = '';
-    if (order.status === 'idle') {
-        actionHtml = `<button onclick="startOrderTimer('${tripId}','${order.id}')" style="background:#f97316;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">▶ 開始</button>`;
-    } else if (order.status === 'running') {
-        actionHtml = `<button onclick="finishOrderTimer('${tripId}','${order.id}')" style="background:#10b981;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">✔ 完成</button>`;
-    } else {
-        actionHtml = `<span style="color:#10b981;font-size:12px;font-weight:800;white-space:nowrap;">薪<span style="font-size:9px;font-weight:600;margin:0 1px;">$</span>${fmt(order.lawPay || 0)}</span>`;
-    }
-
-    const delHtml = isMidway ? `<button onclick="deleteExtraOrder('${tripId}','${order.id}')" style="background:#f1f5f9;color:#94a3b8;width:24px;height:24px;border-radius:50%;font-size:15px;font-weight:950;cursor:pointer;padding:0 2px;flex-shrink:0;">✕</button>` : '';
-    const amountHtml = hideAmount ? '' : `<input type="number" value="${(order.amount || '')}" placeholder="金額" onchange="updateOrderField('${tripId}','${order.id}','amount',this.value)" style="width:0;flex:0.6;min-width:0;border:none;background:#f1f5f9;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#ea580c;font-weight:800;">`;
-
-    return `
-    <div style="padding:3px 1px;border-bottom:1px solid #6ab5ff;">
-        <div style="display:flex;align-items:center;gap:6px;">
-            <div style="flex-shrink:0;font-size:11px;color:${isMidway ? '#7c3aed' : 'var(--t3)'};font-weight:700;width:52px;">${label}</div>
-            <input type="text" value="${safeText(order.orderNo || '')}" placeholder="單號" onchange="updateOrderField('${tripId}','${order.id}','orderNo',this.value)" style="width:25px;flex:0.6;min-width:20px;border:none;background: #ebf5ff;border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);color:#2563eb;font-weight:600;">
-            ${amountHtml}
-            <div data-order-timer data-trip="${tripId}" data-order="${order.id}" style="flex-shrink:0;text-align:center;font-family:var(--mono);font-size:13px;font-weight:900;color:${statusColor};width:52px;">${timeStr}</div>
-            ${actionHtml}
-            ${delHtml}
-        </div>
-        <div style="display:flex;gap:12px;padding-left:58px;margin-top:2px;font-size:10px;font-weight:600;font-family:var(--mono);">
-            <span style="color:#16a34a;">開始 ${startStr}</span>
-            <span style="color:#dc2626;">結束 ${endStr}</span>
-        </div>
-    </div>`;
-}
-
 function updateOtUI() { 
     if (document.getElementById('order-timer-full-page')?.classList.contains('show')) renderFullscreenOrderTimer(); 
     else renderHome(); 
@@ -4577,29 +4831,75 @@ window.navOtDate = function(dir) { const d = new Date(S.otViewDate); d.setDate(d
 window.navOtPage = function(dir) { S.otPage = (S.otPage || 1) + dir; updateOtUI(); };
 window.openOrderTimerFullscreen = function() { document.getElementById('order-timer-full-page').classList.add('show'); renderFullscreenOrderTimer(); };
 window.renderFullscreenOrderTimer = function() { document.getElementById('ot-full-body').innerHTML = getOrderTimerHtml(); startOrderTimerTicker(); };
-window.toggleOrderExtras = function(tId) { const t = S.orderTrips.find(x => x.id === tId); if (t) { t.extrasOpen = !t.extrasOpen; updateOtUI(); } };
+
+// 訂單計時夾單摺疊 (GPU 0 延遲順暢旋轉與展開)
+window.toggleOrderExtras = function(tId, event) { 
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
+    const t = S.orderTrips.find(x => x.id === tId); 
+    if (!t) return; 
+
+    t.extrasOpen = !t.extrasOpen; 
+
+    const container = document.getElementById(`ot-midway-${tId}`);
+    const btnIcon = event?.currentTarget?.querySelector('.ot-extras-icon');
+
+    // 🌟 使用 requestAnimationFrame 避開切頁繪圖高峰，防止箭頭卡住
+    requestAnimationFrame(() => {
+        if (container) {
+            container.style.maxHeight = t.extrasOpen ? '2000px' : '0px';
+        }
+        if (btnIcon) {
+            btnIcon.style.transform = t.extrasOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+    });
+
+    saveOrderTrips();
+};
+
 window.deleteOrderTrip = function(id) { customConfirm('確定刪除？編號將重排。').then(ok => { if (ok) { S.orderTrips = S.orderTrips.filter(t => t.id !== id); reindexOrderTrips(); updateOtUI(); } }); };
 window.deleteExtraOrder = async function(tId, oId) { if (await customConfirm('確定刪除夾單？')) { const t = S.orderTrips.find(x => x.id === tId); if (t) { t.midway = t.midway.filter(o => o.id !== oId); saveOrderTrips(); updateOtUI(); } } };
+// 即時更新訂單欄位（靜默存檔，同步連動金額）
 window.updateOrderField = function(tId, oId, f, v) { 
     const t = S.orderTrips.find(x => x.id === tId); 
     const o = [t?.main, ...(t?.bundled || []), ...(t?.midway || [])].find(x => x?.id === oId);
-    if (o) { if (f === 'orderNo') o.orderNo = v; if (f === 'amount') o.amount = pf(v); if (o.status === 'done') o.lawPay = calcLawPay(calcOrderDurationMs(o)); saveOrderTrips(); updateOtUI(); }
+    if (o) { 
+        if (f === 'orderNo') o.orderNo = v; 
+        if (f === 'amount') {
+            o.amount = pf(v); 
+            // 🌟 即時連動：若修改主要訂單金額，立刻更新卡片上的「初派X單：$金額」
+            if (o.isMain) {
+                const mainAmtEl = document.getElementById(`ot-main-amt-${tId}`);
+                if (mainAmtEl) mainAmtEl.textContent = o.amount;
+            }
+            // 🌟 即時連動：更新頂部總覽卡片的數據
+            if (typeof updateOtSummaryStats === 'function') updateOtSummaryStats();
+        }
+        if (o.status === 'done') o.lawPay = calcLawPay(calcOrderDurationMs(o)); 
+        saveOrderTrips(); // 靜默寫入 LocalStorage 存檔，不刷新 DOM 避免輸入框失去焦點
+    }
 };
-// 6. 新增行程面板（1.選擇平台 2.一次派幾單 3.主要訂單總金額）
+
+// 6. 新增行程面板（1.選擇平台[預設無選擇+置中] 2.出發時間 3.一次派幾單 4.主要訂單總金額）
 window.openAddOrderTripPanel = function() {
     ensureOrderTripsLoaded();
     const activePlatforms = (S.platforms || []).filter(p => p.active);
-    if (!activePlatforms.length) { toast('請先到「設定」，啟用平台'); return; }
-    if (!S.otAddPlatformId || !activePlatforms.find(p => p.id === S.otAddPlatformId)) {
-        S.otAddPlatformId = activePlatforms[0].id;
-    }
+    if (!activePlatforms.length) { toast('請先到設定啟用至少一個平台'); return; }
+
+    // 🌟 預設重置為無選擇任何平台
+    S.otAddPlatformId = null;
+
     if (![1,2,3].includes(S.otAddBatchCount)) S.otAddBatchCount = 1;
 
     document.getElementById('ot-add-trip-overlay')?.remove();
 
+    // 平台按鈕 HTML（預設全未選中）
     const chipsHtml = activePlatforms.map(p => {
         const on = S.otAddPlatformId === p.id;
-        return `<div class="platform-chip${on ? ' on' : ''}" style="${on ? `background:${p.color};border-color:${p.color}` : ''}" onclick="selectOtAddPlatform(this,'${p.id}')"><span>${safeText(p.name)}</span></div>`;
+        const color = p.color || '#2563eb';
+        const style = on
+            ? `background:${color}; border-color:${color}; color:#ffffff; font-weight:800; box-shadow:0 4px 10px ${color}40;`
+            : `background:${color}15; border-color:${color}50; color:${color}; font-weight:800;`;
+        return `<div class="platform-chip${on ? ' on' : ''}" data-plat-color="${color}" style="${style}" onclick="selectOtAddPlatform(this,'${p.id}')"><span>${safeText(p.name)}</span></div>`;
     }).join('');
 
     const batchHtml = [1,2,3].map(n => {
@@ -4607,66 +4907,99 @@ window.openAddOrderTripPanel = function() {
         return `<div class="platform-chip${on ? ' on' : ''}" style="${on ? 'background:var(--acc);border-color:var(--acc);' : ''}flex:1;justify-content:center;" onclick="selectOtAddBatch(this,${n})">${n}單</div>`;
     }).join('');
 
+    const currentTimeStr = nowTime(); // 預設帶入目前時間 (HH:MM)
+
     const panelHtml = `
     <div id="ot-add-trip-overlay" style="position:fixed;inset:0;z-index:999995;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;" onclick="if(event.target===this) closeAddOrderTripPanel()">
-      <div style="background:#ffffff;width:100%;border-radius:32px 32px 0 0;padding:12px 20px calc(24px + env(safe-area-inset-bottom)) 20px;box-sizing:border-box;max-height:90vh;overflow-y:auto;">
+      <div style="background:#ffffff;width:100%;border-radius:28px 28px 0 0;padding:12px 20px calc(24px + env(safe-area-inset-bottom)) 20px;box-shadow:0 -10px 40px rgba(0,0,0,0.15);box-sizing:border-box;max-height:90vh;overflow-y:auto;">
+        
         <!-- 頂部把手指示條 -->
-        <div style="width:56px;height:5px;background:#cbd5e1;border-radius:2px;margin:0 auto 16px auto;"></div>
+        <div style="width:56px;height:4px;background:#cbd5e1;border-radius:2px;margin:0 auto 12px auto;"></div>
+
         <!-- 標頭區塊 -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:38px;height:38px;background:#e0f2fe;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#0284c7;">🛵</div>
-            <div>
-              <div style="font-size:22px;font-weight:900;color:var(--t1);letter-spacing:0.5px;">建立派單行程</div>
-              <div style="font-size:13px;color:var(--t3);font-weight:700;">設定平台、單數與派單金額</div>
-            </div>
+        <div style="display:flex;align-items:center;justify-content:center;;margin-bottom:15px;padding-bottom:10px;border-bottom:1.5px dashed #e2e8f0;">
+          <div style="display:flex;align-items:center;">
+            <div style="font-size:26px;font-weight:900;color: #0e4fbf;letter-spacing:0.8px;margin:0 70px 0 110px;">建立派單行程</div>
           </div>
-          <button onclick="closeAddOrderTripPanel()" style="background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;color:#64748b;font-size:18px;font-weight:1000;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.2s;">✕</button>
+          <button onclick="closeAddOrderTripPanel()" class="bar-btn" style="width:32px;height:32px;"><img src="images/close1.png" style="width:100%;height:100%;object-fit:contain;"></button>
         </div>
-        <!-- 步驟 1: 選擇平台 -->
-        <div style="margin-bottom:25px;">
-          <div style="font-size:20px;font-weight:800;color:var(--text-blue);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;">1</span>
-            <span class="rtus" style="letter-spacing:4px;">選擇外送平台</span>
+
+        <!-- 🌟 步驟 1: 選擇平台 (置中對齊) -->
+        <div style="margin-bottom:22px;">
+          <div style="font-size:28px;font-weight:800;color:var(--t1);margin-bottom:1px;display:flex;align-items:center;gap:6px;letter-spacing:0.8px;">
+            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;">1</span>
+            外送平台
           </div>
-          <div id="ot-add-platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;">${chipsHtml}</div>
+          <div id="ot-add-platform-chips" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">${chipsHtml}</div>
         </div>
-        <!-- 步驟 2: 一次派幾單 -->
-        <div style="margin-bottom:25px;">
-          <div style="font-size:20px;font-weight:800;color:var(--text-blue);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;">2</span>
-            <span class="rtus" style="letter-spacing:4px;">一次派幾單？</span>
+
+        <!-- 步驟 2: 派單時間 -->
+        <div style="margin-bottom:22px;">
+          <div style="font-size:28px;font-weight:800;color:var(--t1);margin-bottom:1px;display:flex;align-items:center;gap:6px;letter-spacing:0.8px;">
+            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;">2</span>
+            派單時間
+          </div>
+          <div style="position:relative;display:flex;align-items:center;">
+            <span style="position:absolute;left:14px;font-size:16px;pointer-events:none;">⏰</span>
+            <input id="ot-add-time" type="time" value="${currentTimeStr}" style="width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:16px;padding:10px 14px 10px 40px;font-size:18px;font-weight:900;font-family:var(--mono, monospace);color:var(--t1);outline:none;background:#f8fafc;cursor:pointer;transition:all 0.2s;" onfocus="this.style.borderColor='#0284c7';this.style.background='#ffffff'" onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+          </div>
+        </div>
+
+        <!-- 步驟 3: 一次派幾單 -->
+        <div style="margin-bottom:22px;">
+          <div style="font-size:28px;font-weight:800;color:var(--t1);margin-bottom:1px;display:flex;align-items:center;gap:6px;letter-spacing:0.8px;">
+            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;">3</span>
+            一次派幾單？
           </div>
           <div id="ot-add-batch-chips" style="display:flex;gap:8px;">${batchHtml}</div>
         </div>
-        <!-- 步驟 3: 金額輸入 -->
-        <div style="margin-bottom:40px;">
-          <div style="font-size:20px;font-weight:800;color:var(--text-blue);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;">3</span>
-            <span class="rtus" style="letter-spacing:4px;">派單總金額</span>
+
+        <!-- 步驟 4: 金額輸入 -->
+        <div style="margin-bottom:32px;">
+          <div style="font-size:28px;font-weight:800;color:var(--t1);margin-bottom:1px;display:flex;align-items:center;gap:6px;letter-spacing:0.8px;">
+            <span style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;">4</span>
+            派單總金額
           </div>
           <div style="position:relative;display:flex;align-items:center;">
             <span style="position:absolute;left:14px;font-size:18px;font-weight:900;color:#0284c7;font-family:var(--mono, monospace);">$</span>
-            <input id="ot-add-amount" type="number" placeholder="0" inputmode="decimal" style="width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:16px;padding:12px 14px 12px 34px;font-size:22px;font-weight:800;font-family:var(--mono, monospace);color:var(--t1);outline:none;background:#f8fafc;transition:all 0.2s;" onfocus="this.style.borderColor='#0284c7';this.style.background='#ffffff'" onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+            <input id="ot-add-amount" type="number" placeholder="0" inputmode="decimal" style="width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:16px;padding:12px 14px 12px 34px;font-size:22px;font-weight:900;font-family:var(--mono, monospace);
+              color:var(--green);letter-spacing:1px;outline:none;background:#f8fafc;transition:all 0.2s;" onfocus="this.style.borderColor='#0284c7';this.style.background='#ffffff'" onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
           </div>
         </div>
+
         <!-- 底部操作按鈕 -->
-        <div style="display:flex;gap:12px;margin-bottom:30px;">
+        <div style="display:flex;gap:12px;margin-bottom:50px;">
           <button onclick="closeAddOrderTripPanel()" style="flex:1;background:#f1f5f9;color:#64748b;border:none;padding:14px;border-radius:16px;font-weight:800;font-size:15px;cursor:pointer;transition:0.2s;">取消</button>
-          <button onclick="confirmAddOrderTrip()" style="flex:2;background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#ffffff;border:none;padding:14px;border-radius:16px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:0.2s;">🚀 開始新增</button>
+          <button onclick="confirmAddOrderTrip()" style="flex:2;background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#ffffff;border:none;padding:14px;border-radius:16px;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 5px rgba(2,132,199,0.5);display:flex;align-items:center;justify-content:center;gap:6px;transition:0.2s;">🚀 新增，並開始計時</button>
         </div>
+
       </div>
     </div>`;
     document.body.insertAdjacentHTML('beforeend', panelHtml);
 };
 
+// 點擊選擇平台 (維持各自平台的專屬色彩)
 window.selectOtAddPlatform = function(el, id) {
     S.otAddPlatformId = id;
-    const p = getPlatform(id);
+
+    // 1. 將所有平台按鈕恢復為「各自平台的專屬未選取顏色」
     document.querySelectorAll('#ot-add-platform-chips .platform-chip').forEach(c => {
-        c.classList.remove('on'); c.style.background = ''; c.style.borderColor = '';
+        const color = c.dataset.platColor || '#94a3b8';
+        c.classList.remove('on');
+        c.style.background = color + '15';  // 淡色背景
+        c.style.borderColor = color + '50'; // 專屬邊框
+        c.style.color = color;              // 專屬文字顏色
+        c.style.boxShadow = 'none';
     });
-    el.classList.add('on'); el.style.background = p.color; el.style.borderColor = p.color;
+
+    // 2. 將點選的平台切換為「實心主色 + 亮白字 + 專屬光暈」
+    const p = getPlatform(id);
+    const color = p.color || '#2563eb';
+    el.classList.add('on');
+    el.style.background = color;
+    el.style.borderColor = color;
+    el.style.color = '#ffffff';
+    el.style.boxShadow = `0 4px 10px ${color}40`;
 };
 
 window.selectOtAddBatch = function(el, n) {
@@ -4681,33 +5014,81 @@ window.closeAddOrderTripPanel = function() {
     document.getElementById('ot-add-trip-overlay')?.remove();
 };
 
+// 🌟 確認新增：自動將選定的出發時間轉為時間戳記，並立即啟動主要訂單與初始夾單計時
 window.confirmAddOrderTrip = function() {
     const platformId = S.otAddPlatformId;
     if (!platformId) { toast('請選擇平台'); return; }
     const batchCount = [1,2,3].includes(S.otAddBatchCount) ? S.otAddBatchCount : 1;
     const amount = pf(document.getElementById('ot-add-amount')?.value);
+    const timeVal = document.getElementById('ot-add-time')?.value || nowTime();
 
     ensureOrderTripsLoaded();
+
+    const dateStr = S.otViewDate || todayStr();
+    
+    // 🌟 精確設定本地當天時間，解決一開始顯示 24:00:00 的問題
+    const [h, m] = timeVal.split(':').map(Number);
+    const startDateObj = new Date();
+    if (!isNaN(h) && !isNaN(m)) {
+        startDateObj.setHours(h, m, 0, 0);
+    }
+    const startTs = startDateObj.getTime();
+
+    // 主要訂單
+    const mainOrder = {
+        id: newId(),
+        orderNo: '',
+        amount,
+        startTs,
+        endTs: null,
+        status: 'running', // 立即啟動計時
+        lawPay: 0,
+        isMain: true
+    };
+
+    // 初始夾單
     const bundled = [];
     for (let i = 0; i < batchCount - 1; i++) {
-        bundled.push({ id: newId(), orderNo: '', amount: 0, startTs: null, endTs: null, status: 'idle', lawPay: 0, isMain: false });
+        bundled.push({
+            id: newId(),
+            orderNo: '',
+            amount: 0,
+            startTs,
+            endTs: null,
+            status: 'running', // 同步啟動計時
+            lawPay: 0,
+            isMain: false
+        });
     }
+
     const trip = {
         id: newId(),
-        date: S.otViewDate || todayStr(),
+        date: dateStr,
         platformId,
         createdAt: Date.now(),
         tripNo: 0,
-        main: { id: newId(), orderNo: '', amount, startTs: null, endTs: null, status: 'idle', lawPay: 0, isMain: true },
+        main: mainOrder,
         bundled,
         midway: [],
         extrasOpen: false
     };
+
+    // 1. 推入記憶體
     S.orderTrips.push(trip);
+    
+    // 2. 重新編排行程序號並寫入 LocalStorage 存檔
     reindexOrderTrips();
+
+    // 3. 自動跳轉到該日期的最後一頁，確保使用者能直接看到新新增的項目
+    const currentDayTrips = S.orderTrips.filter(t => t.date === dateStr);
+    const perPage = 10;
+    S.otPage = Math.max(1, Math.ceil(currentDayTrips.length / perPage));
+
+    // 4. 關閉彈窗並更新畫面
     closeAddOrderTripPanel();
     updateOtUI();
-    toast('已新增行程 ✅');
+    startOrderTimerTicker();
+    toast('🚀 行程已新增，並同步啟動計時！');
 };
 /* ══════════════════════════════════════   訂單計時模組（結束） ══════════════════════════════════════ */
 
@@ -4913,7 +5294,7 @@ function renderRptOverview() {
   const bonus = recs.reduce((s,r) => s+pf(r.bonus)+pf(r.tempBonus), 0); 
   const tips = recs.reduce((s,r) => s+pf(r.tips), 0);
   const orders = recs.reduce((s,r) => s+pf(r.orders), 0); 
-  const mileage = recs.reduce((s,r) => s+pf(r.mileage), 0); // 👈 新增計算里程
+  const mileage = recs.reduce((s,r) => s+pf(r.mileage), 0);
   const hours = calcTotalHours(recs);
   const cashTipTotal = recs.filter(r=>r.isCashTip).reduce((s,r)=>s+pf(r.cashTipAmt), 0);
 
@@ -4924,10 +5305,8 @@ function renderRptOverview() {
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
-  // 👇 基本工資分析
   const wageHtml = getWageBadge(hours, total);
 
-  // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
   let tagsParts = [];
   
   if (orders > 0) {
@@ -4964,7 +5343,6 @@ function renderRptOverview() {
     `;
   }
 
-  // 👇 導入加大加粗的新版導航列
   let html = `
     <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
       <button class="btn btn1" onclick="navRptMonth(-1)" style="width: 42px; height: 42px;">◀</button>
@@ -4972,17 +5350,15 @@ function renderRptOverview() {
       <button class="btn btn1" onclick="navRptMonth(1)" style="width: 42px; height: 42px;">▶</button>
     </div>`;
 
-  // 計算佔比 (將邏輯移到字串外面，修復錯誤)
   const pcts = getExactPercentages([income, bonus, tips]);
   const incPct = pcts[0];
   const bonPct = pcts[1];
   const tipPct = pcts[2];
 
-  // 收入分析，本月總收入框
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:2px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.3); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:2px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.3); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:32px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:4px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
@@ -5058,15 +5434,13 @@ function renderRptOverview() {
       </div>
     </div>`;
 
-  // --- 後面的「結構佔比分析卡片 (包含平台切換與圓餅圖)」保持不變 ---
-
-  // 結構佔比分析卡片 (包含平台切換與圓餅圖)
-  html += `<div class="card" style="border:1.5px solid var(--card-border);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <div style="font-size:13px; font-weight:800; color:var(--t2);">📊 結構佔比分析</div>
+  // 🌟 結構佔比分析卡片 (右上角新增旋轉折疊按鈕)
+  html += `<div style="border:1.5px solid var(--card-border);background:var(--sf);border-radius:var(--r);padding:2px 12px 10px 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;margin-bottom:4px;">
+      <div style="font-size:15px; font-weight:800; color:var(--t2);">📊 結構佔比分析</div>
+      <div id="pie-list-col-btn" onclick="toggleSummaryCard('pie-list-col')" class="btn btn4" style="cursor:pointer;transition:transform 0.3s;width:40px;height:40px;">▼</div>
     </div>`;
 
-  // 將平台切換按鈕放在卡片內部
   html += `<div style="display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
     <button onclick="S.rptOverviewFilter='all'; renderReport()" style="flex-shrink:0; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${isAll ? 'background:var(--acc); color:#fff; box-shadow:0 2px 6px rgba(255,107,53,0.3);' : 'background:var(--sf2); color:var(--t2);'}">全部</button>`;
   activePlats.forEach(p => {
@@ -5075,7 +5449,6 @@ function renderRptOverview() {
   });
   html += `</div>`;
 
-  // 圓餅圖與列表分析邏輯
   let pieLabels = [], pieData = [], pieColors = [], listHtml = '';
   
   if (isAll && total > 0) {
@@ -5084,16 +5457,15 @@ function renderRptOverview() {
     
     const platPcts = getExactPercentages(pieData);
     
-    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
     listHtml = platData.map((p, idx) => {
       const pct = platPcts[idx];
       return `
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
+        <div style="display:grid;grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
           <div style="display:flex; align-items:center; justify-content:flex-start;">
             <div style="width:10px; height:10px; border-radius:3px; background:${p.color}; margin-right:8px; flex-shrink:0;"></div>
             <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(p.name)}</span>
           </div>
-          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--blue); text-align:right;">${pct} <span style="font-size:9px;">%</span></span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
             <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(p.val)}
           </span>
@@ -5108,7 +5480,6 @@ function renderRptOverview() {
       { name: 'APP小費', val: tips, color: '#3b82f6', pct: tipPct }
     ].filter(d => d.val > 0);
     
-    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
     listHtml = details.map(d => {
       return `
         <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
@@ -5116,7 +5487,7 @@ function renderRptOverview() {
             <div style="width:10px; height:10px; border-radius:3px; background:${d.color}; margin-right:8px; flex-shrink:0;"></div>
             <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(d.name)}</span>
           </div>
-          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${d.pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--blue); text-align:right;">${d.pct} <span style="font-size:9px;">%</span></span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
             <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(d.val)}
           </span>
@@ -5127,46 +5498,49 @@ function renderRptOverview() {
   if (total > 0) {
     html += `
       <div style="position:relative; height:180px; margin-bottom:16px;">
-        <!-- 注意：若是 renderRptYearOverview，請確保下方 ID 為 plat-pie-year -->
         <canvas id="${S.rptView === 'yearOverview' ? 'plat-pie-year' : 'plat-pie'}"></canvas>
       </div>
-      <div style="display:flex; flex-direction:column;">
-        
-        <!-- 👇 三等分表頭 (加入 10px 左右內距) -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid var(--border);">
-          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:left;">項目</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">佔比</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">金額</span>
-        </div>
-        
-        ${listHtml}
-        
-        <!-- 👇 三等分總計列 (加入 10px 左右內距，縮小金錢符號) -->
-        <div style="position:relative; display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:12px 10px; margin: 6px -14px 4px -14px; z-index:1;">
-          <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
-            <defs>
-              <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#3b3b3f" />
-                <stop offset="40%" stop-color="#353535" />
-                <stop offset="50%" stop-color="#282828" />
-                <stop offset="100%" stop-color="#18181b" />
-              </linearGradient>
-              <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#fbbf24" />
-                <stop offset="50%" stop-color="#fef08a" />
-                <stop offset="100%" stop-color="#d97706" />
-              </linearGradient>
-            </defs>
-            <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
-            <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
-            <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
-          </svg>
+      
+      <!-- 🌟 新增：預設折疊外框 (max-height: 0px) -->
+      <div id="pie-list-col" style="max-height:0px; overflow:hidden; transition:max-height 0.35s ease;">
+        <div style="display:flex; flex-direction:column;">
           
-          <span style="font-size:16px; font-weight:800; color: #00eeff; letter-spacing:1px; text-align:left; padding-left:14px;">🔷 總計</span>
-          <span style="font-family:var(--mono); font-size:14px; font-weight:800; color: #FFD700; text-align:right; margin-right:2px;">100 <span style="font-size:9px;">%</span></span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color: #ffffff; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5); padding-right:10px;">
-            <span style="font-size:10px; opacity:0.8; margin-right:2px;">$ </span>${fmt(total)}
-          </span>
+          <!-- 三等分表頭 -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid var(--border);">
+            <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:left;">項目</span>
+            <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">佔比</span>
+            <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">金額</span>
+          </div>
+          
+          ${listHtml}
+          
+          <!-- 三等分總計列 -->
+          <div style="position:relative; display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:12px 10px; margin: 6px -14px 4px -14px; z-index:1;">
+            <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
+              <defs>
+                <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#3b3b3f" />
+                  <stop offset="40%" stop-color="#353535" />
+                  <stop offset="50%" stop-color="#282828" />
+                  <stop offset="100%" stop-color="#18181b" />
+                </linearGradient>
+                <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fbbf24" />
+                  <stop offset="50%" stop-color="#fef08a" />
+                  <stop offset="100%" stop-color="#d97706" />
+                </linearGradient>
+              </defs>
+              <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
+              <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
+              <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+            </svg>
+            
+            <span style="font-size:16px; font-weight:800; color: #00eeff; letter-spacing:1px; text-align:left; padding-left:14px;">🔷 總計</span>
+            <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #FFD700; text-align:right; margin-right:2px;">100 <span style="font-size:9px;">%</span></span>
+            <span style="font-family:var(--mono); font-size:16px; font-weight:900; color: #ffffff; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5); padding-right:10px;">
+              <span style="font-size:10px; opacity:0.8; margin-right:2px;">$ </span>${fmt(total)}
+            </span>
+          </div>
         </div>
       </div>`;
   
@@ -5174,8 +5548,8 @@ function renderRptOverview() {
     html += `<div class="empty-tip" style="padding:16px 0;">所選平台，本區間無記錄</div>`;
   }
 
-  html += `</div>`; // 結束佔比卡片
-
+  html += `</div>`;
+  
   document.getElementById('rv-overview').innerHTML = html;
   
   if (total > 0 && pieData.length > 0) {
@@ -5187,10 +5561,8 @@ function renderRptOverview() {
 function renderRptYearOverview() {
   if (!S.rptYearOverviewFilter) S.rptYearOverviewFilter = 'all';
   
-  // 👈 抓取該年度「所有月份」的記錄
   const allYearRecs = S.records.filter(r => r.date && r.date.startsWith(`${S.rptY}-`));
   
-  // 依照選擇的標籤過濾資料
   const isAll = S.rptYearOverviewFilter === 'all';
   const recs = isAll ? allYearRecs : allYearRecs.filter(r => r.platformId === S.rptYearOverviewFilter || r.isPunchOnly);
   
@@ -5212,7 +5584,6 @@ function renderRptYearOverview() {
 
   const wageHtml = getWageBadge(hours, total);
 
-  // 單數、里程、工時膠囊
   let tagsParts = [];
   if (orders > 0) {
     tagsParts.push(`<div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span><span style="font-size:10px; font-weight:600; color:#f97316;">單</span></div>`);
@@ -5226,7 +5597,6 @@ function renderRptYearOverview() {
 
   let tagsHtml = tagsParts.length > 0 ? `<div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:4px; background: #e2e8f0; gap:2px;">${tagsParts.join('')}</div>` : '';
 
-  // 👇 年份導航列 (無月份)
   let html = `
     <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
       <button class="btn btn1" onclick="navRptYear(-1)" style="width: 42px; height: 42px;">◀</button>
@@ -5239,11 +5609,10 @@ function renderRptYearOverview() {
   const pcts = getExactPercentages([income, bonus, tips]);
   const incPct = pcts[0]; const bonPct = pcts[1]; const tipPct = pcts[2];
 
-  // 全年總收入框
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-year-overview-col-btn" onclick="toggleSummaryCard('rpt-year-overview-col')" style="position:absolute; top:2px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.3); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:25px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">▼</div>
+      <div id="rpt-year-overview-col-btn" onclick="toggleSummaryCard('rpt-year-overview-col')" style="position:absolute; top:2px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.3); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:32px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-year-overview-col')" style="padding:4px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
@@ -5296,10 +5665,11 @@ function renderRptYearOverview() {
       </div>
     </div>`;
 
-  // 結構佔比分析卡片
-  html += `<div class="card" style="border:1.5px solid var(--card-border);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <div style="font-size:13px; font-weight:800; color:var(--t2);">📊 結構佔比分析</div>
+  // 🌟 結構佔比分析卡片 (右上角新增旋轉折疊按鈕)
+  html += `<div style="border:1.5px solid var(--card-border);background:var(--sf);border-radius:var(--r);padding:2px 12px 10px 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;margin-bottom:4px;">
+      <div style="font-size:15px; font-weight:800; color:var(--t2);">📊 結構佔比分析</div>
+      <div id="pie-list-col-year-btn" onclick="toggleSummaryCard('pie-list-col-year')" class="btn btn4" style="cursor:pointer;transition:transform 0.3s;width:40px;height:40px;">▼</div>
     </div>`;
 
   html += `<div style="display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px;">
@@ -5318,7 +5688,6 @@ function renderRptYearOverview() {
     
     const platPcts = getExactPercentages(pieData);
     
-    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
     listHtml = platData.map((p, idx) => {
       const pct = platPcts[idx];
       return `
@@ -5327,7 +5696,7 @@ function renderRptYearOverview() {
             <div style="width:10px; height:10px; border-radius:3px; background:${p.color}; margin-right:8px; flex-shrink:0;"></div>
             <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(p.name)}</span>
           </div>
-          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--blue); text-align:right;">${pct} <span style="font-size:9px;">%</span></span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
             <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(p.val)}
           </span>
@@ -5342,7 +5711,6 @@ function renderRptYearOverview() {
       { name: 'APP小費', val: tips, color: '#3b82f6', pct: tipPct }
     ].filter(d => d.val > 0);
     
-    // 👇 完美三等分 Grid，內距 10px，分隔線 1.5px，金錢符號縮小
     listHtml = details.map(d => {
       return `
         <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid #f1f5f9;">
@@ -5350,7 +5718,7 @@ function renderRptYearOverview() {
             <div style="width:10px; height:10px; border-radius:3px; background:${d.color}; margin-right:8px; flex-shrink:0;"></div>
             <span style="font-size:13px; font-weight:800; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeText(d.name)}</span>
           </div>
-          <span style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--blue); text-align:right;">${d.pct} <span style="font-size:9px;">%</span></span>
+          <span style="font-family:var(--mono); font-size:15px; font-weight:800; color:var(--blue); text-align:right;">${d.pct} <span style="font-size:9px;">%</span></span>
           <span style="font-family:var(--mono); font-size:15px; font-weight:900; color:var(--t1); text-align:right;">
             <span style="font-size:10px; color:#94a3b8; margin-right:2px; font-weight:700;">$ </span>${fmt(d.val)}
           </span>
@@ -5361,46 +5729,49 @@ function renderRptYearOverview() {
   if (total > 0) {
     html += `
       <div style="position:relative; height:180px; margin-bottom:16px;">
-        <!-- 注意：若是 renderRptYearOverview，請確保下方 ID 為 plat-pie-year -->
         <canvas id="${S.rptView === 'yearOverview' ? 'plat-pie-year' : 'plat-pie'}"></canvas>
       </div>
-      <div style="display:flex; flex-direction:column;">
-        
-        <!-- 👇 三等分表頭 (加入 10px 左右內距) -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid var(--border);">
-          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:left;">項目</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">佔比</span>
-          <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">金額</span>
-        </div>
-        
-        ${listHtml}
-        
-        <!-- 👇 三等分總計列 (加入 10px 左右內距，縮小金錢符號) -->
-        <div style="position:relative; display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:12px 10px; margin: 6px -14px 4px -14px; z-index:1;">
-          <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
-            <defs>
-              <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#3b3b3f" />
-                <stop offset="40%" stop-color="#353535" />
-                <stop offset="50%" stop-color="#282828" />
-                <stop offset="100%" stop-color="#18181b" />
-              </linearGradient>
-              <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#fbbf24" />
-                <stop offset="50%" stop-color="#fef08a" />
-                <stop offset="100%" stop-color="#d97706" />
-              </linearGradient>
-            </defs>
-            <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
-            <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
-            <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
-          </svg>
+      
+      <!-- 🌟 新增：預設折疊外框 (max-height: 0px) -->
+      <div id="pie-list-col-year" style="max-height:0px; overflow:hidden; transition:max-height 0.35s ease;">
+        <div style="display:flex; flex-direction:column;">
           
-          <span style="font-size:16px; font-weight:800; color: #00eeff; letter-spacing:1px; text-align:left; padding-left:14px;">🔷 總計</span>
-          <span style="font-family:var(--mono); font-size:14px; font-weight:800; color: #FFD700; text-align:right; margin-right:2px;">100 <span style="font-size:9px;">%</span></span>
-          <span style="font-family:var(--mono); font-size:16px; font-weight:900; color: #ffffff; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5); padding-right:10px;">
-            <span style="font-size:10px; opacity:0.8; margin-right:2px;">$ </span>${fmt(total)}
-          </span>
+          <!-- 三等分表頭 -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:10px 10px; border-bottom:1.5px solid var(--border);">
+            <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:left;">項目</span>
+            <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">佔比</span>
+            <span style="font-size:12px; font-weight:800; color:var(--t3); text-align:right;">金額</span>
+          </div>
+          
+          ${listHtml}
+          
+          <!-- 三等分總計列 -->
+          <div style="position:relative; display:grid; grid-template-columns: 1fr 1fr 1.5fr; align-items:center; padding:12px 10px; margin: 6px -14px 4px -14px; z-index:1;">
+            <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:-1; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));">
+              <defs>
+                <linearGradient id="darkGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#3b3b3f" />
+                  <stop offset="40%" stop-color="#353535" />
+                  <stop offset="50%" stop-color="#282828" />
+                  <stop offset="100%" stop-color="#18181b" />
+                </linearGradient>
+                <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fbbf24" />
+                  <stop offset="50%" stop-color="#fef08a" />
+                  <stop offset="100%" stop-color="#d97706" />
+                </linearGradient>
+              </defs>
+              <polygon points="25,0 975,0 1000,20 975,40 25,40 0,20" fill="url(#darkGoldGrad)" />
+              <polygon points="28,3 972,3 995,20 972,37 28,37 5,20" fill="none" stroke="url(#goldLineGrad)" stroke-width="1.5" />
+              <polygon points="30,6 970,6 991,20 970,34 30,34 9,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+            </svg>
+            
+            <span style="font-size:16px; font-weight:800; color: #00eeff; letter-spacing:1px; text-align:left; padding-left:14px;">🔷 總計</span>
+            <span style="font-family:var(--mono); font-size:15px; font-weight:800; color: #FFD700; text-align:right; margin-right:2px;">100 <span style="font-size:9px;">%</span></span>
+            <span style="font-family:var(--mono); font-size:16px; font-weight:900; color: #ffffff; text-align:right; text-shadow:0 2px 4px rgba(0,0,0,0.5); padding-right:10px;">
+              <span style="font-size:10px; opacity:0.8; margin-right:2px;">$ </span>${fmt(total)}
+            </span>
+          </div>
         </div>
       </div>`;
   
@@ -5919,7 +6290,7 @@ function renderRptCompare() {
           <!-- 👇 信封內容 (Envelope Body) -->
           <div style="padding:14px 4px 6px 4px; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(to bottom, #fcfcfc, #ffffff);">
             <!-- 數值 -->
-            <div style="font-family:var(--mono); font-size:16px; font-weight:1000; color:#1e293b; line-height:1.2; margin-bottom:4px; text-align:center;">
+            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:#1e293b; line-height:1.2; margin-bottom:4px; text-align:center;">
               ${c.v}
             </div>
             <!-- 漲跌標籤 -->
@@ -6231,7 +6602,34 @@ function renderRptTop3() {
 function drawPie(canvasId, labels, data, colors) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-  S.charts[canvasId] = new Chart(ctx, { type: 'doughnut', data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] }, options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ display:true, position:'bottom', labels:{font:{size:11},padding:8} } }, animation:{ duration:400 } } });
+  
+  // 計算總金額供 Tooltip 計算 % 數
+  const totalSum = data.reduce((a, b) => a + b, 0);
+
+  S.charts[canvasId] = new Chart(ctx, { 
+    type: 'doughnut', 
+    data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] }, 
+    options: { 
+      responsive:true, 
+      maintainAspectRatio:false, 
+      cutout:'60%', 
+      plugins:{ 
+        legend:{ display:true, position:'bottom', labels:{font:{size:11},padding:8} },
+        tooltip:{
+          callbacks:{
+            // 🌟 新增：% 數值顯示邏輯
+            label: function(context) {
+              const label = context.label || '';
+              const val = context.raw || 0;
+              const pct = totalSum > 0 ? ((val / totalSum) * 100).toFixed(1).replace('.0', '') : '0';
+              return ` ${label}: NT$ ${fmt(val)} (${pct}%)`;
+            }
+          }
+        }
+      }, 
+      animation:{ duration:400 } 
+    } 
+  });
 }
 
 function drawBar(canvasId, labels, data, color) {
@@ -6493,8 +6891,8 @@ function renderNetProfitStats(container) {
       <div style="font-family: var(--mono); font-size: 36px; font-weight: 1000; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};"><span style="font-size:18px;margin-right:6px;">$</span>${fmt(netProfit)}</div>
     </div>
 
-    <div style="background:#16a34a;border-radius:16px;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;margin:8px 0;">
-       <span style="font-weight:700; color:#fff; font-size:16px;">外送總收入</span>
+    <div style="background: #0c7d35;border-radius:16px;padding:12px 20px 12px 18px;display:flex;justify-content:space-between;align-items:center;margin:8px 0;">
+       <span style="font-weight:800; color:#fff; font-size:18px;">外送總收入</span>
        <span style="font-family:var(--mono); font-weight:800; font-size:18px; color:#fff;"><span style="font-size:11px;margin-right:6px;">$</span>${fmt(totalInc)}</span>
     </div>
 
@@ -6511,8 +6909,8 @@ function renderNetProfitStats(container) {
             <span style="font-family:var(--mono); font-size:28px; font-weight:900; color:${pctColor};">${totalPct}<small style="font-size:13px;"> %</small></span>
         </div>
 
-        <button onclick="toggleNetExpDetail()" id="net-exp-toggle-btn" style="width:100%; background:#f1f5f9; border:none; padding:10px; border-radius:10px; color:#475569; font-weight:800; font-size:13px; cursor:pointer; margin-bottom:-10px;">
-          <span id="net-exp-arrow">▼</span> 展開支出細項
+        <button onclick="toggleNetExpDetail()" id="net-exp-toggle-btn" style="width:100%;background:#f1f5f9;border:none;padding:10px;border-radius:10px;color:#475569;font-weight:800;font-size:16px;cursor:pointer;margin-bottom:-10px;display:flex;align-items:center;align-content:center;justify-content:center;">
+          <span id="net-exp-arrow" style="display:inline-block; transition:transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); transform:rotate(0deg);font-size:22px;margin-right:5px;">▼</span><span id="net-exp-label">展開支出細項</span>
         </button>
       </div>
 
@@ -6532,19 +6930,28 @@ function renderNetProfitStats(container) {
     </div>
   `;
 }
-// 輔助函式：展開收起
+// 6. 淨賺分析支出細項摺疊 (不重新替換HTML，保持DOM節點順暢旋轉)
 window.toggleNetExpDetail = function() {
   const el = document.getElementById('net-exp-detail');
   const arrow = document.getElementById('net-exp-arrow');
-  if (el.style.maxHeight === '0px' || el.style.maxHeight === '') {
-    el.style.maxHeight = '1000px';
-    arrow.style.transform = 'rotate(180deg)';
-    arrow.parentElement.innerHTML = '<span id="net-exp-arrow" style="transform:rotate(180deg)">▲</span> 收起支出細項';
-  } else {
-    el.style.maxHeight = '0px';
-    arrow.style.transform = 'rotate(0deg)';
-    arrow.parentElement.innerHTML = '<span id="net-exp-arrow">▼</span> 展開支出細項';
-  }
+  const label = document.getElementById('net-exp-label');
+  if (!el) return;
+
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
+
+  const isCollapsed = el.style.maxHeight === '0px' || el.style.maxHeight === '';
+
+  requestAnimationFrame(() => {
+    if (isCollapsed) {
+      el.style.maxHeight = '1000px';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+      if (label) label.textContent = ' 收起支出細項';
+    } else {
+      el.style.maxHeight = '0px';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+      if (label) label.textContent = ' 展開支出細項';
+    }
+  });
 };
 // 輔助：更新後的每行支出樣式 (將百分比標籤放在右邊金額旁)
 function renderNetRow(label, amt, color, pctBadge) {
@@ -6686,14 +7093,17 @@ function selectVehicle(id) {
 window.toggleVehSelector = function() {
   const wrap = document.getElementById('veh-selector-wrapper');
   const btn = document.getElementById('veh-selector-toggle-btn');
+  if (!wrap || !btn) return;
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
+
   if (wrap.style.maxHeight === '0px' || wrap.style.maxHeight === '') {
-    wrap.style.maxHeight = '140px'; // 展開
+    wrap.style.maxHeight = '140px';
     wrap.style.opacity = '1';
-    btn.style.transform = 'rotate(0deg)';
+    btn.style.transform = 'rotate(-180deg)';
   } else {
-    wrap.style.maxHeight = '0px';   // 折疊
+    wrap.style.maxHeight = '0px';
     wrap.style.opacity = '0';
-    btn.style.transform = 'rotate(180deg)';
+    btn.style.transform = 'rotate(0deg)';
   }
 };
 
@@ -7736,8 +8146,8 @@ window.setMaintCategory = function(cat, idx) {
 
 /* ══ 替換：新增車輛記錄 ══ */
 window.openAddVehRec = function(recordId = null) {
-  // 👇 檢查雲端權限
-  if (GLOBAL_REQUIRE_LOGIN && !USER.loggedIn) { showLoginRequiredWarning(); return; }
+  // 👇 檢查會員權限
+  if (!USER.loggedIn) { showLoginRequiredWarning(); return; }
 
   // 🛡️ 防呆機制：若被瀏覽器誤傳 Event 事件物件，強制轉為 null
   if (typeof recordId === 'object' && recordId !== null) recordId = null;
@@ -10719,23 +11129,26 @@ window.insertVersionTag = function(num, textareaId) {
   el.selectionStart = el.selectionEnd = start + prefix.length + tag.length;
 };
 
-/* ══ 內容摺疊切換 ══ */
+// 5. 版本紀錄內容摺疊
 window.toggleVersionCollapse = function(idx) {
   const body = document.getElementById(`ver-body-${idx}`);
   const btn = document.getElementById(`ver-toggle-btn-${idx}`);
   const icon = document.getElementById(`ver-toggle-icon-${idx}`);
   if (!body) return;
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
 
   const isCollapsed = body.style.maxHeight === '0px' || body.style.maxHeight === '';
-  if (isCollapsed) {
-    body.style.maxHeight = body.scrollHeight + 60 + 'px';
-    if (icon) icon.style.transform = 'rotate(180deg)';
-    if (btn) btn.innerHTML = '▲ 收起內容';
-  } else {
-    body.style.maxHeight = '0px';
-    if (icon) icon.style.transform = 'rotate(0deg)';
-    if (btn) btn.innerHTML = '▼ 展開內容';
-  }
+  requestAnimationFrame(() => {
+    if (isCollapsed) {
+      body.style.maxHeight = body.scrollHeight + 60 + 'px';
+      if (icon) icon.style.transform = 'rotate(180deg)';
+      if (btn) btn.innerHTML = '▲ 收起內容';
+    } else {
+      body.style.maxHeight = '0px';
+      if (icon) icon.style.transform = 'rotate(0deg)';
+      if (btn) btn.innerHTML = '▼ 展開內容';
+    }
+  });
 };
 
 // 版本紀錄
@@ -11288,20 +11701,23 @@ function openRewardSettings() {
   openOverlay('sub-page');
 }
 
-/* 控制平台群組折疊 */
+// 7. 獎勵設定平台群組摺疊
 window.toggleRewardGroup = function(platId) {
   const body = document.getElementById(`rw-grp-body-${platId}`);
   const icon = document.getElementById(`rw-grp-icon-${platId}`);
   if (!body || !icon) return;
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
 
-  if (body.style.maxHeight === '0px') {
-    body.style.maxHeight = '2000px';
-    icon.style.transform = 'rotate(180deg)';
-  } else {
-    body.style.maxHeight = '0px';
-    icon.style.transform = 'rotate(0deg)';
-  }
-}
+  requestAnimationFrame(() => {
+    if (body.style.maxHeight === '0px') {
+      body.style.maxHeight = '2000px';
+      icon.style.transform = 'rotate(180deg)';
+    } else {
+      body.style.maxHeight = '0px';
+      icon.style.transform = 'rotate(0deg)';
+    }
+  });
+};
 
 /* 切換獎勵啟用狀態 */
 window.toggleRewardActive = function(id, isChecked) {
@@ -11541,7 +11957,7 @@ function doRestore() {
       const text = await file.text(); 
       const data = JSON.parse(text); 
       // 👇 將檔案名稱安全地顯示在確認視窗中
-      const ok = await customConfirm(`確定使用<br>「<span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span>」<br><span style="color:#ff0000;font-size:20px;font-weight:700;">覆蓋 </span>現有資料？`);
+      const ok = await customConfirm(`<span style="font-size:20px;font-weight:700;">確定使用<br>「 <span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span> 」<br><span style="color:#ff0000;font-size:24px;font-weight:700;">覆蓋 </span>目前資料？</span><br><br><span style="font-size:18px;font-weight:750;color: #20ab2e;">※ 如果目前的資料還有用，建議先按取消，去備份資料。</span>`);
       if (!ok) return; 
       
       if (data.records) { S.records=data.records; saveRecords(); } 
@@ -11604,20 +12020,20 @@ function openExportModal() {
           匯出包含行程、打卡、小費、油資、保養等多活頁簿 Excel 檔案。
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <select id="export-year-select" class="fsel" style="flex:1; font-size:15px; font-weight:800; text-align:center; color:var(--acc);">
+          <select id="export-year-select" class="fsel" style="flex:1;background:#fff;font-size:18px; font-weight:850; text-align:center;color: #ff7300;">
             ${optionsHtml}
           </select>
           <button onclick="executeExcelExport()" class="btn-acc" style="padding:10px 16px; font-size:14px; font-weight:800; border-radius:12px;">確定匯出</button>
         </div>
       </div>
 
-      <!-- 區塊二：訂單計時差額補償表 -->
+      <!-- 區塊二：專法差額補償表 -->
       <div class="card" style="padding:16px; border:1.5px solid #fed7aa; background:#fff7ed;">
-        <div style="font-size:15px; font-weight:900; color:#9a3412; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-          <span>📄</span> 匯出「訂單計時差額補償表」
+        <div style="font-size:18px; font-weight:800; color: #ff5015; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          <span>📄</span> 匯出「專法差額補償表」
         </div>
-        <div style="font-size:12px; color:#c2410c; font-weight:600; margin-bottom:12px; line-height:1.5;">
-          自動比對專法薪資與接單金額，篩選出應補償差額之訂單。
+        <div style="font-size:14px; color: #1d9421; font-weight:650; margin-bottom:12px; line-height:1.5;letter-spacing:0.6px;">
+          自動比對訂單，篩選出應補償差額之訂單。
         </div>
 
         <!-- 模式切換：單日 / 多日 -->
@@ -11628,25 +12044,25 @@ function openExportModal() {
 
         <!-- 單日日期選擇 -->
         <div id="comp-single-wrap" class="fg" style="margin-bottom:12px;">
-          <label style="font-weight:700; color:#9a3412;">📅 選擇日期</label>
+          <label style="font-size:12px;font-weight:700; color:#9a3412;">📅 選擇日期</label>
           <input type="date" id="comp-date-single" class="finp" value="${todayStr()}">
         </div>
 
         <!-- 多日範圍選擇 -->
         <div id="comp-range-wrap" style="display:none; gap:8px; margin-bottom:12px;">
           <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-weight:700; color:#9a3412;">開始日期</label>
+            <label style="font-size:12px;font-weight:700; color:#9a3412;">開始日期</label>
             <input type="date" id="comp-date-from" class="finp" value="${todayStr()}">
           </div>
           <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-weight:700; color:#9a3412;">結束日期</label>
+            <label style="font-size:12px;font-weight:700; color:#9a3412;">結束日期</label>
             <input type="date" id="comp-date-to" class="finp" value="${todayStr()}">
           </div>
         </div>
 
         <!-- 差額金額門檻設定 -->
         <div class="fg" style="margin-bottom:16px;">
-          <label style="font-weight:700; color:#9a3412;">超過差額門檻 ($) <span style="font-size:11px; color:#ea580c;">(預設0元，即差額 > 門檻才匯出)</span></label>
+          <label style="font-size:12px;font-weight:700; color:#9a3412;">超過差額門檻 ($) <span style="font-size:12px;color:#ea580c;">(預設0元，即差額 > 門檻才匯出)</span></label>
           <input type="number" id="comp-min-diff" class="finp" value="0" min="0" placeholder="0" style="font-family:var(--mono); font-weight:900; color:#ea580c;">
         </div>
 
@@ -11819,30 +12235,29 @@ window.executeCompensationExport = function() {
   doExportCompensationSheet(startDate, endDate, minDiff);
 };
 
-/* 4. 真正產生「訂單計時差額補償表」 Excel 檔案 */
+/* 4. 真正產生「專法差額補償表」 (原生 .xlsx 多工作表/頁籤方案) */
 function doExportCompensationSheet(startDate, endDate, minDiffThreshold) {
   if (typeof XLSX === 'undefined') {
     toast('⚠️ Excel 匯出套件載入中，請稍後再試');
     return;
   }
 
-  showProgress('產生差額補償表中...');
+  showProgress('產生多頁籤 Excel 檔案中...');
 
   setTimeout(() => {
     ensureOrderTripsLoaded();
     const minDiff = parseFloat(minDiffThreshold) || 0;
 
-    // 抓取在日期區間內的所有計時行程
+    // 1. 篩選日期區間內的行程
     const targetTrips = S.orderTrips.filter(t => t.date >= startDate && t.date <= endDate);
 
-    const rows = [];
-    let totalAmount = 0;
-    let totalLawPay = 0;
-    let totalDiff = 0;
+    // 2. 按平台分群 (Group by Platform)
+    const platformGroups = {};
 
     targetTrips.forEach(trip => {
       const plat = getPlatform(trip.platformId);
       const orders = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].filter(Boolean);
+      const is3Batch = orders.length === 3; // 判斷是否為一次派 3 單
 
       orders.forEach(o => {
         const amt = pf(o.amount);
@@ -11850,72 +12265,129 @@ function doExportCompensationSheet(startDate, endDate, minDiffThreshold) {
         const law = o.status === 'done' ? pf(o.lawPay) : calcLawPay(durMs);
         const diff = law - amt;
 
-        // 👈 核心篩選：專法薪資 > 接單金額 且 差額金額 > 門檻
+        // 門檻篩選：專法薪資 > 接單金額 且 差額 > 門檻
         if (law > amt && diff > minDiff) {
-          const startStr = o.startTs ? new Date(o.startTs).toTimeString().slice(0, 8) : '--:--:--';
-          const endStr = o.endTs ? new Date(o.endTs).toTimeString().slice(0, 8) : '--:--:--';
+          if (!platformGroups[trip.platformId]) {
+            platformGroups[trip.platformId] = {
+              platInfo: plat,
+              items: []
+            };
+          }
 
-          totalAmount += amt;
-          totalLawPay += law;
-          totalDiff += diff;
-
-          rows.push([
-            trip.date.replace(/-/g, '/'),
-            plat.name,
-            o.orderNo || '無單號',
-            startStr,
-            endStr,
-            amt,
-            law,
-            diff,
-            o.isMain ? '主要訂單' : '夾單'
-          ]);
+          platformGroups[trip.platformId].items.push({
+            date: trip.date,
+            orderNo: o.orderNo || '無單號',
+            startTs: o.startTs,
+            endTs: o.endTs,
+            amount: amt,
+            lawPay: law,
+            diff: diff,
+            is3Batch: is3Batch
+          });
         }
       });
     });
 
-    if (rows.length === 0) {
-      finishProgress(() => toast(`⚠️ 該區間內，無差額大於 ${minDiff} 元的訂單`));
+    const platformKeys = Object.keys(platformGroups);
+    if (platformKeys.length === 0) {
+      finishProgress(() => toast(`⚠️ 該區間內無符合條件（差額 > ${minDiff} 元）之訂單`));
       return;
     }
 
-    const dateRangeStr = (startDate === endDate) 
-      ? `日期：${startDate.replace(/-/g, '/')}` 
+    const dateRangeStr = (startDate === endDate)
+      ? `日期：${startDate.replace(/-/g, '/')}`
       : `日期範圍：${startDate.replace(/-/g, '/')} ~ ${endDate.replace(/-/g, '/')}`;
 
-    // 建立 AOA 表格 (大標題, 日期範圍, 門檻, 表頭, 數據, 總計)
-    const aoa = [
-      ['外送訂單計時差額補償表'],
-      [dateRangeStr, '', '', '', '', '', '', '', `門檻：差額 > ${minDiff} 元`],
-      [], // 空行分隔
-      ['日期', '平台', '單號', '開始時間', '結束時間', '接單金額 ($)', '專法薪資 ($)', '應補償差額 ($)', '備註'],
-      ...rows,
-      [], // 空行分隔
-      ['總計', '', '', '', '', totalAmount, totalLawPay, totalDiff, `共 ${rows.length} 筆門檻差額訂單`]
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-    // 設定 Excel 欄寬，排版更整齊
-    ws['!cols'] = [
-      { wch: 12 }, // 日期
-      { wch: 12 }, // 平台
-      { wch: 16 }, // 單號
-      { wch: 12 }, // 開始時間
-      { wch: 12 }, // 結束時間
-      { wch: 14 }, // 接單金額
-      { wch: 14 }, // 專法薪資
-      { wch: 14 }, // 應補償差額
-      { wch: 18 }  // 備註
-    ];
-
+    // 3. 建立 XLSX 原生活頁簿 (Workbook)
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "差額補償表");
 
+    platformKeys.forEach((pId) => {
+      const group = platformGroups[pId];
+      const plat = group.platInfo;
+      const items = group.items;
+
+      // 排序：先按日期，再按開始時間
+      items.sort((a,b) => a.date.localeCompare(b.date) || (a.startTs || 0) - (b.startTs || 0));
+
+      let totalAmount = 0;
+      let totalLaw = 0;
+      let totalDiff = 0;
+
+      const rows = [];
+
+      // 需求 1: 標題改為 外送訂單，專法差額補償表
+      rows.push(['外送訂單，專法差額補償表']); // Row 0
+      // 需求 2: 刪除門檻資訊，僅留日期
+      rows.push([dateRangeStr]);            // Row 1
+      // 需求 8: 在日期下方標示平台資訊
+      rows.push([`平台：${plat.name}`]);    // Row 2
+      rows.push([]);                        // Row 3 (空白列)
+
+      // 需求 10 & 8: 刪除平台欄位，新增編號欄位 (Row 4)
+      rows.push(['編號', '日期', '單號', '開始時間', '結束時間', '接單金額 ($)', '專法薪資 ($)', '應補償差額 ($)', '備註']);
+
+      items.forEach((item, idx) => {
+        totalAmount += item.amount;
+        totalLaw += item.lawPay;
+        totalDiff += item.diff;
+
+        const startStr = item.startTs ? new Date(item.startTs).toTimeString().slice(0, 8) : '--:--:--';
+        const endStr = item.endTs ? new Date(item.endTs).toTimeString().slice(0, 8) : '--:--:--';
+
+        // 需求 4: 派3單時在開始時間標註 𖦹 符號
+        const startDisplay = item.is3Batch ? `${startStr} 𖦹` : startStr;
+
+        rows.push([
+          idx + 1,                            // 需求 10: 編號
+          item.date.replace(/-/g, '/'),       // 日期
+          item.orderNo,                       // 單號
+          startDisplay,                       // 開始時間
+          endStr,                             // 結束時間
+          item.amount,                        // 接單金額
+          item.lawPay,                        // 專法薪資
+          item.diff,                          // 應補償差額
+          ''                                  // 需求 3: 備註留空手寫
+        ]);
+      });
+
+      // 需求 10: 刪除「共X筆」，標示「總計」 (Row N)
+      const totalRowIdx = rows.length;
+      rows.push(['總計', '', '', '', '', totalAmount, totalLaw, totalDiff, '']);
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+
+      // 設定儲存格合併 (Merges)
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }, // 標題合併 A1:I1
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } }, // 日期合併 A2:I2
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 8 } }, // 平台合併 A3:I3
+        { s: { r: totalRowIdx, c: 0 }, e: { r: totalRowIdx, c: 4 } } // 總計標籤合併 A{N}:E{N}
+      ];
+
+      // 設定理想欄寬 (Column Widths)
+      ws['!cols'] = [
+        { wch: 8 },  // 編號
+        { wch: 14 }, // 日期
+        { wch: 16 }, // 單號
+        { wch: 16 }, // 開始時間
+        { wch: 14 }, // 結束時間
+        { wch: 14 }, // 接單金額
+        { wch: 14 }, // 專法薪資
+        { wch: 16 }, // 應補償差額
+        { wch: 14 }  // 備註
+      ];
+
+      // 需求 7: 以平台名稱建立獨立工作表頁籤 (例如: [Uber Eats], [foodpanda])
+      let sheetName = plat.name.replace(/[:\\/?*\[\]]/g, '').substring(0, 30) || `平台_${pId}`;
+      
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+
+    // 4. 匯出原生多頁籤 .xlsx 檔案
     const fileNameDate = (startDate === endDate) ? startDate : `${startDate}_至_${endDate}`;
     try {
-      XLSX.writeFile(wb, `訂單計時差額補償表_${fileNameDate}.xlsx`);
-      finishProgress(() => toast('📄 差額補償表，匯出完成 ✅'));
+      XLSX.writeFile(wb, `外送訂單，專法差額補償表_${fileNameDate}.xlsx`);
+      finishProgress(() => toast('📄 多頁籤 Excel 匯出完成 ✅'));
     } catch (err) {
       finishProgress(() => toast('❌ 匯出失敗，請重試'));
     }
@@ -11929,11 +12401,10 @@ async function doClearData() {
     <div style="font-size:48px; margin-bottom:12px; text-align:center;">🗑️</div>
     <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">確定清除<span style="color: #0033ff;"> 所有記錄 </span>嗎？</div>
     <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
-      將清空您的「行程記錄」、「車輛保養/加油資料」<br>
-      以及<span style="color:var(--red); font-weight:800;">「訂單計時紀錄」</span>。
+      將清空您的「每日外送記錄」、「車輛保養/加油」、「花費支出」、「訂單計時」等等...，所有全部的記錄。
     </div>
-    <div style="font-size:14px; color:var(--red); font-weight:700; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
-      ⚠️ 此動作《 無法復原 》，【 確定 】繼續？
+    <div style="font-size:16px; color: #ff0000; font-weight:800; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
+      ⚠️ 此動作《 無法復原 》，<br><span style="color:var(--text-blue); font-weight:750;">【 確定 】繼續？</span>
     </div>
   `;
   const ok = await customConfirm(msg); 
@@ -11974,11 +12445,10 @@ async function doReset() {
     <div style="font-size:48px; margin-bottom:12px; text-align:center; animation: waveHand 2s infinite;">🚨</div>
     <div style="font-size:20px; font-weight:900; color:var(--red); margin-bottom:12px; text-align:center;">重置所有設定和資料</div>
     <div style="font-size:14px; color:var(--t1); line-height:1.6; text-align:center; margin-bottom:16px;">
-      App 將完全恢復到剛安裝的<span style="color:var(--text-blue); font-weight:800;"> 初始狀態 </span>！<br>
-      包含計時、紀錄、車輛、目標與平台設定。
+      App 將完全恢復到，剛安裝的<span style="color:var(--text-blue);font-size:16px;font-weight:800;"> 初始狀態 </span>！<br>
     </div>
-    <div style="font-size:14px; color:var(--red); font-weight:700; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
-      ⚠️ 此動作極度危險且《 無法復原 》，<br>【 確定 】要重置？
+    <div style="font-size:16px; color: #ff0000; font-weight:700; text-align:center; background:var(--red-d); border: 1.5px solid rgba(239,68,68,0.3); padding:8px; border-radius:8px;">
+      ⚠️ 此動作《 無法復原 》，<br><span style="color:var(--text-blue); font-weight:750;">【 確定 】繼續？</span>
     </div>
   `;
   const ok = await customConfirm(msg); 
@@ -12762,8 +13232,7 @@ function showInitialSetupModal() {
 
   ov.innerHTML = `
     <div style="background:#fff; border-radius:24px; padding:28px 24px; width:100%; max-width:360px; box-shadow:0 20px 50px rgba(0,0,0,0.15); transform:translateY(30px); transition:0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);" id="init-setup-box">
-      <div style="font-size:48px; text-align:center; margin-bottom:12px; animation: waveHand 2s infinite; transform-origin: bottom center;">👋</div>
-      <h3 style="text-align:center; font-size:24px; font-weight:900; color:var(--t1); margin-bottom:8px;">歡迎使用！</h3>
+      <h3 style="text-align:center; font-size:24px; font-weight:900; color:var(--t1); margin-bottom:8px;">歡迎使用</h3>
       <p style="text-align:center; font-size:14px; color:var(--t2); font-weight:600; margin-bottom:24px; line-height:1.5;">請先勾選您目前有在跑的外送平台<br><span style="font-size:12px; color:var(--hint-color);">(日後可在設定中隨時更改)</span></p>
       
       ${platHtml}
