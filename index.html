@@ -160,10 +160,11 @@
       <!-- 👇 改為 tabs-3 並加入獎勵進度按鈕 -->
       <div class="slide-tabs tabs-4" style="margin-bottom: 4px;">
         <div class="slide-bg" id="home-tab-bg" style="transform: translateX(0%); background: linear-gradient(135deg, #f43f5e 0%, #f97316 40%, #fbbf24 75%, #fcd34d 100%); box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);"></div>
-        <button class="slide-btn active" id="btn-home-schedule" onclick="switchHomeTab('schedule', 0)">平台日程表</button>
-        <button class="slide-btn" id="btn-home-goal" onclick="switchHomeTab('goal', 1)">目標進度</button>
-        <button class="slide-btn" id="btn-home-reward" onclick="switchHomeTab('reward', 2)">獎勵進度</button>
-        <button class="slide-btn" id="btn-home-ordertime" onclick="switchHomeTab('ordertime', 3)">訂單計時</button>
+        <button class="slide-btn active" id="btn-home-schedule" onclick="switchHomeTab('schedule', 0)">平台日程</button>
+        <button class="slide-btn" id="btn-home-ordertime" onclick="switchHomeTab('ordertime', 1)">訂單計時</button>
+        <button class="slide-btn" id="btn-home-goal" onclick="switchHomeTab('goal', 2)">目標進度</button>
+        <button class="slide-btn" id="btn-home-reward" onclick="switchHomeTab('reward', 3)">獎勵進度</button>
+        
       </div>
     </div>
 
@@ -507,10 +508,10 @@
         </div>
         <!-- 右下：新增記錄按鈕（24px 小尺寸 + 邊框彩色漸層） -->
         <div style="display:flex; justify-content:flex-end; padding-bottom:2px;">
-          <button onclick="openAddVehRec()" style=" position:relative;z-index:10;padding:5px 3px;letter-spacing:0.9px;height:12px;background:#FFEA38;border:none;border-radius:9999px;color:#ffffff;font-size:20px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;margin:15px 0 12px 0;transition:all 0.15s ease;text-shadow:-2px -2px 0 #C80000,2px -2px 0 #C80000,-2px 2px 0 #C80000,2px 2px 0 #C80000;overflow:visible;" onmouseover="this.style.transform='translateY(-1px) scale(1.1)';" onmouseout="this.style.transform='translateY(0) scale(1)';" >
+          <button onclick="openAddVehRec()" style=" position:relative;z-index:10;padding:8px 4px;letter-spacing:1.2px;height:12px;border:none;border-radius:9999px;color:#ff0000;font-size:20px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;margin:15px 0 12px 0;transition:all 0.15s ease;-webkit-text-stroke:4px #fff;paint-order:stroke;overflow:visible;" onmouseover="this.style.transform='translateY(-1px) scale(1.1)';" onmouseout="this.style.transform='translateY(0) scale(1)';" >
             <span style="font-size:29px;font-weight:900;margin:0 6px 5px 0;">+</span>車輛記錄
             <!-- 獨立彩色邊框（重點加強） -->
-            <div style=" position:absolute;inset:-6px;border-radius:9999px;background:repeating-linear-gradient( 40deg,#FF1A1A 0px,#FF1A1A 4px,#FF6B6B 4px,#FF6B6B 8px );z-index:-1;box-shadow:0 0 0 3px #B30000,0 0 0 6px #FF4444;pointer-events:none;"></div>
+            <div style=" position:absolute;inset:-6px;border-radius:9999px;background:repeating-linear-gradient( 40deg,#FF1A1A 0px,#FF1A1A 4px,#FF6B6B 4px,#FF6B6B 8px );z-index:-1;box-shadow:0 0 0 3px #B30000,0 0 0 5px #FF4444;pointer-events:none;"></div>
           </button>
         </div>
       </div>
@@ -932,19 +933,19 @@
         <!-- 👇 修改：禁止條款、隱私權政策 (移到聯絡我們上方) -->
         <div onclick="openPrivacyPolicy()" style="background:var(--sf);padding:18px 15px; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
           <span style="font-size:15px; font-weight:500; color:var(--t1);">禁止條款、隱私權政策</span>
-          <span style="color:var(--t3); font-size:20px; font-weight:1000;">›</span>
+          <span style="color:var(--t3); font-size:20px; font-weight:900;">›</span>
         </div>
 
         <!-- 👇 聯絡我們 (移到下面) -->
         <div onclick="openContactUs()" style="background:var(--blue);padding:18px 15px; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
           <span style="font-size:15px; font-weight:650; color:var(--sf);">聯絡我們</span>
-          <span style="color:var(--t1); font-size:20px; font-weight:1000;">›</span>
+          <span style="color:var(--t1); font-size:20px; font-weight:900;">›</span>
         </div>
 
         <!-- 新增版本紀錄 -->
         <div onclick="openVersionHistory()" style="background:var(--sf);padding:18px 15px; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
           <span style="font-size:15px; font-weight:500; color:var(--t1);">版本紀錄</span>
-          <span style="color:var(--t3); font-size:20px; font-weight:1000;">›</span>
+          <span style="color:var(--t3); font-size:20px; font-weight:900;">›</span>
         </div>
 
         <div style="height:70px;"></div>
