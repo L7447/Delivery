@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v465';
+const CACHE_NAME = 'delivery-app-v466';
 
 const ASSETS = [
   '/',
@@ -10,6 +10,10 @@ const ASSETS = [
   '/style.css',
   '/script.js',
   '/manifest.json',
+  
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  
   '/images/home1.png',
   '/images/home2.png',
   '/images/history1.png',
@@ -30,6 +34,7 @@ const ASSETS = [
   '/images/close2.png',
   '/images/close3.png',
   '/images/new-window.png',
+  
   '/scooter/s1.png',
   '/scooter/s2.png',
   '/scooter/s3.png',
@@ -39,6 +44,7 @@ const ASSETS = [
   '/scooter/s7.png',
   '/scooter/s8.png',  
   '/scooter/s9.png',  
+  
   '/Vehicle/ve1.png',
   '/Vehicle/ve2.png',
   '/Vehicle/ve3.png',
