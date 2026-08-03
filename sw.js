@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v466';
+const CACHE_NAME = 'delivery-app-v467';
 
 const ASSETS = [
   '/',
@@ -11,8 +11,8 @@ const ASSETS = [
   '/script.js',
   '/manifest.json',
   
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/icon-192.png',
+  '/icon-512.png',
   
   '/images/home1.png',
   '/images/home2.png',
