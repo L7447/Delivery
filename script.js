@@ -5851,7 +5851,7 @@ function renderRptTrend() {
     <button class="btn btn1" onclick="navTrend(1)" style="width: 42px; height: 42px;">▶</button>
   </div>`;
 
-  // 🌟 [新增] 全部／各平台 篩選按鈕組（樣式參考「結構佔比分析」），按下各平台可顯示單一平台柱形圖
+  // 🌟 [新增] 全部／各平台 篩選按鈕組（樣式參考「結構佔比分析」），按下各平台可顯示單一平台圖表
   const allPlats = S.platforms.filter(p=>p.active);
   html += `<div style="display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px;">
     <button onclick="S.trendFilter='all'; renderRptTrend()" style="flex-shrink:0; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; transition:0.2s; ${S.trendFilter==='all' ? 'background:var(--acc); color:#fff; box-shadow:0 2px 6px rgba(255,107,53,0.3);' : 'background:var(--sf2); color:var(--t2);'}">全部</button>
@@ -5864,7 +5864,7 @@ function renderRptTrend() {
   const plats = allPlats.filter(p => S.trendFilter === 'all' || p.id === S.trendFilter);
   
   if (curT === 'year') {
-    // 👈 年：改為「長條圖」(水平柱狀圖)
+    // 👈 年：「橫條圖」
     const labels = Array.from({length:12},(_,i)=>`${i+1}月`);
     const datasets =[];
     plats.forEach(p => {
@@ -5900,7 +5900,7 @@ function renderRptTrend() {
     el.innerHTML = html; drawTrendBar('trend-chart', labels, datasets, true, null, true);
   }
   else if (curT === '4week') {
-    // 獨立處理 4 週的繪圖資料（柱形圖，維持垂直）
+    // 獨立處理 4 週的繪圖資料「直條圖」
     const labels = [];
     const datasets =[];
     const weekRanges =[];
@@ -5929,7 +5929,7 @@ function renderRptTrend() {
     drawTrendBar('trend-chart', labels, datasets, true, null, false);
   }
   else if (curT === 'month') {
-    // 👈 月：上下旬合併為單一圖表，改為「長條圖」(水平柱狀圖)
+    // 👈 月：「橫條圖」
     const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
     const datasets = [];
     plats.forEach(p => {
@@ -5941,7 +5941,7 @@ function renderRptTrend() {
     el.innerHTML = html; drawTrendBar('trend-chart', labels, datasets, true, null, true);
   }
   else {
-    // 週：柱形圖，維持垂直
+    // 週：「直條圖」
     const labels = days.map(d=>{const parts=d.split('-');return `${parseInt(parts[2])}日`;});
     const datasets =[];
     plats.forEach(p => {
@@ -5953,7 +5953,7 @@ function renderRptTrend() {
   }
 }
 
-/* ══ 替換：修復趨勢圖表繪製 (透過自訂外掛強制拉開圖例與圖表的距離；支援柱形圖／長條圖雙方向，白色分隔線與藍字粗體金額) ══ */
+/* ══ 支援直條圖／橫條圖雙方向，白色分隔線與藍字粗體金額) ══ */
 function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = null, horizontal = false) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
@@ -5961,12 +5961,12 @@ function drawTrendBar(canvasId, labels, datasets, showLegend = true, maxScale = 
   const style = getComputedStyle(document.documentElement);
   const textColor = style.getPropertyValue('--chart-text').trim() || '#1C1917';
   
-  // 將柱狀圖順序往後移，讓折線畫在最上面；不同顏色間加入白色細線分隔
-  datasets.forEach(ds => { ds.order = 1; ds.borderColor = '#ffffff'; ds.borderWidth = 2; });
+  // 不同顏色間加入白色細線分隔
+  datasets.forEach(ds => { ds.order = 1; ds.borderColor = '#ffffff'; ds.borderWidth = 1; });
 
   const combinedDatasets = [...datasets];
 
-  // 金額標示：藍字粗體，並依柱形圖／長條圖方向調整位置（長條圖移至柱尾右側，柱形圖移至柱頂上方）
+  // 金額標示：藍字粗體，並依直條圖／橫條圖方向調整位置（橫條圖移至柱尾右側，直條圖移至柱頂上方）
   const topTotalPlugin = {
     id: 'topTotalPlugin',
     afterDatasetsDraw: (chart) => {
@@ -6623,7 +6623,7 @@ function renderRptTop3() {
   el.innerHTML = html;
 }
 
-/* 👈 [新增] 結構佔比分析：柱形圖版本（不同顏色間白色細線分隔、金額藍字粗體標示於柱頂） */
+/* 👈 不同顏色間白色細線分隔、金額藍字粗體標示於柱頂 */
 function drawStructBar(canvasId, labels, data, colors) {
   const ctx = document.getElementById(canvasId)?.getContext('2d'); if (!ctx) return;
   if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
@@ -6632,7 +6632,7 @@ function drawStructBar(canvasId, labels, data, colors) {
   const textColor = style.getPropertyValue('--chart-text').trim() || '#1C1917';
   const totalSum = data.reduce((a,b)=>a+b,0);
 
-  // 金額標示（藍字粗體），置於柱形圖上方，避免與柱體重疊
+  // 金額標示（藍字粗體），置於上方，避免與柱體重疊
   const valueLabelPlugin = {
     id: 'structValueLabel',
     afterDatasetsDraw(chart) {
@@ -10152,7 +10152,7 @@ window.openRecordStats = function() {
       @keyframes glassShine { 0% { transform: translateX(-150%) rotate(25deg); } 100% { transform: translateX(150%) rotate(25deg); } }
     </style>
     
-    <div style="background: linear-gradient(125deg, #FF416C, #FF4B2B, #F9D423, #FF4B2B, #FF416C); background-size: 300% 300%; animation: sunriseFlow 6s ease infinite; border-radius: 24px; padding: 28px 20px; position: relative; overflow: hidden; box-shadow: 0 12px 30px rgba(255, 75, 43, 0.4), inset 0 0 0 2px rgba(255,255,255,0.4);">
+    <div style="background: linear-gradient(125deg, #FF416C, #FF4B2B, #F9D423, #FF4B2B, #FF416C); background-size: 300% 300%; animation: sunriseFlow 6s ease infinite; border-radius: 24px; padding: 28px 20px; position: relative; overflow: hidden; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.4);">
       
       <div style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%); transform:rotate(25deg); animation: glassShine 4s infinite ease-in-out; pointer-events:none;"></div>
       
@@ -10181,7 +10181,7 @@ window.openRecordStats = function() {
         <div style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 16px; padding: 12px 16px; display:flex; justify-content:space-between; align-items:center; backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
           <div style="display:flex; align-items:center; gap: 8px;">
             <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 10px #ffffff;"></div>
-            <span style="color: #ffffff; font-size: 13px; font-weight: 800; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">這趟旅程陪伴你</span>
+            <span style="color: #ffffff; font-size: 13px; font-weight: 800; letter-spacing:0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">外送旅程陪伴你</span>
           </div>
           <div style="font-family: var(--mono); font-size: 18px; font-weight: 900; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
             ${daysAcc} <span style="font-size:11px; color:rgba(255,255,255,0.9); font-weight:800;">天</span>
