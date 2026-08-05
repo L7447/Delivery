@@ -2,7 +2,7 @@
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v470';
+const CACHE_NAME = 'delivery-app-v471';
 
 const ASSETS = [
   '/',
