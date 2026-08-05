@@ -655,7 +655,7 @@ const S = {
   histFilter: 'all',
   selVehicleId: null, vehY: new Date().getFullYear(), vehM: new Date().getMonth()+1, addVehRecType: 'fuel',
   rptOverviewFilter: 'all', ovPeriod: 'month', cmpType: 'prev_month', cmpPeriods: [],
-  trendMode: 'month', // 👈 [修正] 補上預設值，避免剛進入趨勢頁、還沒點過頁籤時 navTrend() 判斷不到模式而卡住不動
+  trendMode: 'week', // 👈 [修正] 補上預設值，避免剛進入趨勢頁、還沒點過頁籤時 navTrend() 判斷不到模式而卡住不動
   histFullCalY: new Date().getFullYear(), histFullCalM: new Date().getMonth()+1,
   generalExpenses: [], // 存放一般支出紀錄
   rptNetMode: 'month', // 淨賺頁面的子頁籤：month, year, expense_overview
@@ -12045,7 +12045,18 @@ window.submitRewardSave = function() {
   toast('獎勵設定，已儲存 ✅'); 
 }
 
-function doBackup() { const data = { exportedAt:new Date().toISOString(), records:S.records, platforms:S.platforms, settings:S.settings, vehicles:S.vehicles, vehicleRecs:S.vehicleRecs }; const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `外送記錄${todayStr()}.json`; a.click(); URL.revokeObjectURL(url); toast('備份完成 ✅'); }
+function doBackup() {
+  const fileName = `外送記錄${todayStr()}.json`;
+  const data = buildBackupPayload(fileName);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  showBackupResultBox(data.exportSummary);
+}
 
 function doRestore() { 
   const fi = document.getElementById('restore-file'); 
@@ -12064,6 +12075,7 @@ function doRestore() {
       if (data.settings) { S.settings=data.settings; saveSettings(); } 
       if (data.vehicles) { S.vehicles=data.vehicles; saveVehicles(); } 
       if (data.vehicleRecs) { S.vehicleRecs=data.vehicleRecs; saveVehicleRecs(); } 
+      if (data.generalExpenses) { S.generalExpenses=data.generalExpenses; saveGeneralExpenses(); }
       
       toast('還原「成功」✅'); 
       renderSettings(); 
@@ -13142,18 +13154,97 @@ async function confirmBackupToFile() {
   }
 }
 
-async function doBackupToFile() {
-  const data = { 
-    exportedAt: new Date().toISOString(), 
-    records: S.records, 
-    platforms: S.platforms, 
-    settings: S.settings, 
-    vehicles: S.vehicles, 
-    vehicleRecs: S.vehicleRecs 
+/* ══ 建立備份資料（摘要資訊放在物件最下方） ══ */
+function buildBackupPayload(fileName) {
+  const tripCount = (S.records || []).filter(r => !r.isCashTip && !r.isPunchOnly).length;
+  const fuelCount = (S.vehicleRecs || []).filter(r => r.type === 'fuel').length;
+  const maintCount = (S.vehicleRecs || []).filter(r => r.type === 'maintenance').length;
+  const expCount = (S.generalExpenses || []).length;
+
+  // 主資料在前，摘要固定寫在最下方（JSON 最後一個 key）
+  return {
+    exportedAt: new Date().toISOString(),
+    records: S.records || [],
+    platforms: S.platforms || [],
+    settings: S.settings || {},
+    vehicles: S.vehicles || [],
+    vehicleRecs: S.vehicleRecs || [],
+    generalExpenses: S.generalExpenses || [],
+    // 👇 檔案最下方：存檔摘要
+    exportSummary: {
+      fileName: fileName,
+      tripRecords: tripCount,
+      fuelRecords: fuelCount,
+      maintRecords: maintCount,
+      expenseRecords: expCount,
+      savedAt: new Date().toLocaleString('zh-TW', { hour12: false })
+    }
   };
-  
-  const jsonStr = JSON.stringify(data, null, 2);
+}
+
+/* ══ 漂浮資訊框：顯示存檔結果 ══ */
+function showBackupResultBox(info) {
+  const old = document.getElementById('backup-result-overlay');
+  if (old) old.remove();
+
+  const ov = document.createElement('div');
+  ov.id = 'backup-result-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:999998;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,0.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity 0.25s ease;';
+
+  ov.innerHTML = `
+    <div style="background:#ffffff;border-radius:24px;width:100%;max-width:340px;box-shadow:0 20px 50px rgba(0,0,0,0.2);overflow:hidden;transform:translateY(16px);transition:transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275);">
+      <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:18px 20px;text-align:center;">
+        <div style="font-size:36px;margin-bottom:6px;">✅</div>
+        <div style="font-size:18px;font-weight:900;color:#fff;letter-spacing:1px;">存檔完成</div>
+      </div>
+      <div style="padding:18px 20px 8px;">
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;">檔案名稱</div>
+        <div style="font-family:var(--mono);font-size:14px;font-weight:800;color:#0f172a;background:#f1f5f9;padding:10px 12px;border-radius:12px;border:1.5px solid #e2e8f0;word-break:break-all;margin-bottom:14px;">${safeText(info.fileName)}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#eff6ff;border-radius:12px;border:1px solid #bfdbfe;">
+            <span style="font-size:13px;font-weight:700;color:#1d4ed8;">📋 行程記錄</span>
+            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#1d4ed8;">${info.tripRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff7ed;border-radius:12px;border:1px solid #fed7aa;">
+            <span style="font-size:13px;font-weight:700;color:#c2410c;">⛽ 加油／換電</span>
+            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#c2410c;">${info.fuelRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#ecfdf5;border-radius:12px;border:1px solid #a7f3d0;">
+            <span style="font-size:13px;font-weight:700;color:#047857;">🔧 保養維修</span>
+            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#047857;">${info.maintRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fef2f2;border-radius:12px;border:1px solid #fecdd3;">
+            <span style="font-size:13px;font-weight:700;color:#b91c1c;">💸 支出花費</span>
+            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#b91c1c;">${info.expenseRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:12px 20px 20px;">
+        <button id="backup-result-ok" style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(16,185,129,0.3);">知道了</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => {
+    ov.style.opacity = '1';
+    const box = ov.firstElementChild;
+    if (box) box.style.transform = 'translateY(0)';
+  });
+
+  const close = () => {
+    ov.style.opacity = '0';
+    setTimeout(() => ov.remove(), 250);
+  };
+  ov.querySelector('#backup-result-ok').addEventListener('click', close);
+  ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+}
+
+async function doBackupToFile() {
   const fileName = `外送記錄${todayStr()}.json`;
+  const data = buildBackupPayload(fileName);
+  const summary = data.exportSummary;
+  const jsonStr = JSON.stringify(data, null, 2);
 
   try {
     // 優先嘗試使用 File System Access API (支援 Chrome/Edge/Android)
@@ -13168,7 +13259,7 @@ async function doBackupToFile() {
       
       // ✅ 只有在這裡 (真正寫入檔案完畢後) 才會更新備份時間
       updateLocalBackupTime();
-      toast('「已儲存」至本機 ✅');
+      showBackupResultBox(summary);
       
     } else {
       // 蘋果 iOS / Safari 降級使用傳統下載模式
@@ -13182,7 +13273,7 @@ async function doBackupToFile() {
       
       // ⚠️ 備註：傳統下載模式無法偵測使用者是否點擊取消，所以只要點了就會更新時間
       updateLocalBackupTime();
-      toast('「備份檔」已下載 ✅');
+      showBackupResultBox(summary);
     }
   } catch (err) {
     // 如果使用者按了「取消」，瀏覽器會拋出 AbortError，此時什麼都不做 (也不會更新時間)
