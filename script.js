@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   外送記錄 App — script.js
+   外送記錄與分析 — script.js
    設計：由上到下分區註解，結構清晰，不閃爍，功能完整
    ══════════════════════════════════════════════════════ */
 // 每當使用者點擊螢幕，就更新「最後活動時間」，防止流程在操作中途過期
@@ -28,6 +28,26 @@ function isLocalDevelopment() {
          location.hostname === 'localhost' || 
          location.hostname.includes('192.168.') || 
          location.protocol === 'file:';
+}
+
+/** 顯示用日期：2026/6/1（去掉月日前導 0） */
+function fmtDateDisp(ymd) {
+  if (!ymd) return '';
+  if (ymd instanceof Date) {
+    return `${ymd.getFullYear()}/${ymd.getMonth()+1}/${ymd.getDate()}`;
+  }
+  const s = String(ymd).replace(/-/g, '/');
+  // 2026/06/01 → 2026/6/1
+  return s.replace(/\/0*(\d+)/g, '/$1');
+}
+function fmtMDDisp(ymd) {
+  // 06/01 → 6/1
+  if (!ymd) return '';
+  if (ymd instanceof Date) return `${ymd.getMonth()+1}/${ymd.getDate()}`;
+  const p = String(ymd).replace(/-/g, '/').split('/');
+  if (p.length >= 3) return `${+p[1]}/${+p[2]}`;
+  if (p.length === 2) return `${+p[0]}/${+p[1]}`;
+  return s.replace(/\b0+(\d)/g, '$1');
 }
 
 let homePunchTimer = null;
@@ -565,13 +585,16 @@ function idbDelete(storeName) {
 
 
 const DEFAULT_SETTINGS = { 
-  goals: { weekly: 0, monthly: 0, yearly: 0 }, 
+  goals: { weekly: 0, monthly: 0, yearly: 0 },
+  /*
   rewards:[
     // 內建熊貓預設獎勵 (加入 recurringDays 陣列判斷星期幾)
     { id: 'fp_m_w', name: '週一～週三獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [1,2,3], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
     { id: 'fp_t_s', name: '週四～週六獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [4,5,6], tiers:[{orders:40, amount:150}, {orders:80, amount:450}, {orders:120, amount:1300}, {orders:150, amount:2000}] },
     { id: 'fp_sun', name: '週日獎勵', platformId: 'foodpanda', recurring: true, recurringDays: [0], tiers:[{orders:15, amount:75}, {orders:24, amount:150}, {orders:35, amount:350}, {orders:45, amount:500}] }
-  ], 
+  ],
+  */
+  rewards:[],
   shopHistory:[],
   autoBackup: false,
   // ✨ 新增提醒設定
@@ -651,8 +674,9 @@ const S = {
   vehicles: [], vehicleRecs: [], editingId: null, selPlatformId: null, charts: {},
   homeSubTab: 'schedule', vehicleTab: 'fuel', newVehIcon: 4, newVehColor: '#555555',
   histPage: 1, // 新增分頁狀態
-  histShowList: false, // 控制清單是否展開
+  histShowList: false, // 對帳列表預設
   histFilter: 'all',
+  histReconcilePlat: null,      // 對帳明細：必選平台 id
   selVehicleId: null, vehY: new Date().getFullYear(), vehM: new Date().getMonth()+1, addVehRecType: 'fuel',
   rptOverviewFilter: 'all', ovPeriod: 'month', cmpType: 'prev_month', cmpPeriods: [],
   trendMode: 'week', // 👈 [修正] 補上預設值，避免剛進入趨勢頁、還沒點過頁籤時 navTrend() 判斷不到模式而卡住不動
@@ -703,6 +727,121 @@ const getWeekRecs = (dateObj) => {
   return S.records.filter(r => r.date && r.date >= sStr && r.date <= eStr);
 };
 const recTotal = r => r.isCashTip ? 0 : (pf(r.income)+pf(r.bonus)+pf(r.tempBonus)+pf(r.tips));
+
+
+
+function _parseYMD(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function _fmtMD(str) {
+  const d = _parseYMD(str);
+  return `${d.getMonth()+1}/${d.getDate()}`; // 6/1，不再 pad
+}
+
+/** 取得指定平台、錨點日期所在的報酬區間 */
+function getPayPeriod(platformId, anchorDate) {
+  const ad = new Date(anchorDate || new Date());
+  ad.setHours(12, 0, 0, 0);
+
+  // Uber：週一～週日
+  if (platformId === 'uber') {
+    const { start, end } = getWeekRange(ad);
+    return {
+      platformId: 'uber',
+      startStr: todayStr(start),
+      endStr: todayStr(end),
+      start, end,
+      // 顯示在「日期按鈕」下方的小字（不是整頁大提醒）
+      dateHint: '週一 00:00～04:00 行程歸週日'
+    };
+  }
+
+  // foodpanda：以 2025-11-10 為錨點，每 14 天一區間（公式，不用查表）
+  if (platformId === 'foodpanda') {
+    const anchor = new Date(2025, 10, 10); // 2025/11/10
+    anchor.setHours(12, 0, 0, 0);
+    const diffDays = Math.floor((ad.getTime() - anchor.getTime()) / 86400000);
+    const cycle = Math.floor(diffDays / 14);
+    const start = new Date(anchor);
+    start.setDate(start.getDate() + cycle * 14);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 13);
+    return {
+      platformId: 'foodpanda',
+      startStr: todayStr(start),
+      endStr: todayStr(end),
+      start, end,
+      dateHint: null
+    };
+  }
+
+  // Foodomo：上半月 1～15、下半月 16～月底
+  if (platformId === 'foodomo') {
+    const y = ad.getFullYear(), m = ad.getMonth();
+    const isFirst = ad.getDate() <= 15;
+    const start = isFirst ? new Date(y, m, 1) : new Date(y, m, 16);
+    const end = isFirst ? new Date(y, m, 15) : new Date(y, m + 1, 0);
+    return {
+      platformId: 'foodomo',
+      startStr: todayStr(start),
+      endStr: todayStr(end),
+      start, end,
+      dateHint: null,
+      isFirstHalf: isFirst
+    };
+  }
+
+  const { start, end } = getWeekRange(ad);
+  return { platformId, startStr: todayStr(start), endStr: todayStr(end), start, end, dateHint: null };
+}
+
+function shiftPayPeriod(platformId, anchorDate, dir) {
+  const cur = getPayPeriod(platformId, anchorDate);
+
+  if (platformId === 'uber') {
+    const d = new Date(cur.start);
+    d.setDate(d.getDate() + dir * 7);
+    return d;
+  }
+  if (platformId === 'foodpanda') {
+    const d = new Date(cur.start);
+    d.setDate(d.getDate() + dir * 14);
+    return d;
+  }
+  if (platformId === 'foodomo') {
+    const d = new Date(cur.start);
+    if (dir > 0) {
+      if (cur.isFirstHalf) d.setDate(16);
+      else { d.setMonth(d.getMonth() + 1); d.setDate(1); }
+    } else {
+      if (cur.isFirstHalf) { d.setMonth(d.getMonth() - 1); d.setDate(16); }
+      else d.setDate(1);
+    }
+    return d;
+  }
+  const d = new Date(anchorDate);
+  d.setDate(d.getDate() + dir * 7);
+  return d;
+}
+
+/** 精簡區間總計卡（無折疊、無下方分析） */
+function buildSimplePeriodSummary(total, orders, mileage, hours) {
+  return `
+    <div style="background:#fff; border:2px solid #1e293b; border-radius:16px; overflow:hidden; margin-bottom:4px;">
+      <div style="background:#1e293b; color:#fff; padding:4px 14px; font-size:16px; font-weight:800; letter-spacing:1px;">📊 區間總計</div>
+      <div style="padding:5px 14px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;">
+        <div style="font-family:var(--mono); font-size:26px; font-weight:900; color:#006eff;">
+          <span style="font-size:12px;">$</span>${fmt(total)}
+        </div>
+        <div style="display:inline-flex; align-items:stretch; border-radius:10px; border:1.5px solid #c3c9d0; overflow:hidden; background:#c3c9d0; gap:2px;">
+          <div style="background:#fff7ed; padding:4px 10px;"><span style="font-family:var(--mono); font-weight:900; color:#ff0000; font-size:15px;">${fmt(orders)}</span><span style="font-size:10px; color:#f97316; font-weight:700;"> 單</span></div>
+          <div style="background:#e1ffff; padding:4px 10px;"><span style="font-family:var(--mono); font-weight:900; color:#b23dff; font-size:15px;">${fmt(mileage)}</span><span style="font-size:10px; color:#000; font-weight:800;"> km</span></div>
+          <div style="background:#eff6ff; padding:4px 10px;"><span style="font-size:11px;">⏱️</span> <span style="font-family:var(--mono); font-weight:900; color:#2563eb; font-size:13px;">${fmtHours(hours)}</span></div>
+        </div>
+      </div>
+    </div>`;
+}
 
 /* ══ 數學算式安全解析器 (供臨時獎勵使用) ══ */
 window.safeEvalMath = function(str) {
@@ -827,7 +966,7 @@ function fmtHours(hVal) {
   const hrs = Math.floor(totalMins / 60); const mins = totalMins % 60;
   
   // 定義單位的專屬樣式 (縮小字體、顏色改為黑色、並與數字保持些微間距)
-  const unitStyle = 'font-size: 10px; color: #000000; margin:5px 4px 0 1px ; font-weight: 800;';
+  const unitStyle = 'font-size: 12px; color: #000000; margin:5px 4px 0 4px ; font-weight: 800;';
   
   if (hrs > 0 && mins > 0) return `${hrs}<span style="${unitStyle}">h</span>${mins}<span style="${unitStyle}">m</span>`;
   if (hrs > 0 && mins === 0) return `${hrs}<span style="${unitStyle}">h</span>`;
@@ -963,7 +1102,35 @@ function closeOverlay(id) {
     localStorage.removeItem('auth_origin_tab');
   }
 }
-function closeDetailOverlay() { document.getElementById('detail-overlay').classList.remove('show'); }
+
+/* 🌟 記錄詳情專用：極致滑順向下關閉動畫 (320ms iOS 彈性物理曲線) */
+function closeDetailOverlay() {
+  const ov = document.getElementById('detail-overlay');
+  const box = document.getElementById('detail-box');
+  if (!ov || !ov.classList.contains('show')) return;
+
+  // 1. 背景與卡片同步啟動 320ms GPU 硬體加速動畫
+  ov.style.transition = 'opacity 0.6s ease-out';
+  ov.style.opacity = '0';
+
+  if (box) {
+    box.style.transition = 'transform 0.62s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease-out';
+    box.style.transform = 'translate3d(0, 110%, 0) scale(0.96)';
+    box.style.opacity = '0';
+  }
+
+  // 2. 動畫播放完畢後移除彈窗並恢復內聯樣式
+  setTimeout(() => {
+    ov.classList.remove('show');
+    ov.style.opacity = '';
+    ov.style.transition = '';
+    if (box) {
+      box.style.transform = '';
+      box.style.opacity = '';
+      box.style.transition = '';
+    }
+  }, 620);
+}
 
 /* 退出按鈕點擊動畫：抽屜式往左慢慢抽離 (附帶停留感) */
 window.animateClose = function(btn, action) {
@@ -993,18 +1160,27 @@ window.animateClose = function(btn, action) {
     btn.style.pointerEvents = 'auto';
   }, 850);
 }
-/* 返回按鈕專用：由上而下關閉動畫 (向下滑出) */
+/* 返回按鈕專用：由上而下關閉動畫 */
 window.animateReturnClose = function(btn, action) {
   const img = btn.querySelector('img');
-  if (img) img.src = 'images/close2.png'; // 1. 立即換圖
-  btn.style.pointerEvents = 'none'; 
+  if (img) img.src = 'images/close2.png';
+  btn.style.pointerEvents = 'none';
 
-  // 2. 停留 200ms 提供點擊回饋感
+  const targetWrap = btn.closest('.overlay-page, #sub-page, #detail-overlay, #full-calendar-overlay');
+
+  // 🌟 若為記錄詳情彈窗，直接觸發 320ms 極速滑順向下動畫
+  if (targetWrap && targetWrap.id === 'detail-overlay') {
+    setTimeout(() => {
+      action();
+      if (img) img.src = 'images/close1.png';
+      btn.style.pointerEvents = 'auto';
+    }, 50);
+    return;
+  }
+
+  // 其他大型彈窗
   setTimeout(() => {
-    const targetWrap = btn.closest('.overlay-page, #sub-page, #detail-overlay, #full-calendar-overlay');
-
     if (targetWrap) {
-      // 3. 判斷並加上 1.4秒 的下滑動畫
       if (targetWrap.id === 'full-calendar-overlay' && window.innerWidth < window.innerHeight) {
           targetWrap.classList.add('slide-down-out-rotated');
       } else {
@@ -1012,18 +1188,17 @@ window.animateReturnClose = function(btn, action) {
       }
     }
 
-    // 4. 等待下滑動畫結束 (1.4秒) 後執行關閉動作
     setTimeout(() => {
-      action(); 
+      action();
       if (targetWrap) {
           targetWrap.classList.remove('slide-down-out');
           targetWrap.classList.remove('slide-down-out-rotated');
       }
-      if (img) img.src = 'images/close1.png'; // 恢復原圖
+      if (img) img.src = 'images/close1.png';
       btn.style.pointerEvents = 'auto';
-    }, 1400); 
-  }, 200); 
-}
+    }, 350);
+  }, 80);
+};
 /* 子頁面內部切換專用：內容向下滑出並淡入新內容 (解決背景閃爍破綻) */
 window.animateSubPageReturn = function(btn, action) {
   btn.style.pointerEvents = 'none';
@@ -1135,6 +1310,24 @@ function qdpPickWeek(offsetWeeks) {
   if (typeof _qdpState.onSelectWeek === 'function') _qdpState.onSelectWeek(base);
   closeQuickDatePicker();
 }
+
+// 🌟 快速日期彈窗輔助函式
+window.qdpSelectMonth = function(m) {
+  _qdpState.month = m;
+  renderQuickDatePicker();
+};
+
+window.qdpPickDay = function(d) {
+  const y = _qdpState.year || _qdpState.curY;
+  const m = _qdpState.month || _qdpState.curM || 1;
+  if (typeof _qdpState.onSelectDay === 'function') {
+    _qdpState.onSelectDay(y, m, d);
+  } else if (typeof _qdpState.onSelect === 'function') {
+    _qdpState.onSelect(y, m, d);
+  }
+  closeQuickDatePicker();
+};
+
 function renderQuickDatePicker() {
   const body = document.getElementById('quick-date-body');
   if (!body) return;
@@ -1161,8 +1354,37 @@ function renderQuickDatePicker() {
           return `<button class="qdp-week-btn ${isCur ? 'active' : ''}" onclick="qdpPickWeek(${off})">${s.getFullYear()}/${pad(s.getMonth()+1)}/${pad(s.getDate())} ~ ${pad(e.getMonth()+1)}/${pad(e.getDate())}</button>`;
         }).join('')}
       </div>`;
+  } else if (cfg.mode === 'day') {
+    // 🌟 新增：年月日 (含日選擇) 模式
+    const y = cfg.year || cfg.curY || new Date().getFullYear();
+    const m = cfg.month || cfg.curM || (new Date().getMonth() + 1);
+    const curD = cfg.curD || 1;
+    const maxDays = new Date(y, m, 0).getDate();
+
+    html += `<div class="qdp-title">📅 快速選擇日期</div>
+      <div class="qdp-year-nav">
+        <button onclick="qdpChangeYear(-1)">◀</button>
+        <span class="qdp-year-label">${y} 年</span>
+        <button onclick="qdpChangeYear(1)">▶</button>
+      </div>
+
+      <!-- 月份選擇條 -->
+      <div style="font-size:12px; font-weight:800; color:var(--t3); margin:6px 0 4px; text-align:left;">選擇月份：</div>
+      <div class="hide-scroll-bar" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:8px;">
+        ${Array.from({length:12}, (_,i) => i+1).map(mNum => `
+          <button class="qdp-month-btn ${mNum === m ? 'active' : ''}" onclick="qdpSelectMonth(${mNum})" style="flex-shrink:0; padding:4px 10px; font-size:13px;">${mNum}月</button>
+        `).join('')}
+      </div>
+
+      <!-- 日期選擇網格 (7縱列月曆網格) -->
+      <div style="font-size:12px; font-weight:800; color:var(--t3); margin:4px 0; text-align:left;">選擇日期（${m} 月）：</div>
+      <div class="qdp-month-grid" style="grid-template-columns:repeat(7,1fr); gap:4px; max-height:170px; overflow-y:auto; padding:2px;">
+        ${Array.from({length:maxDays}, (_,i) => i+1).map(dNum => `
+          <button class="qdp-month-btn ${y === cfg.curY && m === cfg.curM && dNum === curD ? 'active' : ''}" onclick="qdpPickDay(${dNum})" style="padding:6px 2px; font-size:13px; font-family:var(--mono);">${dNum}</button>
+        `).join('')}
+      </div>`;
   } else {
-    // month
+    // 預設月份模式
     const y = cfg.year || cfg.curY || new Date().getFullYear();
     html += `<div class="qdp-title">📅 快速選擇年月</div>
       <div class="qdp-year-nav">
@@ -1191,43 +1413,26 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
   const bonPct = pcts[1];
   const tipPct = pcts[2];
 
-  // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
-  let tagsParts = [];
-  
-  if (orders > 0) {
-    tagsParts.push(`
-      <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span>
-        <span style="font-size:10px; font-weight:600; color:#f97316;">單</span>
-      </div>
-    `);
-  }
-  if (mileage > 0) {
-    tagsParts.push(`
-      <div style="background:#e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #b23dff;">${fmt(mileage)}</span>
-        <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
-      </div>
-    `);
-  }
-  if (hours > 0) {
-    tagsParts.push(`
-      <div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;">
-        <span style="font-size:11px;">⏱️</span>
-        <span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(hours)}</span>
-      </div>
-    `);
-  }
+  // 👇 一體成型三色膠囊（缺資料也顯示，數字留––）
+  const ordText = orders > 0 ? fmt(orders) : '––';
+  const milText = mileage > 0 ? fmt(mileage) : '––';
+  const hrText  = hours > 0 ? fmtHours(hours) : '––';
 
-  let tagsHtml = '';
-  if (tagsParts.length > 0) {
-    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果（當日、區間總計卡片）
-    tagsHtml = `
-      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px; background: #e2e8f0; gap:2px;">
-        ${tagsParts.join('')}
+  const tagsHtml = `
+    <div style="display:inline-flex;align-items:stretch;border-radius:8px;border:1.5px solid #e2e8f0;overflow:hidden;margin-bottom:4px;background:#e2e8f0;gap:2px;">
+      <div style="background:#fff7ed;padding:1.5px 8px;display:flex;align-items:baseline;gap:3px;min-width:42px;">
+        <span style="font-size:15px;font-family:var(--mono);font-weight:800;color:#ff0000;">${ordText}</span>
+        <span style="font-size:10px;font-weight:600;color:#f97316;">單</span>
       </div>
-    `;
-  }
+      <div style="background:#e1ffff;padding:2px 8px;display:flex;align-items:baseline;gap:3px;min-width:48px;">
+        <span style="font-size:15px;font-family:var(--mono);font-weight:800;color:#b23dff;">${milText}</span>
+        <span style="font-size:10px;font-weight:800;color:#000;">km</span>
+      </div>
+      <div style="background:#eff6ff;padding:2px 8px;display:flex;align-items:center;gap:4px;min-width:52px;">
+        <span style="font-size:11px;">⏱️</span>
+        <span style="font-size:13px;font-family:var(--mono);font-weight:800;color:#2563eb;">${hrText}</span>
+      </div>
+    </div>`;
 
   const avgOrd = orders > 0 ? Math.round(total / orders) : 0;
   const ordHr = hours > 0 ? (orders / hours).toFixed(1) : 0;
@@ -1239,7 +1444,7 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
   return `
     <div class="hist-rec-card" style="border: 2px solid #708090; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
       <div class="hrc-top" onclick="foldCard('${cardId}', event)" style="padding: 2px 7px; margin:0px 0 4px 0px;">
-        <div class="hrc-toggle" id="${cardId}-btn" style="right: 2px; top: 0px; width: 20px; height: 20px; font-size: 14px;">▼</div>
+        <div class="hrc-toggle" id="${cardId}-btn" style="right:2px;top:0px;width:20px;height:20px;font-size:14px;">▼</div>
         <div class="hrc-row1">
           <span style="position:absolute; top:0; left:0; background:#64748b; color:#ffffff; padding:4px 14px; border-radius:0 0 16px 0; font-size:12px; font-weight:800; letter-spacing:1px;">${title}</span>
           ${dateStr ? `<span style="justify-content:center;margin: 0px 0 3px 100px;letter-spacing:0.5px;background: #fbff89;border:1px solid #000;border-radius:15px;padding:0.5px 12px;">${dateStr}</span>` : ''}
@@ -1495,11 +1700,12 @@ function savePunch() {
 
 function goPage(name, force = false) {
   // 🌟 新增：未登入時禁止進入「收入分析」
+  /*
   if (name === 'report' && !USER.loggedIn) {
     showLoginRequiredWarning();
     return;
   }
-
+*/
   // 💡 標記 JavaScript 已接管畫面，平滑過渡
   document.documentElement.classList.add('js-ready');
 
@@ -1630,14 +1836,20 @@ function switchHomeTab(tab, index) {
   renderHome(); 
 }
 
-function switchHistTab(tab, index) { 
-  S.histTab = tab; 
-  S.histPage = 1; // 👈 每次切換模式 (日/週/年)，強制回到第 1 頁
-  S.histNavDate = new Date(); // 👈 確保日期回到「今天」作為基準，避免跨年切換錯誤
-  
-  document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`; 
-  document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index)); 
-  renderHistory(); 
+function switchHistTab(tab, index) {
+  // 舊版週～年頁籤一律對應到對帳明細列表
+  if (['week','biweek','halfmonth','month','year'].includes(tab)) tab = 'reconcile';
+  S.histTab = tab;
+  S.histPage = 1;
+  S.histNavDate = new Date();
+  if (tab === 'reconcile' && !S.histReconcilePlat) {
+    const first = (S.platforms || []).find(p => p.active);
+    S.histReconcilePlat = first ? first.id : null;
+  }
+
+  document.getElementById('hist-tab-bg').style.transform = `translateX(${index * 100}%)`;
+  document.querySelectorAll('#page-history .slide-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
+  renderHistory();
 }
 function switchRptTab(tab, index, btnEl) {
   S.rptView = tab;
@@ -1879,16 +2091,16 @@ function renderHome() {
 
       // === 今日概況 Top 區塊 ===
       topHtml = `
-        <div style="padding:10px 16px 0;">
+        <div style="padding:3px 16px 0;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <div style="font-family:var(--title);font-size:26px;font-weight:700;color:var(--t1);letter-spacing:1.5px;">今日概況</div>
 
             <div style=" display:flex;align-items:center;font-size:14px;color:var(--t2);font-weight:600;background:var(--sf);padding:3px 12px;border-radius:20px;border:2px solid var(--border);font-family:var(--mono);gap:4px;" >
-              <span style="font-size:18px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 1px 3px 0px;">${dateObj.getFullYear()}</span>年
-              <span style="font-size:18px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 0px 3px 2px;">${dateObj.getMonth()+1}</span>月
-              <span style="font-size:18px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 0px 3px 2px;">${dateObj.getDate()}</span>日
+              <span style="font-size:20px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 1px 3px 0px;">${dateObj.getFullYear()}</span>年
+              <span style="font-size:20px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 0px 3px 2px;">${dateObj.getMonth()+1}</span>月
+              <span style="font-size:20px;color:#ff4400;font-weight:900;letter-spacing:1.5px;margin:0 0px 3px 2px;">${dateObj.getDate()}</span>日
               <span style="border-radius:20px;border:1px solid var(--t3);padding:3px 10px;display:flex;align-items:center;line-height:1;margin-left:5px;"> 星期 
-              <span style="font-size:18px;color:var(--text-blue);font-weight:900;margin-left:5px;">${dow}</span>
+              <span style="font-size:20px;color:var(--text-blue);font-weight:900;margin-left:5px;">${dow}</span>
               </span>
             </div>
           </div>
@@ -2173,41 +2385,44 @@ function renderHome() {
   }
 }
 
-/* ══ 打卡里程捕獲介面 ══ */
+/* ══ 打卡輸入里程介面 ══ */
 // 全域變數，用來存放裁剪實例
 let mileageCropper = null;
 
 function getMileageCaptureHtml(type) {
   const hasKey = !!S.settings.ocrKey;
-  const title = type === 'in' ? '🚀 上線打卡' : '🏁 下線打卡';
   
   return `
-    <div id="mileage-modal" style="padding:16px; text-align:center;">
-      <h2 style="margin-bottom:15px; color:var(--text-blue); font-size:20px;">${title}</h2>
+    <div id="mileage-modal" style="padding:0 16px 25px; text-align:center;">
+      <div style="display:flex; align-items:center; gap:8px; margin:0 0 2px 10px;">
+        <div style="width:7px; height:32px; background:#cf39f0; border-radius:4px;"></div>
+        <span style="background:rgba(207, 57, 240, 0.2);font-size:22px;font-weight:800;color:#000;letter-spacing:1px;padding:3px 14px;border-radius:8px;margin-left:-15.5px;">&nbsp;照片辨識功能</span>
+      </div>
       
       <!-- 裁剪容器 -->
-      <div style="width:100%; height:300px; background:#000; border-radius:16px; margin-bottom:15px; overflow:hidden; position:relative;">
+      <div style="width:100%; height:300px; background:#000; border-radius:16px; margin-bottom:3px; overflow:hidden; position:relative;">
         <img id="ocr-crop-target" style="max-width:100%; display:block;">
         <div id="ocr-init-tip" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; background:rgba(0,0,0,0.5);">
-          請先拍照或從相簿選擇照片
+          請先拍照，或從相簿選擇照片
         </div>
       </div>
-      <p style="font-size:12px;color:var(--text-blue);font-weight:800;margin-bottom:10px;">💡 提示：範圍必須包含「數字」與「km」單位</p>
-      <div style="display:flex; gap:8px; margin-bottom:15px;">
-        <button onclick="document.getElementById('ocr-file-input').click()" style="flex:1; padding:12px; border-radius:12px; background:#fff; border:2px solid var(--blue); font-weight:800; color:var(--blue);">📸 拍照/選圖</button>
-        <button id="start-ocr-btn" onclick="performCropAndOCR()" disabled style="flex:1; padding:12px; border-radius:12px; background:var(--green); color:#fff; border:none; font-weight:800; opacity:0.5;">🔍 裁剪並辨識</button>
+      <p style="font-size:13px;color:var(--text-blue);font-weight:750;margin-bottom:6px;">💡 提示：範圍必須包含「數字」與「km」單位</p>
+      <p style="font-size:15px;color:var(--red);font-weight:650;margin-bottom:6px;">💡 可移動藍框位置，增加辨識成功率</p>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button onclick="document.getElementById('ocr-file-input').click()" style="flex:1;padding:12px;border-radius:12px;background:#fff;color:var(--blue);border:2px solid var(--blue);font-size:15px;font-weight:800;">📸 拍照/選圖</button>
+        <button id="start-ocr-btn" onclick="performCropAndOCR()" disabled style="flex:1;padding:12px;border-radius:12px;background:rgba(34,197,94,0.4);color: #000;border:2px solid var(--green);font-size:15px;font-weight:700;">🔍 裁剪並辨識</button>
       </div>
 
-      <div style="background:#f1f5f9; padding:15px; border-radius:16px; margin-bottom:15px;">
-        <label style="font-size:12px; font-weight:800; color:var(--t2); display:block; margin-bottom:8px;">確認辨識出的數字（可修改），可手動輸入</label>
+      <div style="background: #dde1e5; padding:15px 5px; border-radius:16px; margin-bottom:10px;">
+        <label style="font-size:16px;font-weight:800;color:var(--t2);display:block;margin-bottom:8px;">確認辨識出的數字(可修改)，<span style="background:#fff;color:var(--red);font-size:16px;font-weight:750;border-radius:16px;padding:3px 7px;">可直接手動輸入</span></label>
         <div style="position:relative;">
-          <input type="number" id="manual-km" placeholder="辨識結果..." inputmode="numeric" style="width:100%; padding:12px; border-radius:12px; border:2px solid #cbd5e1; font-family:var(--mono); font-weight:900; font-size:22px; text-align:center; color:var(--blue);">
-          <span style="position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:14px; font-weight:800; color:var(--t3);">km</span>
+          <input type="number" id="manual-km" class="manual-km-input" placeholder="辨識結果..." inputmode="numeric" style="width:100%;padding:12px;border-radius:12px;border:2px solid #cbd5e1;font-family:var(--mono);font-weight:900;font-size:22px;text-align:center;color:var(--text-blue);letter-spacing:1px;">
+          <span style="position:absolute;right:15px;top:50%;transform:translateY(-50%);font-size:15px;font-weight:800;color:var(--t3);letter-spacing:0.5px;">km</span>
         </div>
       </div>
 
       <input type="file" id="ocr-file-input" accept="image/*" style="display:none;" onchange="initMileageCropper(this)">
-      <button id="confirm-mileage-btn" class="btn-acc" style="width:100%; padding:16px; border-radius:16px; font-size:18px; font-weight:900; box-shadow:0 6px 16px rgba(255,107,53,0.3);">✅ 確認里程並打卡</button>
+      <button id="confirm-mileage-btn" class="btn-acc" style="width:100%;padding:16px;background: rgba(255, 107, 53, 0.4);color: #0759c4;border-radius:16px;border:3px solid #FF6B35;font-size:24px;font-weight:750;">確認里程，並打卡 ✅</button>
     </div>
   `;
 }
@@ -2264,7 +2479,7 @@ window.performCropAndOCR = async function() {
       </div>
     `).then(ok => {
       if (ok) {
-        // 先關閉目前的里程捕獲彈窗
+        // 先關閉目前的輸入里程彈窗
         closeOverlay('sub-page'); 
         // 跳轉到設定頁並開啟 OCR 設定
         goPage('settings');
@@ -2370,7 +2585,7 @@ async function punchIn() {
   const active = S.records.find(r => r.isPunchOnly && r.punchOut === '');
   if (active) { toast('⚠️ 已經打卡，正在線上中囉！'); return; }
 
-  document.getElementById('sub-title').textContent = '里程捕獲';
+  document.getElementById('sub-title').textContent = '🚀 上線打卡';
   document.getElementById('sub-body').innerHTML = getMileageCaptureHtml('in');
   openOverlay('sub-page');
 
@@ -2423,20 +2638,46 @@ async function punchOut() {
   const activeRec = S.records.find(r => r.isPunchOnly && r.punchOut === '');
   if (!activeRec) return;
 
-  document.getElementById('sub-title').textContent = '里程捕獲';
+  document.getElementById('sub-title').textContent = '🏁 下線打卡';
   document.getElementById('sub-body').innerHTML = getMileageCaptureHtml('out');
   openOverlay('sub-page');
 
-  document.getElementById('confirm-mileage-btn').onclick = async () => {
+    document.getElementById('confirm-mileage-btn').onclick = async () => {
     const endKm = pf(document.getElementById('manual-km').value);
-    if (endKm <= activeRec.startKm) { 
-        toast(`⚠️ 「結束里程」應大於「起始里程」 (${activeRec.startKm})`); 
-        return; 
+    if (endKm <= 0) {
+      toast('⚠️ 請輸入終點里程');
+      return;
+    }
+    if (endKm <= activeRec.startKm) {
+      toast(`⚠️ 「結束里程」應大於「起始里程」 (${activeRec.startKm})`);
+      return;
     }
 
+    const diffKm = endKm - activeRec.startKm;
+
+    // ── 新增：終點里程確認（取消 = 回去修改）──
+    const ok = await customConfirm(`
+      <div style="text-align:center; padding:6px 4px;">
+        <div style="font-size:36px; margin-bottom:8px;">📍</div>
+        <div style="font-size:22px; font-weight:800; color:var(--t1); margin-bottom:12px;">請確認「終點里程」</div>
+        <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:16px; padding:14px 16px; text-align:left;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:15px; font-weight:700; color: #ff0051;">終點里程：</span>
+            <span style="font-family:var(--mono); font-size:20px; font-weight:800; color: #ec1414;">${fmt(endKm)} <span style="font-size:13px;letter-spacing:0.5px;">km</span></span>
+          </div>
+        </div>
+        <div style="font-size:13px; font-weight:700; color: #304b71; margin-top:12px; line-height:1.5;">
+          若數字有誤，請按「取消」返回修改
+        </div>
+      </div>
+    `);
+
+    // 按取消 → 不寫入、不關閉，留在里程輸入畫面
+    if (!ok) return;
+
+    // ── 以下才真正結算寫入 ──
     const now = new Date();
     const startMs = activeRec.timestamp || new Date(`${activeRec.date}T${activeRec.punchIn}:00`).getTime();
-    const diffKm = endKm - activeRec.startKm;
 
     activeRec.punchOut = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     activeRec.hours = (now.getTime() - startMs) / 3600000;
@@ -2444,11 +2685,8 @@ async function punchOut() {
     activeRec.mileage = diffKm;
 
     await saveRecords();
+    renderHome();
 
-    // 👈 [核心 1] 更新首頁按鈕顏色 (變回綠色)
-    renderHome(); 
-
-    // 👈 [核心 2] 設定跳轉目標
     S.histTab = 'day';
     S.selDate = activeRec.date;
     const [y, m] = activeRec.date.split('-');
@@ -2460,34 +2698,102 @@ async function punchOut() {
       mileageCropper.destroy();
       mileageCropper = null;
     }
-    
-    // 🌟 1. 取得取消按鈕元素
-    const cancelBtn = document.getElementById('confirm-cancel-btn');
-    // 🌟 2. 暫時隱藏取消按鈕
-    if (cancelBtn) cancelBtn.style.display = 'none';
 
-    // 結算提示
-    await customConfirm(`
-      <div style="text-align:center; padding:10px;font-family:var(--mono);">
-        <div style="font-size:40px;">🏁<span style="font-size:26px;font-weight:850;color:var(--green);margin-bottom:15px;"> 下線結算完成</div>
-        <div style="font-size:14px;line-height:1.8;margin-bottom:15px;">
-          <span style="color:var(--text-blue)">起點</span>：<span style="color:var(--text-blue);font-size:18px;"> ${activeRec.startKm}</span> km<br>
-          <span style="color: #ff3333;">終點</span>：<span style="color: #ff3333;font-size:18px;"> ${endKm}</span> km<br>
-        </div>
-        <div style="font-size:14px;color:var(--t2);border:1px solid var(--border);border-radius:var(--r);">本次行駛：<b style="color:var(--blue); font-size:24px;"> ${diffKm.toFixed(1)}</b> km</div>
-      </div>
-    `);
+    // 結算完成漂浮框（若已有 showPunchOutResultBox 就用它）
+    if (typeof showPunchOutResultBox === 'function') {
+      showPunchOutResultBox({
+        punchIn: activeRec.punchIn || '',
+        punchOut: activeRec.punchOut || '',
+        hours: activeRec.hours || 0,
+        startKm: activeRec.startKm,
+        endKm: endKm,
+        mileage: diffKm
+      });
+    } else {
+      toast('已完成結算 ✅');
+    }
 
-    // 🌟 4. 視窗關閉後，恢復取消按鈕的顯示 (還原狀態給其他功能使用)
-    if (cancelBtn) cancelBtn.style.display = '';
-    
-    toast('已完成結算 ✅');
-
-    // 👈 [核心 3] 不再跳轉，直接保持在目前頁面並更新首頁
     renderHome();
     appendAuthDebugLog('打卡完成', 'punchOut 不進行頁面切換', 'info');
     renderHistory();
   };
+}
+
+/** 下線結算完成漂浮框（風格對齊 showBackupResultBox） */
+function showPunchOutResultBox(info) {
+  const old = document.getElementById('punchout-result-overlay');
+  if (old) old.remove();
+
+  const hoursText = (typeof fmtHours === 'function')
+    ? fmtHours(info.hours)
+    : `${Number(info.hours || 0).toFixed(2)} h`;
+  const milText = Math.round(Number(info.mileage || 0));
+
+  const ov = document.createElement('div');
+  ov.id = 'punchout-result-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:999998;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,0.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity 0.25s ease;';
+
+    ov.innerHTML = `
+    <div style="background:#ffffff;border-radius:24px;width:100%;max-width:340px;box-shadow:0 20px 50px rgba(0,0,0,0.2);overflow:hidden;transform:translate3d(0,16px,0);transition:transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275);box-sizing:border-box;">
+      <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:8px 20px 18px;text-align:center;">
+        <div style="font-size:36px;margin-bottom:6px;">🏁</div>
+        <div style="font-size:28px;font-weight:850;color:#fff;letter-spacing:1.5px;">下線結算完成</div>
+      </div>
+
+      <div style="padding:18px 20px 8px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;">
+        <!-- 大框：時間 -->
+        <div style="border:3px solid #bfdbfe;border-radius:16px;padding:5px 0 0;background:#f8fbff;">
+          <div style="font-size:18px;font-weight:800;color:#1d4ed8;margin-bottom:3px;letter-spacing:1px;padding:0 10px;">⏱️ 時間</div>
+          <div style="display:flex;flex-direction:column;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background: #e7fbff;border-radius:12px;border:1px solid #99e4ff;margin:0 10px 20px 10px;">
+              <span style="font-size:13px;font-weight:700;color:#005eff;"><span style="color:#14a22a;">上線</span> → <span style="color:#e11919;">下線</span></span>
+              <span style="font-family:var(--mono);font-size:14px;font-weight:900;color: #005eff;"><span style="color:#14a22a;">${safeText(info.punchIn)}</span> → <span style="color:#e11919;">${safeText(info.punchOut)}</span></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 30px;background:#eff6ff;border-radius:0 0 12px 12px;border-top:3px solid #bfdbfe;">
+              <span style="font-size:20px;font-weight:750;color:#1d4ed8;">工時</span>
+              <span style="font-family:var(--mono);font-size:22px;font-weight:800;color:#1d4ed8;">${hoursText}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 大框：里程 -->
+        <div style="border:3px solid #a5f3fc;border-radius:16px;padding:5px 0 0;background:#f0fdff;">
+          <div style="font-size:18px;font-weight:800;color:#1b86a4;margin-bottom:3px;letter-spacing:1px;padding:0 10px;">🚗 里程</div>
+            <div style="display:flex;flex-direction:column;margin:0 10px 20px 10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 30px;background:#f0fdf4;border-radius:20px;border:1px solid #bbf7d0;letter-spacing:1px;margin-bottom:1px;">
+                <span style="font-size:15px;font-weight:700;color:#14a22a;">起點里程</span>
+                <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#14a22a;">${fmt(Math.round(info.startKm))} <span style="font-size:11px;font-weight:700;">km</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 30px;background:#fef2f2;border-radius:20px;border:1px solid #fecdd3;letter-spacing:1px;">
+                <span style="font-size:15px;font-weight:700;color:#e11919;">終點里程</span>
+                <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#e11919;">${fmt(Math.round(info.endKm))} <span style="font-size:11px;font-weight:700;">km</span></span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 30px;background:#ecfeff;border-radius:0 0 12px 12px;border-top:3px solid #a5f3fc;letter-spacing:0.7px;">
+              <span style="font-size:20px;font-weight:750;color: #006683;">本次行駛</span>
+              <span style="font-family:var(--mono);font-size:22px;font-weight:800;color: #006683;">${milText} <span style="font-size:13px;font-weight:700;">km</span></span>
+            </div>
+        </div>
+      </div>
+      <div style="padding:12px 20px 20px;box-sizing:border-box;width:100%;">
+        <button id="punchout-result-ok" style="width:100%;box-sizing:border-box;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:22px;font-weight:800;cursor:pointer;letter-spacing:1.5px;">知道了</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => {
+    ov.style.opacity = '1';
+    const box = ov.firstElementChild;
+    if (box) box.style.transform = 'translateY(0)';
+  });
+
+  const close = () => {
+    ov.style.opacity = '0';
+    setTimeout(() => ov.remove(), 250);
+  };
+  ov.querySelector('#punchout-result-ok').addEventListener('click', close);
+  ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
 }
 
 // 3. 雲端 OCR 辨識邏輯
@@ -2636,12 +2942,45 @@ function toggleCalendarGrid() {
 }
 
 /* ══ 美化版：單筆記錄卡片 (包含保養維修項目 + 車行 + 備註 + 精美雙色時間標籤) ══ */
-function buildRecItem(r) {
+function buildRecItem(r, listNo) {
   const cid = `hrc-${r.id}`;
   
-  // 統一格式化日期與時間字串
-  const dStr = safeText(r.date.replace(/-/g, '/'));
+  const dStr = safeText(fmtDateDisp(r.date));
   const tStr = safeText(r.time || '--:--');
+  
+  // 🌟 專法報酬記錄卡片（獨立專屬樣式）
+  if (r.isSpecialLawAdj || (r.lawAdjAmt > 0 && pf(r.orders) === 0)) {
+    const plat = getPlatform(r.platformId);
+    const lawStartDisp = r.lawStart ? fmtDateDisp(r.lawStart) : '2026/7/20';
+    const lawEndDisp = r.lawEnd ? fmtDateDisp(r.lawEnd) : '2026/8/2';
+    const totalAmt = recTotal(r);
+
+    return `
+      ${listNo ? `<span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#64748b;">#${listNo}</span>` : ''}
+      <div class="hist-rec-card" data-id="${safeText(r.id)}" style="border:2px solid #a855f7;background:#fff;box-shadow:0 4px 4px rgba(168,85,247,0.4);">
+        <div class="hrc-top" onclick="openDetailOverlay('${safeText(r.id)}')">
+          <div class="hrc-row1" style="display:block; position:relative;">
+            <span style="position:absolute;top:-5px;left:-15px;background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:0 0 16px 0;color:#fff;font-size:15px;font-weight:700;letter-spacing:0.7px;padding:4px 14px;">⚖️ 專法報酬差額調整</span>
+
+            <div style="display:flex; align-items:center; gap:8px; margin-left:168px;">
+              <span style="background:${plat.color}15;color:${plat.color};border:1px solid ${plat.color}40;padding:1px 8px;border-radius:12px;font-size:14px;font-weight:800;">${safeText(plat.name)}</span>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+            <div style="display:flex;flex-direction:column;gap:2px;background:#e6d3f0;padding:1px 8px;border-radius:12px;border:1px solid #b77cd4;">
+              <span style="font-family:var(--mono);font-size:14px;font-weight:750;color: #0072E3;">${lawStartDisp} ~ ${lawEndDisp}</span>
+            </div>
+
+            <div style="text-align:right;margin-top:-27px;">
+              <span style="font-family:var(--mono);font-size:24px;font-weight:900;color:#fff;background:linear-gradient(90deg, #e6d3f0 29%, #b77cd4 30%, #a45fb6 100%);padding:2px 10px;border-radius:16px;box-shadow:0 3px 4px rgba(168,85,247,0.5);">
+                <span style="font-size:27px;color: #2196f3;margin-right:8px;">+</span><span style="font-size:10px;margin-right:4px;">$</span>${fmt(totalAmt)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
   
   // 1. 現金小費專屬卡片 (與平台標籤合體版)
   if (r.isCashTip) {
@@ -2662,8 +3001,8 @@ function buildRecItem(r) {
             <!-- 上排：雙色日期時間膠囊 -->
             <div style="display:flex; align-items:center;">
               <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; flex-shrink:0;">
-                <span style="padding:2px 6px; background:#f1f5f9; font-size:11px; font-weight:800; color:hsl(330, 100%, 56%); font-family:var(--mono); border-right:2px solid #e2e8f0;">${dStr}</span>
-                <span style="padding:2px 6px; background:#ffffff; font-size:11px; font-weight:900; color:#2563eb; font-family:var(--mono);">${tStr}</span>
+                <span style="padding:2px 6px;background:#f1f5f9;font-size:13px;font-weight:800;color: #ff1f8f;font-family:var(--mono);border-right:2px solid #e2e8f0;">${dStr}</span>
+                <span style="padding:2px 6px;background:#ffffff;font-size:12px;font-weight:900;color: #2563eb;font-family:var(--mono);">${tStr}</span>
               </div>
             </div>
 
@@ -2694,7 +3033,7 @@ function buildRecItem(r) {
     // 1. 里程標籤 (僅在下線後且有里程時顯示)
     const mileageHtml = (pf(r.mileage) > 0) 
       ? `<div style="margin-left:6px; background:#fff7ed; color:#ea580c; padding:2px 5px; border-radius:8px; border:1.5px solid #ffd093; font-size:14px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
-          <span style="font-size:13px;">🛣️</span> ${pf(r.mileage).toFixed(1)} <span style="font-size:10px;letter-spacing:0.6px;margin-top:5px;color:#000;">km</span>
+          <span style="font-size:13px;margin-right:5px;">🛣️</span>${Math.round(pf(r.mileage))}<span style="font-size:12px;letter-spacing:0.6px;margin:5px 0 0 4px;color:#000;">km</span>
         </div>` 
       : '';
 
@@ -2709,12 +3048,12 @@ function buildRecItem(r) {
          </div>`;
 
     return `
-      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding: 2px 4px; margin-bottom: 5px;">
+      <div class="hist-rec-card punch-card-compact" data-id="${safeText(r.id)}" onclick="openDetailOverlay('${safeText(r.id)}')" style="${cardBorder} padding:0 4px;">
         <span style="background:${tagBg}; color:#fff; font-size:13px; padding:4px 3px; border-radius:10px; font-weight:800; letter-spacing:0.5px; flex-shrink:0; width:60px; height:32px; display:flex; align-items:center; justify-content:center;margin-right:5px;">🕒 打卡</span>
         
         <div style="font-family:var(--mono);font-size:15px;font-weight:800;color:var(--t1); flex:1; display:flex; align-items:center; justify-content:flex-start;">
           <!-- 移除日期，只保留時間軸 -->
-          <span style="color: #1174ff;margin-bottom:25px;">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color:#000;font-size:16px;font-weight:900;margin:0 3px;">→</span><span style="color:var(--red);margin-top:25px;">${outTimeStr}</span>
+          <span style="font-size:16px;font-weight:850;color: #00b85f;margin-bottom:29px;">${safeText(r.punchIn)}</span><span style="font-family:var(--mono);color:#000;font-size:16px;font-weight:900;margin:0 15px 0 3px;">→</span><span style="color:var(--red);margin:27px 2px 0 -12px;">${outTimeStr}</span>
           
           <!-- 組合標籤區 -->
           <div style="display:flex; align-items:center;">
@@ -2746,40 +3085,27 @@ function buildRecItem(r) {
   // 👇 全新設計：一體成型三色膠囊 (單數、里程、工時)
   let tagsParts = [];
   
-  if (_orders > 0) {
-    tagsParts.push(`
-      <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${_orders}</span>
-        <span style="font-size:10px; font-weight:600; color:#f97316;">單</span>
-      </div>
-    `);
-  }
-  if (r.mileage > 0) {
-    tagsParts.push(`
-      <div style="background:#e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px;">
-        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #b23dff;">${r.mileage}</span>
-        <span style="font-size:10px; font-weight:800; color: #000000;">km</span>
-      </div>
-    `);
-  }
-  if (_hours > 0) {
-    tagsParts.push(`
-      <div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;">
-        <span style="font-size:11px;">⏱️</span>
-        <span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(_hours)}</span>
-      </div>
-    `);
-  }
+  // 一體成型三色膠囊（缺資料也顯示，數字留––）
+  const ordText = _orders > 0 ? String(_orders) : '––';
+  const milText = pf(r.mileage) > 0 ? String(r.mileage) : '––';
+  const hrText  = _hours > 0 ? fmtHours(_hours) : '––';
 
-  let tagsHtml = '';
-  if (tagsParts.length > 0) {
-    // 將所有部分組裝起來，外層統一包裹並設定圓角、邊框，中間使用 gap 與背景色創造分隔線效果（平台總結卡片）
-    tagsHtml = `
-      <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px; background: #e2e8f0; gap:2px;">
-        ${tagsParts.join('')}
+  const tagsHtml = `
+    <div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #c3c9d0; overflow:hidden; margin-bottom:1px; background:#c3c9d0; gap:2px;">
+      <div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px; min-width:42px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color:#ff0000;letter-spacing:0.5px;">${ordText}</span>
+        <span style="font-size:10px; font-weight:600; color: #000;">單</span>
       </div>
-    `;
-  }
+      <div style="background:#e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px; min-width:48px;">
+        <span style="font-size:15px; font-family:var(--mono); font-weight:800; color:#b23dff;letter-spacing:0.5px;">${milText}</span>
+        <span style="font-size:10px; font-weight:800; color:#000;">km</span>
+      </div>
+      <div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px; min-width:52px;">
+        <span style="font-size:11px;">⏱️</span>
+        <span style="font-size:13px; font-family:var(--mono); font-weight:800; color:#2563eb;">${hrText}</span>
+      </div>
+    </div>
+  `;
 
   // 基本工資分析
   const recWageHtml = getWageBadge(_hours, total);
@@ -2801,8 +3127,8 @@ function buildRecItem(r) {
             <span class="hrc-plat-tag" style="background:#8b5cf6; color:#fff;">🔧 保養維修</span>
             <!-- 👇 紫色系雙色時間膠囊 -->
             <div style="display:inline-flex; align-items:center; border-radius:6px; border:1px solid #ddd6fe; overflow:hidden;">
-              <span style="padding:2px 6px; background:#f3e8ff; font-size:11px; font-weight:800; color:#7e22ce; font-family:var(--mono); border-right:1px solid #ddd6fe;">${dStr}</span>
-              <span style="padding:2px 6px; background:#ffffff; font-size:11px; font-weight:900; color:#9333ea; font-family:var(--mono);">${tStr}</span>
+              <span style="padding:2px 6px;background:#f3e8ff;font-size:13px;font-weight:800;color: #7e22ce;font-family:var(--mono);border-right:1px solid #ddd6fe;">${dStr}</span>
+              <span style="padding:2px 6px;background:#ffffff;font-size:12px;font-weight:900;color: #9333ea;font-family:var(--mono);">${tStr}</span>
             </div>
             ${r.shop ? `<span style="font-size:12px; color:var(--t2); font-weight:700; background:#f1f5f9; padding:2px 8px; border-radius:6px;">${safeText(r.shop)}</span>` : ''}
           </div>
@@ -2820,6 +3146,7 @@ function buildRecItem(r) {
 
   // === 一般行程記錄 ===
   return `
+    ${listNo ? `<span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#64748b;">#${listNo}</span>` : ''}
     <div class="hist-rec-card" data-id="${safeText(r.id)}" style="border:2px solid ${plat.color};">
       <div class="hrc-top" onclick="openDetailOverlay('${safeText(r.id)}')">
         <div class="hrc-toggle" id="${cid}-btn" onclick="foldCard('${safeText(cid)}', event)">▼</div>
@@ -2827,11 +3154,11 @@ function buildRecItem(r) {
         <div class="hrc-row1" style="margin: 0px 0 2px 0; display:block;">
           <span style="position:absolute; top:0; left:0; background:${plat.color}; color:#ffffff; padding:4px 14px; border-radius:0 0 16px 0; font-size:13px; font-weight:800; letter-spacing:0.7px; line-height:18px;">${safeText(plat.name)}</span>
           
-          <div style="display:flex; align-items:flex-start; gap:8px; margin: 3px 0 6px 100px;">
+          <div style="display:flex; align-items:flex-start; gap:8px; margin: 1px 0 5px 100px;">
             <!-- 👇 藍色系雙色時間膠囊 -->
-            <div style="display:inline-flex; align-items:center; border-radius:6px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:1px; flex-shrink:0;">
-              <span style="padding:2px 6px; background: #f1f5f9; font-size:12px; font-weight:800; color: hsl(330, 100%, 56%); font-family:var(--mono); border-right:2px solid #e2e8f0;">${dStr}</span>
-              <span style="padding:2px 6px; background: #ffffff; font-size:11px; font-weight:900; color: #2563eb; font-family:var(--mono);">${tStr}</span>
+            <div style="display:inline-flex; align-items:center; border-radius:20px; border:1.5px solid #65edff; overflow:hidden; margin-bottom:1px;">
+              <span style="padding:1px 9px;background:#46484a;font-size:14px;font-weight:800;color: #f0ff1f;font-family:var(--mono);border-right:2px solid #c3c9d0;letter-spacing:0.5px;">${dStr}</span>
+              <span style="padding:1px 9px;background:#ffffff;font-size:14px;font-weight:900;color: #2563eb;font-family:var(--mono);">${tStr}</span>
             </div>
             ${r.note ? `<div style="color: #2563eb; font-weight:800; font-size:12px; line-height:1.4; padding-top:1px;"> ${formatNoteWithLimit(r.note)}</div>` : ''}
           </div>
@@ -2909,13 +3236,21 @@ function buildRecItem(r) {
     </div>`;
 }
 
-if (!S.histTab) S.histTab = 'day';
+if (!S.histTab || ['week','biweek','halfmonth','month','year'].includes(S.histTab)) S.histTab = 'day';
 if (!S.histNavDate) S.histNavDate = new Date();
 if (!S.histFilter) S.histFilter = 'all';
 
 window.navHistGroup = function(dir, mode) {
+  if (mode === 'reconcile' || S.histTab === 'reconcile') {
+    const platId = S.histReconcilePlat;
+    if (!platId) return;
+    S.histNavDate = shiftPayPeriod(platId, S.histNavDate || new Date(), dir);
+    S.histPage = 1;
+    renderHistory();
+    return;
+  }
   let d = new Date(S.histNavDate);
-  if (mode === 'week') { d.setDate(d.getDate() + (dir * 7)); } 
+  if (mode === 'week') { d.setDate(d.getDate() + (dir * 7)); }
   if (mode === 'biweek') { d.setDate(d.getDate() + (dir * 14)); }
   if (mode === 'halfmonth') {
     let isFirstHalf = d.getDate() <= 15;
@@ -2927,14 +3262,47 @@ window.navHistGroup = function(dir, mode) {
       else d.setDate(1);
     }
   }
-  if (mode === 'month') { d.setMonth(d.getMonth() + dir); } 
+  if (mode === 'month') { d.setMonth(d.getMonth() + dir); }
   if (mode === 'year') { d.setFullYear(d.getFullYear() + dir); }
-  
   S.histNavDate = d;
-  S.histPage = 1; // 👈 修正：切換區間時強制回到第 1 頁
+  S.histPage = 1;
   renderHistory();
 };
 function changeHistFilter(val) { S.histFilter = val; renderHistory(); }
+
+window.setHistReconcilePlat = function(platId) {
+  S.histReconcilePlat = platId;
+  S.histPage = 1;
+  S.histNavDate = new Date();
+  renderHistory();
+};
+
+/** 對帳：點日期 → 跳到列表該日第一筆（含換頁） */
+window.jumpToHistListDate = function(dateStr) {
+  const pages = window.__histReconcilePages || [];
+  let targetPage = 1;
+  for (let i = 0; i < pages.length; i++) {
+    if (pages[i].some(r => r.date === dateStr)) {
+      targetPage = i + 1;
+      break;
+    }
+  }
+  S.histPage = targetPage;
+  S.histShowList = true;
+  renderHistory();
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const el = document.querySelector(`[data-hist-date="${dateStr}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow 0.3s';
+        el.style.boxShadow = '0 0 0 3px #3b82f6';
+        setTimeout(() => { el.style.boxShadow = ''; }, 1200);
+      }
+    }, 50);
+  });
+};
 
 /* 👈 [新增] 查看記錄（週/雙週/半月/月/年 分組檢視）的快速選日期入口 */
 function openHistGroupDatePicker(mode) {
@@ -2960,19 +3328,19 @@ function openHistGroupDatePicker(mode) {
 }
 
 /* ══ 替換：統一讓查看紀錄外層負責上下滾動 ══ */
-function renderHistory() { 
+function renderHistory() {
   const content = document.getElementById('hist-content');
-  
-  // 統一所有模式下的滾動屬性，保證必定有上下捲動軸
   content.style.overflowY = 'auto';
   content.style.overflowX = 'hidden';
   content.style.display = 'block';
   content.style.WebkitOverflowScrolling = 'touch';
-  
+
+  if (['week','biweek','halfmonth','month','year'].includes(S.histTab)) S.histTab = 'reconcile';
+
   if (S.histTab === 'day') {
-    renderHistDayView(); 
+    renderHistDayView();
   } else {
-    renderHistGroupView(S.histTab); 
+    renderHistReconcileView();
   }
 }
 
@@ -2988,19 +3356,17 @@ function renderHistDayView() {
       <div style="display:flex;align-items:center;gap:8px">
         <button class="mbtn" id="hist-prev">◀</button>
         
-        <!-- 👇 修改這裡：加入透明 input 疊在文字上方 -->
-        <div style="position:relative; display:inline-block; min-width:90px; text-align:center;">
-          <h2 id="hist-label" style="margin:0; cursor:pointer; line-height:1;">
-            ${styleNum(y)}${styleUnit(' 年 ')}${styleNum(pad(m))}${styleUnit(' 月 ')} <span style="color:#000; font-size:10px; vertical-align:middle;">▼</span>
+        <div onclick="openHistDayDatePicker()" style="min-width:90px; text-align:center; cursor:pointer;">
+          <h2 id="hist-label" style="margin:0; line-height:1;">
+            ${styleNum(y)}${styleUnit(' 年 ')}${styleNum(m)}${styleUnit(' 月 ')} <span style="color:#000; font-size:10px; vertical-align:middle;">▼</span>
           </h2>
-          <input type="month" id="hist-month-picker" value="${y}-${pad(m)}" onchange="S.tempDateValue=this.value" onblur="handleHistMonthBlur()" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; margin:0; padding:0; border:none;">
         </div>
         
         <button class="mbtn" id="hist-next">▶</button>
         <!-- 👇 這裡將箭頭改為預設 ▼ -->
         <button class="mbtn" onclick="toggleCalendarGrid()" id="hist-cal-toggle" style="background:#bbdaf7;color:#0c72d2;font-size:22px;font-weight:900;width:35px;height:35px;border:1.5px solid #29458b;border-radius:50%;transition:transform 0.3s;transform:rotate(180deg);title="收起/展開日曆">▼</button>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:18px;">
         <button class="icon-btn" onclick="openSearch()" title="搜尋記錄"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
         <button class="icon-btn" onclick="openFullCalendar()" title="大日曆"><img src="images/calendar.png" alt="日曆" style="width:16px;height:16px;opacity:0.7;"></button>
       </div>
@@ -3011,7 +3377,7 @@ function renderHistDayView() {
     </div>
     <div class="hist-divider"></div>
     <div id="hist-day-summary" style="margin:6px 0 4px;"></div>
-    <div class="sec-title" id="hist-day-label" style="margin-bottom:4px; padding:0 4px; color: #000000;">指定日記錄</div>
+    <div class="sec-title" id="hist-day-label" style="padding:0 7px; color: #000000;">指定日記錄</div>
   </div>
   <div id="hist-rec-list" style="padding:0 16px 24px; display:flex; flex-direction:column; gap:7px;"></div>`;
   
@@ -3039,20 +3405,25 @@ function renderHistDayView() {
   renderHistCalendarGrid(); 
   renderHistRecords(S.selDate);
 }
-/* ══ 修正：查看記錄選盤等待 ✔ 邏輯 ══ */
-window.handleHistMonthBlur = function() {
-  if (S.tempDateValue) {
-    const [newY, newM] = S.tempDateValue.split('-');
-    S.calY = parseInt(newY);
-    S.calM = parseInt(newM);
-    S.selDate = `${S.calY}-${pad(S.calM)}-01`;
-    S.tempDateValue = null; // 清空暫存
-    
-    // 雖然是 blur，但為了保險還是給 100ms 讓系統 UI 徹底消失
-    setTimeout(() => {
-      renderHistory();
-    }, 100);
-  }
+window.openHistDayDatePicker = function() {
+  const curDate = S.selDate ? new Date(S.selDate + 'T00:00:00') : new Date();
+  const curY = S.calY || curDate.getFullYear();
+  const curM = S.calM || (curDate.getMonth() + 1);
+  const curD = curDate.getDate() || 1;
+
+  openQuickDatePicker({
+    mode: 'day',
+    year: curY,
+    curY: curY,
+    curM: curM,
+    curD: curD,
+    onSelectDay: (y, m, d) => {
+      S.calY = y;
+      S.calM = m;
+      S.selDate = `${y}-${pad(m)}-${pad(d)}`;
+      renderHistory(); // 自動跳轉至小日曆該天位置並渲染當日記錄
+    }
+  });
 };
 
 function renderHistCalendarGrid() {
@@ -3154,168 +3525,230 @@ function calcTotalHours(recs) {
   return totalHours;
 }
 
-/* ══ 修正：查看記錄 - 智慧日期導航視覺優化版 ══ */
-function renderHistGroupView(mode) {
+/* ══ 查看記錄 · 對帳明細列表（依平台報酬區間） ══ */
+function renderHistReconcileView() {
   const content = document.getElementById('hist-content');
-  const nd = new Date(S.histNavDate);
-  let startD, endD, labelStr;
-
-  // 定義樣式組件
-  // styleNum: 藍色大字 (用於數字及上下旬標籤)
-  const styleNum = (val) => `<span style="font-size: 18px; font-weight: 900; color: #006eff; font-family: var(--mono); vertical-align: middle;">${val}</span>`;
-  // styleUnit: 黑色小字 (用於年、月、/ 符號)
-  const styleUnit = (txt) => `<span style="font-size: 13px; font-weight: 800; color: #000000; margin: 0 2px; vertical-align: middle;"> ${txt} </span>`;
-  // styleSep: 黑色中字 (用於 ~ 符號)
-  const styleSep = (sep) => `<span style="font-size: 18px; font-weight: 900; color: #000000; margin: 0 6px; vertical-align: middle;"> ${sep} </span>`;
-
-  // 1. 日期區間計算與標籤 HTML 產生
-  if (mode === 'week') {
-    const day = nd.getDay() || 7;
-    startD = new Date(nd); startD.setDate(startD.getDate() - day + 1);
-    endD = new Date(startD); endD.setDate(endD.getDate() + 6);
-    labelStr = `${styleNum(pad(startD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(startD.getDate()))}${styleSep('~')}${styleNum(pad(endD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(endD.getDate()))}`;
-  } else if (mode === 'biweek') {
-    const anchor = new Date(2025, 10, 10); 
-    const diffTime = (new Date(nd.getFullYear(), nd.getMonth(), nd.getDate(), 12)).getTime() - anchor.getTime();
-    const diffDays = Math.floor(diffTime / 86400000);
-    const cycleOffset = Math.floor(diffDays / 14);
-    startD = new Date(anchor); startD.setDate(startD.getDate() + cycleOffset * 14);
-    endD = new Date(startD); endD.setDate(endD.getDate() + 13);
-    
-    let yearPrefix = startD.getFullYear() === endD.getFullYear() ? '' : `${styleNum(startD.getFullYear())}${styleUnit('年')}`;
-    labelStr = `${yearPrefix}${styleNum(pad(startD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(startD.getDate()))}${styleSep('~')}${styleNum(pad(endD.getMonth()+1))}${styleUnit('/')}${styleNum(pad(endD.getDate()))}`;
-  } else if (mode === 'halfmonth') {
-    let isFirstHalf = nd.getDate() <= 15;
-    const tag = isFirstHalf ? '(上)' : '(下)';
-    if (isFirstHalf) {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth(), 15); 
-    } else {
-      startD = new Date(nd.getFullYear(), nd.getMonth(), 16); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); 
-    }
-    // 👇 (上)、(下) 改為套用 styleNum (藍色大字)
-    labelStr = `${styleNum(nd.getFullYear())}${styleUnit('年')}${styleNum(nd.getMonth()+1)}${styleUnit('月')}${styleNum(tag)}`;
-  } else if (mode === 'month') {
-    startD = new Date(nd.getFullYear(), nd.getMonth(), 1); endD = new Date(nd.getFullYear(), nd.getMonth() + 1, 0); 
-    labelStr = `${styleNum(nd.getFullYear())}${styleUnit('年')}${styleNum(nd.getMonth()+1)}${styleUnit('月')}`;
-  } else if (mode === 'year') {
-    startD = new Date(nd.getFullYear(), 0, 1); endD = new Date(nd.getFullYear(), 11, 31); 
-    labelStr = `${styleNum(nd.getFullYear())}${styleUnit('年')}`;
+  const activePlats = (S.platforms || []).filter(p => p.active);
+  if (!activePlats.length) {
+    content.innerHTML = `<div class="empty-tip" style="padding:40px 16px;">請先至「設定」啟用至少一個外送平台</div>`;
+    return;
   }
+  if (!S.histReconcilePlat || !activePlats.some(p => p.id === S.histReconcilePlat)) {
+    S.histReconcilePlat = activePlats[0].id;
+  }
+  if (!S.histNavDate) S.histNavDate = new Date();
 
-  const sStr = `${startD.getFullYear()}-${pad(startD.getMonth()+1)}-${pad(startD.getDate())}`;
-  const eStr = `${endD.getFullYear()}-${pad(endD.getMonth()+1)}-${pad(endD.getDate())}`;
+  const plat = activePlats.find(p => p.id === S.histReconcilePlat) || activePlats[0];
+  const period = getPayPeriod(plat.id, S.histNavDate);
+  const sStr = period.startStr, eStr = period.endStr;
 
-  // 2. 資料過濾 (保持你之前的修正邏輯)
-  let rawDateRecs = S.records.filter(r => r.date >= sStr && r.date <= eStr);
-  let filteredRecs = (S.histFilter === 'all') 
-    ? rawDateRecs 
-    : rawDateRecs.filter(r => r.platformId === S.histFilter || r.isPunchOnly);
-
+  const filteredRecs = S.records.filter(r =>
+    r.date >= sStr && r.date <= eStr &&
+    (r.platformId === plat.id || r.isPunchOnly)
+  );
   let displayRecs = filteredRecs.filter(r => !r.isPunchOnly && !r.isCashTip);
-  displayRecs.sort((a,b) => b.date.localeCompare(a.date) || (a.time||'').localeCompare(a.time||''));
+  displayRecs.sort((a, b) => b.date.localeCompare(a.date) || (a.time || '').localeCompare(b.time || ''));
 
-  // 3. 按照日期分組 (用於智慧分頁)
+  // 分頁（同日不拆頁）
   const dateGroups = [];
   displayRecs.forEach(r => {
-    let lastGroup = dateGroups[dateGroups.length - 1];
-    if (lastGroup && lastGroup[0].date === r.date) { lastGroup.push(r); } 
-    else { dateGroups.push([r]); }
+    const last = dateGroups[dateGroups.length - 1];
+    if (last && last[0].date === r.date) last.push(r);
+    else dateGroups.push([r]);
   });
-
-  // 4. 【智慧分頁演算法】滿足：21個留、22個進下一頁
   const pages = [];
-  let currentPage = [];
-  let currentCount = 0;
-
+  let currentPage = [], currentCount = 0;
   dateGroups.forEach(group => {
     const groupSize = group.length;
-    const projectedTotal = currentCount + groupSize;
-
-    if (currentCount === 0) {
+    const projected = currentCount + groupSize;
+    if (currentCount === 0 || projected <= 10) {
       currentPage.push(...group);
-      currentCount = groupSize;
-    } else if (projectedTotal <= 20) {
-      currentPage.push(...group);
-      currentCount = projectedTotal;
-    } else if (projectedTotal === 21) {
-      // ✅ 剛好 21 個：允許放在同一頁
-      currentPage.push(...group);
-      currentCount = projectedTotal;
+      currentCount = projected;
     } else {
-      // ✅ 總數大於等於 22：這一整組移到下一頁
       pages.push(currentPage);
       currentPage = [...group];
       currentCount = groupSize;
     }
   });
-  if (currentPage.length > 0) pages.push(currentPage);
+  if (currentPage.length) pages.push(currentPage);
+  window.__histReconcilePages = pages; // 給 jumpToHistListDate 用
 
   const totalPages = pages.length || 1;
   if (S.histPage > totalPages) S.histPage = totalPages;
+  
   const pageItems = pages[S.histPage - 1] || [];
 
-  // 5. 計算總結 (統計全部，不分分頁)
-  const tInc = filteredRecs.reduce((s,r) => s + recTotal(r), 0);
-  const tOrd = filteredRecs.reduce((s,r) => s + pf(r.orders), 0);
-  const tMil = filteredRecs.reduce((s,r) => s + pf(r.mileage), 0);
+  // ✅ 前面幾頁的筆數加總 = 本頁第一筆的編號起點
+  const pageStartNo = pages
+    .slice(0, Math.max(0, (S.histPage || 1) - 1))
+    .reduce((sum, p) => sum + p.length, 0);
+  
+  const tInc = filteredRecs.reduce((s, r) => s + recTotal(r), 0);
+  const tOrd = filteredRecs.reduce((s, r) => s + pf(r.orders), 0);
+  const tMil = filteredRecs.reduce((s, r) => s + pf(r.mileage), 0);
   const tHrs = calcTotalHours(filteredRecs);
-  const tTip = filteredRecs.reduce((s,r) => s + pf(r.tips), 0);
 
-  // 6. 渲染 UI
-  const activePlats = S.platforms.filter(p=>p.active);
-  const currentPlat = S.platforms.find(p => p.id === S.histFilter);
-  const dropdownBg = currentPlat ? currentPlat.color : '#00f7ff';
-  const dropdownText = currentPlat ? '#ffffff' : '#191717';
-  let summaryCardHtml = buildSummaryCard('區間總計', tInc, tOrd, tMil, tHrs, tInc-tTip, 0, tTip, 'hist-group-card', labelStr);
+  // ✅ 只顯示「有紀錄」的日期
+  const datesWithRec = [...new Set(displayRecs.map(r => r.date))].sort();
+  // 顯示順序可改成由新到舊：
+  // const datesWithRec = [...new Set(displayRecs.map(r => r.date))];
 
-  // 3. 渲染 UI 時，將 span 的 color 拔掉，因為裡面已經有各自的顏色
+  const dayChipsHtml = datesWithRec.map(ds => {
+    const day = parseInt(ds.slice(8, 10), 10);
+    return `
+      <button onclick="jumpToHistListDate('${ds}')" style="flex-shrink:0;min-width:40px;padding:6px 6px 4px;border-radius:12px;border:1.5px solid #86efac;background:#ecfdf5;font-family:var(--mono);font-weight:800;font-size:14px;color:#047857;cursor:pointer;">
+        ${day}
+      </button>`;
+  }).join('');
+
+  // 區間標題下方小字（Uber 提示；位置同以前熊貓明細／發薪）
+  let metaHtml = '';
+  if (plat.id === 'uber') {
+    metaHtml = `<div style="font-size:12px;font-weight:600;color: #e50f0f;text-align:center;margin-top:6px;line-height:1.4;">⚠️ 週一 00:00～04:00 的行程，歸類為週日行程</div>`;
+  }
+
   content.innerHTML = `
-    <div style="padding: 5px 16px;">
-      <!-- 日期導航 -->
-      <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 7px;">
-        <button class="btn btn1" onclick="navHistGroup(-1, '${mode}')">◀</button>
-        <span onclick="openHistGroupDatePicker('${mode}')" style="text-align: center; flex: 1; line-height: 1; cursor:pointer;">${labelStr} <span style="color:#94a3b8; font-size:12px; vertical-align:middle;">▼</span></span>
-        <button class="btn btn1" onclick="navHistGroup(1, '${mode}')">▶</button>
+    <div style="padding:8px 16px 24px;">
+      <!-- 平台按鈕 -->
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:-4px;">
+        ${activePlats.map(p => {
+          const on = p.id === plat.id;
+          return `<button onclick="setHistReconcilePlat('${p.id}')" style="flex-shrink:0;padding:8px 16px;border-radius:14px;font-size:13px;font-weight:800;border:2px solid ${on ? p.color : '#e2e8f0'};background:${on ? p.color : '#fff'};color:${on ? '#fff' : '#64748b'};cursor:pointer;">${safeText(p.name)}</button>`;
+        }).join('')}
       </div>
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;justify-content: flex-end;">
-        <select class="plat-dropdown" onchange="setHistFilter(this.value)" style="background:${dropdownBg}; color:${dropdownText}; border-color:${dropdownBg};">
-          <option value="all" ${S.histFilter==='all'?'selected':''}>全部平台</option>
-          ${activePlats.map(p => `<option value="${p.id}" ${S.histFilter===p.id?'selected':''}>${p.name}</option>`).join('')}
-        </select>
-        <button class="toggle-list-btn" onclick="toggleHistList()">
-          ${S.histShowList ? '▲ 隱藏列表' : '▼ 顯示列表'}
-        </button>
+
+      <!-- 區間導覽 + 下方提示 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:3px 10px;border-radius:20px;border:1px solid #cbd5e1;margin-bottom:4px;">
+        <button class="btn btn1" onclick="navHistGroup(-1,'reconcile')" style="width:42px;height:42px;">◀</button>
+        <div onclick="openReconcileDatePicker()" style="flex:1;text-align:center;cursor:pointer;">
+          <div style="font-family:var(--mono);font-weight:900;line-height:1.3;">
+            <span style="color:#006eff;font-size:16px;">${period.startStr.slice(0,4)}</span>
+            <span style="font-size:12px;color:#000;">年</span>
+            <span style="color:#006eff;font-size:16px;">${_fmtMD(period.startStr)}</span>
+            <span style="color:#000;font-size:14px;"> ~ </span>
+            <span style="color:#006eff;font-size:16px;">${_fmtMD(period.endStr)}</span>
+            <span style="color:#94a3b8;font-size:12px;vertical-align:middle;"> ▼</span>
+          </div>
+          ${metaHtml}
+        </div>
+        <button class="btn btn1" onclick="navHistGroup(1,'reconcile')" style="width:42px;height:42px;">▶</button>
       </div>
-      <div class="summary-forehead-box">
-        <div class="summary-forehead-top"><span class="summary-forehead-title">📊 區間總結數據</span></div>
-        <div style="padding:4px 2px 2px 2px;">${summaryCardHtml}</div>
+
+      <!-- 有紀錄的日期列（無小字提示） -->
+      <div style="display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;">
+        ${dayChipsHtml || `<span style="font-size:14px;color:#94a3b8;font-weight:700;">本區間尚無行程紀錄</span>`}
       </div>
-      <div class="pg-info" style="margin-bottom:5px;">
-        <span style="font-size:14px;font-weight:750;color: #0099ff;">共有 <span style="font-size:15px;font-weight:900;color: #ff7300;">${displayRecs.length}</span> 筆記錄</span> <span style="font-size:15px;font-weight:900;color:#000;">│</span> (第 <span style="font-size:15px;font-weight:900;color: #ff0000;">${S.histPage}</span> 頁 / 總共 <span style="font-size:15px;font-weight:900;color:#000;">${totalPages}</span> 頁)</span>
+
+      ${buildSimplePeriodSummary(tInc, tOrd, tMil, tHrs)}
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0;flex-wrap:wrap;">
+        <span style="font-size:14px;font-weight:750;color:#0099ff;">
+          共有 <span style="font-size:18px;font-weight:900;color:#ff7300;">${displayRecs.length}</span> 筆
+        </span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage <= 1 ? 'disabled' : ''}
+            style="padding:6px 12px;border-radius:10px;border:1.5px solid #cbd5e1;background:#fff;font-weight:800;color:#475569;${S.histPage <= 1 ? 'opacity:0.4;' : ''}">上一頁</button>
+          <span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#2563eb;background:#eff6ff;padding:4px 10px;border-radius:20px;border:1px solid #bfdbfe;">
+            <span style="font-size:16px;font-weight:900;color: #f62525;">${S.histPage}</span> / ${totalPages}
+          </span>
+          <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage >= totalPages ? 'disabled' : ''}
+            style="padding:6px 12px;border-radius:10px;border:1.5px solid #cbd5e1;background:#fff;font-weight:800;color:#475569;${S.histPage >= totalPages ? 'opacity:0.4;' : ''}">下一頁</button>
+          <button class="toggle-list-btn" onclick="toggleHistList()">${S.histShowList ? '▲ 隱藏列表' : '▼ 顯示列表'}</button>
+        </div>
       </div>
+
       <div id="hist-list-wrapper" class="${S.histShowList ? '' : 'hidden'}">
-        ${renderCardList(pageItems)}
-        ${renderPagination(totalPages)}
+        ${typeof renderCardList === 'function' ? renderCardList(pageItems, pageStartNo) : ''}
+
+        <!-- 回到頂端 -->
+        <div style="display:flex;justify-content:center;padding:16px 0 28px;">
+          <button onclick="scrollHistToTop()" style=" padding:10px 22px;border-radius:20px;border:1.5px solid #cbd5e1;background:#ffffff;color:#2563eb;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 4px rgba(37,99,235,0.4);display:inline-flex;align-items:center;gap:6px;"> ↑ 回到頂端 </button>
+        </div>
       </div>
-    </div>
   `;
 }
-// 輔助功能：切換過濾器
-window.setHistFilter = function(val) {
-  S.histFilter = val;
+// 回到頂端捲動函式（對帳明細列表）
+window.scrollHistToTop = function() {
+  const el = document.getElementById('hist-content');
+  if (el) {
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+window.openReconcileDatePicker = function() {
+  const platId = S.histReconcilePlat;
+  if (!platId) {
+    toast('⚠️ 請先選擇平台');
+    return;
+  }
+
+  // 以目前錨點為中心，前後各列出若干個「該平台報酬區間」
+  const center = new Date(S.histNavDate || new Date());
+  const periods = [];
+  // 先往前推 5 格
+  let cursor = new Date(center);
+  for (let i = 0; i < 5; i++) {
+    cursor = shiftPayPeriod(platId, cursor, -1);
+  }
+  // 再依序產生 11 個區間（前5 + 當前 + 後5）
+  for (let i = 0; i < 11; i++) {
+    const p = getPayPeriod(platId, cursor);
+    periods.push(p);
+    cursor = shiftPayPeriod(platId, cursor, 1);
+  }
+
+  const cur = getPayPeriod(platId, center);
+  const body = document.getElementById('quick-date-body');
+  const ov = document.getElementById('quick-date-overlay');
+  if (!body || !ov) {
+    toast('⚠️ 找不到日期選擇元件');
+    return;
+  }
+
+  let html = `<div class="qdp-title">📅 選擇報酬區間</div>
+    <div class="qdp-week-grid">`;
+
+  periods.forEach((p, idx) => {
+    const isCur = p.startStr === cur.startStr && p.endStr === cur.endStr;
+    // 用 startStr 當選取值，避免 closure 問題
+    html += `<button class="qdp-week-btn ${isCur ? 'active' : ''}"
+      onclick="qdpPickPayPeriod('${p.startStr}')">
+      ${p.startStr.slice(0,4)}/${p.startStr.slice(5,7)}/${p.startStr.slice(8,10)}
+      ~
+      ${p.endStr.slice(5,7)}/${p.endStr.slice(8,10)}
+    </button>`;
+  });
+
+  html += `</div>
+    <button class="qdp-close-btn" onclick="closeQuickDatePicker()">取消</button>`;
+
+  body.innerHTML = html;
+  ov.classList.add('show');
+};
+
+window.qdpPickPayPeriod = function(startStr) {
+  // startStr = YYYY-MM-DD
+  const [y, m, d] = startStr.split('-').map(Number);
+  S.histNavDate = new Date(y, m - 1, d, 12, 0, 0);
   S.histPage = 1;
+  closeQuickDatePicker();
   renderHistory();
 };
+
 // 輔助功能：展開/收起列表
 window.toggleHistList = function() {
   S.histShowList = !S.histShowList;
   renderHistory();
 };
 // 輔助功能：渲染列表卡片 (提取原本的 group 邏輯)
-function renderCardList(items) {
+function renderCardList(items, startIndex = 0) {
   if (items.length === 0) return `<div class="empty-tip">✨ 目前無行程記錄</div>`;
   let html = '';
   let cursor = 0;
+  let no = startIndex; // 第 2 頁會是 10、20…
+
   while (cursor < items.length) {
     let currentDate = items[cursor].date;
     let group = [];
@@ -3324,30 +3757,26 @@ function renderCardList(items) {
       cursor++;
     }
     if (group.length > 1) {
-      html += `<div class="rec-group-wrapper"><div class="rec-group-line"></div>${group.map(r => `<div style="position:relative; margin-bottom:8px;"><div class="rec-node"></div>${buildRecItem(r)}</div>`).join('')}</div>`;
+      html += `<div class="rec-group-wrapper" data-hist-date="${currentDate}"><div class="rec-group-line"></div>${
+        group.map(r => {
+          no++;
+          return `<div style="position:relative;margin-bottom:8px;"><div class="rec-node"></div>${buildRecItem(r, no)}</div>`;
+        }).join('')
+      }</div>`;
     } else {
-      html += `<div style="margin-bottom:8px;">${buildRecItem(group[0])}</div>`;
+      no++;
+      html += `<div style="margin-bottom:8px;" data-hist-date="${currentDate}">${buildRecItem(group[0], no)}</div>`;
     }
   }
   return html;
 }
-// 輔助功能：分頁按鈕
-function renderPagination(total) {
-  if (total <= 1) return '';
-  return `
-    <div class="pagination-ctrl">
-      <button class="pg-btn" onclick="changeHistPage(-1)" ${S.histPage===1?'disabled':''}>上一頁</button>
-      <span class="pg-info">${S.histPage} / ${total}</span>
-      <button class="pg-btn" onclick="changeHistPage(1)" ${S.histPage===total?'disabled':''}>下一頁</button>
-    </div>`;
-}
+
 // 分頁處理
 window.changeHistPage = function(dir) {
   S.histPage += dir;
   renderHistory();
   document.getElementById('hist-content').scrollTop = 0;
 };
-
 
 function openFullCalendar() { document.getElementById('full-calendar-overlay').classList.add('show'); renderFullCalendar(); }
 function closeFullCalendar() { document.getElementById('full-calendar-overlay').classList.remove('show'); }
@@ -3374,14 +3803,14 @@ function renderFullCalendar() {
   const { calY:y, calM:m } = S;
 
   // 定義樣式組件
-  const styleNum = (val) => `<span style="font-size: 20px; font-weight: 900; color: #006eff; font-family: var(--mono); vertical-align: middle;">${val}</span>`;
-  const styleUnit = (txt) => `<span style="font-size: 11px; font-weight: 800; color: #000000; margin: 0 1px; vertical-align: middle;">${txt}</span>`;
+  const styleNum = (val) => `<span style="font-size:20px;font-weight:900;color: #006eff;font-family:var(--mono);vertical-align:middle;margin-bottom:2px;">${val}</span>`;
+  const styleUnit = (txt) => `<span style="font-size:13px;font-weight:800;color: #000;margin:8px 4px 0 2px;vertical-align:middle;">${txt}</span>`;
   
   // 1. 渲染頂部年月選擇器
   document.getElementById('fc-title').innerHTML = `
     <div style="position:relative; display:inline-block;">
-      <span style="cursor:pointer;">
-        ${styleNum(y)}${styleUnit(' 年 ')}${styleNum(pad(m))}${styleUnit(' 月 ')} <span style="color:#000; font-size:10px; vertical-align:middle;">▼</span>
+      <span style="display:flex;flex-direction:row;cursor:pointer; align-items:center;align-content: center;justify-content:center; gap:4px;">
+        ${styleNum(y)}${styleUnit(' 年 ')}${styleNum(m)}${styleUnit(' 月 ')} <span style="color:#000;font-size:12px;font-weight:900;vertical-align:middle;">▼</span>
       </span>
       <input type="month" value="${y}-${pad(m)}" onchange="S.tempDateValue=this.value" onblur="handleFullCalBlur()" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
     </div>`;
@@ -3523,12 +3952,10 @@ function openDetailOverlay(id) {
   const plat = getPlatform(r.platformId); 
   const total = recTotal(r);
   
-  // 判斷是否為正在打卡中
   const isOnline = r.isPunchOnly && r.punchOut === '';
   const punchDisplay = r.punchIn ? (r.punchOut ? `${safeText(r.punchIn)} → ${safeText(r.punchOut)}` : `${safeText(r.punchIn)} → <span style="color:var(--green); font-weight:800;">上線中</span>`) : '—';
   const hourDisplay = isOnline ? '<span style="color:var(--green); font-weight:800;">計時中...</span>' : (r.hours > 0 ? fmtHours(r.hours) : '—');
 
-  // 格式化顯示資料
   const rows = [ 
     ['🏪 平台', `<span style="color:${plat.color};font-weight:600">${safeText(plat.name)}</span>`], 
     ['📆 日期', safeText(r.date)], 
@@ -3543,7 +3970,6 @@ function openDetailOverlay(id) {
     ['📝 備註', r.note ? safeTextWithBr(r.note) : '—'] 
   ];
 
-  // 產生 HTML
   let html = `
     <div style="text-align:center; padding:10px 0 16px; border-bottom:1px solid var(--border)">
       <div style="font-size:13px; color:var(--t3); margin-bottom:4px">本筆總收入</div>
@@ -3561,8 +3987,31 @@ function openDetailOverlay(id) {
       <button onclick="deleteRecord('${r.id}')" style="flex:1; padding:12px; border-radius:var(--rs); background:var(--red-d); color:var(--red); border:1px solid rgba(239,68,68,.3); font-size:14px; cursor:pointer; font-weight:600">🗑 刪除</button>
     </div>`;
 
+  const ov = document.getElementById('detail-overlay');
+  const box = document.getElementById('detail-box');
   document.getElementById('detail-body').innerHTML = html;
-  document.getElementById('detail-overlay').classList.add('show');
+
+  // 🌟 準備開啟時的初始透明度與位置
+  ov.style.opacity = '0';
+  if (box) {
+    box.style.transform = 'translate3d(0, 100%, 0) scale(0.96)';
+    box.style.opacity = '0.5';
+  }
+
+  ov.classList.add('show');
+
+  // 雙重幀動畫確保觸發流暢滑入
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      ov.style.opacity = '1';
+      ov.style.transition = 'opacity 0.25s ease-out';
+      if (box) {
+        box.style.transition = 'transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.15), opacity 0.25s ease-out';
+        box.style.transform = 'translate3d(0, 0, 0) scale(1)';
+        box.style.opacity = '1';
+      }
+    });
+  });
 }
 async function deleteRecord(id) { closeDetailOverlay(); const ok = await customConfirm('確定要<span style="color:var(--red);"> 刪除 </span>這筆記錄嗎？<br><span style="color:var(--text-blue);font-weight:700;">此動作無法復原。</span>'); if (!ok) return; S.records = S.records.filter(r=>r.id!==id); saveRecords(); toast('已刪除'); if (S.tab==='home') renderHome(); if (S.tab==='history') renderHistory(); }
 
@@ -3579,9 +4028,9 @@ function openSearch() {
       yearContainer = document.createElement('div');
       yearContainer.id = 'dynamic-year-tags';
       yearContainer.innerHTML = `
-        <div style="font-size:12px; color:var(--t3); font-weight:800; margin-bottom:6px; margin-top:4px;">📅 快速選擇年份區間</div>
+        <div style="color:#0083FF;font-size:14px;font-weight:700;margin-bottom:4px;margin-top:6px;">📅 快速選擇(全年區間)</div>
         <style>.hide-scroll-bar::-webkit-scrollbar { display: none; }</style>
-        <div id="year-btn-wrap" class="hide-scroll-bar" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;"></div>
+        <div id="year-btn-wrap" class="hide-scroll-bar" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:5px;border-bottom:2px solid #0083FF;"></div>
       `;
       resultsDiv.parentNode.insertBefore(yearContainer, resultsDiv);
     }
@@ -3641,19 +4090,43 @@ function doSearch() {
   const from = document.getElementById('search-from').value; 
   const to = document.getElementById('search-to').value; 
   const el = document.getElementById('search-results');
-  const countEl = document.getElementById('search-count'); // 用來顯示數量的標籤
+  const countEl = document.getElementById('search-count');
   
-  // 防呆：如果完全沒有輸入條件，就清空結果並隱藏數量
-  if (!kw && !from && !to) {
-    el.innerHTML = `<div class="empty-tip">請輸入條件開始搜尋</div>`;
+  const hasFrom = !!from;
+  const hasTo = !!to;
+  const hasBothDates = hasFrom && hasTo;
+  const hasKw = !!kw;
+
+  // 🌟 第一順位優先判斷：只要 2 個日期都選好了，立刻先檢查「開始是否大於結束」！
+  if (hasBothDates && from > to) {
+    el.innerHTML = `<div class="empty-tip" style="color: #85898d;">⚠️ 「<span style="color: #28a745;margin:0 4px;">開始日期</span>」<span style="color: #0083FF;font-size:17px;font-weight:800;">不能大於</span>「<span style="color: #ff3131;margin:0 4px;">結束日期</span>」</div>`;
+    if (countEl) countEl.style.display = 'none';
+    return; // 優先報錯，不需等關鍵字填寫
+  }
+
+  // 🌟 第二順位判斷：日期區間合規後，才檢查是否有缺選日期或缺關鍵字
+  if (!hasBothDates || !hasKw) {
+    let msg = '';
+    if (!hasFrom && !hasTo && !hasKw) {
+      msg = '請輸入「<span style="color: #0072E3;margin:0 4px;">時間範圍</span>」及「<span style="color: #e83e92;margin:0 4px;">關鍵字</span>」';
+    } else if (!hasFrom && !hasTo) {
+      msg = '請選擇「<span style="color: #0072E3;margin:0 4px;">時間範圍</span>」';
+    } else if (!hasFrom) {
+      msg = '請選擇「<span style="color: #28a745;margin:0 4px;">開始日期</span>」';
+    } else if (!hasTo) {
+      msg = '請選擇「<span style="color: #ff3131;margin:0 4px;">結束日期</span>」';
+    } else {
+      msg = '請<span style="color: #0072E3;margin:0 10px 0 4px;">輸入關鍵字</span>或<span style="color: #e83e92;margin-left:10px;">點選</span>【<span style="color: #e83e92;margin:0 3px;">關鍵字標籤</span>】';
+    }
+    
+    el.innerHTML = `<div class="empty-tip">${msg}</div>`;
     if (countEl) countEl.style.display = 'none';
     return;
   }
 
+  // 進行過濾（條件全數符合時執行搜尋）
   let recs = S.records.filter(r => { 
-    if (from && r.date < from) return false; 
-    if (to && r.date > to) return false; 
-    if (!kw) return true; 
+    if (r.date < from || r.date > to) return false; 
     
     if (kw === '現金小費' && r.isCashTip) return true;
     if (kw === '線上小費' && !r.isCashTip && !r.isPunchOnly && pf(r.tips) > 0) return true;
@@ -3663,45 +4136,68 @@ function doSearch() {
            (r.note||'').toLowerCase().includes(kw) || 
            String(recTotal(r)).includes(kw) || 
            String(r.orders||'').includes(kw); 
-  }).sort((a,b)=>b.date.localeCompare(a.date));
+  }).sort((a,b) => b.date.localeCompare(a.date));
   
-  // 更新搜尋數量顯示
+  // 更新搜尋數量膠囊
   if (countEl) {
     countEl.style.display = 'inline-flex';
-    countEl.innerHTML = `找到 <span style="margin:0 4px; font-size:18px; font-family:var(--mono); color: #000000; align-items:center">${recs.length}</span> 筆`;
+    countEl.innerHTML = `找到<span style="margin:0 5px;font-family:var(--mono);color: #0072E3;font-size:18px;font-weight:900;letter-spacing:0.9px;">${recs.length}</span>筆`;
   }
 
   if (!recs.length) { 
-    el.innerHTML = `<div class="empty-tip">找不到符合記錄</div>`; 
+    el.innerHTML = `<div class="empty-tip">該時間範圍內，找不到符合「<span style="color:var(--red);margin:0 4px;">${escapeHtml(kw)}</span>」的記錄</div>`; 
     return; 
   }
   
-  // 👇 極限防護：如果搜尋結果大於 300 筆，只渲染前 300 筆，避免手機渲染崩潰卡死
-  const RENDER_LIMIT = 300;
+  // 渲染列表內容
+  const RENDER_LIMIT = 100;
+  let listHtml = '';
   if (recs.length > RENDER_LIMIT) {
     const renderRecs = recs.slice(0, RENDER_LIMIT);
-    el.innerHTML = renderRecs.map(r=>buildRecItem(r)).join('') + 
-      `<div style="text-align:center; padding:20px; font-weight:800; color:var(--red); font-size:13px; background:#fef2f2; border-radius:12px; margin-top:8px;">
-         ⚠️ 搜尋結果超過 ${RENDER_LIMIT} 筆，為維持手機流暢度，僅顯示最新 ${RENDER_LIMIT} 筆。<br>請縮小日期區間或輸入更精確的關鍵字。
+    listHtml = renderRecs.map(r => buildRecItem(r)).join('') + 
+      `<div style="text-align:center;font-family:var(--mono);color:var(--red);font-size:16px;font-weight:700;background:#ffe1e1;border-radius:12px;padding:20px 10px;margin-top:8px;">
+         ⚠️ 搜尋結果超過<span style="color:#0072E3;margin:0 4px;">${RENDER_LIMIT}</span>筆，僅顯示最新<span style="color:#0072E3;margin:0 4px;">${RENDER_LIMIT}</span>筆記錄。
        </div>`;
   } else {
-    el.innerHTML = recs.map(r=>buildRecItem(r)).join('');
+    listHtml = recs.map(r => buildRecItem(r)).join('');
   }
-}
 
+  // 最下方 (回到最上面) 按鈕
+  listHtml += `
+    <div style="display:flex;justify-content:center;padding:20px 0 35px 0;">
+      <button onclick="scrollSearchToTop()" style="padding:10px 22px;border-radius:20px;border:1.5px solid #cbd5e1;background:#ffffff;color:#2563eb;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 4px rgba(37,99,235,0.4);display:inline-flex;align-items:center;gap:6px;transition:0.2s;">
+        ↑ 回到最上面
+      </button>
+    </div>
+  `;
+
+  el.innerHTML = listHtml;
+}
+// 🌟 搜尋記錄：回到頂端平滑捲動函式
+window.scrollSearchToTop = function() {
+  const bodyEl = document.querySelector('#search-page .overlay-body');
+  if (bodyEl) {
+    bodyEl.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
 function resetSearch() {
   document.getElementById('search-kw').value = '';
   document.getElementById('search-from').value = '';
   document.getElementById('search-to').value = '';
-  document.getElementById('search-results').innerHTML = `<div class="empty-tip">請輸入條件開始搜尋</div>`;
+  document.getElementById('search-results').innerHTML = `<div class="empty-tip">請輸入「<span style="color: #0072E3;margin:0 4px;">時間範圍</span>」及「<span style="color: #e83e92;margin:0 4px;">關鍵字</span>」</div>`;
+  
   const countEl = document.getElementById('search-count');
-  if (countEl) countEl.style.display = 'none'; // 清除條件時隱藏數量
+  if (countEl) countEl.style.display = 'none';
 
-  // 清除年份按鈕的亮起狀態
   document.querySelectorAll('.year-quick-btn').forEach(btn => {
     btn.style.background = '#f1f5f9';
     btn.style.color = '#475569';
     btn.style.borderColor = '#cbd5e1';
+    btn.classList.remove('on');
+  });
+
+  document.querySelectorAll('.search-quick-tag').forEach(btn => {
+    btn.classList.remove('on');
   });
 }
 /* ══ 3. 查看記錄 結束 ════════════════════════════════════ */
@@ -3710,13 +4206,14 @@ function resetSearch() {
 /* ══ 4. 新增記錄 開始 ════════════════════════════════════ */
 function openAddPage(record=null, prefill={}) {
   // 🌟 [防禦性程式碼]：防止從 Console 呼叫函式繞過權限
+  /*
   if (!USER.loggedIn) {
     showLoginRequiredWarning();
     return;
   }
-
+*/
   S.editingId = record ? record.id : null; 
-  S.selPlatformId = record ? record.platformId : (S.platforms.find(p=>p.active)?.id||null);
+  S.selPlatformId = record ? record.platformId : null;
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
   
   if (record && record.isPunchOnly) {
@@ -3724,7 +4221,11 @@ function openAddPage(record=null, prefill={}) {
     document.getElementById('f-pu-date').value = record.date || todayStr();
     document.getElementById('f-pu-in').value = record.punchIn || '';
     document.getElementById('f-pu-out').value = record.punchOut || '';
-    document.getElementById('f-pu-mileage').value = record.mileage || '';
+    
+    if (document.getElementById('f-start-km')) document.getElementById('f-start-km').value = record.startKm !== undefined ? record.startKm : ''; 
+    if (document.getElementById('f-end-km')) document.getElementById('f-end-km').value = record.endKm !== undefined ? record.endKm : ''; 
+    if (document.getElementById('f-mileage')) document.getElementById('f-mileage').value = record.mileage || ''; 
+    
     let totalHours = pf(record.hours || 0); 
     let h = Math.floor(totalHours); 
     let m = Math.round((totalHours - h) * 60);
@@ -3740,26 +4241,24 @@ function openAddPage(record=null, prefill={}) {
     document.getElementById('f-ct-note').value = record.note || '';
   } else {
     switchAddTab('regular', 0);
-    // 👇 精準抓取目標日期 (日曆選取的日期)
     const targetDate = record?.date || prefill.date || S.selDate || todayStr(); 
     
     document.getElementById('f-date').value = targetDate;
-    document.getElementById('f-ct-date').value = targetDate; // 👈 預先同步給小費頁籤
-    document.getElementById('f-pu-date').value = targetDate; // 👈 預先同步給打卡頁籤
+    document.getElementById('f-ct-date').value = targetDate;
+    document.getElementById('f-pu-date').value = targetDate;
     
     document.getElementById('f-time').value = record?.time || nowTime();
-    let totalHours = pf(record?.hours || prefill.hours || 0); let h = Math.floor(totalHours); let m = Math.round((totalHours - h) * 60);
-    document.getElementById('f-hrs-val').value = h > 0 ? h : ''; document.getElementById('f-min-val').value = m > 0 ? m : '';
-    document.getElementById('f-start-km').value = record?.startKm !== undefined ? record.startKm : ''; 
-    document.getElementById('f-end-km').value = record?.endKm !== undefined ? record.endKm : ''; 
-    document.getElementById('f-mileage').value = record?.mileage || ''; 
     document.getElementById('f-orders').value = record?.orders || ''; 
     document.getElementById('f-income').value = record?.income || '';
     document.getElementById('f-bonus').value = record?.bonus || ''; 
     document.getElementById('f-temp-bonus').value = record?.tempBonus || '';
     document.getElementById('f-tips').value = record?.tips || ''; 
     document.getElementById('f-note').value = record?.note || '';
-    if (window.checkManualMileage) window.checkManualMileage();
+
+    // 🌟【新增此 3 列】載入專法報酬相關資料
+    if (document.getElementById('f-law-start')) document.getElementById('f-law-start').value = record?.lawStart || '2026-07-20';
+    if (document.getElementById('f-law-end')) document.getElementById('f-law-end').value = record?.lawEnd || '2026-08-02';
+    if (document.getElementById('f-law-adj-amount')) document.getElementById('f-law-adj-amount').value = record?.lawAdjAmt || '';
   }
   
   renderPlatformChips(); calcAddTotal(); 
@@ -3896,31 +4395,32 @@ window.calcPunchHours = function() {
 
 /* ══ 替換：重置新增記錄表單 (加入清除里程) ══ */
 function resetAddForm() {
-  // 👇 讓表單重置時也能吃到當前選取的日期，沒有則帶今天
   const targetDate = S.selDate || todayStr();
   
   document.getElementById('f-date').value = targetDate;
   if (document.getElementById('f-time')) document.getElementById('f-time').value = nowTime();
   
-  document.getElementById('f-start-km').value = '';
-  document.getElementById('f-end-km').value = '';
-  document.getElementById('f-mileage').value = ''; 
+  if (document.getElementById('f-start-km')) document.getElementById('f-start-km').value = '';
+  if (document.getElementById('f-end-km')) document.getElementById('f-end-km').value = '';
+  if (document.getElementById('f-mileage')) document.getElementById('f-mileage').value = ''; 
   if (document.getElementById('mileage-warning')) {
     document.getElementById('mileage-warning').style.display = 'none';
     document.getElementById('f-mileage').style.color = 'var(--text-blue)';
   }
   
   document.getElementById('f-orders').value = '';
-  document.getElementById('f-hrs-val').value = '';
-  document.getElementById('f-min-val').value = '';
   document.getElementById('f-income').value = '';
   document.getElementById('f-bonus').value = '';
   document.getElementById('f-temp-bonus').value = '';
   document.getElementById('f-tips').value = '';
   document.getElementById('f-note').value = '';
   document.getElementById('add-total-val').textContent = '0';
+
+  // 🌟【新增此 3 列】重置專法報酬欄位回預設值
+  if (document.getElementById('f-law-start')) document.getElementById('f-law-start').value = '2026-07-20';
+  if (document.getElementById('f-law-end')) document.getElementById('f-law-end').value = '2026-08-02';
+  if (document.getElementById('f-law-adj-amount')) document.getElementById('f-law-adj-amount').value = '';
   
-  // 👇 一併重置時帶入正確的日期
   document.getElementById('f-ct-date').value = targetDate;
   document.getElementById('f-ct-time').value = nowTime();
   document.getElementById('f-ct-given').value = '';
@@ -3938,10 +4438,12 @@ function resetAddForm() {
   document.getElementById('f-exp-date').value = targetDate;
   document.getElementById('f-exp-amount').value = '';
   document.getElementById('f-exp-note').value = '';
-  document.getElementById('f-exp-cat').value = ''; // 恢復預設類別
+  document.getElementById('f-exp-cat').value = '';
   const tagContainer = document.getElementById('exp-sub-tags');
   if (tagContainer) tagContainer.innerHTML = '';
 
+  // 🌟 清空選取的平台狀態
+  S.selPlatformId = null;
   S.editingId = null;
   
   document.querySelectorAll('.w-tag, .ct-tag, .search-quick-tag').forEach(el => el.classList.remove('on'));
@@ -3951,7 +4453,15 @@ function resetAddForm() {
   switchAddTab('regular', 0); 
 }
 
-function renderPlatformChips() { const container = document.getElementById('platform-chips'); const active = Array.isArray(S.platforms) ? S.platforms.filter(p=>p.active) : []; if (!S.selPlatformId && active.length) S.selPlatformId = active[0].id; container.innerHTML = active.map(p => `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${safeText(p.id)}')"><span>${safeText(p.name)}</span></div>`).join(''); }
+function renderPlatformChips() { 
+  const container = document.getElementById('platform-chips'); 
+  const active = Array.isArray(S.platforms) ? S.platforms.filter(p=>p.active) : []; 
+  
+  // 🌟 移除原本自動強預設第一項的邏輯，保持未選擇狀態
+  container.innerHTML = active.map(p => 
+    `<div class="platform-chip${S.selPlatformId===p.id?' on':''}" style="${S.selPlatformId===p.id?`background:${p.color};border-color:${p.color}`:''}" onclick="selectPlatform('${safeText(p.id)}')"><span>${safeText(p.name)}</span></div>`
+  ).join(''); 
+}
 /* 替換原有的 selectPlatform */
 function selectPlatform(id) { 
   S.selPlatformId = id; 
@@ -3960,17 +4470,19 @@ function selectPlatform(id) {
 }
 /* ══ 替換：帶入自動獎勵計算與總額 (支援即時連動更新) ══ */
 function calcAddTotal() { 
-  calcAutoReward(); // 👈 計算行程輸入時，立刻更新獎勵欄位
+  calcAutoReward();
 
-  const income = pf(document.getElementById('f-income').value); 
-  const bonus = pf(document.getElementById('f-bonus').value); 
+  const income = pf(document.getElementById('f-income')?.value); 
+  const lawAdj = pf(document.getElementById('f-law-adj-amount')?.value); // 專法調整金額
+  const bonus = pf(document.getElementById('f-bonus')?.value); 
   
-  // 👇 使用 safeEvalMath 來支援臨時獎勵的算式動態加總
-  const tempBonusStr = document.getElementById('f-temp-bonus').value;
+  const tempBonusStr = document.getElementById('f-temp-bonus')?.value;
   const tempBonus = safeEvalMath(tempBonusStr); 
   
-  const tips = pf(document.getElementById('f-tips').value); 
-  const total = income + bonus + tempBonus + tips; 
+  const tips = pf(document.getElementById('f-tips')?.value); 
+
+  // 將差額調整金額計入淨收入與總金額中
+  const total = income + lawAdj + bonus + tempBonus + tips; 
   document.getElementById('add-total-val').textContent = fmt(total); 
 }
 
@@ -4225,37 +4737,22 @@ async function confirmAddRecord() {
     const pm = pf(document.getElementById('f-pu-min').value);
     const totalHours = ph + (pm / 60);
 
-    const mileageVal = pf(document.getElementById('f-pu-mileage').value);
+    const startKmVal = pf(document.getElementById('f-start-km')?.value);
+    const endKmVal = pf(document.getElementById('f-end-km')?.value);
+    const mileageVal = pf(document.getElementById('f-mileage')?.value);
 
-    if (!puDate) {
-      if (checkImg) checkImg.src = 'images/Check1.png';
-      toast('⚠️ 請選擇「打卡日期」');
-      return;
-    }
-    if (!puIn) {
-      if (checkImg) checkImg.src = 'images/Check1.png';
-      toast('⚠️ 請填寫「上線時間」');
-      return;
-    }
-    if (!puOut) {
-      if (checkImg) checkImg.src = 'images/Check1.png';
-      toast('⚠️ 請填寫「下線時間」');
-      return;
-    }
-    if (totalHours <= 0) {
-      if (checkImg) checkImg.src = 'images/Check1.png';
-      toast('⚠️ 總工時，必須大於 0');
-      return;
-    }
+    if (!puDate) { if (checkImg) checkImg.src = 'images/Check1.png'; toast('⚠️ 請選擇「打卡日期」'); return; }
+    if (!puIn) { if (checkImg) checkImg.src = 'images/Check1.png'; toast('⚠️ 請填寫「上線時間」'); return; }
+    if (!puOut) { if (checkImg) checkImg.src = 'images/Check1.png'; toast('⚠️ 請填寫「下線時間」'); return; }
+    if (totalHours <= 0) { if (checkImg) checkImg.src = 'images/Check1.png'; toast('⚠️ 總工時，必須大於 0'); return; }
 
-    // 👈 [關鍵 2] 如果是編輯，先取得舊資料，避免 startKm / endKm 遺失
     let existingData = {};
     if (S.editingId) {
       existingData = S.records.find(x => x.id === S.editingId) || {};
     }
 
     rec = { 
-      ...existingData, // 保留舊有的 startKm, endKm, timestamp 等
+      ...existingData,
       id: S.editingId || newId(),
       platformId: S.selPlatformId || '',
       isPunchOnly: true,
@@ -4265,7 +4762,9 @@ async function confirmAddRecord() {
       punchIn: document.getElementById('f-pu-in').value,
       punchOut: document.getElementById('f-pu-out').value,
       hours: totalHours, 
-      mileage: mileageVal, // 寫入正確的數字
+      startKm: startKmVal,
+      endKm: endKmVal,
+      mileage: mileageVal,
       orders: 0, income: 0, bonus: 0, tempBonus: 0, tips: 0, note: ''
     };
   } else if (S.addTab === 'cashtip') {
@@ -4273,13 +4772,38 @@ async function confirmAddRecord() {
     if (amt <= 0) { toast('請輸入「現金小費」金額'); return; }
     rec = { ...rec, isCashTip: true, date: document.getElementById('f-ct-date').value, time: document.getElementById('f-ct-time').value, givenAmt: pf(document.getElementById('f-ct-given').value), costAmt: pf(document.getElementById('f-ct-cost').value), cashTipAmt: amt, note: document.getElementById('f-ct-note').value.trim() };
   } else {
+    // ── 處理一般行程記錄 ──
     const income = pf(document.getElementById('f-income').value); 
+    const lawAdjAmt = pf(document.getElementById('f-law-adj-amount')?.value);
     const bonus = pf(document.getElementById('f-bonus').value); 
     const temp = safeEvalMath(document.getElementById('f-temp-bonus').value); 
     const tips = pf(document.getElementById('f-tips').value);
-    if (income + bonus + temp + tips <= 0) { toast('請輸入「收入金額」'); return; }
-    const h = pf(document.getElementById('f-hrs-val').value); const m = pf(document.getElementById('f-min-val').value); const totalHours = h + (m / 60);
-    rec = { ...rec, isCashTip: false, date: document.getElementById('f-date').value || todayStr(), time: document.getElementById('f-time').value || nowTime(), hours: totalHours, orders: pf(document.getElementById('f-orders').value), mileage: pf(document.getElementById('f-mileage').value), income, bonus, tempBonus: temp, tips, note: document.getElementById('f-note').value.trim(), updatedAt: Date.now() };
+
+    if (income + lawAdjAmt + bonus + temp + tips <= 0) { toast('請輸入「收入金額」'); return; }
+
+    const lawStart = document.getElementById('f-law-start')?.value || '2026-07-20';
+    const lawEnd = document.getElementById('f-law-end')?.value || '2026-08-02';
+    const isSpecialLawAdj = lawAdjAmt > 0 && income === 0 && pf(document.getElementById('f-orders')?.value) === 0;
+
+    rec = { 
+      ...rec, 
+      isCashTip: false, 
+      isSpecialLawAdj,
+      date: document.getElementById('f-date').value || todayStr(), 
+      time: document.getElementById('f-time').value || nowTime(), 
+      hours: 0, 
+      orders: pf(document.getElementById('f-orders').value), 
+      mileage: 0, 
+      income: income + lawAdjAmt, // 將調整金額併入淨行程收入
+      lawAdjAmt,
+      lawStart,
+      lawEnd,
+      bonus, 
+      tempBonus: temp, 
+      tips, 
+      note: document.getElementById('f-note').value.trim(), 
+      updatedAt: Date.now() 
+    };
   }
   
   if (S.editingId) {
@@ -4553,37 +5077,33 @@ function fmtTotalWorkTime(ms) {
     return `${pad(m)}:${pad(s)}`;
 }
 
-// 🌟 即時更新頂部總覽卡片 (工時與專法薪資皆【僅採計已完成訂單】)
+// 🌟 訂單計時：即時更新總覽數據 (含各平台單數看板)
 function updateOtSummaryStats() {
-    const incEl = document.getElementById('ot-summary-inc');
-    const msEl = document.getElementById('ot-summary-ms');
-    const lawEl = document.getElementById('ot-summary-law');
-    const diffEl = document.getElementById('ot-summary-diff');
-
-    if (!msEl && !lawEl) return;
-
     const viewDate = S.otViewDate || todayStr();
     const dayTrips = (S.orderTrips || []).filter(t => t.date === viewDate);
 
-    let tMs = 0, tInc = 0, tLaw = 0;
+    let tMs = 0, tInc = 0, tLaw = 0, totalDayOrders = 0;
+    const platOrderCounts = {};
 
     dayTrips.forEach(t => {
+        const pId = t.platformId;
         const orders = [t.main, ...(t.bundled || []), ...(t.midway || [])].filter(Boolean);
-        if (orders.length === 0) return;
+        const count = orders.length;
 
-        // 1. 平台總報酬 & 專法薪資總額 (專法薪資僅計算 status === 'done' 已完成的訂單)
+        platOrderCounts[pId] = (platOrderCounts[pId] || 0) + count;
+        totalDayOrders += count;
+
         orders.forEach(o => {
-          const amount = Number(o.amount);
-          tInc += Number(pf(amount));
+            const amount = Number(o.amount);
+            tInc += Number(pf(amount));
 
-          if (o.status === 'done') {
-            if (!o.startTs) return; // 或設 0
-            const span = (o.endTs ?? Date.now()) - o.startTs;
-            tLaw += Number(pf(o.lawPay ?? calcLawPay(span)));
-          }
+            if (o.status === 'done') {
+                if (!o.startTs) return;
+                const span = (o.endTs ?? Date.now()) - o.startTs;
+                tLaw += Number(pf(o.lawPay ?? calcLawPay(span)));
+            }
         });
 
-        // 2. 全部工時 (僅採計 status === 'done' 已完成的訂單)
         const doneOrders = orders.filter(o => o.status === 'done' && o.startTs && o.endTs);
         if (doneOrders.length > 0) {
             const minStart = Math.min(...doneOrders.map(o => o.startTs));
@@ -4594,41 +5114,58 @@ function updateOtSummaryStats() {
         }
     });
 
-    if (incEl) {
-      incEl.textContent = "";
-      const sp = document.createElement("span");
-      sp.style.fontSize = "11px";
-      sp.style.marginRight = "3px";
-      sp.textContent = "$";
-      incEl.appendChild(sp);
+    // 使用 querySelectorAll 同步更新主畫面與全螢幕的所有數據
+    document.querySelectorAll('.ot-summary-total-orders, #ot-summary-total-orders').forEach(el => {
+        el.textContent = totalDayOrders;
+    });
 
-      const text = document.createElement("span");
-      text.textContent = fmt(tInc);
-      incEl.appendChild(text);
-    }
+    document.querySelectorAll('.ot-summary-plat-orders, #ot-summary-plat-orders').forEach(platOrdersEl => {
+        const activePlats = (S.platforms || []).filter(p => p.active);
+        platOrdersEl.innerHTML = activePlats.map(p => {
+            const count = platOrderCounts[p.id] || 0;
+            const color = p.color || '#3b82f6';
+            return `
+                <div style="display:flex;align-items:center;background:#fff;border:2px solid ${color}70;border-radius:10px;padding:3px 6px;gap:7px;">
+                    <span style="font-size:13px;font-weight:800;color:${color};">${safeText(p.name)}</span>
+                    <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:#4da6ff;">${count}<span style="font-size:10px;font-weight:700;color:#000;margin-left:4px;">單</span></span>
+                </div>
+            `;
+        }).join('');
+    });
 
-    if (msEl) msEl.textContent = tMs > 0 ? fmtTotalWorkTime(tMs) : '0';
+    document.querySelectorAll('#ot-summary-inc').forEach(incEl => {
+        incEl.textContent = "";
+        const sp = document.createElement("span");
+        sp.style.fontSize = "11px";
+        sp.style.marginRight = "3px";
+        sp.textContent = "$";
+        incEl.appendChild(sp);
+        const text = document.createElement("span");
+        text.textContent = fmt(tInc);
+        incEl.appendChild(text);
+    });
 
-    if (lawEl) {
-      lawEl.textContent = "";
+    document.querySelectorAll('#ot-summary-ms').forEach(msEl => {
+        msEl.textContent = tMs > 0 ? fmtTotalWorkTime(tMs) : '0';
+    });
 
-      const sp = document.createElement("span");
-      sp.style.fontSize = "11px";
-      sp.style.marginRight = "3px";
-      sp.textContent = "$";
+    document.querySelectorAll('#ot-summary-law').forEach(lawEl => {
+        lawEl.textContent = "";
+        const sp = document.createElement("span");
+        sp.style.fontSize = "11px";
+        sp.style.marginRight = "3px";
+        sp.textContent = "$";
+        lawEl.appendChild(sp);
+        const text = document.createElement("span");
+        text.textContent = fmt(tLaw);
+        lawEl.appendChild(text);
+    });
 
-      const text = document.createElement("span");
-      text.textContent = fmt(tLaw);
-
-      lawEl.appendChild(sp);
-      lawEl.appendChild(text);
-    }
-
-    if (diffEl) {
+    document.querySelectorAll('#ot-summary-diff').forEach(diffEl => {
         const diff = tInc - tLaw;
         diffEl.style.color = diff >= 0 ? '#4ade80' : '#ff2c2c';
         diffEl.textContent = `${diff >= 0 ? '+' : ''}${fmt(diff)}`;
-    }
+    });
 }
 
 // 🌟 2. 背景計時器心跳 (每秒同步更新單單計時 + 頂部總覽卡片)
@@ -4670,10 +5207,16 @@ function getOrderTimerHtml() {
     const trips = allTrips.slice(startIdx, startIdx + perPage);
 
     // 計算當日初始統計
-    let tMs = 0, tInc = 0, tLaw = 0;
+    let tMs = 0, tInc = 0, tLaw = 0, totalDayOrders = 0;
+    const platOrderCounts = {};
+
     allTrips.forEach(t => {
+        const pId = t.platformId;
         const orders = [t.main, ...(t.bundled || []), ...(t.midway || [])].filter(Boolean);
-        if (orders.length === 0) return;
+        const count = orders.length;
+
+        platOrderCounts[pId] = (platOrderCounts[pId] || 0) + count;
+        totalDayOrders += count;
 
         orders.forEach(o => {
             tInc += pf(o.amount);
@@ -4692,20 +5235,27 @@ function getOrderTimerHtml() {
         }
     });
 
-    const editBtnStyle = isEditing
-        ? 'background:#10b981; color:#ffffff; border:none; padding:5px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.3);'
-        : 'background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.25); padding:5px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;';
+    const activePlats = (S.platforms || []).filter(p => p.active);
+    const platChipsHtml = activePlats.map(p => {
+        const count = platOrderCounts[p.id] || 0;
+        const color = p.color || '#3b82f6';
+        return `
+            <div style="display:flex;align-items:center;background:#fff;border:2px solid ${color}70;border-radius:10px;padding:3px 6px;gap:7px;">
+                <span style="font-size:13px;font-weight:800;color:${color};">${safeText(p.name)}</span>
+                <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:#4da6ff;">${count}<span style="font-size:10px;font-weight:550;color:#000;margin-left:4px;">單</span></span>
+            </div>
+        `;
+    }).join('');
 
     let html = `
-    <div style="background:linear-gradient(135deg,#1e293b,#0f172a); border-radius:20px; padding:4px 8px 6px; color:#fff; margin-bottom:2px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-weight:900; font-size:18px; letter-spacing:1px;">📊 訂單計時總覽</span>
-            <div style="display:flex; align-items:center; gap:6px;">
-                <div style="display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);">
-                    <span style="font-size:14px; color:#94a3b8; font-weight:700;">專法時薪</span>
-                    <input type="number" value="${S.lawHourlyWage}" onchange="S.lawHourlyWage=pf(this.value); localStorage.setItem(OT_KEYS.wage, this.value); updateOtUI();" style="width:38px; background:transparent; border:none; color:#fbbf24;font-size:14px;font-weight:900; font-family:var(--mono); text-align:center; outline:none;">
+    <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border-radius:20px;padding:4px 12px 4px;color:#fff;margin-bottom:-2px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-weight:900;font-size:18px;letter-spacing:1px;">📊 訂單計時總覽</span>
+            <div style="display:flex;align-items:center;">
+                <div style="display:flex;align-items:center;background:rgba(255,255,255,0.1);border-radius:10px;border:1px solid rgba(255, 255, 255, 0.8);padding:4px 10px;gap:5px;">
+                    <span style="font-size:15px;font-weight:750;color:#0083FF;">專法時薪</span>
+                    <input type="number" value="${S.lawHourlyWage}" onchange="S.lawHourlyWage=pf(this.value); localStorage.setItem(OT_KEYS.wage, this.value); updateOtUI();" style="width:38px;background:transparent;border:none;color:#fbbf24;font-size:15px;font-weight:800;font-family:var(--mono);text-align:center;letter-spacing:0.8px;">
                 </div>
-                ${!isFs ? `<button onclick="openOrderTimerFullscreen()" style="background:#2563eb; color:#fff;padding:4px 12px; border-radius:10px; font-size:17px; font-weight:800; cursor:pointer;margin-left:20px;">⤢ 全螢幕</button>` : ''}
             </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; grid-gap:5px 20px;">
@@ -4716,56 +5266,83 @@ function getOrderTimerHtml() {
         </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;align-items:center; gap:12px; margin-bottom:12px;">
-        <div style="display:grid;grid-template-columns: 1fr 2.2fr 0.6fr 1fr;align-items:center;justify-items:center;background:#fff;border:1.5px solid #e2e8f0;border-radius:18px;overflow:hidden;padding:2px 1px;">
-            <button class="btn btn3" onclick="navOtDate(-1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">◀</button>
-            <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:var(--t1);padding:0 6px;white-space:nowrap;letter-spacing:1.2px;justify-content:center;">${viewDate.replace(/-/g,'/')}</div>
-            <div style="position:relative; width:26px; height:26px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px;">▼
-              <input type="date" value="${viewDate}" onchange="S.otViewDate=this.value; S.otPage=1; updateOtUI();" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; margin:0; padding:0; border:none;">
+    <!-- 🌟 各平台單數 (含夾單) 及全部總計看板 (支援全螢幕折疊) -->
+    <div style="background:#a0b3d6;border:1.5px solid rgba(255,255,255,0.2);border-radius:14px;padding:2px 10px 4px;margin-top:5px;margin-bottom:5px;">
+        <div onclick="toggleOtPlatOrders(this)" style="display:flex;justify-content:flex-start;align-items:center;cursor:pointer;user-select:none;gap:10px;">
+            <span style="display:inline;align-items:center;font-size:16px;font-weight:800;color:#1e3a63;padding:2px 1px 2px 20px;">
+                <span>📦</span> 今日單數
+            </span>
+
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="display:inline;background:rgba(255, 255, 255, 0.8);border:2px solid rgba(255,255,255,0.15);padding:1px 8px;border-radius:8px;box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);backdrop-filter:blur(4px);font-family:var(--mono);font-size:14px;font-weight:750;color:#f4712a;">
+                    <span class="ot-summary-total-orders" style="font-size:19px;font-weight:900;color:#1a4d99;">${totalDayOrders}</span><span style="font-size:10px;font-weight:550;color:#000;margin-left:4px;">單</span>
+                </div>
+                <!-- 🌟 折疊箭頭按鈕 -->
+                <div class="ot-plat-orders-btn" style="display:flex;align-items:center;align-content:center;justify-content:center;font-size:16px;font-weight:900;color: #509dfc;width:27px;height:27px;border-radius:50%;background:var(--sf);border:1.5px solid var(--border);transition:transform 0.3s ease;padding:2px;margin-left:150px;">▼</div>
             </div>
-            <button class="btn btn3" onclick="navOtDate(1)" style="font-size:20px;width:37px;height:37px;cursor:pointer;">▶</button>
         </div>
-        ${!isFs ? `<button onclick="openAddOrderTripPanel()" style="background:var(--acc);color:#fff;border:none;height:40px;border-radius:14px;font-size:18px;font-weight:800;cursor:pointer;">＋ 新增行程</button>` : ''}
+
+        <span style="display:flex;flex-direction:row;border-bottom:2px dashed rgba(255,255,255,0.6);margin:4px 0 -3px 0;"></span>
+
+        <!-- 可折疊的各平台單數清單 -->
+        <div class="ot-plat-orders-col" style="max-height:0px; overflow:hidden; transition:max-height 0.35s ease;">
+            <div class="ot-summary-plat-orders" style="display:flex;justify-content:space-between;gap:6px;padding-top:8px;margin-top:2px;">
+                ${platChipsHtml}
+            </div>
+        </div>
     </div>
 
-    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:15px;">
-        <button onclick="navOtPage(-1)" ${S.otPage<=1?'disabled':''} style="
-            background:${S.otPage<=1?'#f8fafc':'#ffffff'}; 
-            border:1.5px solid ${S.otPage<=1?'#e2e8f0':'#3b82f6'}; 
-            color:${S.otPage<=1?'#cbd5e1':'#2563eb'}; 
-            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
-            cursor:${S.otPage<=1?'default':'pointer'}; 
-            box-shadow:${S.otPage<=1?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
-            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
-            ◀ 上一頁
-        </button>
-
-        <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; padding:4px 14px; display:inline-flex; align-items:baseline; font-family:var(--mono);">
-            <span style="font-size:17px; font-weight:900; color:#1d4ed8;">${S.otPage}</span>
-            <span style="font-size:11px; font-weight:700; color:#93c5fd; margin:0 5px;">/</span>
-            <span style="font-size:13px; font-weight:700; color:#64748b;">${totalPages}</span>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; background:#fff; border:1.5px solid #e2e8f0; border-radius:18px; padding:3px 6px; box-sizing:border-box; width:100%;">
+            <!-- 左切換按鈕 -->
+            <button class="btn btn3" onclick="navOtDate(-1)" style="font-size:20px; width:38px; height:38px; cursor:pointer; flex-shrink:0;margin-right:7px;">◀</button>
+            
+            <!-- 中間日期與▼：點擊開啟統一的快速日期彈窗 -->
+            <div onclick="openOtDatePicker()" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; cursor:pointer; flex:1; text-align:center; padding:0 6px;">
+              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--t1); letter-spacing:1px;margin:7px;">${viewDate.replace(/-/g,'/')}</span>
+              <span style="color:#94a3b8;font-size:14px;vertical-align:middle;">▼</span>
+            </div>
+            
+            <!-- 右切換按鈕 -->
+            <button class="btn btn3" onclick="navOtDate(1)" style="font-size:20px; width:38px; height:38px; cursor:pointer; flex-shrink:0;margin-left:14px;">▶</button>
         </div>
+        ${!isFs ? `<button onclick="openAddOrderTripPanel()" style="height:44px;background:var(--acc);border-radius:16px;border:none;color:#fff;font-size:20px;font-weight:800;cursor:pointer;">＋ 新增行程</button>` : ''}
+    </div>
 
-        <button onclick="navOtPage(1)" ${S.otPage>=totalPages?'disabled':''} style="
-            background:${S.otPage>=totalPages?'#f8fafc':'#ffffff'}; 
-            border:1.5px solid ${S.otPage>=totalPages?'#e2e8f0':'#3b82f6'}; 
-            color:${S.otPage>=totalPages?'#cbd5e1':'#2563eb'}; 
-            padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; 
-            cursor:${S.otPage>=totalPages?'disabled':'pointer'}; 
-            box-shadow:${S.otPage>=totalPages?'none':'0 2px 6px rgba(59,130,246,0.12)'}; 
-            transition:all 0.2s ease; display:inline-flex; align-items:center; gap:3px;">
-            下一頁 ▶
-        </button>
+    <span style="display:flex;flex-direction:row;border-bottom:2px solid #003366;margin-bottom:4px;"></span>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+        <!-- 🌟 一體成型三色膠囊 (上一頁 | 頁數 | 下一頁) -->
+        <div style="display:inline-flex;align-items:stretch;border-radius:14px;border:1.5px solid #ffffff;overflow:hidden;background: #ffffff;box-shadow:0 2px 4px rgba(0,0,0,0.4);">
+            <!-- 1. 上一頁 (藍色系) -->
+            <button onclick="if(${S.otPage}>1) navOtPage(-1)" ${S.otPage<=1?'disabled':''} style="background:${S.otPage<=1?'#f8fafc':'#e0eeff'};color:${S.otPage<=1?'#cbd5e1':'#2563eb'};border:none;padding:6px 14px;font-size:14px;font-weight:800;cursor:${S.otPage<=1?'default':'pointer'};display:flex;align-items:center;transition:0.15s;">
+                ◀ 上一頁
+            </button>
+
+            <!-- 2. 頁數顯示 (暖橘系) -->
+            <div style="background: hsl(33, 100%, 94%);padding:6px 14px;display:flex;align-items:center;font-family:var(--mono);user-select:none;margin:0 1.5px;">
+                <span style="font-size:20px;font-weight:900;color: #ff5900;">${S.otPage}</span>
+                <span style="font-size:18px;font-weight:900;color:#fdba74;margin:0 4px;">/</span>
+                <span style="font-size:14px;font-weight:800;color:#c2410c;">${totalPages}</span>
+            </div>
+
+            <!-- 3. 下一頁 (翠綠系) -->
+            <button onclick="if(${S.otPage}<${totalPages}) navOtPage(1)" ${S.otPage>=totalPages?'disabled':''} style="background:${S.otPage>=totalPages?'#f8fafc':'#dafbec'};color:${S.otPage>=totalPages?'#cbd5e1':'#16a34a'};border:none;padding:6px 14px;font-size:14px;font-weight:800;cursor:${S.otPage>=totalPages?'default':'pointer'};display:flex;align-items:center;transition:0.15s;">
+                下一頁 ▶
+            </button>
+        </div>
 
         <button onclick="toggleOtEditMode()" style="
             background:${isEditing ? '#10b981' : '#ffffff'}; 
             color:${isEditing ? '#ffffff' : '#475569'}; 
-            border:1.5px solid ${isEditing ? '#10b981' : '#cbd5e1'}; 
-            padding:5px 14px; border-radius:12px; font-size:13px; font-weight:800; 
-            cursor:pointer; box-shadow:${isEditing ? '0 4px 5px rgba(16,185,129,0.5)' : '0'}; 
+            border:1.5px solid ${isEditing ? '#10b981' : '#cbd5e1'};
+            border-radius:${isEditing ? '12px' : '16px'};
+            padding:6px;font-size:13px;font-weight:800;
+            cursor:pointer; box-shadow:${isEditing ? '0 4px 2px rgba(16,185,129,0.5)' : '0'}; 
             transition:all 0.2s ease;">
-            ${isEditing ? '✅ 完成' : '<span style="display:flex;align-items:center;align-content:center;padding:0 1px;"><span style="font-weight:900;font-size:22px;margin-right:5px;">✎</span>編輯</span>'}
+            ${isEditing ? '✅ 完成' : '<span style="display:flex;align-items:center;align-content:center;padding:1px 5px;">✎ 編輯</span>'}
         </button>
+        ${!isFs ? `<button onclick="openOrderTimerFullscreen()" style="background:#2563eb;color:#fff;padding:6px;border-radius:12px;border:1.5px solid #f27bc2;font-size:13px;font-weight:800;cursor:pointer;">⤢ 全螢幕</button>` : ''}
     </div>`;
 
     trips.forEach(trip => {
@@ -4855,7 +5432,28 @@ function getOrderTimerHtml() {
     return html || '<div class="empty-tip" style="padding:40px 0;">無計時記錄</div>';
 }
 
-// 渲染單筆訂單（主單／夾單）的精簡列，含單號、金額、開始/結束時間、計時與操作按鈕
+// 🌟 訂單計時：單數看板獨立折疊函式 (支援全螢幕與主畫面相對控制)
+window.toggleOtPlatOrders = function(headerEl) {
+    if (!headerEl) return;
+    const card = headerEl.parentElement;
+    const col = card ? card.querySelector('.ot-plat-orders-col') : null;
+    const btn = card ? card.querySelector('.ot-plat-orders-btn') : null;
+
+    if (!col || !btn) return;
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
+
+    requestAnimationFrame(() => {
+        if (col.style.maxHeight === '0px' || col.style.maxHeight === '') {
+            col.style.maxHeight = col.scrollHeight + 'px';
+            btn.style.transform = 'rotate(180deg)';
+        } else {
+            col.style.maxHeight = '0px';
+            btn.style.transform = 'rotate(0deg)';
+        }
+    });
+};
+
+// 渲染單筆訂單（主單／夾單）的精簡列，支援編輯模式動態修改時間
 function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
     if (!order) return '';
     const isEditing = !!S.otEditMode;
@@ -4863,8 +5461,9 @@ function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
     const dur = calcOrderDurationMs(order);
     const timeStr = fmtOrderTimer(dur);
     const statusColor = order.status === 'running' ? '#ff6a00' : (order.status === 'done' ? '#0088ff' : '#94a3b8');
-    const startStr = order.startTs ? new Date(order.startTs).toTimeString().slice(0,5) : '--:--';
-    const endStr = order.endTs ? new Date(order.endTs).toTimeString().slice(0,5) : '--:--';
+    
+    const startVal = order.startTs ? new Date(order.startTs).toTimeString().slice(0,5) : '';
+    const endVal = order.endTs ? new Date(order.endTs).toTimeString().slice(0,5) : '';
 
     let actionHtml = '';
     if (order.status === 'idle') {
@@ -4872,14 +5471,14 @@ function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
     } else if (order.status === 'running') {
         actionHtml = `<button onclick="finishOrderTimer('${tripId}','${order.id}')" style="background: #10b981;color:#fff;border:none;padding:5px 10px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;">✔ 完成</button>`;
     } else {
-        actionHtml = `<span style="background: #2c3f68;color: #22e96b;font-size:14px;font-weight:650;white-space:nowrap;border-radius:16px;padding:2px 8px;margin-right:3px;"><span style="margin:0 4px 0 1px;">專$</span><span style="font-weight:750;">${fmt(order.lawPay || 0)}</span></span>`;
+        // 🌟 加上 id="ot-lawpay-${order.id}"，以便靜默更新數字
+        actionHtml = `<span style="background: #2c3f68;color: #22e96b;font-size:14px;font-weight:650;white-space:nowrap;border-radius:16px;padding:2px 8px;margin-right:3px;"><span style="margin:0 4px 0 1px;">專$</span><span id="ot-lawpay-${order.id}" style="font-weight:750;">${fmt(order.lawPay || 0)}</span></span>`;
     }
 
     const delHtml = (isMidway && isEditing)
         ? `<button onclick="deleteExtraOrder('${tripId}','${order.id}')" style="background:#fef2f2;color:#ef4444;border:1px solid #fecdd3;width:24px;height:24px;border-radius:50%;font-size:14px;font-weight:900;cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>`
         : '';
 
-    // 🌟 判斷：中途夾單使用紫色外框與淡紫色背景
     const amtBg = isMidway ? '#fdf0ff' : '#fff7ed';
     const amtBorder = isMidway ? '#f59eff' : '#fdba74';
     const amtColor = isMidway ? '#e927ff' : '#ff5900';
@@ -4889,6 +5488,25 @@ function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
       <span style="position:absolute;left:4px;bottom:4px;font-size:11px;color:${amtSymbolColor};font-weight:800;font-family:var(--mono);pointer-events:none;z-index:1;${order.amount ? '' : 'display:none;'}">$</span>
       <input type="number" value="${(order.amount || '')}" placeholder="金額" oninput="this.previousElementSibling.style.display = this.value ? 'inline' : 'none';updateOrderField('${tripId}','${order.id}','amount',this.value)" style="width:55px;flex:0.5;background:${amtBg};border:1.5px solid ${amtBorder};border-radius:99px;padding:2px 2px 2px 11px;font-family:var(--mono);color:${amtColor};font-size:15px;font-weight:750;text-align:center;letter-spacing:0.5px;">
     </div>`;
+
+    // 🌟 時間顯示區：編輯模式顯示時間選擇框，非編輯模式顯示純文字
+    const timeDisplayHtml = isEditing ? `
+      <div style="display:flex; align-items:center; gap:8px; margin-top:4px; padding-left:8px; font-size:12px; font-family:var(--mono);">
+        <div style="display:flex; align-items:center; gap:4px; background:#f0fdf4; border:1px solid #bbf7d0; padding:2px 8px; border-radius:8px;">
+          <span style="color:#15803d; font-weight:800;">開始</span>
+          <input type="time" value="${startVal}" onchange="updateOrderTime('${tripId}','${order.id}','start',this.value)" style="border:none; background:transparent; font-family:var(--mono); font-size:13px; font-weight:900; color:#15803d; outline:none; cursor:pointer;">
+        </div>
+        <div style="display:flex; align-items:center; gap:4px; background:#fef2f2; border:1px solid #fecdd3; padding:2px 8px; border-radius:8px;">
+          <span style="color: #ff2828; font-weight:800;">結束</span>
+          <input type="time" value="${endVal}" onchange="updateOrderTime('${tripId}','${order.id}','end',this.value)" style="border:none; background:transparent; font-family:var(--mono); font-size:13px; font-weight:900; color: #ff2828; outline:none; cursor:pointer;">
+        </div>
+      </div>
+    ` : `
+      <div style="display:flex; gap:20px; padding-left:12px; margin-top:2px; font-size:14px; font-weight:650; font-family:var(--mono);">
+        <span style="color:#16a34a;">開始<span style="color:#000;">〔</span><span style="font-weight:800;margin:0 5px;">${startVal || '--:--'}</span><span style="color:#000;">〕</span></span>
+        <span style="color:#ff2e2e;">結束<span style="color:#000;">〔</span><span style="font-weight:800;margin:0 5px;">${endVal || '--:--'}</span><span style="color:#000;">〕</span></span>
+      </div>
+    `;
 
     return `
     <div style="padding:3px 0px;border-bottom:1px solid #6ab5ff;">
@@ -4900,10 +5518,7 @@ function renderCompactOrderRow(tripId, order, label, isMidway, hideAmount) {
             ${actionHtml}
             ${delHtml}
         </div>
-        <div style="display:flex;gap:12px;padding-left:12px;margin-top:2px;font-size:12px;font-weight:650;font-family:var(--mono);">
-            <span style="color:#16a34a;">開始 ${startStr}</span>
-            <span style="color: #ff2e2e;">結束 ${endStr}</span>
-        </div>
+        ${timeDisplayHtml}
     </div>`;
 }
 
@@ -4954,6 +5569,29 @@ window.navOtPage = function(dir) { S.otPage = (S.otPage || 1) + dir; updateOtUI(
 window.openOrderTimerFullscreen = function() { document.getElementById('order-timer-full-page').classList.add('show'); renderFullscreenOrderTimer(); };
 window.renderFullscreenOrderTimer = function() { document.getElementById('ot-full-body').innerHTML = getOrderTimerHtml(); startOrderTimerTicker(); };
 
+// 🌟 訂單計時：開啟 APP 統一的快速日期選擇彈窗
+window.openOtDatePicker = function() {
+  const curDate = new Date((S.otViewDate || todayStr()) + 'T00:00:00');
+  const curY = curDate.getFullYear();
+  const curM = curDate.getMonth() + 1;
+  const curD = curDate.getDate();
+
+  openQuickDatePicker({
+    mode: 'month',
+    year: curY,
+    curY: curY,
+    curM: curM,
+    onSelect: (y, m) => {
+      // 防呆：確保選擇新月份時，日期不超過該月最大天數 (例如 2/31 自動修正為 2/28)
+      const maxDays = new Date(y, m, 0).getDate();
+      const targetD = Math.min(curD, maxDays);
+      S.otViewDate = `${y}-${pad(m)}-${pad(targetD)}`;
+      S.otPage = 1;
+      updateOtUI();
+    }
+  });
+};
+
 // 訂單計時夾單摺疊 (GPU 0 延遲順暢旋轉與展開)
 window.toggleOrderExtras = function(tId, event) { 
     if (navigator.vibrate) try { navigator.vibrate(12); } catch(e){}
@@ -4998,6 +5636,50 @@ window.updateOrderField = function(tId, oId, f, v) {
         }
         if (o.status === 'done') o.lawPay = calcLawPay(calcOrderDurationMs(o)); 
         saveOrderTrips(); // 靜默寫入 LocalStorage 存檔，不刷新 DOM 避免輸入框失去焦點
+    }
+};
+
+// 🌟 訂單計時：編輯模式下修改時間 (採用靜默更新，防範 iOS 滾輪被強制彈關)
+window.updateOrderTime = function(tripId, orderId, type, timeStr, el) {
+    const trip = S.orderTrips.find(t => t.id === tripId);
+    if (!trip || !timeStr) return;
+    const o = [trip.main, ...(trip.bundled || []), ...(trip.midway || [])].find(x => x?.id === orderId);
+    if (!o) return;
+
+    const dateStr = trip.date; // 行程日期 YYYY-MM-DD
+    const newTs = new Date(`${dateStr}T${timeStr}:00`).getTime();
+
+    if (isNaN(newTs)) return;
+
+    if (type === 'start') {
+        o.startTs = newTs;
+    } else if (type === 'end') {
+        o.endTs = newTs;
+    }
+
+    // 當開始與結束時間皆存在時，驗證並計算專法薪資
+    if (o.startTs && o.endTs) {
+        if (o.endTs >= o.startTs) {
+            o.status = 'done';
+            o.lawPay = calcLawPay(o.endTs - o.startTs);
+        } else {
+            toast('⚠️ 結束時間不能小於開始時間');
+            return;
+        }
+    }
+
+    // 1. 靜默寫入 LocalStorage，絕不重繪 DOM，讓 iOS 滾輪順暢關閉
+    saveOrderTrips();
+
+    // 2. 靜默更新該列的專法薪資數字
+    const lawPayEl = document.getElementById(`ot-lawpay-${orderId}`);
+    if (lawPayEl && o.lawPay !== undefined) {
+        lawPayEl.textContent = fmt(o.lawPay);
+    }
+
+    // 3. 靜默更新頂部總覽卡片 (總工時、專法薪資總額與差額)
+    if (typeof updateOtSummaryStats === 'function') {
+        updateOtSummaryStats();
     }
 };
 
@@ -5301,7 +5983,7 @@ function getRewardsHtml() {
       const textColor = isPassed ? '#fff' : 'var(--t3)';
       const arrowColor = isPassed ? plat.color : 'var(--t3)';
       
-      tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:2px 4px; border-radius:6px; font-size:12px; font-weight:800; font-family:var(--mono); transition:0.3s; letter-spacing:0.4px;">${t.orders}<span style="font-size:8px;font-weight:600;">單 $</span>${t.amount}</span>`;
+      tiersHtml += `<span style="background:${bgColor}; color:${textColor}; padding:2px 4px; border-radius:6px; font-size:14px; font-weight:800; font-family:var(--mono); transition:0.3s; letter-spacing:0.4px;">${t.orders}<span style="font-size:10px;font-weight:600;">單 $</span>${t.amount}</span>`;
       if (i < sortedTiers.length - 1) tiersHtml += `<span style="color:${arrowColor}; font-size:10px; font-weight:900; margin: 0 -1px;">➔</span>`;
     });
     tiersHtml += `</div>`;
@@ -5316,14 +5998,14 @@ function getRewardsHtml() {
       : `<span style="color:var(--green);">🎉 已達成最高階！</span>`;
 
     html += `
-      <div class="card" style="border: 2px solid ${plat.color}40; margin-bottom:12px;">
+      <div class="card" style="border: 2px solid ${plat.color}40; margin-bottom:8px;padding:5px 6px;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
           <div>
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
               <span style="background:${plat.color}; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">${safeText(plat.name)}</span>
               <span style="font-size:14px; font-weight:800; color:var(--t1);">${safeText(r.name)}</span>
             </div>
-            <div style="font-size:13px;color: #30a553;font-family:var(--mono);font-weight:750;">📅 ${r.window.start} <span style="color:#000000;font-weight:900;">~</span> ${r.window.end}</div>
+            <div style="font-size:15px;font-weight:750;color:#30a553;font-family:var(--mono);letter-spacing:0.8px;">📅 ${fmtDateDisp(r.window.start)}<span style="color: #000;font-size:12px;font-weight:900;margin:0 5px;">～</span>${fmtDateDisp(r.window.end)}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:11px; color:var(--t3); font-weight:700;">目前累積獎金</div>
@@ -5393,21 +6075,32 @@ function openNetProfitDatePicker() {
   }
 }
 
-/* ══ 替換：趨勢導航時間切換 ══ */
+/* ══ 替換：圖表區間切換 ══ */
 window.navTrend = function(dir) {
   let d = new Date(S.trendDate || new Date());
-  // 👈 [修正] 原本直接用 S.trendMode 比對，若 S.trendMode 還沒被設定過(undefined)，
-  // 四個 if/else if 全部不成立，d 完全不會被修改，日期就會「卡住不動」。
-  // 這裡跟畫面頁籤高亮邏輯（curT = S.trendMode || 'month'）保持一致，一律給預設值 'month'。
   const mode = S.trendMode || 'month';
-  if (mode === 'week') d.setDate(d.getDate() + dir * 7);
-  else if (mode === '4week') d.setDate(d.getDate() + dir * 28); // 👈 加入4週(28天)切換
-  else if (mode === 'month') d.setMonth(d.getMonth() + dir);
-  else if (mode === 'year') d.setFullYear(d.getFullYear() + dir);
-  S.trendDate = d;
-  S.trendMode = mode;
+  const m = S.trendMode || 'month';
+
+  if (m === 'week') {
+    const platId = (S.trendFilter && S.trendFilter !== 'all') ? S.trendFilter : null;
+    if (platId && typeof shiftPayPeriod === 'function') {
+      S.trendDate = shiftPayPeriod(platId, d, dir);
+    } else {
+      d.setDate(d.getDate() + dir * 7);
+      S.trendDate = d;
+    }
+  } else if (m === 'month') {
+    d.setMonth(d.getMonth() + dir);
+    S.trendDate = d;
+  } else if (m === 'year') {
+    d.setFullYear(d.getFullYear() + dir);
+    S.trendDate = d;
+  } else {
+    S.trendDate = d;
+  }
+
   renderRptTrend();
-}
+};
 
 const globalRptPrev = document.getElementById('rpt-prev');
 const globalRptNext = document.getElementById('rpt-next');
@@ -5448,9 +6141,14 @@ window.navRptPeriod = function(dir) {
   const period = S.ovPeriod || 'month';
   if (period === 'week') {
     if (!S.rptWeekDate) S.rptWeekDate = new Date();
-    const d = new Date(S.rptWeekDate);
-    d.setDate(d.getDate() + dir * 7);
-    S.rptWeekDate = d;
+    const platId = (S.rptOverviewFilter && S.rptOverviewFilter !== 'all') ? S.rptOverviewFilter : null;
+    if (platId) {
+      S.rptWeekDate = shiftPayPeriod(platId, S.rptWeekDate, dir);
+    } else {
+      const d = new Date(S.rptWeekDate);
+      d.setDate(d.getDate() + dir * 7);
+      S.rptWeekDate = d;
+    }
   } else if (period === 'year') {
     S.rptY += dir;
   } else {
@@ -5493,13 +6191,23 @@ function renderRptOverview() {
   const periodIdx = { week: 0, month: 1, year: 2 }[period];
 
   // 1. 依三種區間取得對應原始資料與導覽標籤
-  let allRecs, navLabel, totalTitle, emptyTip;
+  let allRecs, navLabel, totalTitle, emptyTip, weekNotice = '';
+  const isAll = S.rptOverviewFilter === 'all';
+
   if (period === 'week') {
-    allRecs = getWeekRecs(S.rptWeekDate);
-    const { start, end } = getWeekRange(S.rptWeekDate);
-    navLabel = `<span style="color:#006eff; font-size:20px;">${start.getFullYear()}</span> 年 <span style="color:#006eff; font-size:18px;">${pad(start.getMonth()+1)}/${pad(start.getDate())} ~ ${pad(end.getMonth()+1)}/${pad(end.getDate())}</span>`;
-    totalTitle = '本週總收入';
-    emptyTip = '所選平台，本週無記錄';
+    if (!isAll && S.rptOverviewFilter) {
+      const pay = getPayPeriod(S.rptOverviewFilter, S.rptWeekDate);
+      allRecs = S.records.filter(r => r.date >= pay.startStr && r.date <= pay.endStr);
+      navLabel = `<span style="color:#006eff; font-size:20px;">${pay.startStr.slice(0,4)}</span> 年 <span style="color:#006eff; font-size:18px;">${_fmtMD(pay.startStr)} ~ ${_fmtMD(pay.endStr)}</span>`;
+      if (pay.notice) weekNotice = pay.notice;  // 只留 Uber 提示
+    } else {
+      // 收入分析-週總覽
+      allRecs = getWeekRecs(S.rptWeekDate);
+      const { start, end } = getWeekRange(S.rptWeekDate);
+      navLabel = `<span style="color:#006eff; font-size:20px;">${start.getFullYear()}</span> 年 <span style="color:#006eff; font-size:18px;">${start.getMonth()+1}/${start.getDate()} ~ ${end.getMonth()+1}/${end.getDate()}</span>`;
+    }
+    totalTitle = '區間總收入';
+    emptyTip = '所選平台，本區間無記錄';
   } else if (period === 'year') {
     allRecs = S.records.filter(r => r.date && r.date.startsWith(`${S.rptY}-`));
     navLabel = `<span style="color: #006eff; font-size: 24px;">${S.rptY}</span> 年全年總覽`;
@@ -5512,8 +6220,6 @@ function renderRptOverview() {
     emptyTip = '所選平台，本區間無記錄';
   }
 
-  // 依照選擇的標籤過濾資料
-  const isAll = S.rptOverviewFilter === 'all';
   const recs = isAll ? allRecs : allRecs.filter(r => r.platformId === S.rptOverviewFilter || r.isPunchOnly);
 
   const total = recs.reduce((s,r) => s+recTotal(r), 0);
@@ -5533,18 +6239,26 @@ function renderRptOverview() {
   const avgHr = hours > 0 ? Math.round(total / hours) : 0;
 
   const wageHtml = getWageBadge(hours, total);
+  // 總覽頁，一體成型三色膠囊（缺資料也顯示，數字留––）
+  const ordText = orders > 0 ? fmt(orders) : '––';
+  const milText = mileage > 0 ? fmt(mileage) : '––';
+  const hrText  = hours > 0 ? fmtHours(hours) : '––';
 
-  let tagsParts = [];
-  if (orders > 0) {
-    tagsParts.push(`<div style="background:#fff7ed; padding:1.5px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #ff0000;">${fmt(orders)}</span><span style="font-size:10px; font-weight:600; color:#f97316;">單</span></div>`);
-  }
-  if (mileage > 0) {
-    tagsParts.push(`<div style="background:#e1ffff; padding:2px 8px; display:flex; align-items:baseline; gap:3px;"><span style="font-size:15px; font-family:var(--mono); font-weight:800; color: #b23dff;">${fmt(mileage)}</span><span style="font-size:10px; font-weight:800; color: #000000;">km</span></div>`);
-  }
-  if (hours > 0) {
-    tagsParts.push(`<div style="background:#eff6ff; padding:2px 8px; display:flex; align-items:center; gap:4px;"><span style="font-size:11px;">⏱️</span><span style="font-size:13px; font-family:var(--mono); font-weight:800; color: #2563eb;">${fmtHours(hours)}</span></div>`);
-  }
-  let tagsHtml = tagsParts.length > 0 ? `<div style="display:inline-flex; align-items:stretch; border-radius:8px; border:1.5px solid #e2e8f0; overflow:hidden; margin-bottom:4px; background: #e2e8f0; gap:2px;">${tagsParts.join('')}</div>` : '';
+  const tagsHtml = `
+    <div style="display:inline-flex;align-items:stretch;border-radius:8px;border:1.5px solid #e2e8f0;overflow:hidden;margin-bottom:4px;background:#e2e8f0;gap:2px;">
+      <div style="background:#fff7ed;padding:1.5px 8px;display:flex;align-items:baseline;gap:3px;min-width:42px;">
+        <span style="font-size:15px;font-family:var(--mono);font-weight:800;color:#ff0000;">${ordText}</span>
+        <span style="font-size:10px;font-weight:600;color:#f97316;">單</span>
+      </div>
+      <div style="background:#e1ffff;padding:2px 8px;display:flex;align-items:baseline;gap:3px;min-width:48px;">
+        <span style="font-size:15px;font-family:var(--mono);font-weight:800;color:#b23dff;">${milText}</span>
+        <span style="font-size:10px;font-weight:800;color:#000;">km</span>
+      </div>
+      <div style="background:#eff6ff;padding:2px 8px;display:flex;align-items:center;gap:4px;min-width:52px;">
+        <span style="font-size:11px;">⏱️</span>
+        <span style="font-size:13px;font-family:var(--mono);font-weight:800;color:#2563eb;">${hrText}</span>
+      </div>
+    </div>`;
 
   // 2. 最上方：週總覽／月總覽／年總覽 滑動特效切換按鈕（漸層背景）
   const periodGrads = {
@@ -5567,13 +6281,17 @@ function renderRptOverview() {
       <button class="btn btn1" onclick="navRptPeriod(1)" style="width: 42px; height: 42px;">▶</button>
     </div>`;
 
+  if (period === 'week' && weekNotice) {
+    html += `<div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:12px;font-weight:700;color:#9a3412;line-height:1.55;">${weekNotice}</div>`;
+  }
+
   const pcts = getExactPercentages([income, bonus, tips]);
   const incPct = pcts[0]; const bonPct = pcts[1]; const tipPct = pcts[2];
 
   html += `
     <div style="background: var(--sf); border:2px solid var(--card-border); border-radius:12px; position:relative; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:10px; overflow:hidden;">
 
-      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute; top:2px; right:12px; width:40px; height:40px; background: hsla(320, 75%, 34%, 0.3); border-radius:50%; color: hsl(320, 100%, 34%); display:flex; align-items:center; justify-content:center; font-size:32px; cursor:pointer; transition:transform 0.3s; font-weight:900; z-index:2;">▼</div>
+      <div id="rpt-overview-col-btn" onclick="toggleSummaryCard('rpt-overview-col')" style="position:absolute;top:2px;right:12px;width:40px;height:40px;background:hsla(320,75%,34%,0.3);border-radius:50%;color:hsl(320,100%,34%);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;cursor:pointer;transition:transform 0.3s;z-index:2;">▼</div>
       
       <div onclick="toggleSummaryCard('rpt-overview-col')" style="padding:4px 0px; cursor:pointer; text-align:center;">
         <div style="margin-bottom:6px;">
@@ -5586,8 +6304,8 @@ function renderRptOverview() {
         <div style="display:flex; justify-content:space-between; gap:6px; margin-top:4px; padding: 0 4px 0px 4px;">
           
           <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(34, 197, 94, 0.15); border-radius:12px;">
-            <div style="background: rgba(34, 197, 94, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: #1f9c4d; font-size:11px; font-weight:700; font-family:var(--mono);">淨行程</span>
+            <div style="background: rgba(34, 197, 94, 0.15); padding:0 6px 1px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: #1f9c4d; font-size:13px; font-weight:700; font-family:var(--mono);">淨行程</span>
               <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(34, 197, 94, 0.3);">
                 <span style="color: #1f9c4d; font-size:12px; font-weight:700;">${incPct}<span style="font-size:8px;">%</span></span>
               </span>
@@ -5598,8 +6316,8 @@ function renderRptOverview() {
           </div>
 
           <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(245, 158, 11, 0.15); border-radius:12px;">
-            <div style="background: rgba(245, 158, 11, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: hsl(25, 100%, 55%); font-size:11px; font-weight:700; font-family:var(--mono);">獎勵</span>
+            <div style="background: rgba(245, 158, 11, 0.15); padding:0 6px 1px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: hsl(25, 100%, 55%); font-size:13px; font-weight:700; font-family:var(--mono);">獎勵</span>
               <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(245, 158, 11, 0.3);">
                 <span style="color: hsl(25, 100%, 55%); font-size:12px; font-weight:700;">${bonPct}<span style="font-size:8px;">%</span></span>
               </span>
@@ -5610,8 +6328,8 @@ function renderRptOverview() {
           </div>
 
           <div style="flex:1; display:flex; flex-direction:column; gap:3px; border:2px solid rgba(190, 59, 246, 0.15); border-radius:12px;">
-            <div style="background: rgba(190, 59, 246, 0.15); padding:1px 6px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
-              <span style="color: rgba(137, 43, 226, 0.9); font-size:11px; font-weight:700; font-family:var(--mono);">小費</span>
+            <div style="background: rgba(190, 59, 246, 0.15); padding:0 6px 1px; border-radius:10px; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
+              <span style="color: rgba(137, 43, 226, 0.9); font-size:13px; font-weight:700; font-family:var(--mono);">小費</span>
               <span style="display:inline-flex; align-items:center; border-radius:4px; padding:1px 4px; background: #ffffff; border:1px solid rgba(190, 59, 246, 0.3);">
                 <span style="color: rgba(137, 43, 226, 0.9); font-size:12px; font-weight:700;">${tipPct}<span style="font-size:8px;">%</span></span>
               </span>
@@ -5641,10 +6359,10 @@ function renderRptOverview() {
           </div>
         </div>
         ${cashTipTotal > 0 ? `
-        <div style="border-top:1px dashed var(--border);"></div>
+        <div style="border-top:2px dashed var(--border);"></div>
         <div style="display:flex; justify-content:flex-start; align-items:center; padding:5px 16px;">
-          <span style="background: #d6ffe5; color: #129943; font-size:12px; padding:4px 8px; border-radius:8px; font-weight:700;">現金小費 (不計總收)</span>：
-          <span style="font-family:var(--mono); font-size:16px; font-weight:800; color: var(--green);"><span style="font-size:10px;"> $ </span> ${fmt(cashTipTotal)}</span>
+          <span style="background: #d6ffe5; color: #129943; font-size:13px; padding:4px 10px; border-radius:15px; font-weight:700;">現金小費 (不算總收入)</span>：
+          <span style="font-family:var(--mono); font-size:21px; font-weight:800; color: #009921;"><span style="font-size:10px;margin:0 5px 0 10px;">$</span>${fmt(cashTipTotal)}</span>
         </div>` : ''}
       </div>
     </div>`;
@@ -5772,12 +6490,12 @@ function renderRptOverview() {
   }
 }
 
-/* ══ 替換：完整趨勢分析圖表 (加入 4 週趨勢) ══ */
+/* ══ 圖表 ══ */
 function openTrendDatePicker() {
   if (!S.trendDate) S.trendDate = new Date();
-  const mode = S.trendMode || 'month';
+  const mode = S.trendMode === '4week' ? 'week' : (S.trendMode || 'month');
   const td = new Date(S.trendDate);
-  if (mode === 'week' || mode === '4week') {
+  if (mode === 'week') {
     openQuickDatePicker({
       mode: 'week', weekAnchor: td,
       onSelectWeek: (d) => { S.trendDate = d; renderRptTrend(); }
@@ -5803,23 +6521,30 @@ function renderRptTrend() {
 
   // 👈 「趨勢」字樣移除，僅保留區間名稱（週／4週／月／年）
   const trends =[
-    { key:'week',  label:'週',   getDays: () => { 
-        const day = td.getDay() || 7; 
+    { key:'week',  label:'週',   getDays: () => {
+        const platId = (S.trendFilter && S.trendFilter !== 'all') ? S.trendFilter : null;
+        if (platId && typeof getPayPeriod === 'function') {
+          const pay = getPayPeriod(platId, td);
+          navLabel = `${+pay.startStr.slice(5,7)}/${+pay.startStr.slice(8,10)} ~ ${+pay.endStr.slice(5,7)}/${+pay.endStr.slice(8,10)}`;
+          // 展開區間內每一天
+          const days = [];
+          const c = new Date(pay.start); c.setHours(12,0,0,0);
+          const end = new Date(pay.end); end.setHours(12,0,0,0);
+          while (c <= end) {
+            days.push(todayStr(c));
+            c.setDate(c.getDate() + 1);
+          }
+          return days;
+        }
+        // 未選平台：維持日曆週一～週日
+        const day = td.getDay() || 7;
         const start = new Date(td); start.setDate(start.getDate() - day + 1);
         const end = new Date(start); end.setDate(end.getDate() + 6);
-        navLabel = `${pad(start.getMonth()+1)}/${pad(start.getDate())} ~ ${pad(end.getMonth()+1)}/${pad(end.getDate())}`;
+        navLabel = `${start.getMonth()+1}/${start.getDate()} ~ ${end.getMonth()+1}/${end.getDate()}`;
         return Array.from({length:7}, (_,i)=>{
            const nd = new Date(start); nd.setDate(nd.getDate() + i);
-           return `${nd.getFullYear()}-${pad(nd.getMonth()+1)}-${pad(nd.getDate())}`;
+           return todayStr(nd);
         });
-      }
-    },
-    { key:'4week', label:'4週',  getDays: () => { 
-        const day = td.getDay() || 7; 
-        const start = new Date(td); start.setDate(start.getDate() - day + 1 - 21); // 回推 3 週
-        const end = new Date(td); end.setDate(end.getDate() - day + 7);
-        navLabel = `${pad(start.getMonth()+1)}/${pad(start.getDate())} ~ ${pad(end.getMonth()+1)}/${pad(end.getDate())}`;
-        return []; 
       }
     },
     { key:'month', label:'月',   getDays: () => { 
@@ -5843,7 +6568,7 @@ function renderRptTrend() {
 
   // 👇 導入加大加粗的新版導航列 與 圓潤頁籤
   let html = `<div style="display:flex;gap:6px;margin-bottom:12px">
-    ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:8px 6px;border-radius:14px;border:1.5px solid ${curT===t.key?'var(--acc)':'#e2e8f0'};background:${curT===t.key?'var(--acc-d)':'var(--bg-input)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:13px;cursor:pointer;font-family:var(--sans);font-weight:${curT===t.key?'800':'600'}">${t.label}</button>`).join('')}
+    ${trends.map(t=>`<button onclick="S.trendMode='${t.key}';renderRptTrend()" style="flex:1;padding:8px 6px;border-radius:14px;border:1.5px solid ${curT===t.key?'var(--acc)':'#b9bec4'};background:${curT===t.key?'#fff':'var(--bg-input)'};color:${curT===t.key?'var(--acc)':'var(--t2)'};font-size:18px;cursor:pointer;font-family:var(--sans);font-weight:${curT===t.key?'750':'600'}">${t.label}</button>`).join('')}
   </div>
   <div style="display:flex; justify-content:space-between; align-items:center; background: #ffffff; padding: 5px 10px; border-radius: 20px; border: 1px solid #cbd5e1; margin-bottom: 10px;">
     <button class="btn btn1" onclick="navTrend(-1)" style="width: 42px; height: 42px;">◀</button>
@@ -5898,35 +6623,6 @@ function renderRptTrend() {
       </div>`;
       
     el.innerHTML = html; drawTrendBar('trend-chart', labels, datasets, true, null, true);
-  }
-  else if (curT === '4week') {
-    // 獨立處理 4 週的繪圖資料「直條圖」
-    const labels = [];
-    const datasets =[];
-    const weekRanges =[];
-    
-    const day = td.getDay() || 7; 
-    const endOfThisWeek = new Date(td); endOfThisWeek.setDate(endOfThisWeek.getDate() + (7 - day));
-
-    for (let w=3; w>=0; w--) {
-      const startD = new Date(endOfThisWeek); startD.setDate(startD.getDate() - 6 - w*7);
-      const endD = new Date(startD); endD.setDate(endD.getDate() + 6);
-      labels.push(`${pad(startD.getMonth()+1)}/${pad(startD.getDate())} 起`); 
-      weekRanges.push({ start: startD, end: endD });
-    }
-
-    plats.forEach(p => {
-      const data = weekRanges.map(wt => {
-        const sStr = `${wt.start.getFullYear()}-${pad(wt.start.getMonth()+1)}-${pad(wt.start.getDate())}`;
-        const eStr = `${wt.end.getFullYear()}-${pad(wt.end.getMonth()+1)}-${pad(wt.end.getDate())}`;
-        return S.records.filter(r => r.platformId === p.id && r.date >= sStr && r.date <= eStr && !r.isPunchOnly).reduce((s,r)=>s+recTotal(r),0);
-      });
-      if (data.some(v => v > 0)) datasets.push({ label: p.name, data, backgroundColor: p.color, borderRadius: 4 });
-    });
-    
-    html += `<div class="card"><div style="height:260px; position:relative;"><canvas id="trend-chart"></canvas></div></div>`;
-    el.innerHTML = html; 
-    drawTrendBar('trend-chart', labels, datasets, true, null, false);
   }
   else if (curT === 'month') {
     // 👈 月：「橫條圖」
@@ -7316,12 +8012,21 @@ function _syncVehSelectorActive(id) {
 /* ══ 替換：車輛管理內容 (支援月度燃料/保養、年總覽與記錄搜尋) ══ */
 function renderVehicleContent() {
   const container = document.getElementById('vehicle-content');
-  const subWrap = document.getElementById('veh-search-sub-wrap'); // 取得靜態頁籤容器
-  
-  if (!S.selVehicleId) { container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; return; }
+  const subWrap = document.getElementById('veh-search-sub-wrap'); // 靜態頁籤容器
+  const yearlyTopCard = document.getElementById('veh-yearly-top-card'); // 👑 年總覽固定金條卡片容器
 
-  // 🌟 控制靜態頁籤的顯隱：只有在主分頁是「記錄搜尋」時才顯示
+  if (!S.selVehicleId) { 
+    if (yearlyTopCard) { yearlyTopCard.style.display = 'none'; yearlyTopCard.innerHTML = ''; }
+    container.innerHTML = `<div class="empty-tip">請選擇車輛</div>`; 
+    return; 
+  }
+
+  // 控制靜態頁籤與頂部金條卡片的顯隱
   if (subWrap) subWrap.style.display = (S.vehicleTab === 'search') ? 'block' : 'none';
+  if (yearlyTopCard && S.vehicleTab !== 'yearly') {
+    yearlyTopCard.style.display = 'none';
+    yearlyTopCard.innerHTML = '';
+  }
 
   let html = '';
 
@@ -7398,39 +8103,46 @@ function renderVehicleContent() {
         if (r.items) r.items.forEach(it => { itemFreq[it] = (itemFreq[it] || 0) + 1; });
       } else if (r.type === 'wash') {
         yWashAmt += pf(r.amount);
-        yWashCount++; // 👈 新增：計算洗車次數
+        yWashCount++;
       }
     });
     
     const sortedItems = Object.entries(itemFreq).sort((a,b) => b[1] - a[1]);
     const totalExp = yFuelAmt + yMaintAmt + yWashAmt;
 
-    // 2. 總支出金條卡片 (極度縮緊)
-    html += `
-      <div style="background: linear-gradient(135deg, #f59e0b 0%, #fcd34d 40%, #fbbf24 60%, #f59e0b 100%); border-radius:16px; padding:10px 14px; margin-bottom:10px; box-shadow:0 4px 12px rgba(245, 158, 11, 0.3); border: 1.5px solid #fde68a; position:relative; overflow:hidden;">
-        <!-- 閃光線條特效 -->
-        <div style="position:absolute; top:0; left:-100%; width:50%; height:100%; background:linear-gradient(to right, transparent, rgba(255,255,255,0.5), transparent); transform:skewX(-25deg); opacity:0.6;"></div>
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <div style="width:30px; height:30px; background:#ffffff; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); font-size:16px;">👑</div>
-            <span style="font-size:15px; font-weight:900; color:#78350f; text-shadow:0 1px 0 rgba(255,255,255,0.4);">${S.vehY}年 總支出</span>
-          </div>
+    // 2. 總支出金條卡片 (渲染至頂部頁籤正下方的固定容器)
+    if (yearlyTopCard) {
+      yearlyTopCard.style.display = 'block';
+      yearlyTopCard.innerHTML = `
+        <div style="background:linear-gradient(135deg, #ffbd4a 0%, #fcd75e 40%, #fed160 60%, #ffda46 100%);border-radius:14px;border:1.5px solid #fff200;position:relative;overflow:hidden;padding:4px 10px;">
+          <!-- 閃光線條特效 -->
+          <div style="position:absolute; top:0; left:-50%; width:200%; height:100%; background: repeating-linear-gradient(45deg, transparent, transparent 15px, rgba(255,255,255,0.4) 15px, rgba(255,255,255,0.4) 30px);"></div>
           
-          <div style="background: rgba(255,255,255,0.95); padding: 4px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 2px 6px rgba(120,53,15,0.15); display:flex; align-items:baseline;">
-            <span style="font-size:14px; font-weight:900; color:#b45309; margin-right: 4px;">$</span>
-            <span style="font-family:var(--mono); font-size:24px; font-weight:900; color:#b45309; letter-spacing:-0.5px;">${fmt(totalExp)}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
+            <div style="display:flex;align-items:center;gap:8px;letter-spacing:1px;">
+              <div style="width:40px;height:40px;background:rgba(255,255,255,0.7);border-radius:6px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(15px);box-shadow:inset 0 1px 4px rgba(255,255,255,0.9),inset 1px 1px 4px rgba(255,255,255,0.9);font-size:32px;"><span style="margin:0 0 4px 2px;">👑</span></div>
+              <span style="font-size:16px;font-weight:800;color: #0049a8;backdrop-filter:blur(4px);background: rgba(255, 255, 255, 0.7);padding:0 3px;"><span style="font-size:26px;font-weight:900;margin-right:4px;">${S.vehY}</span>年<span style="font-size:22px;font-weight:800;margin-left:8px;">總支出</span></span>
+            </div>
+            
+            <div style="background: #242121;padding:4px 12px;border-radius:10px;border:1.5px solid #fff200;display:flex;align-items:baseline;margin-right:30px;">
+              <span style="font-size:14px;font-weight:900;color: #ffc400;margin-right:4px;">$</span>
+              <span style="font-family:var(--mono);font-size:24px;font-weight:900;color: #ffc400;letter-spacing:0.5px;">${fmt(totalExp)}</span>
+            </div>
           </div>
         </div>
-      </div>
-    `;
+      `;
+    }
 
     // 3. 燃料與里程卡片 (玻璃反光與科技碳纖維斜紋)
-    const fuelBg = isEV ? 'linear-gradient(180deg, #1e3a8a 0%, #3b82f6 30%, #fff 100%)' : 'linear-gradient(180deg, #e60000 0%, #ff6666 100%)';
-    const fuelShadow = isEV ? 'rgba(59,130,246,0.25)' : 'rgba(225,29,72,0.25)';
+    const fuelBg = isEV ? 'linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%)' : 'linear-gradient(180deg, #e60000 0%, #ff6666 100%)';
+    const fuelShadow = isEV ? 'rgba(59,130,246,0.4)' : 'rgba(230, 0, 0,0.4)';
     const fuelImgSrc = isEV ? 'Vehicle/ve2.png' : 'Vehicle/ve1.png';
     const fuelTitle = isEV ? '年度換電與里程' : '年度油資與里程';
-    
+    const fuelborderColor = isEV ? '#0b55cb' : '#ef4444';
+    const fuelopacity = isEV ? 0.1 : 0.2;
+    const fuelCostPerKm = (yDist > 0 && yFuelAmt > 0) ? (yFuelAmt / yDist).toFixed(2) : 0;
+    const fuelgrayline = isEV ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.6)';
+
     // 計算電動車專屬資料
     let yEvFeeTotal = 0, yEvExtraTotal = 0;
     if (isEV) {
@@ -7444,61 +8156,69 @@ function renderVehicleContent() {
     const evCostPerKm = (yDist > 0 && yFuelAmt > 0) ? (yFuelAmt / yDist).toFixed(2) : 0;
 
     html += `
-      <div style="background:${fuelBg}; border-radius:16px; padding:6px 10px; margin-bottom:10px; box-shadow:0 6px 16px ${fuelShadow}; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.2); background-size:101% 101% ;">
+      <div style="background:${fuelBg};border-radius:16px;box-shadow:0 4px 4px ${fuelShadow};position:relative;overflow:hidden;border:1px solid ${fuelborderColor};background-size:101% 101%;padding:3px 10px 2px 10px;margin-bottom:10px;">
         <!-- 碳纖維科技斜紋背景 -->
-        <div style="position:absolute; inset:0; opacity:0.1; background-image: repeating-linear-gradient(45deg, #ffffff 0px, #ffffff 1px, transparent 1px, transparent 8px);"></div>
+        <div style="position:absolute; inset:0; opacity:${fuelopacity}; background-image: repeating-linear-gradient(45deg, #ffffff 0px, #ffffff 2px, transparent 1px, transparent 18px);"></div>
         <!-- 頂部玻璃反光光暈 -->
         <div style="position:absolute; top:0; left:0; right:0; height:30%; background:linear-gradient(to bottom, rgba(255,255,255,0.15), transparent); pointer-events:none;"></div>
 
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; border-bottom:2px dashed rgba(255,255,255,0.3); padding-bottom:3px; position:relative; z-index:1;">
-          <div style="width:40px; height:40px; background:rgba(255,255,255,0.2); border-radius:6px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(15px); box-shadow:inset 0 1px 2px rgba(255,255,255,0.4);">
-            <img src="${fuelImgSrc}" style="width:38px; height:38px; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.2));">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px dashed ${fuelgrayline};padding-bottom:3px;margin-bottom:3px;position:relative;z-index:1;">
+          <!-- 左側：圖示 + 標題（靠左包覆） -->
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(15px);box-shadow:inset 0 1px 4px rgba(255,255,255,0.9),inset 1px 1px 4px rgba(255,255,255,0.9);">
+              <img src="${fuelImgSrc}" style="width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
+            </div>
+            <span style="font-size:18px;font-weight:750;color:#fff;letter-spacing:1px;">${fuelTitle}</span>
           </div>
-          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:1px;">${fuelTitle}</span>
+
+          <!-- 右側：金額標籤（動態藍/紅系配色） -->
+          <div style="background:#fff;padding:4px 12px;border-radius:10px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1),0 2px 8px rgba(0,0,0,0.15);border:1px solid ${isEV ? '#93c5fd' : '#fca5a5'};display:flex;align-items:baseline;margin-right:5px;">
+            <span style="font-size:14px; font-weight:900; color:${isEV ? '#1d4ed8' : '#b91c1c'}; margin-right:4px;">$</span>
+            <span style="font-family:var(--mono); font-size:24px; font-weight:900; background:${isEV ? 'linear-gradient(180deg, #1d4ed8, #3b82f6)' : 'linear-gradient(180deg, #b91c1c, #ef4444)'}; -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:0.5px;">${fmt(yFuelAmt)}</span>
+          </div>
         </div>
         
-        <div style="display:flex; justify-content:space-around; align-items:center; position:relative; z-index:1;">
+        <div style="display:flex;justify-content:space-around;align-items:center;position:relative;z-index:1;">
           ${!isEV ? `
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">總加油金額</span>
-            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yFuelAmt)}</span>
+            <span style="font-size:14px;font-weight:650;color: #0059ff;margin-bottom:3px;letter-spacing:0.5px;background:#fff;padding:0 3px;">總油量</span>
+            <div style="background:rgba(255, 255, 255, 0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);backdrop-filter:blur(4px);">
+              <span style="font-family:var(--mono); font-size:18px; font-weight:900;color: #fff;letter-spacing:0.5px;">${yLiters.toFixed(1)}<span style="font-size:11px;color: #000;margin-left:4px;">L</span></span>
             </div>
           </div>
-          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
+          <div style="width:2px;height:55px;background:${fuelgrayline};"></div>
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">總油量</span>
-            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${yLiters.toFixed(1)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">L</span></span>
+            <span style="font-size:14px;font-weight:650;color: #0059ff;margin-bottom:3px;letter-spacing:0.5px;background:#fff;padding:0 3px;">行駛總里程</span>
+            <div style="background:rgba(255, 255, 255, 0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);backdrop-filter:blur(4px);">
+              <span style="font-family:var(--mono); font-size:18px; font-weight:900;color: #fff;letter-spacing:0.5px;">${fmt(yDist)}<span style="font-size:11px;color: #000;letter-spacing:1px;margin-left:4px;">km</span></span>
             </div>
           </div>
-          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
+          <div style="width:2px;height:55px;background:${fuelgrayline};"></div>
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:700; color: rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">行駛總里程</span>
-            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${fmt(yDist)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8); letter-spacing:1px;">km</span></span>
+            <span style="font-size:14px;font-weight:650;color: #0059ff;margin-bottom:3px;letter-spacing:0.5px;background:#fff;padding:0 3px;">每公里成本</span>
+            <div style="background:rgba(255, 255, 255, 0.15);border:1px solid rgba(255,255,255,0.15);padding:4px 10px;border-radius:10px;box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);backdrop-filter:blur(4px);">
+              <span style="font-family:var(--mono);font-size:18px;font-weight:900;color: #fff;letter-spacing:0.5px;">${fuelCostPerKm}<span style="font-size:11px;color: #000;letter-spacing:1px;margin-left:4px;">元/km</span></span>
             </div>
-          </div>
+          </div>  
           ` : `
-          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">月租 + 換電</span>
-            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2); display:flex; flex-direction:column; align-items:center;">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;margin-right:20px;"><span style="font-size:11px; color: rgba(0, 0, 0, 0.8);">$</span> ${fmt(yEvFeeTotal)}</span>
-              <span style="font-family:var(--mono); font-size:14px; font-weight:800; color: #e600ff;margin:4px 0 0 25px ;">+<span style="font-size:8px;">  </span>${fmt(yEvExtraTotal)}</span>
+          <div style="display:flex; flex:1.4; flex-direction:column; align-items:center;margin-right:5px;">
+            <span style="font-size:14px;font-weight:650;color:rgba(255,255,255,0.9);margin-bottom:3px;letter-spacing:0.5px;">月租 + 換電</span>
+            <div style="background:rgba(255, 255, 255, 0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);backdrop-filter:blur(4px);">
+              <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:#fff;letter-spacing:0.5px;"><span style="font-size:11px;color:#000;margin-right:4px;">$</span>${fmt(yEvFeeTotal)}<span style="font-size:18px;font-weight:900;color:#000;margin:0 4px 0 4px;">+</span><span style="color: #37ff00;letter-spacing:0.5px;">${fmt(yEvExtraTotal)}</span></span>
             </div>
           </div>
-          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
+          <div style="width:2px;height:55px;background:${fuelgrayline};"></div>
           <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">行駛總里程</span>
-            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;">${fmt(yDist)} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8); letter-spacing:1px;">km</span></span>
+            <span style="font-size:14px;font-weight:650;color:rgba(255,255,255,0.9);margin-bottom:3px;letter-spacing:0.5px;">行駛總里程</span>
+            <div style="background:rgba(255, 255, 255, 0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);backdrop-filter:blur(4px);">
+              <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:#ffffff;">${fmt(yDist)}<span style="font-size:11px;color:rgba(0,0,0,0.8);letter-spacing:1px;margin-left:4px;">km</span></span>
             </div>
           </div>
-          <div style="width:2px; height:55px; background:rgba(255,255,255,0.3);"></div>
-          <div style="display:flex; flex:1; flex-direction:column; align-items:center;">
-            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.8); margin-bottom:4px; letter-spacing:0.5px;">每公里成本</span>
-            <div style="background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);">
-              <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#ffffff;"> ${evCostPerKm} <span style="font-size:11px; color: rgba(0, 0, 0, 0.8); letter-spacing:1px;">元/km</span></span>
+          <div style="width:2px;height:55px;background:${fuelgrayline};"></div>
+          <div style="display:flex; flex:1.1; flex-direction:column; align-items:center;">
+            <span style="font-size:14px;font-weight:650;color:rgba(255,255,255,0.9);margin-bottom:3px;letter-spacing:0.5px;">每公里成本</span>
+            <div style="background:rgba(255, 255, 255, 0.15); border:1px solid rgba(255,255,255,0.15); padding:4px 10px; border-radius:10px; box-shadow:inset 0 1px 4px rgba(0,0,0,0.2);backdrop-filter:blur(4px);">
+              <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:#ffffff;">${evCostPerKm}<span style="font-size:11px;color:rgba(0,0,0,0.8);letter-spacing:1px;margin-left:4px;">元/km</span></span>
             </div>
           </div>
           `}
@@ -7519,57 +8239,58 @@ function renderVehicleContent() {
     });
 
     html += `
-    <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:16px;">
+    <div style="background:#ffffff;border-radius:16px;border:1px solid #059669;box-shadow:0 4px 4px rgba(5, 150, 105,0.4);overflow:hidden;margin-bottom:10px;">
       
       <!-- 頂部翡翠綠玻璃感卡 -->
-      <div style="background:linear-gradient(180deg, #064e3b 0%, #059669 100%); padding:10px 16px; position:relative; overflow:hidden;">
+      <div style="background:linear-gradient(180deg, #064e3b 0%, #059669 100%);position:relative;overflow:hidden;padding:3px 10px;">
         <!-- 科技全息方格背景 -->
-        <div style="position:absolute; inset:0; opacity:0.12; background-image: linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px); background-size: 16px 16px;"></div>
+        <div style="position:absolute;inset:0;opacity:0.12;background-image:linear-gradient(#ffffff 1px, transparent 1px),linear-gradient(90deg, #ffffff 1px, transparent 1px);background-size:16px 16px;"></div>
         <!-- 頂部玻璃反光光暈 -->
-        <div style="position:absolute; top:0; left:0; right:0; height:40%; background:linear-gradient(to bottom, rgba(255,255,255,0.12), transparent); pointer-events:none;"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:40%;background:linear-gradient(to bottom, rgba(255,255,255,0.12), transparent);pointer-events:none;"></div>
         
-        <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
-          <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
-            <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:24px;">🔧</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
+          <h3 style="font-size:18px;font-weight:750;color:#fff;display:flex;align-items:center;gap:8px;letter-spacing:1px;">
+            <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(15px);box-shadow:inset 0 1px 4px rgba(255,255,255,0.9),inset 1px 1px 4px rgba(255,255,255,0.9);font-size:32px;">🔧</div>
             保養與維修總額
           </h3>
-          <div style="background:#ffffff; padding:4px 12px; border-radius:10px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15); border:1px solid #6ee7b7; display:flex; align-items:baseline;">
+          <div style="background:#fff;padding:4px 12px;border-radius:10px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1),0 2px 8px rgba(0,0,0,0.15);border:1px solid #6ee7b7;display:flex;align-items:baseline;margin-right:5px;">
             <span style="font-size:14px; font-weight:900; color:#047857; margin-right:4px;">$</span>
-            <span style="font-family:var(--mono); font-size:24px; font-weight:900; background:linear-gradient(180deg, #047857, #10b981); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-0.5px;">${fmt(yMaintAmt)}</span>
+            <span style="font-family:var(--mono); font-size:24px; font-weight:900; background:linear-gradient(180deg, #047857, #10b981); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:0.5px;">${fmt(yMaintAmt)}</span>
           </div>
         </div>
       </div>
       
       <!-- 下方緊湊立體清單區 -->
       <div style="padding:10px 8px; background:#f8fafc;">
-        <!-- 表頭與內容寬度精準對齊 -->
-        <div style="font-size:11px; font-weight:800; color:#64748b; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; padding:0 12px;">
-          <span style="width:35%; text-align:left;">保養項目</span>
-          <span style="width:20%; text-align:center;">次數</span>
-          <span style="width:40%; text-align:right; margin-right:20px;">累計花費</span>
+        <!-- 表頭：採用 Grid 網格，對齊方式與下方內容一致 (左、中、右) -->
+        <div style="font-size:13px; font-weight:650; color:#64748b; margin-bottom:6px; display:grid; grid-template-columns: 45% 20% 35%; align-items:center; padding:0 12px;">
+          <span style="text-align:left;">保養項目</span>
+          <span style="text-align:center;">次數</span>
+          <span style="text-align:right;">累計花費</span>
         </div>
         
         <div style="display:flex; flex-direction:column; gap:4px;">
           ${sortedItems.length ? sortedItems.map(it => `
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:#ffffff; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <!-- 資料列：統一採用 45% 20% 35% 的 Grid 欄位分割 -->
+            <div style="display:grid; grid-template-columns: 45% 20% 35%; align-items:center; padding:6px 12px; background:#ffffff; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
               
-              <!-- 項目名稱 -->
-              <div style="width:35%; display:flex; align-items:center; gap:6px; overflow:hidden;">
+              <!-- 項目名稱（靠左） -->
+              <div style="display:flex; align-items:center; gap:6px; overflow:hidden; min-width:0;">
                 <div style="width:6px; height:6px; border-radius:50%; background: #10b981; flex-shrink:0;"></div>
                 <span style="font-size:14px; font-weight:800; color: #334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                   ${safeText(it[0])}
                 </span>
               </div>
               
-              <!-- 次數膠囊 -->
-              <div style="width:20%; display:flex; justify-content:center;">
+              <!-- 次數膠囊（居中） -->
+              <div style="display:flex; justify-content:center;">
                 <span style="font-family:var(--mono); font-size:15px; font-weight:900; color: #ff5900; background: #fff2e2; padding:3px 10px; border-radius:8px; border:1px solid #ffedd5;">
                   ${it[1]}<span style="font-size:10px; color: #4b4846; margin-left:2px;"> 次</span>
                 </span>
               </div>
               
-              <!-- 金額置右 -->
-              <div style="width:40%; text-align:right;">
+              <!-- 金額（靠右） -->
+              <div style="text-align:right;">
                 <span style="font-family:var(--mono); font-size:16px; font-weight:900; color:#2563eb;">
                   <span style="font-size:11px; color: #94a3b8; margin-right:2px;">$ </span>${fmt(itemAmount[it[0]] || 0)}
                 </span>
@@ -7588,26 +8309,26 @@ function renderVehicleContent() {
     // 5. 洗車美容總額 (風格 3：動態傾斜折光，次數置中，底部留白)
     if (yWashCount > 0) {
       html += `
-      <div style="background:#ffffff; border-radius:16px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:16px;">
-        <div style="background:linear-gradient(180deg, #0891b2 0%, #06b6d4 100%); padding:10px 16px; position:relative; overflow:hidden;">
+      <div style="background:#fff;border-radius:16px;border:1px solid #06b6d4;box-shadow:0 4px 4px rgba(6, 182, 212,0.4);overflow:hidden;margin-bottom:16px;">
+        <div style="background:linear-gradient(180deg, #0891b2 0%, #06b6d4 100%);padding:3px 10px;position:relative;overflow:hidden;">
           <!-- 特效：斜向反光線條 -->
           <div style="position:absolute; top:0; left:-50%; width:200%; height:100%; background: repeating-linear-gradient(135deg, transparent, transparent 15px, rgba(255,255,255,0.1) 15px, rgba(255,255,255,0.1) 30px); pointer-events:none;"></div>
           
           <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
-            <h3 style="font-size:18px; color: #ffffff; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
-              <div style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); color:#ffffff; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 2px rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.2); font-size:24px;">🧽</div>
+            <h3 style="font-size:18px;font-weight:750;color:#fff;letter-spacing:1px;display:flex;align-items:center;gap:8px;">
+              <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:6px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(15px);box-shadow:inset 0 1px 4px rgba(255,255,255,0.9),inset 1px 1px 4px rgba(255,255,255,0.9);font-size:32px;">🧽</div>
               洗車美容總額
             </h3>
-            <div style="background:#ffffff; padding:4px 12px; border-radius:10px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15); border:1px solid #67e8f9; display:flex; align-items:baseline;">
+            <div style="background:#ffffff; padding:4px 12px; border-radius:10px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.15); border:1px solid #67e8f9; display:flex; align-items:baseline;margin-right:5px;">
               <span style="font-size:14px; font-weight:900; color:#0891b2; margin-right:4px;">$</span>
-              <span style="font-family:var(--mono); font-size:24px; font-weight:900; background:linear-gradient(180deg, #0891b2, #06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-0.5px;">${fmt(yWashAmt)}</span>
+              <span style="font-family:var(--mono); font-size:24px; font-weight:900; background:linear-gradient(180deg, #0891b2, #06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:0.5px;">${fmt(yWashAmt)}</span>
             </div>
           </div>
         </div>
         <!-- 置中的洗車次數清單區 -->
-        <div style="padding:10px 20px; background:#f8fafc; display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:10px;">
-           <span style="font-size:14px; font-weight:800; color: #202226; margin-top:6px;">本年度洗車總計</span>
-           <span style="font-family:var(--mono); font-size:22px; font-weight:800; color: #e41919; background: #b1faff; padding:3px 12px; border-radius:12px; border:2px solid #68f2ff;">${yWashCount} <span style="font-size:14px; color:#202226;">次</span></span>
+        <div style="background:#f8fafc;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;padding:6px 30px;gap:20px;">
+           <span style="font-size:16px;font-weight:800;color:#202226;margin-top:6px;">本年度洗車總計</span>
+           <span style="font-family:var(--mono);font-size:22px;font-weight:800;color:#e41919;background:#b1faff;padding:2px 10px;border-radius:12px;border:1.5px solid #68f2ff;">${yWashCount}<span style="font-size:14px;color:#202226;margin-left:4px;">次</span></span>
         </div>
       </div>`;
     } else {
@@ -7679,22 +8400,22 @@ function renderVehicleContent() {
         </div>`;
 
       html += `
-        <div style="background: linear-gradient(to right, #4f46e5 0%, #3b82f6 40%, #93c5fd 75%, #e0f2fe 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25); border: 1.5px solid #bfdbfe;">
+        <div style="background:linear-gradient(to right, #4f46e5 0%, #3b82f6 40%, #93c5fd 75%, #e0f2fe 100%);border-radius:16px;padding:8px 12px;margin-bottom:8px;box-shadow:0 4px 4px rgba(59,130,246,0.4);border:1.5px solid #bfdbfe;">
           <div onclick="toggleSummaryCard('veh-ev-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🔋 本月「電池（月租費）」</span>
+            <span style="font-size:18px;font-weight:800;color:#fff;letter-spacing:0.5px;">🔋 <span style="color:#fff;font-size:24px;font-weight:900;margin-right:4px;">${S.vehM}</span>月「電池總花費」</span>
             
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
-                <span style="font-size:14px; font-weight:800; color:#4f46e5; margin-right: 4px;">$</span>
-                <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#3b82f6;">${fmt(totalEVAmount)}</span>
+            <div style="display:flex;align-items:center;gap:30px;">
+              <div style="background:rgba(255,255,255,0.9);padding:2px 12px;border-radius:12px;box-shadow:inset 0 2px 4px rgba(255,255,255,0.9),0 2px 4px rgba(0,0,0,0.05);display:flex;align-items:baseline;">
+                <span style="font-size:14px;font-weight:800;color:#4f46e5;margin-right:4px;">$</span>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:850;color:#3b82f6;letter-spacing:0.5px;">${fmt(totalEVAmount)}</span>
               </div>
-              <div style="background:rgba(255,255,255,0.6); color:#3b82f6; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                <div id="veh-ev-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
+              <div style="background:#fff;color: #3b82f6;padding:6px;border-radius:50%;display:flex;align-items:center;justify-content:center;width:24px;height:24px;">
+                <div id="veh-ev-col-btn" style="font-size:12px;font-weight:900;transition:transform 0.3s;">▼</div>
               </div>
             </div>
           </div>
-          <div id="veh-ev-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
-            <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:8px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1);">
+          <div id="veh-ev-col" style="max-height:0px;overflow:hidden;transition:max-height 0.3s ease;">
+            <div style="background:rgba(255,255,255,0.8);border-radius:12px;padding:8px;margin-top:8px;box-shadow:inset 0 1px 3px rgba(255,255,255,1);">
               ${evStatsHtml}
             </div>
           </div>
@@ -7719,22 +8440,22 @@ function renderVehicleContent() {
         </div>`;
 
       html += `
-        <div style="background: linear-gradient(to right, #be123c 0%, #e11d48 20%, #f43f5e 40%, #fb7185 60%, #fda4af 80%, #fff1f2 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.25); border: 1.5px solid #fecdd3;">
+        <div style="background:linear-gradient(to right, #be123c 0%, #e11d48 20%, #f43f5e 40%, #fb7185 60%, #fda4af 80%, #fff1f2 100%);border-radius:16px;padding:8px 12px;margin-bottom:8px;box-shadow:0 4px 4px rgba(225, 29, 72, 0.35);border:1.5px solid #fecdd3;">
           <div onclick="toggleSummaryCard('veh-fuel-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">⛽ 本月「汽油總花費」</span>
+            <span style="font-size:18px;font-weight:800;color:#fff;letter-spacing:0.5px;">⛽ <span style="color:#fff;font-size:24px;font-weight:900;margin-right:4px;">${S.vehM}</span>月「汽油總花費」</span>
             
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
-                <span style="font-size:14px; font-weight:800; color:#be123c; margin-right: 4px;">$</span>
-                <span style="font-family:var(--mono); font-size:26px; font-weight:900; color:#e11d48;">${fmt(totalFuelPaid)}</span>
+            <div style="display:flex;align-items:center;gap:30px;">
+              <div style="background:rgba(255,255,255,0.9);padding:2px 12px;border-radius:12px;box-shadow:inset 0 2px 4px rgba(255,255,255,0.9),0 2px 4px rgba(0,0,0,0.05);display:flex;align-items:baseline;">
+                <span style="font-size:14px;font-weight:800;color:#be123c;margin-right:4px;">$</span>
+                <span style="font-family:var(--mono);font-size:24px;font-weight:850;color:#e11d48;letter-spacing:0.5px;">${fmt(totalFuelPaid)}</span>
               </div>
-              <div style="background:rgba(255,255,255,0.6); color:#be123c; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                <div id="veh-fuel-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
+              <div style="background:#fff;color: #be123c;padding:6px;border-radius:50%;display:flex;align-items:center;justify-content:center;width:24px;height:24px;">
+                <div id="veh-fuel-col-btn" style="font-size:12px;font-weight:900;transition:transform 0.3s;">▼</div>
               </div>
             </div>
           </div>
-          <div id="veh-fuel-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
-            <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:8px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1);">
+          <div id="veh-fuel-col" style="max-height:0px;overflow:hidden;transition:max-height 0.3s ease;">
+            <div style="background:rgba(255,255,255,0.8);border-radius:12px;padding:8px;margin-top:8px;box-shadow:inset 0 1px 3px rgba(255,255,255,1);">
               ${fuelStatsHtml}
             </div>
           </div>
@@ -7742,22 +8463,22 @@ function renderVehicleContent() {
     }
   } else if (S.vehicleTab === 'maintenance') {
     html += `
-      <div style="background: linear-gradient(to right, #047857 0%, #059669 20%, #10b981 40%, #56d4a6 60%, #8ce6c2 80%, #ecfdf5 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); border: 1.5px solid #a7f3d0;">
+      <div style="background:linear-gradient(to right, #047857 0%, #059669 20%, #10b981 40%, #56d4a6 60%, #8ce6c2 80%, #ecfdf5 100%);border-radius:16px;padding:8px 12px;margin-bottom:8px;box-shadow:0 4px 4px rgba(16, 185, 129, 0.35);border:1.5px solid #a7f3d0;">
         <div onclick="toggleSummaryCard('veh-maint-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🔧 本月「保養與維修」</span>
+          <span style="font-size:18px;font-weight:800;color:#fff;letter-spacing:0.5px;">🔧 <span style="color:#fff;font-size:24px;font-weight:900;margin-right:4px;">${S.vehM}</span>月「保養與維修」</span>
           
-          <div style="display:flex; align-items:center; gap:8px;">
+          <div style="display:flex;align-items:center;gap:30px;">
             <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
-              <span style="font-size:14px; font-weight:800; color:#047857; margin-right: 4px;">$</span>
-              <span style="font-family:var(--mono); font-size:26px; font-weight:900; color: #059669;">${fmt(totalMaintPaid)}</span>
+              <span style="font-size:14px;font-weight:800;color:#047857;margin-right:4px;">$</span>
+              <span style="font-family:var(--mono);font-size:24px;font-weight:850;color: #059669;letter-spacing:0.5px;">${fmt(totalMaintPaid)}</span>
             </div>
-            <div style="background:rgba(255,255,255,0.6); color:#047857; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-              <div id="veh-maint-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
+            <div style="background:#fff;color: #047857;padding:6px;border-radius:50%;display:flex;align-items:center;justify-content:center;width:24px;height:24px;">
+              <div id="veh-maint-col-btn" style="font-size:12px;font-weight:900;transition:transform 0.3s;">▼</div>
             </div>
           </div>
         </div>
-        <div id="veh-maint-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
-          <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:10px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1); display:flex; justify-content:center; text-align:center;">
+        <div id="veh-maint-col" style="max-height:0px;overflow:hidden;transition:max-height 0.3s ease;">
+          <div style="background:rgba(255,255,255,0.8);border-radius:12px;padding:8px;margin-top:8px;box-shadow:inset 0 1px 3px rgba(255,255,255,1);display:flex;justify-content:center;text-align:center;">
             <div style="flex:1;">
               <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">本月保養次數：</div>
               <div style="font-weight:900; font-size:16px; color:#059669; font-family:var(--mono);">${maintRecs.length} <span style="font-size:12px; color:#64748b;">筆</span></div>
@@ -7767,22 +8488,22 @@ function renderVehicleContent() {
       </div>`;
   } else if (S.vehicleTab === 'wash') {
     html += `
-      <div style="background: linear-gradient(to right, #0891b2 0%, #06b6d4 20%, #22d3ee 40%, #67e8f9 60%, #a5f3fc 80%, #ecfeff 100%); border-radius:16px; padding:8px 12px; margin-bottom:8px; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.25); border: 1.5px solid #cffafe;">
+      <div style="background:linear-gradient(to right, #0891b2 0%, #06b6d4 20%, #1fc0d9 40%, #67e8f9 60%, #a5f3fc 80%, #ecfeff 100%);border-radius:16px;padding:8px 12px;margin-bottom:8px;box-shadow:0 4px 4px rgba(6,182,212,0.35);border:1.5px solid #cffafe;">
         <div onclick="toggleSummaryCard('veh-wash-col')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:14px; font-weight:800; color:#ffffff; letter-spacing:0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">🧽 本月「洗車美容」</span>
+          <span style="font-size:18px;font-weight:800;color:#fff;letter-spacing:0.5px;">🧽 <span style="font-size:24px;font-weight:900;margin-right:4px;">${S.vehM}</span>月「洗車美容」</span>
           
-          <div style="display:flex; align-items:center; gap:8px;">
+          <div style="display:flex;align-items:center;gap:30px;">
             <div style="background: rgba(255,255,255,0.9); padding: 2px 12px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:baseline;">
               <span style="font-size:14px; font-weight:800; color:#0891b2; margin-right: 4px;">$</span>
-              <span style="font-family:var(--mono); font-size:26px; font-weight:900; color: #06b6d4;">${fmt(totalWashPaid)}</span>
+              <span style="font-family:var(--mono);font-size:24px;font-weight:850;color: #06b6d4;letter-spacing:0.5px;">${fmt(totalWashPaid)}</span>
             </div>
-            <div style="background:rgba(255,255,255,0.6); color:#0891b2; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-              <div id="veh-wash-col-btn" style="font-size:10px; transition:transform 0.3s; font-weight:900;">▼</div>
+            <div style="background:#fff;color: #0891b2;padding:6px;border-radius:50%;display:flex;align-items:center;justify-content:center;width:24px;height:24px;">
+              <div id="veh-wash-col-btn" style="font-size:12px;font-weight:900;transition:transform 0.3s;">▼</div>
             </div>
           </div>
         </div>
         <div id="veh-wash-col" style="max-height:0px; overflow:hidden; transition:max-height 0.3s ease;">
-          <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:10px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1); display:flex; justify-content:center; text-align:center;">
+          <div style="background:rgba(255,255,255,0.8); border-radius:12px; padding:8px; margin-top:8px; box-shadow:inset 0 1px 3px rgba(255,255,255,1); display:flex; justify-content:center; text-align:center;">
             <div style="flex:1;">
               <div style="font-size:12px; color:#475569; margin-bottom:4px; font-weight:700;">本月洗車次數：</div>
               <div style="font-weight:900; font-size:16px; color:#0891b2; font-family:var(--mono);">${washRecs.length} <span style="font-size:12px; color:#64748b;">次</span></div>
@@ -7801,7 +8522,7 @@ function renderVehicleContent() {
     typeRecs.sort((a, b) => b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||'')).forEach(r => {
       const isFuel = r.type === 'fuel'; 
       const isEV = r.fuelType === 'electric'; 
-      const formatTime = r.date.slice(5).replace('-','/') + ' ' + (r.time || '');
+      const formatTime = fmtMDDisp(r.date) + (r.time ? ` ${r.time}` : '');
       
       let htmlContent = '';
 
@@ -7812,9 +8533,9 @@ function renderVehicleContent() {
               const kmL = (r.liters > 0 && diff > 0) ? (diff / r.liters).toFixed(2) : 0;
               
               let pillsHtml = '';
-              if (r.liters) pillsHtml += `<div class="vb-pill"><span style="color: #0ea5e9;">${r.liters}</span><span style="color:#64748b; font-size:10px;">L</span></div>`;
-              if (diff > 0) pillsHtml += `<div class="vb-pill"><span style="color: #2563eb;">${diff}</span><span style="color:#64748b; font-size:10px;">km</span></div>`;
-              if (kmL > 0)  pillsHtml += `<div class="vb-pill"><span style="color: #0d9488;">${kmL}</span><span style="color:#64748b; font-size:10px;">km/L</span></div>`;
+              if (r.liters) pillsHtml += `<div class="vb-pill" style="background: #e5f6ff;border:1px solid #ade2fa;color: #0ea5e9;">${r.liters}<span style="color: #000;font-size:11px;letter-spacing:0.5px;">L</span></div>`;
+              if (diff > 0) pillsHtml += `<div class="vb-pill" style="background: #e5eeff;border:1px solid #b0c6f8;color: #2563eb;">${diff}<span style="color: #000;font-size:11px;letter-spacing:0.5px;">km</span></div>`;
+              if (kmL > 0)  pillsHtml += `<div class="vb-pill" style="background: #e5fffd;border:1px solid #8af5ec;color: #0d9488;">${kmL}<span style="color: #000;font-size:11px;letter-spacing:0.5px;">km/L</span></div>`;
 
               htmlContent = `
                 <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')">
@@ -7822,13 +8543,13 @@ function renderVehicleContent() {
                   <div class="vc-mid">
                     <div class="vc-mid-top">
                       <div class="vt-time">${formatTime}</div>
-                      <div class="vt-tag" style="background:#fee2e2; color:#dc2626;">${r.fuelType||'95'} 無鉛</div>
+                      <div class="vt-tag" style="background:#fee2e2;color:#dc2626;">${r.fuelType||'95'} 無鉛</div>
                     </div>
                     <div class="vc-mid-bot">${pillsHtml}</div>
                   </div>
                   <div class="vc-right">
-                    <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:2px;">花費</span>
-                    <span class="vc-right-val" style="color:#2563eb;"><span style="font-size:10px;">-$</span> ${fmt(r.amount)}</span>
+                    <span style="font-size:14px;font-weight:650;color:var(--t2);margin-bottom:2px;">油費</span>
+                    <span class="vc-right-val" style="color: #2563eb;"><span style="font-size:10px;margin-right:4px;">$</span>${fmt(r.amount)}</span>
                   </div>
                 </div>`;
           } else {
@@ -7851,8 +8572,8 @@ function renderVehicleContent() {
                     <div class="vc-mid-bot">${pillsHtml}</div>
                   </div>
                   <div class="vc-right">
-                    <span style="font-size:10px; color:var(--t3); font-weight:700; margin-bottom:2px;">行駛</span>
-                    <span class="vc-right-val"><span style="color: #ea580c;">${diff > 0 ? diff : 0}</span> <span style="color:#64748b; font-size:12px; letter-spacing:1px;">km</span></span>
+                    <span style="font-size:14px;font-weight:650;color:var(--t2);margin-bottom:2px;">行駛</span>
+                    <span class="vc-right-val"><span style="color: #ea580c;">${diff > 0 ? diff : 0}</span><span style="color: #64748b;font-size:12px;letter-spacing:1px;margin-left:4px;">km</span></span>
                   </div>
                 </div>`;
           }
@@ -7864,8 +8585,10 @@ function renderVehicleContent() {
           
           // 動態色彩：維修(藍色) / 保養(綠色)
           const cardBorder = isRepair ? '#3b82f6' : '#10b981';
-          const rightColor = isRepair ? '#2563eb' : '#16a34a';
-          const rightBg    = isRepair ? '#eff6ff' : '#f0fdf4';
+          const rightname = isRepair ? '維修' : '保養';
+          const rightColor = isRepair ? '#2563eb' : '#00a23c';
+          const rightColor1 = isRepair ? '#3067df' : '#0ab82d';
+          const rightBg    = isRepair ? '#eff6ff' : '#d6ffe2';
           const pillBg     = isRepair ? '#dbeafe' : '#dcfce7';
           const pillBorder = isRepair ? '#bfdbfe' : '#86efac';
           const pillColor  = isRepair ? '#1d4ed8' : '#15803d';
@@ -7874,27 +8597,29 @@ function renderVehicleContent() {
           if (r.km) pillsHtml += `<div class="vb-pill" style="color: #ea580c; border:1px solid #c8cbce;">${fmt(r.km)}<span style="color: #64748b; font-size:10px; letter-spacing:1px;">km</span></div>`;
 
           (r.items || []).forEach(item => {
-            pillsHtml += `<div class="vb-pill" style="background: ${pillBg}; border:1px solid ${pillBorder}; color: ${pillColor}; font-size:10px; font-weight:800;">${safeText(item)}</div>`;
+            pillsHtml += `<div class="vb-pill" style="background: ${pillBg}; border:1px solid ${pillBorder}; color: ${pillColor}; font-size:14px; font-weight:750;">${safeText(item)}</div>`;
           });
 
           // 機車行與備註標籤
           const shopHtml = r.shop ? `<div class="vt-tag" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:800;">${safeText(r.shop)}</div>` : '';
-          const noteHtml = r.note ? `<div class="vt-tag" style="background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:800;">${safeText(r.note)}</div>` : '';
+          const noteHtml = r.note ? `<div class="vt-tag" style="background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; font-weight:800; white-space:normal; word-break:break-word; max-width:100%;">${safeText(r.note)}</div>` : '';
 
           htmlContent = `
             <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')" style="border: 2px solid ${cardBorder}60;">
               <div class="vc-left"><img src="${iconSrc}" style="width:${iconSize}; height:${iconSize}; transition:0.3s;"></div>
               <div class="vc-mid">
-                <div class="vc-mid-top">
-                  <div class="vt-time">${formatTime}</div>
+                <!-- vc-mid-top 加上 flex-wrap:wrap 允許元件擠不下時換行 -->
+                <div class="vc-mid-top" style="display:flex; flex-wrap:wrap; align-items:center; gap:4px;">
+                  <!-- vt-time 加上 white-space:nowrap 和 flex-shrink:0 強制時間絕對不換行 -->
+                  <div class="vt-time" style="white-space:nowrap; flex-shrink:0;">${formatTime}</div>
                   ${shopHtml}
                   ${noteHtml}
                 </div>
                 <div class="vc-mid-bot">${pillsHtml}</div>
               </div>
-              <div class="vc-right" style="background:${rightBg}; border-left: 1px dashed ${cardBorder}60;">
-                <span style="font-size:10px; color:${rightColor}; font-weight:700; margin-bottom:2px;">花費</span>
-                <span class="vc-right-val" style="color:${rightColor}; font-family:var(--mono); font-weight:900;"><span style="font-size:10px;">-$</span> ${fmt(r.amount)}</span>
+              <div class="vc-right" style="background:${rightBg}; border-left: 2px dashed ${cardBorder}60;">
+                <span style="font-size:14px;font-weight:650;color:${rightColor};margin-bottom:2px;">${rightname}</span>
+                <span class="vc-right-val" style="color:${rightColor1};background:#fff;padding:1px 6px;border-radius:9px;border:1px solid ${pillBorder};"><span style="font-size:10px;margin-right:4px;">$</span>${fmt(r.amount)}</span>
               </div>
             </div>`;
             
@@ -7903,23 +8628,24 @@ function renderVehicleContent() {
           const cardBorder = '#06b6d4';
           const rightColor = '#0891b2';
           const rightBg    = '#ecfeff';
+          const rightBorder    = '#9efaff';
           
           const shopHtml = r.shop ? `<div class="vt-tag" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-weight:800;">${safeText(r.shop)}</div>` : '';
-          const noteHtml = r.note ? `<div class="vt-tag" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:800;">${safeText(r.note)}</div>` : '';
+          const noteHtml = r.note ? `<div class="vt-tag" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; font-weight:800; white-space:normal; word-break:break-word; max-width:100%;">${safeText(r.note)}</div>` : '';
 
           htmlContent = `
             <div class="v-card" onclick="openAddVehRec('${safeText(r.id)}')" style="border: 2px solid ${cardBorder}60;">
-              <div class="vc-left" style="background:#cffafe; border-right: 1px dashed #a5f3fc;"><span style="font-size:24px;">🧽</span></div>
+              <div class="vc-left" style="background:#cffafe;border-right:2px dashed ${cardBorder}60;"><span style="font-size:24px;">🧽</span></div>
               <div class="vc-mid">
-                <div class="vc-mid-top">
-                  <div class="vt-time">${formatTime}</div>
+                <div class="vc-mid-top" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;">
+                  <div class="vt-time" style="white-space:nowrap;flex-shrink:0;">${formatTime}</div>
                   ${shopHtml}
                   ${noteHtml}
                 </div>
               </div>
-              <div class="vc-right" style="background:${rightBg}; border-left: 1px dashed ${cardBorder}60;">
-                <span style="font-size:10px; color:${rightColor}; font-weight:700; margin-bottom:2px;">花費</span>
-                <span class="vc-right-val" style="color:${rightColor}; font-family:var(--mono); font-weight:900;"><span style="font-size:10px;">-$</span> ${fmt(r.amount)}</span>
+              <div class="vc-right" style="background:${rightBg};border-left:2px dashed ${cardBorder}60;">
+                <span style="font-size:14px;font-weight:650;color:${rightColor};margin-bottom:2px;">洗車</span>
+                <span class="vc-right-val" style="color:${rightColor};background:#fff;padding:1px 6px;border-radius:9px;border:1px solid ${rightBorder};"><span style="font-size:10px;margin-right:4px;">$</span>${fmt(r.amount)}</span>
               </div>
             </div>`;
       }
@@ -8246,8 +8972,9 @@ window.setMaintCategory = function(cat, idx) {
 /* ══ 替換：新增車輛記錄 ══ */
 window.openAddVehRec = function(recordId = null) {
   // 👇 檢查會員權限
+  /*
   if (!USER.loggedIn) { showLoginRequiredWarning(); return; }
-
+*/
   // 🛡️ 防呆機制：若被瀏覽器誤傳 Event 事件物件，強制轉為 null
   if (typeof recordId === 'object' && recordId !== null) recordId = null;
 
@@ -8933,7 +9660,7 @@ window.doVehSearch = function(isFullScreen = false) {
         <div style="position:absolute; left:-18px; top:12px; width:14px; height:14px; border-radius:50%; background:${boxBorder}; border:2px solid #ffffff; box-shadow:0 0 0 1px ${boxBorder};"></div>
         <div onclick="openAddVehRec('${safeText(r.id)}')" style="border:2.5px solid ${boxBorder}; border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:0 4px 8px rgba(0,0,0,0.03); transition:transform 0.1s;">
           <div style="background: rgb(236, 241, 244); padding:8px 12px; display:flex; align-items:center; border-bottom:2.5px solid #cbd5e1;">
-            <div style="flex:1; text-align:left; font-family:var(--mono); font-size:14px; font-weight:900; color: #334155;">${r.date.replace(/-/g, '/')}</div>
+            <div style="flex:1; text-align:left; font-family:var(--mono); font-size:14px; font-weight:900; color: #334155;letter-spacing:0.5px;">${fmtDateDisp(r.date)}</div>
             <div style="flex:1; text-align:center; font-family:var(--mono); font-size:18px; font-weight:900; color: #2a69fc;">${fmt(r.km)}<span style="font-size:11px; color: #282a2d; margin-left:2px;"> km</span></div>
             <div style="flex:1; text-align:right; height:18px;">${isLatest && !kw ? `<span style="background: #10b981; color:#ffffff; padding:2px 8px; border-radius:6px; font-size:14px; font-weight:750; letter-spacing:1px;">最新</span>` : ''}</div>
           </div>
@@ -9198,7 +9925,7 @@ function renderSettings() {
        </div>` 
     : `<div style="display:inline-flex; align-items:center; border-radius:8px; border:2px solid #fecdd3; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02); margin-left:auto; flex-shrink:0;">
          <span style="padding:3px 6px; background:#fff1f2; font-size:12px; font-weight:800; color: #e11d48; border-right:1.5px solid #fecdd3;">尚未存檔</span>
-         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:800; color: #f63a69;">🆘 建議在「雲端硬碟」備份</span>
+         <span style="padding:3px 6px; background:#ffffff; font-size:12px; font-weight:700; color: #f63a69;">🆘 建議在「雲端硬碟」備份</span>
        </div>`;
 
   const html = `
@@ -9235,7 +9962,7 @@ function renderSettings() {
   </div></div>
 
   <div class="set-sec" style="margin-bottom:8px;"><h3>資料管理與備份</h3><div class="set-list">
-      <div class="set-row" onclick="confirmBackupToFile()"><span class="sn">📂 儲存到「本機」或「雲端硬碟」(.json) ${lastBackupStr}</span><span class="arr">↓</span></div>
+      <div class="set-row" onclick="confirmBackupToFile()" style="padding:8px 16px 4px;"><span class="sn">📂 儲存到「本機」或「雲端硬碟」(.json) ${lastBackupStr}</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doRestore()"><span class="sn">📤 從本機還原「備份檔」</span><span class="arr">↑</span></div>
       <div class="set-row" onclick="openExportModal()"><span class="sn">📊 匯出 Excel、試算表 (.xlsx)</span><span class="arr">↓</span></div>
       <div class="set-row" onclick="doClearData()"><span class="sn" style="color:var(--red)">🗑 清除所有資料</span><span class="arr" style="color:var(--red)">!</span></div>
@@ -10054,6 +10781,10 @@ async function openAccountStats() {
       👥 管理註冊會員名單 (含搜尋)
     </button>
 
+    <button onclick="openAdminExceptionList()" style="width:100%; padding:14px; border-radius:var(--rs); background:#06b6d4; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(6,182,212,0.3); cursor:pointer;">
+      🛡️ 管理 14 天豁免例外名單
+    </button>
+
     <button onclick="openAdminSystemSettings()" style="width:100%; padding:14px; border-radius:var(--rs); background:#8b5cf6; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(139,92,246,0.3); cursor:pointer;">
       🔒 編輯系統存取權限
     </button>
@@ -10262,7 +10993,7 @@ window.openRecordStats = function() {
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="font-size:18px; font-weight:900; color:var(--t1);">${y} <span style="font-size:12px; font-weight:700; color:#64748b;">年</span></div>
             <!-- 👇 顯示年度總單量 -->
-            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].totalOrders)} <span style="font-size:11px;font-weight:650;color:#94a3b8;">單</span></div>
+            <div style="font-family:var(--mono); font-size:16px; font-weight:900; color:var(--text-blue);">${fmt(yearStats[y].totalOrders)}<span style="font-size:11px;font-weight:600;color: #000;margin:3px 0 0 4px;">單</span></div>
           </div>
           
           <style>.hide-scroll-bar::-webkit-scrollbar { display: none; }</style>
@@ -10656,7 +11387,125 @@ window.adminUnbanUser = async function(targetEmail) {
   }
 }
 
+/* =========================================================
+   管理員專區：14 天豁免例外名單管理
+   ========================================================= */
+window.openAdminExceptionList = async function() {
+  document.getElementById('sub-title').textContent = '14天豁免例外名單';
+  
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer;">🔙 返回</button>
+  `;
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px; display:flex; flex-direction:column; height:100%;">
+      <div style="font-size:13px; color:#0f766e; background:#ccfbf1; border:1px solid #99f6e4; padding:12px; border-radius:12px; margin-bottom:16px; font-weight:700; line-height:1.6;">
+        💡 在此名單中的帳號，將<b>永遠不會因為 14 天未活動而被自動登出</b>。
+      </div>
 
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <input type="email" id="adm-exc-email" class="finp" placeholder="輸入要豁免的 Email..." style="flex:1; border:2px solid #10b981; font-weight:800;">
+        <button onclick="adminAddExceptionSubmit()" style="background:#10b981; color:#fff; border:none; padding:8px 16px; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer; flex-shrink:0;">＋ 新增豁免</button>
+      </div>
+
+      <div class="card" style="padding:0; flex:1; overflow-y:auto; border:1px solid var(--border);" id="adm-exc-list-container">
+        <div style="text-align:center; color:var(--t3); padding:30px; font-weight:700;">📡 載入豁免名單中...</div>
+      </div>
+    </div>
+  `;
+
+  // 取得例外名單
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/exception-list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.success) {
+      renderAdminExceptionList(data.exceptions);
+    } else {
+      document.getElementById('adm-exc-list-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 載入失敗：${data.message}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('adm-exc-list-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 連線失敗</div>`;
+  }
+}
+
+function renderAdminExceptionList(exceptions) {
+  const container = document.getElementById('adm-exc-list-container');
+  if (!container) return;
+
+  if (exceptions.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color:var(--t3); padding:40px; font-weight:700;">目前沒有任何豁免帳號 📭</div>`;
+    return;
+  }
+
+  let html = '';
+  exceptions.forEach(item => {
+    const d = new Date(item.createdAt);
+    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 12px; border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:15px; font-weight:900; color:#0f766e;">🛡️ ${item.email}</div>
+          <div style="font-size:11px; color:#64748b; margin-top:2px;">加入時間: ${dateStr}</div>
+        </div>
+        <button onclick="adminRemoveException('${item.email}')" style="background:#fef2f2; color:#ef4444; border:1px solid #fecdd3; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">移除豁免</button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+window.adminAddExceptionSubmit = async function() {
+  const email = document.getElementById('adm-exc-email').value.trim();
+  if (!email) { toast('請輸入 Email'); return; }
+
+  showProgress('處理中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/add-exception`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ targetEmail: email })
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) {
+        toast('已加入 14 天豁免名單 ✅');
+        openAdminExceptionList();
+      } else {
+        toast('⚠️ ' + data.message);
+      }
+    });
+  } catch(e) { finishProgress(() => toast('連線失敗')); }
+}
+
+window.adminRemoveException = async function(targetEmail) {
+  const ok = await customConfirm(`確定要移除【 <b>${targetEmail}</b> 】的 14 天豁免權限嗎？`);
+  if (!ok) return;
+
+  showProgress('處理中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/remove-exception`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ targetEmail: targetEmail })
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) {
+        toast('已移除豁免權限 ✅');
+        openAdminExceptionList();
+      } else {
+        toast('⚠️ ' + data.message);
+      }
+    });
+  } catch(e) { finishProgress(() => toast('連線失敗')); }
+}
 
 /* ✨ 新增：管理員編輯系統存取權限 */
 function openAdminSystemSettings() {
@@ -11434,7 +12283,6 @@ window.deleteVersion = async function(ver) {
 
 /* ══ 踢下線檢查 (處理強制登出與 31 天未活動) ══ */
 /* ══ 檢查帳號狀態 (新增同步浮水印設定) ══ */
-// 搜尋 async function checkAccountStatus()
 async function checkAccountStatus() {
   if (!USER.loggedIn) return false;
   try {
@@ -11476,7 +12324,6 @@ confirmAddRecord = async function() {
 }
 
 /* ══ 登出清空權限 ══ */
-// 搜尋 function logoutAccount()
 function logoutAccount() {
   USER = { email: null, verified: false, loggedIn: false, role: 'user', uid: null };
   saveUser();
@@ -11730,7 +12577,7 @@ function openRewardSettings() {
             <span style="font-size:16px; font-weight:900; color:var(--t1);">${platName}</span>
             <span style="background:#fff; color:${platColor}; font-size:16px; font-weight:900; padding:4px 12px; border-radius:8px; margin-left:4px;">${rList.length} <span style="font-size:10px; font-weight:500;">組</span></span>
           </div>
-          <div id="rw-grp-icon-${platId}" style="color:${platColor}; font-weight:900; transition:0.3s; transform:rotate(0deg); font-size:22px;">▼</div>
+          <div id="rw-grp-icon-${platId}" style="color:${platColor};font-size:22px;font-weight:900;transition:0.3s;transform:rotate(0deg);">▼</div>
         </div>
 
         <!-- 👇 修改 1：拔除外層 padding，讓折疊時高度能真正歸零，不會露出一截白邊 -->
@@ -11858,7 +12705,7 @@ window.openAddReward = function() {
     <button onclick="animateSubPageReturn(this, () =>{document.querySelector('#sub-page .top-bar .bar-btn').style.display = 'flex';openRewardSettings();} )" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#ffffff; border:1px solid #6d28d9; padding:6px 8px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(139,92,246,0.3); transition:0.2s; letter-spacing:0.5px; text-shadow:0 1px 2px rgba(0,0,0,0.2);">🔙 返回清單</button>
   `;
   
-  tempTiers = [{orders:0, amount:0}, {orders:0, amount:0}];
+  tempTiers = [{orders:'', amount:''}, {orders:'', amount:''}];
   renderRewardForm();
 }
 
@@ -11897,7 +12744,7 @@ function saveTempFormState() {
 
 window.addRewardTier = function() {
   const savedState = saveTempFormState();
-  tempTiers.push({orders:0, amount:0});
+  tempTiers.push({orders:'', amount:''});
   renderRewardForm(savedState);
 }
 
@@ -11930,17 +12777,17 @@ function renderRewardForm(data = null) {
 
         <div style="display:flex; gap:10px;">
           <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-size:10px; color:var(--t3); letter-spacing:0.5px;">📦 滿幾單</label>
+            <label style="font-size:12px; color:var(--t2); letter-spacing:0.5px;">📦 滿幾單</label>
             <div style="position:relative;">
-              <input type="number" class="finp" value="${t.orders}" inputmode="numeric" onchange="tempTiers[${idx}].orders=this.value" style="font-family:var(--mono); font-weight:800; color:var(--text-blue); padding-right:30px;">
-              <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--t3); font-weight:700;">單</span>
+              <input type="number" class="finp" value="${t.orders === 0 || t.orders === '0' ? '' : (t.orders ?? '')}" inputmode="numeric" onchange="tempTiers[${idx}].orders=this.value" style="font-family:var(--mono); font-weight:800; color:var(--text-blue); padding-right:30px;">
+              <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; color:#000; font-weight:600;">單</span>
             </div>
           </div>
           <div class="fg" style="flex:1; margin-bottom:0;">
-            <label style="font-size:10px; color:var(--t3); letter-spacing:0.5px;">💰 獎金</label>
+            <label style="font-size:12px; color:var(--t2); letter-spacing:0.5px;">💰 獎金</label>
             <div style="position:relative;">
               <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--acc); font-weight:900; font-family:var(--mono);">$</span>
-              <input type="number" class="finp" value="${t.amount}" inputmode="numeric" onchange="tempTiers[${idx}].amount=this.value" style="font-family:var(--mono); font-weight:800; color:var(--acc); padding-left:26px;">
+              <input type="number" class="finp" value="${t.amount === 0 || t.amount === '0' ? '' : (t.amount ?? '')}" inputmode="numeric" onchange="tempTiers[${idx}].amount=this.value" style="font-family:var(--mono); font-weight:800; color:var(--acc); padding-left:26px;">
             </div>
           </div>
         </div>
@@ -12067,7 +12914,13 @@ function doRestore() {
       const text = await file.text(); 
       const data = JSON.parse(text); 
       // 👇 將檔案名稱安全地顯示在確認視窗中
-      const ok = await customConfirm(`<span style="font-size:20px;font-weight:700;">確定使用<br>「 <span style="color:var(--blue); font-family:var(--mono);">${safeText(file.name)}</span> 」<br><span style="color:#ff0000;font-size:24px;font-weight:700;">覆蓋 </span>目前資料？</span><br><br><span style="font-size:18px;font-weight:750;color: #20ab2e;">※ 如果目前的資料還有用，建議先按取消，去備份資料。</span>`);
+      const ok = await customConfirm(`
+        <span style="font-size:20px;font-weight:750;">確定使用<br>「 <span style="color:var(--blue);font-family:var(--mono);">${safeText(file.name)}</span> 」<br>
+          <span style="display:inline;color:#ff0000;font-size:24px;font-weight:600;margin-right:5px;">覆蓋</span>目前資料？<br><br>
+
+          <span style="font-size:17px;font-weight:650;background: #20ab2e66;border-radius:20px;padding:3px 10px;margin-bottom:8px;">※ 如果目前的資料還有用，</span><br>
+          <span style="font-size:17px;font-weight:650;background: #20ab2e66;border-radius:20px;padding:3px 10px;">建議先按取消，去備份資料。</span>
+        </span>`);
       if (!ok) return; 
       
       if (data.records) { S.records=data.records; saveRecords(); } 
@@ -12083,9 +12936,9 @@ function doRestore() {
     } catch { 
       toast('❌ 檔案格式「錯誤」'); 
     } 
-    fi.value=''; 
-  }; 
-  fi.click(); 
+    fi.value='';
+  };
+  fi.click();
 }
 
 
@@ -12769,6 +13622,7 @@ function agreePrivacyPolicy() {
 function enforceTimeLimits() {
   const hEl = document.getElementById('f-hrs-val');
   const mEl = document.getElementById('f-min-val');
+  if (!hEl || !mEl) return;
   
   if (hEl.value !== '') {
     let h = parseInt(hEl.value);
@@ -12780,7 +13634,6 @@ function enforceTimeLimits() {
     if (m < 0) mEl.value = 0;
     if (m > 59) mEl.value = 59;
   }
-  // 當輸入 24 小時時，分鐘自動鎖定為 0
   if (parseInt(hEl.value) === 24) {
     mEl.value = 0;
   }
@@ -12790,13 +13643,14 @@ function enforceTimeLimits() {
 function enforceTimeRules() {
   const hEl = document.getElementById('f-hrs-val');
   const mEl = document.getElementById('f-min-val');
+  if (!hEl || !mEl) return;
+
   let h = parseInt(hEl.value || 0);
   let m = parseInt(mEl.value || 0);
 
   if (h === 24) {
     mEl.value = 0;
   } else if (h === 0) {
-    // 當小時輸入0時，若使用者有輸入且分鐘為0，強制改為1分鐘以符合防呆
     if (m === 0 && (hEl.value !== '' || mEl.value !== '')) {
        mEl.value = 1;
        toast('⏱️ 工時不能為 0，已自動設為 1 分鐘');
@@ -13195,32 +14049,33 @@ function showBackupResultBox(info) {
     <div style="background:#ffffff;border-radius:24px;width:100%;max-width:340px;box-shadow:0 20px 50px rgba(0,0,0,0.2);overflow:hidden;transform:translateY(16px);transition:transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275);">
       <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:18px 20px;text-align:center;">
         <div style="font-size:36px;margin-bottom:6px;">✅</div>
-        <div style="font-size:18px;font-weight:900;color:#fff;letter-spacing:1px;">存檔完成</div>
+        <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:1.5px;">存檔完成</div>
       </div>
-      <div style="padding:18px 20px 8px;">
-        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;">檔案名稱</div>
-        <div style="font-family:var(--mono);font-size:14px;font-weight:800;color:#0f172a;background:#f1f5f9;padding:10px 12px;border-radius:12px;border:1.5px solid #e2e8f0;word-break:break-all;margin-bottom:14px;">${safeText(info.fileName)}</div>
+      <div style="padding:3px 20px 8px;">
+        <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:0;">檔案名稱</div>
+        <div style="font-family:var(--mono);font-size:17px;font-weight:800;color: #00aaff;background: hsl(322, 100%, 96%);padding:3px 12px;border-radius:18px;border:1px solid hsl(321, 100%, 85%);text-align:center;letter-spacing:0.8px;margin-bottom:30px;">${safeText(info.fileName)}</div>
+
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#eff6ff;border-radius:12px;border:1px solid #bfdbfe;">
-            <span style="font-size:13px;font-weight:700;color:#1d4ed8;">📋 行程記錄</span>
-            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#1d4ed8;">${info.tripRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 28px 10px 12px;background:#eff6ff;border-radius:12px;border:1px solid #bfdbfe;">
+            <span style="font-size:14px;font-weight:700;color:#1d4ed8;">📋 行程記錄</span>
+            <span style="font-family:var(--mono);font-size:18px;font-weight:900;color: #1d54ea;">${info.tripRecords} <span style="font-size:11px;font-weight:650;">筆</span></span>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff7ed;border-radius:12px;border:1px solid #fed7aa;">
-            <span style="font-size:13px;font-weight:700;color:#c2410c;">⛽ 加油／換電</span>
-            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#c2410c;">${info.fuelRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 28px 10px 12px;background:#fff7ed;border-radius:12px;border:1px solid #fed7aa;">
+            <span style="font-size:14px;font-weight:700;color:#e84708;">⛽ 加油／換電</span>
+            <span style="font-family:var(--mono);font-size:18px;font-weight:900;color: #e84708;">${info.fuelRecords} <span style="font-size:11px;font-weight:650;">筆</span></span>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#ecfdf5;border-radius:12px;border:1px solid #a7f3d0;">
-            <span style="font-size:13px;font-weight:700;color:#047857;">🔧 保養維修</span>
-            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#047857;">${info.maintRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 28px 10px 12px;background:#ecfdf5;border-radius:12px;border:1px solid #a7f3d0;">
+            <span style="font-size:14px;font-weight:700;color:#009a6e;">🔧 保養維修</span>
+            <span style="font-family:var(--mono);font-size:18px;font-weight:900;color: #009a6e;">${info.maintRecords} <span style="font-size:11px;font-weight:650;">筆</span></span>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fef2f2;border-radius:12px;border:1px solid #fecdd3;">
-            <span style="font-size:13px;font-weight:700;color:#b91c1c;">💸 支出花費</span>
-            <span style="font-family:var(--mono);font-size:16px;font-weight:900;color:#b91c1c;">${info.expenseRecords} <span style="font-size:11px;font-weight:700;">筆</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 28px 10px 12px;background:#fef2f2;border-radius:12px;border:1px solid #fecdd3;">
+            <span style="font-size:14px;font-weight:700;color:#e71b1b;">💸 支出花費</span>
+            <span style="font-family:var(--mono);font-size:18px;font-weight:900;color: #e71b1b;">${info.expenseRecords} <span style="font-size:11px;font-weight:650;">筆</span></span>
           </div>
         </div>
       </div>
       <div style="padding:12px 20px 20px;">
-        <button id="backup-result-ok" style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(16,185,129,0.3);">知道了</button>
+        <button id="backup-result-ok" style="width:100%;padding:8px 14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:24px;font-weight:750;cursor:pointer;box-shadow:0 4px 2px rgba(16,185,129,0.4);letter-spacing:2.5px;">知道了</button>
       </div>
     </div>
   `;
