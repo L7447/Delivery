@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   外送記錄 App — style.css (終極乾淨整理版)
+   外送記錄與分析 — style.css (終極乾淨整理版)
    ══════════════════════════════════════════════════════ */
 :root {
   --bg: #f8fafc; 
@@ -66,11 +66,11 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 /* ══ 3. 彈出視窗與毛玻璃頂部 ══ */
 .overlay-page{position:fixed;inset:0;background:#f8fafc;z-index:200;opacity:0;visibility:hidden;transition:opacity 0.3s;display:flex;flex-direction:column;overflow:hidden;}
 .overlay-page.show{opacity:1;visibility:visible;}
-.overlay-body{flex:1;min-height:0;overflow-y:auto;padding:5px;-webkit-overflow-scrolling:touch;}
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 7px;/* 統一內外距，與下方內容距離 7px */
- border-bottom:1px solid var(--border);flex-shrink:0;background:#ffffff;/* 統一白色背景 */
+.overlay-body{flex:1;min-height:0;overflow-y:auto;padding:5px 10px;-webkit-overflow-scrolling:touch;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:5px 16px 5px;/* 統一內外距，與下方內容距離 7px */
+ border-bottom:1.5px solid var(--border);flex-shrink:0;background:#ffffff;/* 統一白色背景 */
  position:relative;}
-.top-bar h2{font-size:24px;font-weight:700;font-family:var(--title);color:#2563eb;/* 統一為藍色 */
+.top-bar h2{font-size:26px;font-weight:700;font-family:var(--title);color:#2563eb;/* 統一為藍色 */
  margin:0;position:absolute;left:50%;transform:translateX(-50%);padding:0 40px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .bar-btn{width:32px;height:32px;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;padding:0;outline:none;}
 .fixed-header{padding:16px 16px 7px;/* 頂部 16px、左右 16px、與下方內容距離 7px */
@@ -80,7 +80,7 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 /* ══ 4. 共用 UI 元件 ══ */
 .pg-title{font-family:var(--title);font-size:26px;font-weight:700;text-align:center;margin:-15px 0 2px 0;/* 標題與下方切換按鈕距離 5px */
  color:var(--t1);}
-.sec-title { font-size: 11px; font-weight: 600; color: var(--t3); letter-spacing: .8px; margin-bottom: 6px; }
+.sec-title { font-size: 13px; font-weight: 700; color: var(--t3); letter-spacing: .8px; margin-bottom: 1px; }
 .mbtn { width: 36px; height: 36px; border-radius: 12px; background: var(--sf); border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--acc); font-weight: 900; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
 .mbtn:active { transform: translateY(2px); background: var(--sf2); }
 .icon-btn { width: 32px; height: 32px; border-radius: 50%; background: #ffffff; border: 1.5px solid #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569; -webkit-tap-highlight-color: transparent; }
@@ -88,12 +88,12 @@ html.no-tr, html.no-tr * { transition: none !important; -webkit-transition: none
 .btn-acc { background: var(--acc); color: #fff; border: none; border-radius: var(--r); font-size: 14px; font-family: var(--sans); font-weight: 600; cursor: pointer; padding: 12px; }
 .btn-acc:active { transform: scale(0.9); }
 .btn-danger { background: var(--red-d); color: var(--red); border: 1px solid rgba(239,68,68,.25); border-radius: var(--rs); padding: 10px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.empty-tip { text-align: center; padding: 16px 0; color: var(--t3); font-size: 13px; font-weight: 700; }
+.empty-tip { text-align:center;padding:26px 0;color:var(--t2);font-size:16px;font-weight:750; }
 
 /* ══ 5. 輸入框與進度條 ══ */
 .fg { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-.fg label { font-size: 11px; color: var(--t2); font-weight: 700; letter-spacing: .5px; }
-.finp, .fsel { width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--rs); color: var(--t1); font-size: 16px; font-family: var(--sans); outline: none; appearance: none; transition: 0.15s; font-weight: 600; }
+.fg label { font-size: 12px; color: var(--t2); font-weight: 700; letter-spacing:0.5px; }
+.finp, .fsel { width: 100%; padding: 7px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--rs); color: var(--t1); font-size: 16px; font-family: var(--sans); outline: none; appearance: none; transition: 0.15s; font-weight: 600; }
 .finp:focus, .fsel:focus { border-color: var(--acc); background: var(--sf); box-shadow: 0 0 0 3px var(--acc-d); }
 
 /* 新增頁輸入框專屬顏色 */
@@ -144,8 +144,8 @@ body[data-tab="vehicles"] .slide-bg{ background: #8B5CF6; box-shadow: 0 2px 8px 
  animation:spinRing 0.8s linear infinite;}
 .punch-btn-right { padding: 7px 18px; border-radius: 12px; font-size: 16px; font-weight: 750; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
 .punch-btn-right:active { transform: scale(0.95); }
-.btn-go-online { background: var(--green); color: #fff; box-shadow: 0 4px 12px rgba(34,197,94,0.25); }
-.btn-go-offline { background: var(--red); color: #fff; box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
+.btn-go-online { background: var(--green); color: #fff; box-shadow: 0 4px 4px rgba(34,197,94,0.5); }
+.btn-go-offline { background: var(--red); color: #fff; box-shadow: 0 4px 4px rgba(239,68,68,0.5); }
 
 /* ══ 8. 記錄卡片與下拉面板 ══ */
 .hist-rec-card { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; margin-top:0px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
@@ -384,8 +384,8 @@ input:checked + .slider:before { transform: translateX(20px); }
 .v-card:active { transform: scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,0.02); }
 
 /* 左側：圖示區 (固定窄寬度，擠出空間) */
-.vc-left { width: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 4px; background: #f8fafc; border-right: 1px dashed #e2e8f0; }
-.vc-left img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05)); }
+.vc-left{width:50px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:4px;background:#f8fafc;border-right:2px dashed #d9dde1;}
+.vc-left img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.05));}
 
 /* 中間：資訊區 (自動填滿剩下所有空間，縮小上下內距) */
 .vc-mid { flex: 1; padding: 5px 8px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
@@ -394,15 +394,15 @@ input:checked + .slider:before { transform: translateX(20px); }
 .vc-mid-bot { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
 /* 頂部文字與標籤 */
-.vt-time { font-size: 11px; font-weight: 800; color: #475569; font-family: var(--mono); letter-spacing: 0px; }
-.vt-tag { border-radius: 6px; padding: 1px 5px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.vt-time{font-size:15px;font-weight:750;border-radius:16px;padding:1px 8px;background:#e4f7ff;border: 1px solid #bbebff;color:#bd14d7;font-family:var(--mono);letter-spacing:0.7px;}
+.vt-tag{font-size:14px;font-weight:600;border-radius:8px;padding:1px 8px;white-space:nowrap;}
 
 /* 底部數據藥丸 (稍微縮小字體讓單排能塞更多) */
-.vb-pill { background: #f1f5f9; border-radius: 6px; padding: 2px 5px; font-size: 11px; font-weight: 800; white-space: nowrap; font-family: var(--mono); display: flex; align-items: baseline; gap: 3px; }
+.vb-pill{background:#e5e8ebcc;border-radius:8px;padding:2px 8px;font-size:14px;font-weight:750;white-space:nowrap;font-family:var(--mono);display:flex;align-items:baseline;gap:3px;}
 
 /* 右側：金額與里程區 (固定邊距，不浪費多餘寬度) */
-.vc-right { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 10px; border-left: 1px dashed #cbd5e1; background: #ffffff; flex-shrink: 0; }
-.vc-right-val { font-family: var(--mono); font-size: 15px; font-weight: 900; white-space: nowrap; }
+.vc-right{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 0 4px 4px;border-left:2px dashed #cbd5e1;background:#ffffff;flex-shrink:0;gap:6px;}
+.vc-right-val{font-family:var(--mono);font-size:18px;font-weight:900;white-space:nowrap;letter-spacing:0.7px;margin-right:8px;}
 
 /* ══ TOP5 月份切換新版導航列 ══ */
 .btn{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:50%;text-align:center;font-weight:900;font-size:32px;}
@@ -748,7 +748,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* --- 3. 藍底白字隱藏列表按鈕 --- */
 .toggle-list-btn{flex-shrink:0;padding:8px 16px;border-radius:18px;font-size:14px;font-weight:700;background:#2563eb !important;/* 藍色背景 */
  color:#ffffff !important;/* 白色文字 */
- border:none !important;cursor:pointer;box-shadow:0 4px 10px rgba(37,99,235,0.2);}
+ border:none !important;cursor:pointer;box-shadow:0 4px 4px rgba(37,99,235,0.4);}
 /* --- 4. 區間總計：高額頭雙色設計 --- */
 .summary-forehead-box{background:#ffffff;border-radius:20px;border:3px solid #1e293b;overflow:hidden;margin-bottom:4px;}
 /* 高額頭頂部 (標題區) */
@@ -938,4 +938,13 @@ input.myInput1:focus::placeholder{color:transparent;opacity:0;}
   
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
   -webkit-tap-highlight-color: transparent;
+}
+
+.manual-km-input::placeholder {
+  color: #1f1e1d;   /* 想要的顏色，例如灰 */
+  opacity: 1;       /* Firefox 預設會半透明，設 1 才準 */
+}
+input:focus::placeholder {
+  color: transparent;
+  opacity: 0;
 }
