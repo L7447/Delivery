@@ -1,8 +1,8 @@
-/* ══ 外送記錄 Service Worker ══
+/* ══ 外送記錄與分析 Service Worker ══
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v471';
+const CACHE_NAME = 'delivery-app-v472';
 
 const ASSETS = [
   '/',
@@ -10,10 +10,8 @@ const ASSETS = [
   '/style.css',
   '/script.js',
   '/manifest.json',
-  
   '/icon-192.png',
   '/icon-512.png',
-  
   '/images/home1.png',
   '/images/home2.png',
   '/images/history1.png',
@@ -29,12 +27,9 @@ const ASSETS = [
   '/images/calendar.png',
   '/images/Check1.png',
   '/images/Check2.png',   
-  '/images/Miyako.webp',
   '/images/close1.png',
   '/images/close2.png',
-  '/images/close3.png',
   '/images/new-window.png',
-  
   '/scooter/s1.png',
   '/scooter/s2.png',
   '/scooter/s3.png',
@@ -44,11 +39,28 @@ const ASSETS = [
   '/scooter/s7.png',
   '/scooter/s8.png',  
   '/scooter/s9.png',  
-  
   '/Vehicle/ve1.png',
   '/Vehicle/ve2.png',
   '/Vehicle/ve3.png',
-  '/Vehicle/ve4.png'
+  '/Vehicle/ve4.png',
+  '/figure/fig1.webp',
+  '/figure/fig2.webp',
+  '/figure/fig3.webp',
+  '/figure/fig4.webp',
+  '/figure/fig5.webp',
+  '/figure/fig6.webp',
+  '/figure/fig7.webp',
+  '/figure/fig12.webp',
+  '/figure/fig13.webp',
+  '/figure/fig14.webp',
+  '/figure/fig15.webp',
+  '/figure/fig16.webp',
+  '/figure/fig17.webp',
+  '/figure/fig18.webp',
+  '/figure/fig19.webp',
+  '/figure/fig20.webp',
+  '/figure/fig21.webp',
+  '/figure/fig22.webp'
 ];
 
 /* 安裝 SW：預先快取所有靜態資源 */
