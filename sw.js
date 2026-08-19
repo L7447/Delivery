@@ -1,8 +1,8 @@
-/* ══ 外送記錄與分析 Service Worker ══
+/* ══ 外送記錄好幫手 Service Worker ══
    快取靜態資源，支援離線使用
    ══════════════════════════════ */
 
-const CACHE_NAME = 'delivery-app-v472';
+const CACHE_NAME = 'delivery-app-v473';
 
 const ASSETS = [
   '/',
