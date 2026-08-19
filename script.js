@@ -10453,6 +10453,12 @@ function renderAuthContent() {
           </div>
         </div>
         
+        <!-- 🌟 新增：核准碼輸入框 -->
+        <div class="auth-input-group">
+          <label class="auth-input-label">6 位數註冊核准碼 <span style="color:var(--red);">*</span></label>
+          <input type="text" class="auth-input" id="auth-approval-code" placeholder="請輸入管理員提供之 6 位數字" maxlength="6" inputmode="numeric" style="font-family:var(--mono); letter-spacing:2px; font-weight:800; color:#2563eb;">
+        </div>
+
         <div class="auth-input-group">
           <label class="auth-input-label">電子郵件</label>
           <input type="email" class="auth-input" id="auth-email" placeholder="你的帳號@gmail.com">
@@ -10555,6 +10561,14 @@ async function requestLogin() {
   const email = document.getElementById('auth-email').value.trim().toLowerCase();
   const pwd = document.getElementById('auth-pwd').value.trim();
 
+  if (authMode === 'register') {
+    const approvalCode = document.getElementById('auth-approval-code')?.value.trim() || '';
+    if (!approvalCode || approvalCode.length !== 6) {
+      toast('⚠️ 請輸入 6 位數註冊核准碼');
+      return;
+    }
+  }
+
   // 🌟 前端即時檢查：僅允許 @gmail.com 與 @googlemail.com
   const isGmail = email.endsWith('@gmail.com') || email.endsWith('@googlemail.com');
   if (!isGmail || email.length <= 10) {
@@ -10598,7 +10612,7 @@ async function requestLogin() {
     const res = await fetch(`${API_BASE_URL}${apiPath}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pwd, turnstileToken }) 
+      body:JSON.stringify({email,password:pwd,turnstileToken,approvalCode:document.getElementById('auth-approval-code')?.value.trim() || ''})
     });
     const data = await res.json();
     appendAuthDebugLog(`收到 ${authMode === 'login' ? '登入' : '註冊'} 回應`, `success=${data.success} message=${data.message || '無訊息'}`);
@@ -10781,6 +10795,10 @@ async function openAccountStats() {
 
     <!-- 👇 插入管理員專屬的在線名單 -->
     ${adminOnlineHtml}
+
+    <button onclick="openAdminApprovalCodes()" style="width:100%; padding:14px; border-radius:var(--rs); background:#3b82f6; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(59,130,246,0.3); cursor:pointer;">
+      🔑 管理註冊核准碼 (產生/刪除)
+    </button>
 
     <button onclick="openAdminUserList()" style="width:100%; padding:14px; border-radius:var(--rs); background:#10b981; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(16,185,129,0.3); cursor:pointer;">
       👥 管理註冊會員名單 (含搜尋)
@@ -14518,3 +14536,113 @@ window.copyWebsiteUrl = function(text) {
     document.body.removeChild(ta);
   }
 };
+
+/* =========================================================
+   管理員專區：註冊核准碼管理
+   ========================================================= */
+window.openAdminApprovalCodes = async function() {
+  document.getElementById('sub-title').textContent = '註冊核准碼管理';
+  
+  const closeBtn = document.querySelector('#sub-page .top-bar .bar-btn');
+  if (closeBtn) closeBtn.style.display = 'none';
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="animateSubPageReturn(this, () => { document.querySelector('#sub-page .top-bar .bar-btn').style.display=''; openAccountStats(); })" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#ffffff; border:1px solid #1d4ed8; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:900; cursor:pointer;">🔙 返回</button>
+  `;
+  
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px; display:flex; flex-direction:column; height:100%;">
+      <button onclick="adminGenerateApprovalCode()" style="width:100%; padding:14px; border-radius:var(--rs); background:#3b82f6; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:16px; box-shadow:0 4px 12px rgba(59,130,246,0.3); cursor:pointer;">
+        🎲 隨機產生一組 6 位數核准碼
+      </button>
+
+      <div class="card" style="padding:0; flex:1; overflow-y:auto; border:1px solid var(--border);" id="adm-codes-container">
+        <div style="text-align:center; color:var(--t3); padding:30px; font-weight:700;">📡 載入核准碼清單中...</div>
+      </div>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/approval-codes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.success) {
+      renderAdminApprovalCodes(data.codes);
+    } else {
+      document.getElementById('adm-codes-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 載入失敗：${data.message}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('adm-codes-container').innerHTML = `<div style="text-align:center; color:var(--red); padding:30px; font-weight:700;">⚠️ 連線失敗</div>`;
+  }
+}
+function renderAdminApprovalCodes(codes) {
+  const container = document.getElementById('adm-codes-container');
+  if (!container) return;
+
+  if (codes.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color:var(--t3); padding:40px; font-weight:700;">目前沒有任何核准碼，請點擊上方按鈕產生 🎲</div>`;
+    return;
+  }
+
+  let html = '';
+  codes.forEach(c => {
+    const isUsed = c.used === 1;
+    const statusTag = isUsed 
+      ? `<span style="background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:800;">已使用 (${safeText(c.usedBy || '')})</span>`
+      : `<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:800;">未使用 (可註冊)</span>`;
+
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-family:var(--mono); font-size:20px; font-weight:900; color:#2563eb; letter-spacing:3px;">${c.code}</div>
+          <div style="margin-top:4px;">${statusTag}</div>
+        </div>
+        ${!isUsed ? `<button onclick="adminDeleteApprovalCode('${c.code}')" style="background:#fef2f2; color:#ef4444; border:1px solid #fecdd3; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">刪除</button>` : ''}
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+window.adminGenerateApprovalCode = async function() {
+  showProgress('產生核准碼中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/generate-approval-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) {
+        toast(`🎉 新核准碼：${data.code}`);
+        openAdminApprovalCodes();
+      } else {
+        toast('⚠️ ' + data.message);
+      }
+    });
+  } catch(e) { finishProgress(() => toast('連線失敗')); }
+}
+window.adminDeleteApprovalCode = async function(code) {
+  const ok = await customConfirm(`確定刪除核准碼【 <b>${code}</b> 】嗎？`);
+  if (!ok) return;
+
+  showProgress('刪除中...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/delete-approval-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) {
+        toast('已刪除核准碼 ✅');
+        openAdminApprovalCodes();
+      } else {
+        toast('⚠️ ' + data.message);
+      }
+    });
+  } catch(e) { finishProgress(() => toast('連線失敗')); }
+}
