@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   外送記錄與分析 — script.js
+   外送記錄好幫手 — script.js
    設計：由上到下分區註解，結構清晰，不閃爍，功能完整
    ══════════════════════════════════════════════════════ */
 // 每當使用者點擊螢幕，就更新「最後活動時間」，防止流程在操作中途過期
@@ -1132,34 +1132,42 @@ function closeDetailOverlay() {
   }, 620);
 }
 
-/* 退出按鈕點擊動畫：抽屜式往左慢慢抽離 (附帶停留感) */
+/* 退出按鈕點擊動畫：抽屜式往左滑出 (含背景計時器攔截修復) */
 window.animateClose = function(btn, action) {
+  if (window.__isPageTransitioning) return; // 動畫進行中防連點
+  window.__isPageTransitioning = true; // 開啟過渡鎖
+
+  // 🌟【關鍵修復】：在點擊第一毫秒，立刻預先將狀態改為歷史頁，防止背景計時器讀到舊的 'add' 狀態
+  if (S.tab === 'add') {
+    S.tab = 'history';
+    localStorage.setItem('delivery_current_tab', 'history');
+  }
+
   const img = btn.querySelector('img');
   if (img) img.src = 'images/close2.png';
-  btn.style.pointerEvents = 'none'; // 鎖定按鈕防止連點
+  btn.style.pointerEvents = 'none'; // 鎖定點擊
 
-  // 自動往上尋找最外層的頁面或彈窗容器
-  const targetWrap = btn.closest('.overlay-page, #detail-overlay, #full-calendar-overlay, .page');
+  const targetWrap = btn.closest('.overlay-page, #sub-page, #detail-overlay, #full-calendar-overlay, .page');
   
-  // 套用抽屜往左滑出特效
   if (targetWrap) {
     targetWrap.classList.add('drawer-slide-out');
   }
 
-  // 設定 600ms 延遲，配合 CSS 動畫播完後再執行關閉
+  // 縮短動畫時間為 300ms（順暢且無縫）
   setTimeout(() => {
-    action(); // 執行原本的關閉指令
-    
-    // 動作執行完畢後，移除動畫 Class，確保下次開啟時，動畫能再次被觸發
+    action(); // 執行 goPage('history')
     if (targetWrap) {
       targetWrap.classList.remove('drawer-slide-out');
     }
-    
-    // 恢復原狀以供下次開啟
     if (img) img.src = 'images/close1.png';
     btn.style.pointerEvents = 'auto';
-  }, 850);
-}
+    
+    // 100ms 後解除過渡鎖
+    setTimeout(() => {
+      window.__isPageTransitioning = false;
+    }, 400);
+  }, 600);
+};
 /* 返回按鈕專用：由上而下關閉動畫 */
 window.animateReturnClose = function(btn, action) {
   const img = btn.querySelector('img');
@@ -1700,12 +1708,11 @@ function savePunch() {
 
 function goPage(name, force = false) {
   // 🌟 新增：未登入時禁止進入「收入分析」
-  /*
   if (name === 'report' && !USER.loggedIn) {
     showLoginRequiredWarning();
     return;
   }
-*/
+
   // 💡 標記 JavaScript 已接管畫面，平滑過渡
   document.documentElement.classList.add('js-ready');
 
@@ -3636,7 +3643,7 @@ function renderHistReconcileView() {
 
       <!-- 有紀錄的日期列（無小字提示） -->
       <div style="display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;">
-        ${dayChipsHtml || `<span style="font-size:14px;color:#94a3b8;font-weight:700;">本區間尚無行程紀錄</span>`}
+        ${dayChipsHtml || `<span style="font-size:14px;color:#94a3b8;font-weight:700;">本區間尚無行程記錄</span>`}
       </div>
 
       ${buildSimplePeriodSummary(tInc, tOrd, tMil, tHrs)}
@@ -4206,12 +4213,11 @@ function resetSearch() {
 /* ══ 4. 新增記錄 開始 ════════════════════════════════════ */
 function openAddPage(record=null, prefill={}) {
   // 🌟 [防禦性程式碼]：防止從 Console 呼叫函式繞過權限
-  /*
   if (!USER.loggedIn) {
     showLoginRequiredWarning();
     return;
   }
-*/
+
   S.editingId = record ? record.id : null; 
   S.selPlatformId = record ? record.platformId : null;
   document.getElementById('add-page-title').textContent = record ? '編輯記錄' : '新增記錄';
@@ -4334,7 +4340,7 @@ function switchAddTab(tab, idx) {
   };
   bg.style.background = colors[tab];
 
-  // 3. 更新按鈕文字顏色 (修正按鈕顏色不變的問題)
+  // 3. 更新按鈕文字顏色
   const tabIds = ['btn-add-regular', 'btn-add-cashtip', 'btn-add-punch', 'btn-add-expense'];
   tabIds.forEach((id, i) => {
     const btn = document.getElementById(id);
@@ -4343,10 +4349,10 @@ function switchAddTab(tab, idx) {
     }
   });
 
-  // 4. 控制「選擇平台」區塊的顯隱 (修正支出花費不應出現平台的問題)
+  // 4. 控制「選擇平台」區塊的顯隱（支出花費與打卡工時均隱藏平台）
   const platArea = document.getElementById('add-platform-select-area');
   if (platArea) {
-    platArea.style.display = (tab === 'expense') ? 'none' : 'block';
+    platArea.style.display = (tab === 'expense' || tab === 'punch') ? 'none' : 'block';
   }
 
   // 5. 顯示對應的表單內容
@@ -8972,9 +8978,8 @@ window.setMaintCategory = function(cat, idx) {
 /* ══ 替換：新增車輛記錄 ══ */
 window.openAddVehRec = function(recordId = null) {
   // 👇 檢查會員權限
-  /*
   if (!USER.loggedIn) { showLoginRequiredWarning(); return; }
-*/
+
   // 🛡️ 防呆機制：若被瀏覽器誤傳 Event 事件物件，強制轉為 null
   if (typeof recordId === 'object' && recordId !== null) recordId = null;
 
@@ -11609,7 +11614,7 @@ function openAdminGasPriceEdit() {
   document.getElementById('sub-body').innerHTML = `
     <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:16px;">
       <div style="font-size:12px; color:var(--hint-color); line-height:1.6; font-weight:700;">
-        💡 在此設定的油價將會同步給所有外送員，他們新增車輛紀錄時將自動帶入此價格，且一般使用者無法手動修改。
+        💡 在此設定的油價，將同步給所有外送員；他們新增車輛記錄時，會自動帶入此價格。
       </div>
       <div style="border-top:1px dashed var(--border);"></div>
       <div class="fg">
@@ -12155,7 +12160,7 @@ window.openVersionHistory = function() {
       `;
     });
   } else {
-    html += `<div class="empty-tip">目前尚無版本更新紀錄</div>`;
+    html += `<div class="empty-tip">目前尚無「版本更新」紀錄</div>`;
   }
   
   html += `</div>`;
@@ -14436,14 +14441,11 @@ document.addEventListener('visibilitychange', () => {
        }
      }
      
-     // 當手機把 APP 從背景叫回來時，延遲 300 毫秒等畫面恢復
      setTimeout(() => {
-       if (isAuthFlowBusy()) {
-         appendAuthDebugLog(`略過背景喚醒重繪`, `帳號流程正在進行中`);
-         return;
-       }
-       // 強迫系統重新計算當前分頁的所有內容高度，避免空白破圖！
-       if (S.tab) {
+       // 🌟【關鍵修復】：正在過渡、忙碌或目前狀態為 'add' 時，背景喚醒不強制重新跳轉頁面
+       if (isAuthFlowBusy() || window.__isPageTransitioning) return;
+       
+       if (S.tab && S.tab !== 'add') {
          goPage(S.tab);
          updateNavIndicator(S.tab);
        }
