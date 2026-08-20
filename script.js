@@ -621,29 +621,29 @@ let GLOBAL_ALLOW_REGISTRATION = true; // 👈 新增：控制是否允許註冊
 async function fetchSystemSettings() {
   try {
     if (isLocalDevelopment()) {
-      console.log('🟢 本地開發模式 - 跳過遠端 API');
       GLOBAL_REQUIRE_LOGIN = false;
       GLOBAL_ALLOW_REGISTRATION = true;
       return;
     }
 
-    const res = await fetch(`${API_BASE_URL}/settings/system`, { 
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!res.ok) throw new Error('Network response not ok');
-
+    // 1. 取得系統設定
+    const res = await fetch(`${API_BASE_URL}/settings/system`, { cache: 'no-store' });
     const data = await res.json();
     if (data.success && data.settings) {
       GLOBAL_REQUIRE_LOGIN = data.settings.requireLoginToAdd !== false; 
       GLOBAL_ALLOW_REGISTRATION = data.settings.allowRegistration !== false;
-      console.log('✅ 系統設定已從雲端載入');
+    }
+
+    // 🌟 2. 自動載入雲端全域平台日程規則
+    const schedRes = await fetch(`${API_BASE_URL}/settings/schedules`, { cache: 'no-store' });
+    const schedData = await schedRes.json();
+    if (schedData.success && schedData.schedules) {
+      S.settings.platformSchedules = schedData.schedules;
+      saveSettings();
+      if (S.tab === 'home') renderHome();
     }
   } catch(e) {
-    console.log('⚠️ 無法取得系統設定，使用本地預設值', e);
-    GLOBAL_REQUIRE_LOGIN = false;
-    GLOBAL_ALLOW_REGISTRATION = true;
+    console.log('⚠️ 無法取得雲端設定，使用本地預設值', e);
   }
 }
 
@@ -1539,7 +1539,32 @@ function buildSummaryCard(title, total, orders, mileage, hours, bonus, tempBonus
     </div>`;
 }
 
-// 修復：計算平台日程表的函式 (擴大預測範圍至35天，解決Foodomo月底結算超過14天不顯示的問題)
+/* ════ 平台日程時間規則引擎 (Systematized Schedule Engine) ════ */
+const DEFAULT_SCHEDULE_RULES = {
+  uber: [
+    { id: 'u_1', name: '薪資結算', type: 'weekly_day', days: [1], enabled: true },
+    { id: 'u_2', name: '發薪', type: 'weekly_day', days: [4], enabled: true }
+  ],
+  foodpanda: [
+    { id: 'fp_1', name: '薪資結算', type: 'biweekly_anchor', anchorDate: '2023-12-24', intervalDays: 14, offsetDays: 0, enabled: true },
+    { id: 'fp_2', name: '明細寄發', type: 'biweekly_anchor', anchorDate: '2023-12-24', intervalDays: 14, offsetDays: 3, enabled: true },
+    { id: 'fp_3', name: '發薪', type: 'biweekly_anchor', anchorDate: '2023-12-24', intervalDays: 14, offsetDays: 10, enabled: true }
+  ],
+  foodomo: [
+    { id: 'fd_1', name: '薪資結算', type: 'monthly_dates', dates: [15], isLastDay: true, enabled: true },
+    { id: 'fd_2', name: '發薪', type: 'monthly_dates', dates: [5, 20], isLastDay: false, enabled: true }
+  ]
+};
+
+// 取得指定平台的日程規則
+function getPlatformScheduleRules(platformId) {
+  if (S.settings && S.settings.platformSchedules && S.settings.platformSchedules[platformId]) {
+    return S.settings.platformSchedules[platformId];
+  }
+  return DEFAULT_SCHEDULE_RULES[platformId] || [];
+}
+
+// 重構：由規則引擎動態推算平台的近期日程
 function calcNextDates(id) {
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -1548,7 +1573,6 @@ function calcNextDates(id) {
   function addEv(name, targetDate) {
     const d = new Date(targetDate); d.setHours(0,0,0,0);
     const diff = Math.round((d - today) / 86400000);
-    // 👇 將過濾條件從 14 天放寬到 35 天
     if (diff >= 0 && diff <= 35) {
       events.push({
         name, 
@@ -1560,56 +1584,53 @@ function calcNextDates(id) {
     }
   }
 
-  if (id === 'uber') {
-    // 👇 迴圈檢查天數拉長到 35 天
-    for(let i=0; i<=35; i++) {
-      let d = new Date(today); d.setDate(d.getDate() + i);
-      let dw = d.getDay();
-      if (dw === 1) addEv('平日獎結算', d);
-      if (dw === 4) { addEv('假日獎結算', d); addEv('發薪', d); }
-    }
-  } else if (id === 'foodpanda') {
-    // 1. 取單率結算：每週三、六、日
-    for(let i=0; i<=35; i++) {
-      let d = new Date(today); d.setDate(d.getDate() + i);
-      let dw = d.getDay(); // 0是週日, 3是週三, 6是週六
-      if (dw === 3 || dw === 6 || dw === 0) {
-        addEv('取單率結算', d);
+  const rules = getPlatformScheduleRules(id);
+
+  rules.forEach(rule => {
+    if (rule.enabled === false) return; // 支援停用單條規則
+
+    if (rule.type === 'weekly_day') {
+      // 模式 1：每週指定星期幾 (例如: 每週一、週四)
+      const targetDays = rule.days || [];
+      for (let i = 0; i <= 35; i++) {
+        let d = new Date(today); d.setDate(d.getDate() + i);
+        if (targetDays.includes(d.getDay())) {
+          addEv(rule.name, d);
+        }
+      }
+    } else if (rule.type === 'biweekly_anchor') {
+      // 模式 2：週期性錨點計算 (例如: 雙週 14 天循環)
+      const anchor = new Date(rule.anchorDate || '2023-12-24');
+      anchor.setHours(12, 0, 0, 0);
+      const interval = rule.intervalDays || 14;
+      const offset = rule.offsetDays || 0;
+
+      for (let i = 0; i <= 35; i++) {
+        let d = new Date(today); d.setDate(d.getDate() + i);
+        let diffDays = Math.round((d - anchor) / 86400000);
+        if ((diffDays - offset) % interval === 0) {
+          addEv(rule.name, d);
+        }
+      }
+    } else if (rule.type === 'monthly_dates') {
+      // 模式 3：每月固定日期 / 月底 (例如: 5日、15日、20日、月底)
+      const targetDates = rule.dates || [];
+      const isLastDay = !!rule.isLastDay;
+
+      for (let i = 0; i <= 35; i++) {
+        let d = new Date(today); d.setDate(d.getDate() + i);
+        let dt = d.getDate();
+        let checkLast = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() === dt;
+
+        if (targetDates.includes(dt) || (isLastDay && checkLast)) {
+          addEv(rule.name, d);
+        }
       }
     }
-    // 2. 雙週薪資結算 / 明細寄發 / 發薪
-    //    錨點：2023/12/24（週日）= 某報酬區間末日（薪資結算日）
-    //    週期 14 天：
-    //      diffDays % 14 === 0  → 薪資結算（報酬區間最後一天，雙週日）
-    //      (diffDays - 3) % 14 === 0  → 明細寄發（結算後第一個週三）
-    //      (diffDays - 10) % 14 === 0 → 發薪（再隔一個週三）
-    //    對照官方表：例 11/23 結算 → 11/26 明細 → 12/03 發薪
-    const anchor = new Date(2023, 11, 24); 
-    for(let i=0; i<=35; i++) {
-      let d = new Date(today); d.setDate(d.getDate() + i);
-      let diffDays = Math.round((d - anchor) / 86400000);
-      
-      // 薪資結算日 = 報酬區間最後一天（雙週日）
-      if (diffDays % 14 === 0) addEv('薪資結算', d);
-      // 每雙週三寄發明細
-      if ((diffDays - 3) % 14 === 0) addEv('明細寄發', d);
-      // 每雙週三發薪
-      if ((diffDays - 10) % 14 === 0) addEv('發薪', d);
-    }
-  } else if (id === 'foodomo') {
-    // 👇 迴圈檢查天數統一拉長到 35 天
-    for(let i=0; i<=35; i++) {
-      let d = new Date(today); d.setDate(d.getDate() + i);
-      let dt = d.getDate();
-      let isLastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() === dt;
-      if (dt === 15 || isLastDay) addEv('薪資結算', d);
-      if (dt === 5 || dt === 20) addEv('發薪', d);
-    }
-  }
+  });
 
   const uniqueEvents = [];
   const seen = new Set();
-  // 依時間先後排序，過濾掉同一天重複的同名標籤，最後只取前 3 個顯示
   events.sort((a,b) => a.ts - b.ts).forEach(e => {
     const key = `${e.name}-${e.dateStr}`;
     if(!seen.has(key)) { seen.add(key); uniqueEvents.push(e); }
@@ -10824,6 +10845,10 @@ async function openAccountStats() {
       📢 編輯首頁系統公告
     </button>
 
+    <button onclick="openPlatformScheduleManager()" style="width:100%; padding:14px; border-radius:var(--rs); background:#ea580c; color:#fff; font-size:15px; font-weight:800; border:none; margin-bottom:12px; box-shadow:0 4px 12px rgba(234,88,12,0.3); cursor:pointer;">
+      📅 管理平台日程時間規則
+    </button>
+
     <button onclick="logoutWithConfirm()" class="btn-danger" style="width:100%;padding:14px;font-weight:700;font-size:15px;">登出帳號</button>
   </div>`;
 }
@@ -14646,3 +14671,273 @@ window.adminDeleteApprovalCode = async function(code) {
     });
   } catch(e) { finishProgress(() => toast('連線失敗')); }
 }
+
+/* ═════════════════════════════════════════════════════════
+   管理員專區：平台日程時間規則管理 (Platform Schedule Manager)
+   ═════════════════════════════════════════════════════════ */
+// 1. 同步規則至 Cloudflare 雲端
+window.syncSchedulesToCloud = async function() {
+  if (!USER || USER.role !== 'admin') return;
+  try {
+    showProgress('同步全域日程至雲端...');
+    const res = await fetch(`${API_BASE_URL}/admin/schedules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${USER.token}` },
+      body: JSON.stringify({ schedules: S.settings.platformSchedules })
+    });
+    const data = await res.json();
+    finishProgress(() => {
+      if (data.success) toast('全域日程規則已發布至雲端 ✅');
+      else toast('⚠️ 雲端同步失敗：' + data.message);
+    });
+  } catch(e) {
+    finishProgress(() => toast('⚠️ 連線失敗，僅儲存於本機'));
+  }
+};
+// 2. 主管理頁面進入點
+window.openPlatformScheduleManager = function(selectedPlatId) {
+  // 🌟【權限控管】：僅限管理員使用
+  if (!USER || USER.role !== 'admin') {
+    toast('⚠️ 權限不足：此功能僅限管理員使用');
+    return;
+  }
+
+  document.getElementById('sub-title').textContent = '平台日程時間規則管理';
+
+  // 右上角：重設預設值按鈕
+  document.getElementById('sub-top-right').innerHTML = `
+    <button onclick="resetPlatformScheduleRules()" style="background:var(--sf2); color:var(--t2); border:1.5px solid var(--border); padding:6px 12px; border-radius:14px; font-size:13px; font-weight:700; cursor:pointer;">↺ 恢復預設</button>
+  `;
+
+  if (!S.settings.platformSchedules) {
+    S.settings.platformSchedules = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE_RULES));
+  }
+
+  const activePlats = S.platforms.filter(p => p.active);
+  const platList = activePlats.length > 0 ? activePlats : S.platforms;
+  const curPlatId = selectedPlatId || (platList[0] ? platList[0].id : 'uber');
+  const curPlat = getPlatform(curPlatId);
+
+  const rules = getPlatformScheduleRules(curPlatId);
+
+  let platChips = platList.map(p => `
+    <button onclick="openPlatformScheduleManager('${p.id}')" style="flex-shrink:0; padding:6px 14px; border-radius:12px; font-size:13px; font-weight:800; border:2px solid ${p.id===curPlatId ? p.color : '#cbd5e1'}; background:${p.id===curPlatId ? p.color : '#fff'}; color:${p.id===curPlatId ? '#fff' : '#64748b'}; cursor:pointer;">
+      ${safeText(p.name)}
+    </button>
+  `).join('');
+
+  let rulesListHtml = '';
+  if (rules.length === 0) {
+    rulesListHtml = `<div class="empty-tip" style="padding:20px 0;">目前此平台無設定任何日程規則</div>`;
+  } else {
+    rulesListHtml = rules.map((r, idx) => {
+      let desc = '';
+      if (r.type === 'weekly_day') {
+        const dayNames = ['日','一','二','三','四','五','六'];
+        desc = `每週 ${(r.days||[]).map(d => '週' + dayNames[d]).join('、')}`;
+      } else if (r.type === 'biweekly_anchor') {
+        desc = `每 ${r.intervalDays||14} 天循環 (偏離 ${r.offsetDays||0} 天)`;
+      } else if (r.type === 'monthly_dates') {
+        desc = `每月 ${(r.dates||[]).map(d => d + '日').join('、')}${r.isLastDay ? '、月底' : ''}`;
+      }
+
+      return `
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:14px; padding:12px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="font-size:15px; font-weight:900; color:#1e293b;">${safeText(r.name)}</span>
+              <span style="font-size:11px; font-weight:800; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:6px;">${desc}</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button onclick="openAddScheduleRuleModal('${curPlatId}', ${idx})" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:5px 10px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">編輯</button>
+            <button onclick="deleteScheduleRule('${curPlatId}', ${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #fecdd3; padding:5px 10px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">刪除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('sub-body').innerHTML = `
+    <div style="padding:16px;">
+      <div style="font-size:13px; color:var(--hint-color); line-height:1.6; font-weight:700; margin-bottom:16px; background:var(--blue-d); padding:12px; border-radius:12px;">
+        💡 您可以為各平台隨時彈性調整結算、發薪或取單率日程規則。
+      </div>
+
+      <!-- 平台切換頁籤 -->
+      <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;">
+        ${platChips}
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:15px; font-weight:900; color:#1e293b;">${safeText(curPlat.name)} - 規則列表</span>
+        <button onclick="openAddScheduleRuleModal('${curPlatId}')" class="btn-acc" style="padding:6px 12px; font-size:13px; font-weight:800; border-radius:10px;">＋ 新增規則</button>
+      </div>
+
+      ${rulesListHtml}
+    </div>
+  `;
+
+  openOverlay('sub-page');
+};
+// 3. 新增 / 編輯規則彈窗
+window.openAddScheduleRuleModal = function(platId, editIdx = null) {
+  const isEdit = editIdx !== null;
+  const rules = getPlatformScheduleRules(platId);
+  const rule = isEdit ? rules[editIdx] : { name: '', type: 'weekly_day', days: [1] };
+
+  const typeOptions = [
+    { value: 'weekly_day', label: '每週指定星期' },
+    { value: 'biweekly_anchor', label: '雙週 / 週期錨點' },
+    { value: 'monthly_dates', label: '每月固定日期 / 月底' }
+  ].map(o => `<option value="${o.value}" ${rule.type===o.value?'selected':''}>${o.label}</option>`).join('');
+
+  window._renderRuleTypeFields = function() {
+    const type = document.getElementById('rule-type').value;
+    const fieldsEl = document.getElementById('rule-type-fields');
+    let html = '';
+
+    if (type === 'weekly_day') {
+      const days = rule.days || [1];
+      const dayNames = ['週日','週一','週二','週三','週四','週五','週六'];
+      html = `
+        <label style="font-weight:700; color:var(--t1); display:block; margin-bottom:6px;">選擇星期</label>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          ${dayNames.map((d, i) => `
+            <label style="display:inline-flex; align-items:center; gap:4px; background:#f1f5f9; padding:6px 10px; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer;">
+              <input type="checkbox" class="rule-day-cb" value="${i}" ${days.includes(i)?'checked':''}> ${d}
+            </label>
+          `).join('')}
+        </div>`;
+    } else if (type === 'biweekly_anchor') {
+      html = `
+        <div class="fg" style="margin-bottom:10px;">
+          <label style="font-weight:700; color:var(--t1);">錨點日期 (基準點)</label>
+          <input type="date" id="rule-anchor" class="finp" value="${rule.anchorDate || '2023-12-24'}">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div class="fg" style="flex:1;">
+            <label style="font-weight:700; color:var(--t1);">循環天數 (如雙週14天)</label>
+            <input type="number" id="rule-interval" class="finp" value="${rule.intervalDays || 14}">
+          </div>
+          <div class="fg" style="flex:1;">
+            <label style="font-weight:700; color:var(--t1);">偏離天數 (Offset)</label>
+            <input type="number" id="rule-offset" class="finp" value="${rule.offsetDays || 0}" placeholder="0">
+          </div>
+        </div>`;
+    } else if (type === 'monthly_dates') {
+      html = `
+        <div class="fg" style="margin-bottom:10px;">
+          <label style="font-weight:700; color:var(--t1);">每月幾號 (用逗號隔開，如: 5, 20)</label>
+          <input type="text" id="rule-dates" class="finp" value="${(rule.dates||[]).join(', ')}" placeholder="5, 20">
+        </div>
+        <label style="display:inline-flex; align-items:center; gap:6px; font-weight:800; color:var(--t1); cursor:pointer;">
+          <input type="checkbox" id="rule-lastday" ${rule.isLastDay?'checked':''}> 包含每月最後一天 (月底)
+        </label>`;
+    }
+    fieldsEl.innerHTML = html;
+  };
+
+  const dialogHtml = `
+    <div id="schedule-rule-dialog-overlay" style="position:fixed; inset:0; z-index:999999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px;">
+      <div style="background:#ffffff; border-radius:20px; width:100%; max-width:360px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,0.2);">
+        <div style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:14px; text-align:center;">
+          ${isEdit ? '編輯日程規則' : '新增日程規則'}
+        </div>
+
+        <div class="fg" style="margin-bottom:12px;">
+          <label style="font-weight:700; color:var(--t1);">規則名稱</label>
+          <input type="text" id="rule-name" class="finp" value="${safeText(rule.name)}" placeholder="例: 薪資結算 / 發薪">
+        </div>
+
+        <div class="fg" style="margin-bottom:12px;">
+          <label style="font-weight:700; color:var(--t1);">規則類型</label>
+          <select id="rule-type" class="fsel" onchange="_renderRuleTypeFields()">
+            ${typeOptions}
+          </select>
+        </div>
+
+        <div id="rule-type-fields" style="margin-bottom:16px;"></div>
+
+        <div style="display:flex; gap:10px;">
+          <button onclick="document.getElementById('schedule-rule-dialog-overlay').remove()" style="flex:1; padding:12px; background:#f1f5f9; color:#64748b; border:none; border-radius:12px; font-weight:800; cursor:pointer;">取消</button>
+          <button onclick="saveScheduleRule('${platId}', ${editIdx})" class="btn-acc" style="flex:2; padding:12px; font-weight:800; border-radius:12px;">儲存規則</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', dialogHtml);
+  _renderRuleTypeFields();
+};
+// 4. 儲存規則
+window.saveScheduleRule = function(platId, editIdx = null) {
+  const name = document.getElementById('rule-name').value.trim();
+  const type = document.getElementById('rule-type').value;
+
+  if (!name) { toast('⚠️ 請輸入「規則名稱」'); return; }
+
+  const newRule = { id: newId(), name, type, enabled: true };
+
+  if (type === 'weekly_day') {
+    const days = Array.from(document.querySelectorAll('.rule-day-cb:checked')).map(cb => parseInt(cb.value));
+    if (days.length === 0) { toast('⚠️ 請至少選擇一個「星期」'); return; }
+    newRule.days = days;
+  } else if (type === 'biweekly_anchor') {
+    newRule.anchorDate = document.getElementById('rule-anchor').value || '2023-12-24';
+    newRule.intervalDays = parseInt(document.getElementById('rule-interval').value) || 14;
+    newRule.offsetDays = parseInt(document.getElementById('rule-offset').value) || 0;
+  } else if (type === 'monthly_dates') {
+    const rawDates = document.getElementById('rule-dates').value;
+    const dates = rawDates.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d >= 1 && d <= 31);
+    const isLastDay = document.getElementById('rule-lastday').checked;
+    if (dates.length === 0 && !isLastDay) { toast('⚠️ 請填寫日期或勾選「月底」'); return; }
+    newRule.dates = dates;
+    newRule.isLastDay = isLastDay;
+  }
+
+  if (!S.settings.platformSchedules) S.settings.platformSchedules = {};
+  if (!S.settings.platformSchedules[platId]) {
+    S.settings.platformSchedules[platId] = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE_RULES[platId] || []));
+  }
+
+  const list = S.settings.platformSchedules[platId];
+  if (editIdx !== null) {
+    list[editIdx] = newRule;
+  } else {
+    list.push(newRule);
+  }
+
+  saveSettings();
+  document.getElementById('schedule-rule-dialog-overlay')?.remove();
+  openPlatformScheduleManager(platId);
+  if (S.tab === 'home') renderHome();
+  syncSchedulesToCloud();
+};
+// 5. 刪除規則
+window.deleteScheduleRule = async function(platId, idx) {
+  const ok = await customConfirm('確定要刪除這條「日程規則」嗎？');
+  if (!ok) return;
+
+  if (!S.settings.platformSchedules) S.settings.platformSchedules = {};
+  if (!S.settings.platformSchedules[platId]) {
+    S.settings.platformSchedules[platId] = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE_RULES[platId] || []));
+  }
+
+  S.settings.platformSchedules[platId].splice(idx, 1);
+  saveSettings();
+  openPlatformScheduleManager(platId);
+  if (S.tab === 'home') renderHome();
+  syncSchedulesToCloud();
+};
+// 6. 恢復預設值
+window.resetPlatformScheduleRules = async function() {
+  const ok = await customConfirm('確定要將所有平台的「日程時間規則」<br>重設為系統預設值嗎？');
+  if (!ok) return;
+
+  S.settings.platformSchedules = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE_RULES));
+  saveSettings();
+  openPlatformScheduleManager();
+  if (S.tab === 'home') renderHome();
+  syncSchedulesToCloud();
+};
